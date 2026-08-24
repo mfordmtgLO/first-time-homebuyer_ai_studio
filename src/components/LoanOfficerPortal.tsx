@@ -34,6 +34,8 @@ import {
   Clock,
   Filter,
   Award,
+  Upload,
+  Image as ImageIcon,
   X
 } from "lucide-react";
 import { 
@@ -1463,19 +1465,72 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#2D362E]">Headshot Image URL</label>
-                  <input
-                    type="url"
-                    required
-                    value={currentLo.headshotUrl}
-                    onChange={(e) => onUpdateGuidesState({
-                      ...guidesState,
-                      loanOfficer: { ...currentLo, headshotUrl: e.target.value }
-                    })}
-                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
-                  />
+              {/* Headshot Photo with Local Upload & URL */}
+              <div className="space-y-2 bg-[#F9F8F4] p-4 rounded-2xl border border-[#EAE7E0] md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                    <span>Loan Officer Headshot Profile Photo</span>
+                  </label>
+                  <span className="text-[11px] text-[#9A9488]">Upload local file or paste image link</span>
                 </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3.5 pt-1">
+                  <div className="relative shrink-0">
+                    <img
+                      src={currentLo.headshotUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80"}
+                      alt={currentLo.name}
+                      referrerPolicy="no-referrer"
+                      className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md bg-[#EAE7E0]"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80";
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2.5">
+                      <label className="cursor-pointer px-3.5 py-2 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-xl text-xs font-semibold text-[#2D362E] flex items-center gap-1.5 shadow-2xs transition-colors shrink-0">
+                        <Upload className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                        <span>Upload Photo File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (uploadEvent) => {
+                                const result = uploadEvent.target?.result as string;
+                                if (result) {
+                                  onUpdateGuidesState({
+                                    ...guidesState,
+                                    loanOfficer: { ...currentLo, headshotUrl: result }
+                                  });
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                      <span className="text-[11px] text-[#9A9488]">Supports JPG, PNG, WEBP from your device</span>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="https://... (or leave blank to use default professional avatar)"
+                      value={currentLo.headshotUrl}
+                      onChange={(e) => onUpdateGuidesState({
+                        ...guidesState,
+                        loanOfficer: { ...currentLo, headshotUrl: e.target.value }
+                      })}
+                      className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
+                    />
+                  </div>
+                </div>
+              </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D362E]">Phone Number</label>
@@ -1681,15 +1736,69 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#606C5D]">Headshot URL</label>
-                <input
-                  type="url"
-                  required
-                  value={editingLo ? editingLo.headshotUrl : newLoForm.headshotUrl}
-                  onChange={(e) => editingLo ? setEditingLo({ ...editingLo, headshotUrl: e.target.value }) : setNewLoForm(p => ({ ...p, headshotUrl: e.target.value }))}
-                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
-                />
+              {/* Headshot Photo Section with Upload & URL */}
+              <div className="space-y-2 bg-[#F9F8F4] p-3.5 rounded-2xl border border-[#EAE7E0]">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                    <span>Headshot Profile Photo</span>
+                  </label>
+                  <span className="text-[10px] text-[#9A9488]">URL or Local Upload</span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="relative shrink-0">
+                    <img
+                      src={editingLo ? editingLo.headshotUrl : newLoForm.headshotUrl}
+                      alt="Preview"
+                      referrerPolicy="no-referrer"
+                      className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md bg-[#EAE7E0]"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80";
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer px-3 py-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-xl text-xs font-semibold text-[#2D362E] flex items-center gap-1.5 shadow-2xs transition-colors shrink-0">
+                        <Upload className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                        <span>Upload Photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (uploadEvent) => {
+                                const result = uploadEvent.target?.result as string;
+                                if (result) {
+                                  if (editingLo) {
+                                    setEditingLo({ ...editingLo, headshotUrl: result });
+                                  } else {
+                                    setNewLoForm(p => ({ ...p, headshotUrl: result }));
+                                  }
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                      <span className="text-[10px] text-[#9A9488]">or paste web link below</span>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="https://... or file data URL"
+                      value={editingLo ? editingLo.headshotUrl : newLoForm.headshotUrl}
+                      onChange={(e) => editingLo ? setEditingLo({ ...editingLo, headshotUrl: e.target.value }) : setNewLoForm(p => ({ ...p, headshotUrl: e.target.value }))}
+                      className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -1791,28 +1900,80 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#606C5D]">Email</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="marcus@realty.com"
-                    value={editingAgent ? editingAgent.email : newAgentForm.email}
-                    onChange={(e) => editingAgent ? setEditingAgent({ ...editingAgent, email: e.target.value }) : setNewAgentForm(p => ({ ...p, email: e.target.value }))}
-                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
-                  />
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D]">Email</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="marcus@realty.com"
+                  value={editingAgent ? editingAgent.email : newAgentForm.email}
+                  onChange={(e) => editingAgent ? setEditingAgent({ ...editingAgent, email: e.target.value }) : setNewAgentForm(p => ({ ...p, email: e.target.value }))}
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                />
+              </div>
+
+              {/* Realtor Headshot Photo Section with Upload & URL */}
+              <div className="space-y-2 bg-[#F9F8F4] p-3.5 rounded-2xl border border-[#EAE7E0]">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                    <span>Agent Headshot Photo</span>
+                  </label>
+                  <span className="text-[10px] text-[#9A9488]">URL or Local Upload</span>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#606C5D]">Headshot URL</label>
-                  <input
-                    type="url"
-                    required
-                    value={editingAgent ? editingAgent.headshotUrl : newAgentForm.headshotUrl}
-                    onChange={(e) => editingAgent ? setEditingAgent({ ...editingAgent, headshotUrl: e.target.value }) : setNewAgentForm(p => ({ ...p, headshotUrl: e.target.value }))}
-                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
-                  />
+                <div className="flex items-center gap-3">
+                  <div className="relative shrink-0">
+                    <img
+                      src={editingAgent ? editingAgent.headshotUrl : newAgentForm.headshotUrl}
+                      alt="Preview"
+                      referrerPolicy="no-referrer"
+                      className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md bg-[#EAE7E0]"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80";
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer px-3 py-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-xl text-xs font-semibold text-[#2D362E] flex items-center gap-1.5 shadow-2xs transition-colors shrink-0">
+                        <Upload className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                        <span>Upload Photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (uploadEvent) => {
+                                const result = uploadEvent.target?.result as string;
+                                if (result) {
+                                  if (editingAgent) {
+                                    setEditingAgent({ ...editingAgent, headshotUrl: result });
+                                  } else {
+                                    setNewAgentForm(p => ({ ...p, headshotUrl: result }));
+                                  }
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                      <span className="text-[10px] text-[#9A9488]">or paste web link below</span>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="https://... or file data URL"
+                      value={editingAgent ? editingAgent.headshotUrl : newAgentForm.headshotUrl}
+                      onChange={(e) => editingAgent ? setEditingAgent({ ...editingAgent, headshotUrl: e.target.value }) : setNewAgentForm(p => ({ ...p, headshotUrl: e.target.value }))}
+                      className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
+                    />
+                  </div>
                 </div>
               </div>
 

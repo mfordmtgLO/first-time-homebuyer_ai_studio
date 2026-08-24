@@ -155,9 +155,13 @@ export interface LoanOfficerProfile {
   specialties: string[];
   bookingUrl: string;
   licenseStates: string[];
+  licenseVerificationYear?: number;
+  licenseLastVerifiedDate?: string;
   isAdmin?: boolean; // Mike Ford = true
   parentManagerId?: string;
   customSlug?: string;
+  password?: string;
+  lastLogin?: string;
   adSettings?: LoanOfficerAdSettings;
 }
 

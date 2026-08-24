@@ -36,7 +36,13 @@ import {
   Award,
   Upload,
   Image as ImageIcon,
-  X
+  X,
+  Lock,
+  Key,
+  LogOut,
+  ShieldAlert,
+  KeyRound,
+  AlertTriangle
 } from "lucide-react";
 import { 
   LoanOfficerProfile, 
@@ -50,6 +56,8 @@ import {
 } from "../types";
 import { SocialPushHub } from "./SocialPushHub";
 import { AdsCampaignHub } from "./AdsCampaignHub";
+import { LoanOfficerLoginView } from "./LoanOfficerLoginView";
+import { StateLicensingSelector } from "./StateLicensingSelector";
 
 interface LoanOfficerPortalProps {
   guidesState: ProfessionalGuidesState;
@@ -64,10 +72,45 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   onClose,
   onViewPublicSite,
 }) => {
+  // Authentication & Session State (loaded from localStorage)
+  const [authenticatedLoId, setAuthenticatedLoId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("lo_portal_auth_id") || null;
+    }
+    return null;
+  });
+
   // Current user / viewing context
   const [activeTab, setActiveTab] = useState<"leads" | "team_distribution" | "pairings" | "realtor_roster" | "my_profile" | "social_push" | "ad_campaigns">("leads");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Password Management Modal State
+  const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
+  const [newPasswordInput, setNewPasswordInput] = useState<string>("");
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState<string>("");
+  const [passwordModalError, setPasswordModalError] = useState<string | null>(null);
+
+  // Determine Logged In User Identity
+  const loggedInUser: LoanOfficerProfile = 
+    guidesState.loanOfficers.find(l => l.id === authenticatedLoId) || 
+    guidesState.loanOfficers[0];
+
+  const isAdminUser = Boolean(loggedInUser?.isAdmin || loggedInUser?.id === guidesState.adminLoanOfficerId);
+
+  // Which Loan Officer dashboard is currently being managed/viewed
+  // If Mike Ford (Admin): can switch to any LO; if downstream LO: locked to self
+  const [managedLoId, setManagedLoId] = useState<string>(() => {
+    if (authenticatedLoId) {
+      return authenticatedLoId;
+    }
+    return guidesState.loanOfficer.id || "lo-mike-ford";
+  });
+
+  // Current active LO being configured in this dashboard
+  const currentLo: LoanOfficerProfile = 
+    guidesState.loanOfficers.find(lo => lo.id === (isAdminUser ? managedLoId : loggedInUser.id)) || 
+    loggedInUser;
 
   // Leads CRM State
   const [leadSearchQuery, setLeadSearchQuery] = useState<string>("");
@@ -84,7 +127,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const [editingPairing, setEditingPairing] = useState<LOPairing | null>(null);
 
   // New LO Form State
-  const [newLoForm, setNewLoForm] = useState<Partial<LoanOfficerProfile>>({
+  const [newLoForm, setNewLoForm] = useState<Partial<LoanOfficerProfile> & { initialPassword?: string }>({
     name: "",
     title: "Mortgage Advisor",
     nmlsId: "NMLS #",
@@ -96,7 +139,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     bio: "Dedicated mortgage specialist helping first-time homebuyers secure the best rates and state grant programs.",
     specialties: ["First-Time Homebuyers", "FHA & Conventional", "State DPA Grants"],
     bookingUrl: "https://calendly.com",
-    licenseStates: ["Oregon", "Washington"]
+    licenseStates: ["Oregon", "Washington"],
+    initialPassword: "pass123"
   });
 
   // New Agent Form State
@@ -116,15 +160,14 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
   // New Pairing Form State
   const [newPairingForm, setNewPairingForm] = useState<{ loId: string; agentId: string; title: string; customSlug: string; campaignTag: string }>({
-    loId: guidesState.loanOfficer.id,
+    loId: currentLo.id,
     agentId: guidesState.activeAgentId || guidesState.agentRoster[0]?.id || "",
     title: "",
     customSlug: "",
     campaignTag: "first-time-buyer-blast"
   });
 
-  const isSuperAdmin = guidesState.currentUserId === guidesState.adminLoanOfficerId || guidesState.loanOfficer.isAdmin;
-  const currentLo = guidesState.loanOfficer;
+  const isSuperAdmin = isAdminUser;
   const activeAgent = guidesState.agentRoster.find(a => a.id === guidesState.activeAgentId) || guidesState.agentRoster[0];
 
   const triggerToast = (msg: string) => {
@@ -138,10 +181,22 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     setTimeout(() => setCopiedKey(null), 2500);
   };
 
-  // Switch viewing Loan Officer
+  // Sign out / Lock Hub
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("lo_portal_auth_id");
+    }
+    setAuthenticatedLoId(null);
+    triggerToast("Loan Officer Hub locked.");
+  };
+
+  // Switch viewing Loan Officer (Admin only)
   const handleSwitchLoanOfficer = (loId: string) => {
+    if (!isAdminUser && loId !== loggedInUser.id) return;
     const selectedLo = guidesState.loanOfficers.find(lo => lo.id === loId);
     if (!selectedLo) return;
+
+    setManagedLoId(loId);
 
     // Find first agent assigned to this LO or default to first in roster
     const assignedAgent = guidesState.agentRoster.find(a => a.assignedLoIds?.includes(loId)) || guidesState.agentRoster[0];
@@ -156,6 +211,66 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     onUpdateGuidesState(updated);
     triggerToast(`Switched active Loan Officer dashboard to: ${selectedLo.name}`);
   };
+
+  // Password Change Handler
+  const handleSaveChangedPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordModalError(null);
+
+    if (!newPasswordInput || newPasswordInput.length < 4) {
+      setPasswordModalError("Password must be at least 4 characters long.");
+      return;
+    }
+    if (newPasswordInput !== confirmPasswordInput) {
+      setPasswordModalError("Passwords do not match. Please re-enter.");
+      return;
+    }
+
+    const targetId = isAdminUser ? currentLo.id : loggedInUser.id;
+    const updatedLos = guidesState.loanOfficers.map(lo => {
+      if (lo.id === targetId) {
+        return { ...lo, password: newPasswordInput };
+      }
+      return lo;
+    });
+
+    onUpdateGuidesState({
+      ...guidesState,
+      loanOfficers: updatedLos,
+      loanOfficer: currentLo.id === targetId ? { ...currentLo, password: newPasswordInput } : guidesState.loanOfficer
+    });
+
+    setShowPasswordModal(false);
+    setNewPasswordInput("");
+    setConfirmPasswordInput("");
+    triggerToast(`Password successfully updated for ${currentLo.name}!`);
+  };
+
+  // If not authenticated, show dedicated credentialed login & password setup view
+  if (!authenticatedLoId) {
+    return (
+      <LoanOfficerLoginView
+        guidesState={guidesState}
+        onUpdateGuidesState={onUpdateGuidesState}
+        onAuthenticate={(loId) => {
+          setAuthenticatedLoId(loId);
+          setManagedLoId(loId);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("lo_portal_auth_id", loId);
+          }
+          const targetLo = guidesState.loanOfficers.find(l => l.id === loId);
+          if (targetLo) {
+            onUpdateGuidesState({
+              ...guidesState,
+              currentUserId: loId,
+              loanOfficer: targetLo
+            });
+          }
+        }}
+        onBackToPublicSite={onViewPublicSite}
+      />
+    );
+  }
 
   // Add / Save Downstream Loan Officer
   const handleSaveLoanOfficer = (e: React.FormEvent) => {
@@ -491,71 +606,136 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       )}
 
       {/* Top Navigation Bar */}
-      <header className="bg-white border-b border-[#EAE7E0] sticky top-0 z-40 px-4 sm:px-8 py-3.5 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#4A5D4E] text-white flex items-center justify-center font-serif font-bold text-lg shadow-sm">
+      <header className="bg-white border-b border-[#EAE7E0] sticky top-0 z-40 px-4 sm:px-8 py-3 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Brand & Logged-In User Badge */}
+          <div className="flex items-center gap-3.5 flex-wrap">
+            <div className="w-10 h-10 rounded-2xl bg-[#4A5D4E] text-white flex items-center justify-center font-serif font-bold text-lg shadow-sm shrink-0">
               M
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-serif font-bold text-base sm:text-lg text-[#2D362E]">
-                  Loan Officer Management & Distribution Portal
+                  Loan Officer Management Hub
                 </span>
-                {isSuperAdmin ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                    👑 Branch Manager / Admin (Mike Ford)
+                {isAdminUser ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                    <span>👑</span>
+                    <span>Branch Manager Admin (Mike Ford)</span>
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
-                    Managed Loan Officer Account
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                    <span>🛡️</span>
+                    <span>Loan Officer ({loggedInUser.name})</span>
                   </span>
                 )}
               </div>
               <p className="text-xs text-[#606C5D]">
-                Pacific Coast Lending Partners • Distribution, Co-Branded URLs & Ad Campaigns
+                Pacific Coast Lending Partners • Private Credentialed Environment
               </p>
             </div>
           </div>
 
           {/* User Profile Switcher & Actions */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            {/* Switch LO View Dropdown */}
-            <div className="flex items-center gap-1.5 bg-[#F1EFE9] px-3 py-1.5 rounded-xl border border-[#EAE7E0] text-xs">
-              <span className="text-[11px] font-bold text-[#606C5D]">Viewing As:</span>
-              <select
-                value={currentLo.id}
-                onChange={(e) => handleSwitchLoanOfficer(e.target.value)}
-                className="bg-transparent font-bold text-[#2D362E] focus:outline-none cursor-pointer"
-              >
-                {guidesState.loanOfficers.map(lo => (
-                  <option key={lo.id} value={lo.id}>
-                    {lo.name} {lo.isAdmin ? "(Admin)" : ""} • {lo.title}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* If Admin: LO Switcher to manage downstream LO dashboards */}
+            {isAdminUser && (
+              <div className="flex items-center gap-1.5 bg-[#FAF9F5] px-3 py-1.5 rounded-xl border border-amber-300 text-xs shadow-2xs">
+                <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1">
+                  <span>👑</span>
+                  <span>Manage LO Dashboard:</span>
+                </span>
+                <select
+                  value={currentLo.id}
+                  onChange={(e) => handleSwitchLoanOfficer(e.target.value)}
+                  className="bg-transparent font-bold text-[#2D362E] focus:outline-none cursor-pointer"
+                >
+                  {guidesState.loanOfficers.map(lo => (
+                    <option key={lo.id} value={lo.id}>
+                      {lo.name} {lo.isAdmin ? "(Admin Dashboard)" : `(${lo.title})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
+            {/* Password Change Button */}
+            <button
+              onClick={() => {
+                setPasswordModalError(null);
+                setNewPasswordInput("");
+                setConfirmPasswordInput("");
+                setShowPasswordModal(true);
+              }}
+              title="Change private password"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] hover:bg-[#F1EFE9] text-xs font-semibold text-[#2D362E] transition-colors"
+            >
+              <Key className="w-3.5 h-3.5 text-[#4A5D4E]" />
+              <span className="hidden sm:inline">Password</span>
+            </button>
+
+            {/* Preview Public Site Button */}
             <button
               onClick={onViewPublicSite}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-[#F9F8F4] text-xs font-semibold text-[#4A5D4E] transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-[#F9F8F4] text-xs font-semibold text-[#4A5D4E] transition-colors shadow-2xs"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Preview Live Site</span>
             </button>
 
+            {/* Sign Out / Lock Hub Button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-bold transition-colors shadow-2xs"
+              title="Lock portal & return to sign in"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Lock Hub</span>
+            </button>
+
+            {/* Exit Portal Button */}
             <button
               onClick={onClose}
-              className="px-4 py-1.5 rounded-xl bg-[#2D362E] hover:bg-[#1E241F] text-white text-xs font-bold transition-colors"
+              className="px-3.5 py-1.5 rounded-xl bg-[#2D362E] hover:bg-[#1E241F] text-white text-xs font-bold transition-colors shadow-2xs"
             >
-              Exit Portal
+              Exit
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-6">
+        {/* Admin Managing Downstream LO Alert Banner */}
+        {isAdminUser && currentLo.id !== loggedInUser.id && (
+          <div className="bg-amber-50/90 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-2xs">
+                👑
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-xs sm:text-sm text-amber-950">
+                    Branch Manager Mode: Actively Managing {currentLo.name}&apos;s Dashboard
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 border border-amber-300">
+                    Full Admin Control
+                  </span>
+                </div>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  As Branch Manager (Mike Ford), you retain full rights over {currentLo.name}&apos;s account. Any partner agents, co-branded pairing links, or lead updates you make here apply directly to this loan officer.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleSwitchLoanOfficer(loggedInUser.id)}
+              className="px-4 py-2 rounded-xl bg-amber-900 hover:bg-amber-950 text-white text-xs font-bold shrink-0 transition-colors shadow-2xs self-start sm:self-center"
+            >
+              ← Back to Mike Ford Admin Dashboard
+            </button>
+          </div>
+        )}
         {/* Navigation Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#EAE7E0]">
           <button
@@ -1044,9 +1224,22 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           <span>Active Realtor Pairings:</span>
                           <span className="font-bold text-[#2D362E]">{loPairings.length} Partnerships</span>
                         </div>
-                        <div className="flex items-center justify-between text-[#606C5D]">
-                          <span>Licensed States:</span>
-                          <span className="font-semibold text-[#4A5D4E]">{lo.licenseStates.join(", ")}</span>
+                        <div className="flex items-start justify-between text-[#606C5D] gap-2">
+                          <span className="shrink-0">Licensed States:</span>
+                          <div className="text-right">
+                            <span className="font-semibold text-[#4A5D4E] block">{lo.licenseStates.join(", ")}</span>
+                            {Boolean((lo.licenseVerificationYear ?? new Date().getFullYear()) === new Date().getFullYear() && lo.licenseStates.length > 0) ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5">
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                                <span>Verified {new Date().getFullYear()}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-700 bg-red-50 px-1.5 py-0.5 rounded border border-red-200 mt-0.5 animate-pulse">
+                                <AlertTriangle className="w-2.5 h-2.5 text-red-600" />
+                                <span>Re-select Annually (1/1)</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -1574,6 +1767,34 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 </div>
               </div>
 
+              {/* State Mortgage Origination Licensing with Annual 1/1 Compliance Checkmark */}
+              <div className="pt-2 border-t border-[#EAE7E0]">
+                <StateLicensingSelector
+                  selectedStates={currentLo.licenseStates || []}
+                  verificationYear={currentLo.licenseVerificationYear ?? new Date().getFullYear()}
+                  lastVerifiedDate={currentLo.licenseLastVerifiedDate}
+                  onUpdate={(updatedStates, verifiedYear, verifiedDate) => {
+                    const updatedLo: LoanOfficerProfile = {
+                      ...currentLo,
+                      licenseStates: updatedStates,
+                      licenseVerificationYear: verifiedYear,
+                      licenseLastVerifiedDate: verifiedDate
+                    };
+                    const updatedLos = guidesState.loanOfficers.map(l => l.id === currentLo.id ? updatedLo : l);
+                    onUpdateGuidesState({
+                      ...guidesState,
+                      loanOfficers: updatedLos,
+                      loanOfficer: updatedLo
+                    });
+                    if (verifiedYear === new Date().getFullYear() && updatedStates.length > 0) {
+                      triggerToast(`✅ Active green compliance confirmed for ${verifiedYear}! (${updatedStates.length} states licensed)`);
+                    } else if (verifiedYear < new Date().getFullYear()) {
+                      triggerToast(`⚠️ Annual 1/1 compliance reset simulated. Re-selection required.`);
+                    }
+                  }}
+                />
+              </div>
+
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D362E]">Professional Bio</label>
                 <textarea
@@ -1799,6 +2020,32 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* State Licensing & Compliance Selector */}
+              <div className="pt-2 border-t border-[#EAE7E0]">
+                <StateLicensingSelector
+                  selectedStates={editingLo ? editingLo.licenseStates || [] : newLoForm.licenseStates || []}
+                  verificationYear={editingLo ? editingLo.licenseVerificationYear : newLoForm.licenseVerificationYear}
+                  lastVerifiedDate={editingLo ? editingLo.licenseLastVerifiedDate : newLoForm.licenseLastVerifiedDate}
+                  onUpdate={(states, year, date) => {
+                    if (editingLo) {
+                      setEditingLo({
+                        ...editingLo,
+                        licenseStates: states,
+                        licenseVerificationYear: year,
+                        licenseLastVerifiedDate: date
+                      });
+                    } else {
+                      setNewLoForm(p => ({
+                        ...p,
+                        licenseStates: states,
+                        licenseVerificationYear: year,
+                        licenseLastVerifiedDate: date
+                      }));
+                    }
+                  }}
+                />
               </div>
 
               <div className="space-y-1">
@@ -2193,6 +2440,93 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 Close Transcript
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Password Management Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#EAE7E0] space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#EAE7E0]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#4A5D4E]/10 text-[#4A5D4E] flex items-center justify-center">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-[#2D362E]">
+                    Update Password for {isAdminUser ? currentLo.name : loggedInUser.name}
+                  </h3>
+                  <p className="text-[11px] text-[#606C5D]">
+                    {isAdminUser && currentLo.id !== loggedInUser.id
+                      ? "Admin override: Setting credentials for this team loan officer"
+                      : "Set a secure private password for your loan officer dashboard"}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowPasswordModal(false)}
+                className="text-[#9A9488] hover:text-[#2D362E] text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {passwordModalError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{passwordModalError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveChangedPassword} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D]">New Password</label>
+                <input
+                  type="password"
+                  placeholder="Enter new password (min 4 characters)"
+                  value={newPasswordInput}
+                  onChange={(e) => setNewPasswordInput(e.target.value)}
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D]">Confirm New Password</label>
+                <input
+                  type="password"
+                  placeholder="Re-enter new password"
+                  value={confirmPasswordInput}
+                  onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  required
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] text-[11px] text-[#606C5D] space-y-1">
+                <p className="font-semibold text-[#2D362E]">Current Account Login ID:</p>
+                <code className="text-[#4A5D4E] font-bold">
+                  {isAdminUser ? currentLo.email || currentLo.id : loggedInUser.email || loggedInUser.id}
+                </code>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-[#606C5D] hover:bg-[#F1EFE9] rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#38463B] rounded-xl shadow-xs"
+                >
+                  Save New Password
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

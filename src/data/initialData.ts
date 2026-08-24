@@ -860,7 +860,10 @@ export const DEFAULT_LOAN_OFFICER: LoanOfficerProfile = {
   ],
   bookingUrl: "https://calendly.com",
   licenseStates: ["Oregon", "Washington", "California", "Idaho"],
+  licenseVerificationYear: 2026,
+  licenseLastVerifiedDate: "2026-01-10",
   isAdmin: true,
+  password: "admin123",
   customSlug: "mike-ford",
   adSettings: {
     metaAdAccountId: "act_49182049182",
@@ -895,7 +898,10 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     ],
     bookingUrl: "https://calendly.com",
     licenseStates: ["Oregon", "Washington"],
+    licenseVerificationYear: 2026,
+    licenseLastVerifiedDate: "2026-01-12",
     isAdmin: false,
+    password: "pass123",
     parentManagerId: "lo-mike-ford",
     customSlug: "jessica-taylor",
     adSettings: {
@@ -924,7 +930,10 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     ],
     bookingUrl: "https://calendly.com",
     licenseStates: ["Oregon", "Washington", "California"],
+    licenseVerificationYear: 2026,
+    licenseLastVerifiedDate: "2026-01-14",
     isAdmin: false,
+    password: "pass123",
     parentManagerId: "lo-mike-ford",
     customSlug: "david-chen",
     adSettings: {
@@ -953,7 +962,10 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     ],
     bookingUrl: "https://calendly.com",
     licenseStates: ["Oregon"],
+    licenseVerificationYear: 2025,
+    licenseLastVerifiedDate: "2025-08-10",
     isAdmin: false,
+    password: "pass123",
     parentManagerId: "lo-mike-ford",
     customSlug: "rachel-adams",
     adSettings: {

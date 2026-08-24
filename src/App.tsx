@@ -15,7 +15,6 @@ import { AICopilot } from "./components/AICopilot";
 import { EscrowTracker } from "./components/EscrowTracker";
 import { Step4AIScenarioSummary } from "./components/Step4AIScenarioSummary";
 import { LoanOfficerPortal } from "./components/LoanOfficerPortal";
-import { LoanOfficerLoginModal } from "./components/LoanOfficerLoginModal";
 import { LeadIntakeChatbot } from "./components/LeadIntakeChatbot";
 import { 
   INITIAL_PROFILE, 
@@ -90,7 +89,6 @@ export default function App() {
   }, [guidesState]);
 
   // LO Hub & Modals State
-  const [showLoLoginModal, setShowLoLoginModal] = useState<boolean>(false);
   const [showLoPortal, setShowLoPortal] = useState<boolean>(false);
   const [scorecardProperty, setScorecardProperty] = useState<PropertyListing | null>(null);
   const [showNewPropertyModal, setShowNewPropertyModal] = useState<boolean>(false);
@@ -400,18 +398,6 @@ export default function App() {
         <NewPropertyModal
           onClose={() => setShowNewPropertyModal(false)}
           onAdd={handleAddNewProperty}
-        />
-      )}
-
-      {/* LO Login Modal */}
-      {showLoLoginModal && (
-        <LoanOfficerLoginModal
-          loanOfficer={guidesState.loanOfficer}
-          isOpen={showLoLoginModal}
-          onClose={() => setShowLoLoginModal(false)}
-          onLoginSuccess={() => {
-            setShowLoPortal(true);
-          }}
         />
       )}
 

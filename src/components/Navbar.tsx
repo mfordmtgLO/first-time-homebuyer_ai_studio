@@ -429,12 +429,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Brand Logo & Title */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
+              id="navbar-brand-logo-btn"
+              type="button"
               onClick={() => {
                 setActiveMode("website");
                 setCurrentTab("hero");
+                setMobileMenuOpen(false);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className="flex items-center gap-2 sm:gap-2.5 text-left group focus:outline-none"
+              className="flex items-center gap-2 sm:gap-2.5 text-left group focus:outline-none cursor-pointer"
               title="Return to start: First-Time Homebuyer Roadmap"
             >
               <div className="w-8 h-8 sm:w-9 sm:h-9 bg-[#606C5D] rounded-xl flex items-center justify-center text-white font-bold shadow-xs group-hover:scale-105 transition-transform shrink-0">
@@ -459,16 +462,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Mode Pill Toggle (Explore vs Dashboard) */}
           <div className="hidden xl:flex items-center bg-[#F1EFE9] p-1 rounded-xl border border-[#EAE7E0] shrink-0">
             <button
+              id="navbar-step1-2-explore-btn"
+              type="button"
               onClick={() => {
                 setActiveMode("website");
-                if (currentTab === "hero") {
+                if (currentTab === "hero" || !["calculator", "roadmap", "grants"].includes(currentTab)) {
                   setCurrentTab("calculator");
                 }
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeMode === "website"
                   ? "bg-[#4A5D4E] text-white shadow-xs"
-                  : "text-[#606C5D] hover:text-[#2D362E]"
+                  : "text-[#606C5D] hover:text-[#2D362E] hover:bg-[#FAF9F5]"
               }`}
               title="Step 1 & 2: Buying power, PITI analysis, interactive roadmap & grants"
             >
@@ -476,16 +483,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Step 1 & 2: Explore</span>
             </button>
             <button
+              id="navbar-step3-4-dashboard-btn"
+              type="button"
               onClick={() => {
                 setActiveMode("dashboard");
-                if (currentTab === "hero" || currentTab === "calculator" || currentTab === "roadmap" || currentTab === "grants") {
+                if (!["dashboard", "step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow", "documents"].includes(currentTab)) {
                   setCurrentTab("dashboard");
                 }
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all relative ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all relative cursor-pointer ${
                 activeMode === "dashboard"
                   ? "bg-[#4A5D4E] text-white shadow-xs"
-                  : "text-[#606C5D] hover:text-[#2D362E]"
+                  : "text-[#606C5D] hover:text-[#2D362E] hover:bg-[#FAF9F5]"
               }`}
               title="Step 3 & 4: Buyer Dashboard, AI Plan & Local Professional Guides"
             >
@@ -662,9 +673,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Mode Switcher for Mobile */}
           <div className="grid grid-cols-2 gap-2 p-1 bg-[#F1EFE9] rounded-xl border border-[#EAE7E0]">
             <button
+              id="mobile-step1-2-explore-btn"
+              type="button"
               onClick={() => {
                 setActiveMode("website");
-                setCurrentTab("calculator");
+                if (currentTab === "hero" || !["calculator", "roadmap", "grants"].includes(currentTab)) {
+                  setCurrentTab("calculator");
+                }
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all ${
                 activeMode === "website" ? "bg-[#4A5D4E] text-white shadow-xs" : "text-[#606C5D]"
@@ -674,9 +691,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               Step 1 & 2: Explore
             </button>
             <button
+              id="mobile-step3-4-dashboard-btn"
+              type="button"
               onClick={() => {
                 setActiveMode("dashboard");
-                setCurrentTab("dashboard");
+                if (!["dashboard", "step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow", "documents"].includes(currentTab)) {
+                  setCurrentTab("dashboard");
+                }
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all ${
                 activeMode === "dashboard" ? "bg-[#4A5D4E] text-white shadow-xs" : "text-[#606C5D]"

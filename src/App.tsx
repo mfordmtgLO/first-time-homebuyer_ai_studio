@@ -235,7 +235,7 @@ export default function App() {
                   />
                 )}
 
-                {activeTab === "calculator" && (
+                {(activeTab === "calculator" || (!["hero", "roadmap", "grants"].includes(activeTab))) && (
                   <InstantAffordabilityCalculator
                     profile={profile}
                     setProfile={setProfile}
@@ -260,7 +260,7 @@ export default function App() {
             {/* DASHBOARD MODE VIEWS */}
             {currentMode === "dashboard" && (
               <div>
-                {activeTab === "dashboard" && (
+                {(activeTab === "dashboard" || (!["step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "documents", "escrow"].includes(activeTab))) && (
                   <DashboardOverview
                     profile={profile}
                     setProfile={setProfile}

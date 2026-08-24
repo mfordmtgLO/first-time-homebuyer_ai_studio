@@ -13,7 +13,7 @@ import {
   HeartHandshake
 } from "lucide-react";
 import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
-import { calculateMortgageBreakdown, formatUSD } from "../utils/mortgageMath";
+import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 import { LocalProfessionalGuides } from "./LocalProfessionalGuides";
 
 interface HeroWebsiteProps {
@@ -44,6 +44,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
   onOpenLoPortal,
 }) => {
   const breakdown = calculateMortgageBreakdown(profile);
+  const dtiStatus = getDTIStatus(breakdown.backEndDTI);
 
   return (
     <div className="space-y-16 pb-12">
@@ -119,12 +120,18 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
           <div className="lg:col-span-5 bg-[#F1EFE9] rounded-2xl border border-[#EAE7E0] p-6 shadow-sm space-y-5">
             <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#4A5D4E]"></div>
+                <div className={`w-3 h-3 rounded-full ${dtiStatus.isIneligible ? "bg-red-600 animate-pulse" : dtiStatus.isHigh ? "bg-red-600" : dtiStatus.tier === "moderate" ? "bg-[#C18C5D]" : "bg-[#4A5D4E]"}`}></div>
                 <span className="text-xs font-bold uppercase tracking-wider text-[#2D362E]">Instant Affordability Preview</span>
               </div>
-              <span className="text-xs text-[#4A5D4E] font-semibold bg-white px-2.5 py-0.5 rounded-md border border-[#EAE7E0]">
-                Safe 28/36 Rule
-              </span>
+              {dtiStatus.isIneligible ? (
+                <span className="text-[11px] font-bold text-black bg-red-50 px-2 py-0.5 rounded-md border border-red-300">
+                  <span className="line-through decoration-red-600 decoration-2">most loan programs ineligible over 50% DTI</span>
+                </span>
+              ) : (
+                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-md border ${dtiStatus.badgeClass}`}>
+                  {dtiStatus.badgeLabel}
+                </span>
+              )}
             </div>
 
             {/* Quick Sliders */}
@@ -153,7 +160,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
                 <input
                   type="range"
                   min="0"
-                  max="2500"
+                  max="4500"
                   step="50"
                   value={profile.monthlyDebt}
                   onChange={(e) => setProfile(prev => ({ ...prev, monthlyDebt: Number(e.target.value) }))}
@@ -259,14 +266,29 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
 
               <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[#EAE7E0]">
                 <div>
-                  <span className="text-[#9A9488] block">Est. Monthly (P&I+Tax+Ins):</span>
+                  <span className="text-[#9A9488] block text-[11px] mb-0.5">Est. Monthly (P&I+Tax+Ins):</span>
                   <span className="text-[#2D362E] font-bold">{formatUSD(breakdown.totalMonthly)}/mo</span>
                 </div>
                 <div>
-                  <span className="text-[#9A9488] block">Back-End DTI:</span>
-                  <span className={`font-bold ${breakdown.backEndDTI <= 36 ? "text-[#4A5D4E]" : breakdown.backEndDTI <= 43 ? "text-[#C18C5D]" : "text-[#B94A48]"}`}>
-                    {breakdown.backEndDTI}% {breakdown.backEndDTI <= 36 ? "(Optimal)" : "(Moderate)"}
-                  </span>
+                  <span className="text-[#9A9488] block text-[11px] mb-0.5">Back-End DTI:</span>
+                  {dtiStatus.isIneligible ? (
+                    <div className="space-y-0.5">
+                      <span className="text-black font-bold text-xs line-through decoration-red-600 decoration-2">
+                        {breakdown.backEndDTI}%
+                      </span>
+                      <span className="block text-[11px] font-bold text-black line-through decoration-red-600 decoration-2 leading-tight">
+                        most loan programs ineligible over 50% DTI
+                      </span>
+                    </div>
+                  ) : dtiStatus.isHigh ? (
+                    <span className="font-bold text-red-600 text-xs">
+                      {breakdown.backEndDTI}% (High)
+                    </span>
+                  ) : (
+                    <span className={`font-bold text-xs ${dtiStatus.colorClass}`}>
+                      {breakdown.backEndDTI}% ({dtiStatus.label})
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

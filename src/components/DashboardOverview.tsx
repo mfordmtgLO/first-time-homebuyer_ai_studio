@@ -16,7 +16,7 @@ import {
   Calendar
 } from "lucide-react";
 import { FinancialProfile, PropertyListing, RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
-import { calculateMortgageBreakdown, formatUSD } from "../utils/mortgageMath";
+import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 import { SavingsGoalTracker } from "./SavingsGoalTracker";
 
 interface DashboardOverviewProps {
@@ -129,23 +129,41 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
         {/* Card 2: Max Safe Price */}
-        <div 
-          onClick={() => onNavigate("calculator", "website")}
-          className="cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#9A9488] font-semibold">Max Safe Home Price</span>
-            <div className="w-8 h-8 rounded-lg bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
+        {(() => {
+          const dtiStatus = getDTIStatus(breakdown.backEndDTI);
+          return (
+            <div 
+              onClick={() => onNavigate("calculator", "website")}
+              className="cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#9A9488] font-semibold">Max Safe Home Price</span>
+                <div className="w-8 h-8 rounded-lg bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] flex items-center justify-center">
+                  <DollarSign className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-[#2D362E]">
+                {formatUSD(breakdown.maxSafePriceConservative)}
+              </div>
+              {dtiStatus.isIneligible ? (
+                <span className="text-[11px] text-black flex items-center gap-1 font-bold">
+                  <AlertCircle className="w-3 h-3 text-red-600" />
+                  <span className="line-through decoration-red-600 decoration-2">
+                    Back-End DTI {breakdown.backEndDTI}% (most loan programs ineligible over 50% DTI)
+                  </span>
+                </span>
+              ) : dtiStatus.isHigh ? (
+                <span className="text-[11px] text-red-600 flex items-center gap-1 font-bold">
+                  <AlertCircle className="w-3 h-3 text-red-600" /> Back-End DTI {breakdown.backEndDTI}% (High)
+                </span>
+              ) : (
+                <span className={`text-[11px] flex items-center gap-1 font-semibold ${dtiStatus.colorClass}`}>
+                  <CheckCircle2 className="w-3 h-3" /> Back-End DTI {breakdown.backEndDTI}% ({dtiStatus.label})
+                </span>
+              )}
             </div>
-          </div>
-          <div className="text-2xl font-bold text-[#2D362E]">
-            {formatUSD(breakdown.maxSafePriceConservative)}
-          </div>
-          <span className="text-[11px] text-[#4A5D4E] flex items-center gap-1 font-semibold">
-            <CheckCircle2 className="w-3 h-3" /> Back-End DTI {breakdown.backEndDTI}% (Healthy)
-          </span>
-        </div>
+          );
+        })()}
 
         {/* Card 3: Saved & Touring Homes */}
         <div 

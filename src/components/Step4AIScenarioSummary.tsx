@@ -16,7 +16,7 @@ import {
   MessageSquare
 } from "lucide-react";
 import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing } from "../types";
-import { calculateMortgageBreakdown, formatUSD } from "../utils/mortgageMath";
+import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 import { LocalProfessionalGuides } from "./LocalProfessionalGuides";
 
 interface Step4AIScenarioSummaryProps {
@@ -45,8 +45,7 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
   const downPaymentPercent = (profile.downPaymentSavings / profile.targetPrice) * 100;
   let recommendedProgram = "Conventional 97 (3% Down)";
   let maxIpcPercent = 3;
-  let dtiSafety = "Optimal (Under 36% DTI)";
-  let dtiColor = "text-[#4A5D4E]";
+  const dtiStatus = getDTIStatus(breakdown.backEndDTI);
 
   if (downPaymentPercent >= 20) {
     recommendedProgram = "Conventional 20% (No PMI)";
@@ -57,14 +56,6 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
   } else if (profile.creditScore < 680) {
     recommendedProgram = "FHA 3.5% (Flexible Credit)";
     maxIpcPercent = 6;
-  }
-
-  if (breakdown.backEndDTI > 43) {
-    dtiSafety = "Stretched (>43% DTI)";
-    dtiColor = "text-[#B94A48]";
-  } else if (breakdown.backEndDTI > 36) {
-    dtiSafety = "Moderate (36%-43% DTI)";
-    dtiColor = "text-[#C18C5D]";
   }
 
   const maxIpcDollar = (profile.targetPrice * maxIpcPercent) / 100;
@@ -186,7 +177,18 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
           </div>
 
           <div className="pt-2 text-xs text-[#9A9488] flex items-center justify-between">
-            <span>Back-End DTI Ratio: <strong className={dtiColor}>{breakdown.backEndDTI}% ({dtiSafety})</strong></span>
+            <span className="flex items-center gap-1.5">
+              <span>Back-End DTI Ratio:</span>
+              {dtiStatus.isIneligible ? (
+                <span className="text-black font-bold line-through decoration-red-600 decoration-2">
+                  {breakdown.backEndDTI}% (most loan programs ineligible over 50% DTI)
+                </span>
+              ) : dtiStatus.isHigh ? (
+                <strong className="text-red-600 font-bold">{breakdown.backEndDTI}% (High)</strong>
+              ) : (
+                <strong className={dtiStatus.colorClass}>{breakdown.backEndDTI}% ({dtiStatus.label})</strong>
+              )}
+            </span>
             <span>Est. Loan: <strong>{formatUSD(breakdown.loanAmount)}</strong></span>
           </div>
         </div>

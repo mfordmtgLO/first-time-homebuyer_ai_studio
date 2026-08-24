@@ -471,3 +471,69 @@ export function calculateIPCLimits(params: {
     guidelineSummary,
   };
 }
+
+export interface DTIStatusInfo {
+  tier: "optimal" | "moderate" | "high" | "ineligible";
+  label: string;
+  badgeLabel: string;
+  isHigh: boolean;
+  isIneligible: boolean;
+  colorClass: string;
+  badgeClass: string;
+  ineligibleMessage: string;
+}
+
+/**
+ * Returns formatted status, labels, and styles for Debt-to-Income (DTI) ratio
+ * - Optimal: <= 36.00%
+ * - Moderate: 36.01% - 45.00%
+ * - High: 45.01% - 50.00% (Red text)
+ * - Ineligible: > 50.00% (Black text with red strikethrough line "most loan programs ineligible over 50% DTI")
+ */
+export function getDTIStatus(dti: number): DTIStatusInfo {
+  if (dti <= 36) {
+    return {
+      tier: "optimal",
+      label: "Optimal",
+      badgeLabel: "Safe 28/36 Rule",
+      isHigh: false,
+      isIneligible: false,
+      colorClass: "text-[#4A5D4E]",
+      badgeClass: "text-[#4A5D4E] bg-white border-[#EAE7E0]",
+      ineligibleMessage: "",
+    };
+  } else if (dti <= 45) {
+    return {
+      tier: "moderate",
+      label: "Moderate",
+      badgeLabel: "Moderate DTI",
+      isHigh: false,
+      isIneligible: false,
+      colorClass: "text-[#C18C5D]",
+      badgeClass: "text-[#C18C5D] bg-amber-50 border-amber-200",
+      ineligibleMessage: "",
+    };
+  } else if (dti <= 50) {
+    return {
+      tier: "high",
+      label: "High",
+      badgeLabel: "High DTI (45.01% - 50%)",
+      isHigh: true,
+      isIneligible: false,
+      colorClass: "text-red-600 font-bold",
+      badgeClass: "text-red-600 bg-red-50 border-red-200 font-bold",
+      ineligibleMessage: "",
+    };
+  } else {
+    return {
+      tier: "ineligible",
+      label: "most loan programs ineligible over 50% DTI",
+      badgeLabel: "most loan programs ineligible over 50% DTI",
+      isHigh: false,
+      isIneligible: true,
+      colorClass: "text-black font-bold line-through decoration-red-600 decoration-2",
+      badgeClass: "text-black bg-red-50 border-red-300 font-bold",
+      ineligibleMessage: "most loan programs ineligible over 50% DTI",
+    };
+  }
+}

@@ -15,7 +15,7 @@ import {
   ShieldCheck
 } from "lucide-react";
 import { FinancialProfile } from "../types";
-import { calculateMortgageBreakdown, formatUSD } from "../utils/mortgageMath";
+import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 
 interface InstantAffordabilityCalculatorProps {
   profile: FinancialProfile;
@@ -604,50 +604,75 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             </div>
 
             {/* DTI Ratios Bar */}
-            <div className="bg-[#F1EFE9] rounded-xl p-4 border border-[#EAE7E0] space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#2D362E]">Underwriting DTI Ratios</span>
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                  breakdown.backEndDTI <= 36 
-                    ? "bg-white text-[#4A5D4E] border border-[#EAE7E0]"
-                    : breakdown.backEndDTI <= 43
-                    ? "bg-[#C18C5D]/10 text-[#C18C5D] border border-[#C18C5D]/20"
-                    : "bg-rose-50 text-rose-700 border border-rose-200"
-                }`}>
-                  {breakdown.backEndDTI <= 36 ? "Optimal Tier (≤36%)" : breakdown.backEndDTI <= 43 ? "Moderate Risk (≤43%)" : "High Debt Risk (>43%)"}
-                </span>
-              </div>
+            {(() => {
+              const backEndDtiStatus = getDTIStatus(breakdown.backEndDTI);
+              return (
+                <div className="bg-[#F1EFE9] rounded-xl p-4 border border-[#EAE7E0] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#2D362E]">Underwriting DTI Ratios</span>
+                    {backEndDtiStatus.isIneligible ? (
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-red-50 text-black border border-red-300">
+                        <span className="line-through decoration-red-600 decoration-2">most loan programs ineligible over 50% DTI</span>
+                      </span>
+                    ) : (
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                        backEndDtiStatus.isHigh
+                          ? "bg-red-50 text-red-600 border border-red-200"
+                          : breakdown.backEndDTI <= 36 
+                          ? "bg-white text-[#4A5D4E] border border-[#EAE7E0]"
+                          : "bg-[#C18C5D]/10 text-[#C18C5D] border border-[#C18C5D]/20"
+                      }`}>
+                        {backEndDtiStatus.isHigh ? "High DTI (45.01% - 50%)" : breakdown.backEndDTI <= 36 ? "Optimal Tier (≤36%)" : "Moderate Risk (36.01% - 45%)"}
+                      </span>
+                    )}
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                  <div className="flex justify-between text-[#606C5D] mb-1">
-                    <span>Front-End DTI (Housing Only)</span>
-                    <strong className="text-[#2D362E]">{breakdown.frontEndDTI}%</strong>
-                  </div>
-                  <div className="w-full h-1.5 bg-[#DEDAD2] rounded-full overflow-hidden">
-                    <div 
-                      style={{ width: `${Math.min(100, (breakdown.frontEndDTI / 28) * 100)}%` }} 
-                      className={`h-full ${breakdown.frontEndDTI <= 28 ? "bg-[#4A5D4E]" : "bg-[#C18C5D]"}`}
-                    />
-                  </div>
-                  <span className="text-[10px] text-[#9A9488] mt-0.5 block">Standard benchmark: ≤28%</span>
-                </div>
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <div className="flex justify-between text-[#606C5D] mb-1">
+                        <span>Front-End DTI (Housing Only)</span>
+                        <strong className="text-[#2D362E]">{breakdown.frontEndDTI}%</strong>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#DEDAD2] rounded-full overflow-hidden">
+                        <div 
+                          style={{ width: `${Math.min(100, (breakdown.frontEndDTI / 28) * 100)}%` }} 
+                          className={`h-full ${breakdown.frontEndDTI <= 28 ? "bg-[#4A5D4E]" : "bg-[#C18C5D]"}`}
+                        />
+                      </div>
+                      <span className="text-[10px] text-[#9A9488] mt-0.5 block">Standard benchmark: ≤28%</span>
+                    </div>
 
-                <div>
-                  <div className="flex justify-between text-[#606C5D] mb-1">
-                    <span>Back-End DTI (Housing + Debts)</span>
-                    <strong className="text-[#2D362E]">{breakdown.backEndDTI}%</strong>
+                    <div>
+                      <div className="flex justify-between text-[#606C5D] mb-1">
+                        <span>Back-End DTI (Housing + Debts)</span>
+                        {backEndDtiStatus.isIneligible ? (
+                          <strong className="text-black font-bold line-through decoration-red-600 decoration-2">
+                            {breakdown.backEndDTI}%
+                          </strong>
+                        ) : backEndDtiStatus.isHigh ? (
+                          <strong className="text-red-600 font-bold">{breakdown.backEndDTI}% (High)</strong>
+                        ) : (
+                          <strong className={breakdown.backEndDTI <= 36 ? "text-[#4A5D4E]" : "text-[#C18C5D]"}>{breakdown.backEndDTI}%</strong>
+                        )}
+                      </div>
+                      <div className="w-full h-1.5 bg-[#DEDAD2] rounded-full overflow-hidden">
+                        <div 
+                          style={{ width: `${Math.min(100, (breakdown.backEndDTI / 50) * 100)}%` }} 
+                          className={`h-full ${breakdown.backEndDTI <= 36 ? "bg-[#4A5D4E]" : breakdown.backEndDTI <= 45 ? "bg-[#C18C5D]" : "bg-red-600"}`}
+                        />
+                      </div>
+                      {backEndDtiStatus.isIneligible ? (
+                        <span className="text-[10px] text-black font-semibold line-through decoration-red-600 decoration-2 mt-0.5 block">
+                          most loan programs ineligible over 50% DTI
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-[#9A9488] mt-0.5 block">Standard benchmark: ≤36-45%</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="w-full h-1.5 bg-[#DEDAD2] rounded-full overflow-hidden">
-                    <div 
-                      style={{ width: `${Math.min(100, (breakdown.backEndDTI / 43) * 100)}%` }} 
-                      className={`h-full ${breakdown.backEndDTI <= 36 ? "bg-[#4A5D4E]" : breakdown.backEndDTI <= 43 ? "bg-[#C18C5D]" : "bg-rose-500"}`}
-                    />
-                  </div>
-                  <span className="text-[10px] text-[#9A9488] mt-0.5 block">Standard benchmark: ≤36-43%</span>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
 
           {/* Purchasing Power Tier Matrix */}

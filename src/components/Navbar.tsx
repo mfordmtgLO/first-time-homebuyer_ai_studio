@@ -101,14 +101,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "hero", label: "Home / Overview", shortLabel: "Overview", icon: Home, mode: "website" },
     { id: "calculator", label: "Step 1: Calculate Buying Power", shortLabel: "Step 1: Buying Power", icon: Calculator, mode: "website" },
     { id: "roadmap", label: "Step 2: Explore Roadmap", shortLabel: "Step 2: Roadmap", icon: Compass, mode: "website" },
-    { id: "grants", label: "Grants & DPA Finder", shortLabel: "Grants & DPA", icon: Award, mode: "website" },
     { id: "dashboard", label: "Step 3: Buyer Dashboard", shortLabel: "Step 3: Dashboard", icon: LayoutDashboard, mode: "dashboard" },
     { id: "step4_ai_plan", label: "Step 4: AI Plan & Guides", shortLabel: "Step 4: AI Plan", icon: Sparkles, badge: "AI Plan", mode: "dashboard", highlight: true },
+    { id: "grants", label: "Grants & DPA Finder", shortLabel: "Grants & DPA", icon: Award, mode: "website" },
     { id: "properties", label: `Saved Homes (${savedCount})`, shortLabel: `Homes (${savedCount})`, icon: Building, mode: "dashboard" },
     { id: "mortgagelab", label: "Mortgage Lab & PITI", shortLabel: "Mortgage Lab", icon: TrendingUp, mode: "dashboard" },
     { id: "ai_copilot", label: "AI Advisor Copilot", shortLabel: "AI Advisor", icon: Sparkles, badge: "Gemini 3.7", mode: "dashboard" },
     { id: "escrow", label: "Closing & Escrow Tracker", shortLabel: "Closing Tracker", icon: ShieldCheck, mode: "dashboard" },
-    { id: "documents", label: "Document Vault", shortLabel: "Doc Vault", icon: FileText, mode: "dashboard" },
   ];
 
   // Check scroll positions and update arrow button states

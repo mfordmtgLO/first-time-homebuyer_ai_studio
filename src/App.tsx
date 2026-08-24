@@ -12,7 +12,6 @@ import { TourScorecardModal } from "./components/TourScorecardModal";
 import { NewPropertyModal } from "./components/NewPropertyModal";
 import { MortgageLab } from "./components/MortgageLab";
 import { AICopilot } from "./components/AICopilot";
-import { DocumentVault } from "./components/DocumentVault";
 import { EscrowTracker } from "./components/EscrowTracker";
 import { Step4AIScenarioSummary } from "./components/Step4AIScenarioSummary";
 import { LoanOfficerPortal } from "./components/LoanOfficerPortal";
@@ -260,7 +259,7 @@ export default function App() {
             {/* DASHBOARD MODE VIEWS */}
             {currentMode === "dashboard" && (
               <div>
-                {(activeTab === "dashboard" || (!["step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "documents", "escrow"].includes(activeTab))) && (
+                {(activeTab === "dashboard" || (!["step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow"].includes(activeTab))) && (
                   <DashboardOverview
                     profile={profile}
                     setProfile={setProfile}
@@ -305,13 +304,6 @@ export default function App() {
                   <AICopilot
                     profile={profile}
                     properties={properties}
-                  />
-                )}
-
-                {activeTab === "documents" && (
-                  <DocumentVault
-                    documents={documents}
-                    setDocuments={setDocuments}
                   />
                 )}
 

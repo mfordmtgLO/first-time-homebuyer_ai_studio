@@ -187,23 +187,23 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </span>
         </div>
 
-        {/* Card 4: Document Vault Readiness */}
+        {/* Card 4: Step 4 AI Action Plan */}
         <div 
-          onClick={() => onNavigate("documents", "dashboard")}
+          onClick={() => onNavigate("step4_ai_plan", "dashboard")}
           className="cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#9A9488] font-semibold">Pre-Approval Doc Locker</span>
+            <span className="text-xs text-[#9A9488] font-semibold">Step 4: AI Strategic Plan</span>
             <div className="w-8 h-8 rounded-lg bg-[#F1EFE9] text-[#C18C5D] border border-[#EAE7E0] flex items-center justify-center">
-              <FileText className="w-4 h-4" />
+              <Sparkles className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-bold text-[#2D362E]">
-            {readyDocsCount} / {documents.length}
-            <span className="text-xs font-normal text-[#9A9488] ml-1.5">files ready</span>
+            Step 4
+            <span className="text-xs font-normal text-[#9A9488] ml-1.5">Action Plan</span>
           </div>
-          <span className="text-[11px] text-[#C18C5D] font-semibold">
-            {documents.length - readyDocsCount === 0 ? "All verified" : `${documents.length - readyDocsCount} documents pending`}
+          <span className="text-[11px] text-[#4A5D4E] font-semibold flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-[#4A5D4E]" /> AI recommendations & local guides
           </span>
         </div>
       </div>

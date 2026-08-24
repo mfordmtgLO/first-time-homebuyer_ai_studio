@@ -26,7 +26,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   if (currentTab === "hero") activeStep = 0;
   else if (currentTab === "calculator") activeStep = 1;
   else if (currentTab === "roadmap" || currentTab === "grants") activeStep = 2;
-  else if (currentTab === "dashboard" || currentTab === "properties" || currentTab === "mortgagelab" || currentTab === "escrow" || currentTab === "documents") activeStep = 3;
+  else if (currentTab === "dashboard" || currentTab === "properties" || currentTab === "mortgagelab" || currentTab === "escrow") activeStep = 3;
   else if (currentTab === "step4_ai_plan" || currentTab === "ai_copilot") activeStep = 4;
 
   const steps = [

@@ -25,7 +25,16 @@ import {
   UserCheck,
   Building,
   MapPin,
-  ChevronDown
+  ChevronDown,
+  Inbox,
+  Flame,
+  Search,
+  Download,
+  MessageSquare,
+  Clock,
+  Filter,
+  Award,
+  X
 } from "lucide-react";
 import { 
   LoanOfficerProfile, 
@@ -34,7 +43,8 @@ import {
   ProfessionalGuidesState,
   SocialPushCampaign,
   AdCampaignDraft,
-  LoanOfficerAdSettings
+  LoanOfficerAdSettings,
+  CapturedLead
 } from "../types";
 import { SocialPushHub } from "./SocialPushHub";
 import { AdsCampaignHub } from "./AdsCampaignHub";
@@ -53,9 +63,15 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   onViewPublicSite,
 }) => {
   // Current user / viewing context
-  const [activeTab, setActiveTab] = useState<"team_distribution" | "pairings" | "realtor_roster" | "my_profile" | "social_push" | "ad_campaigns">("team_distribution");
+  const [activeTab, setActiveTab] = useState<"leads" | "team_distribution" | "pairings" | "realtor_roster" | "my_profile" | "social_push" | "ad_campaigns">("leads");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Leads CRM State
+  const [leadSearchQuery, setLeadSearchQuery] = useState<string>("");
+  const [leadStatusFilter, setLeadStatusFilter] = useState<string>("all");
+  const [leadLoFilter, setLeadLoFilter] = useState<string>("all");
+  const [viewingTranscriptLead, setViewingTranscriptLead] = useState<CapturedLead | null>(null);
 
   // Modals / Editors
   const [showAddLoModal, setShowAddLoModal] = useState<boolean>(false);
@@ -371,6 +387,93 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     triggerToast(`Active public pairing updated to: ${lo.name} + ${agent.name}`);
   };
 
+  // Lead Management Handlers
+  const handleUpdateLeadStatus = (leadId: string, newStatus: CapturedLead['status']) => {
+    const currentLeads = guidesState.leads || [];
+    const updated = currentLeads.map(l => l.id === leadId ? { ...l, status: newStatus } : l);
+    onUpdateGuidesState({
+      ...guidesState,
+      leads: updated
+    });
+    triggerToast(`Lead status updated to: ${newStatus.toUpperCase()}`);
+  };
+
+  const handleDeleteLead = (leadId: string) => {
+    if (!window.confirm("Are you sure you want to delete this captured lead?")) return;
+    const currentLeads = guidesState.leads || [];
+    const updated = currentLeads.filter(l => l.id !== leadId);
+    onUpdateGuidesState({
+      ...guidesState,
+      leads: updated
+    });
+    triggerToast("Lead removed from database.");
+  };
+
+  const handleExportLeadsCSV = () => {
+    const leads = guidesState.leads || [];
+    if (leads.length === 0) {
+      alert("No leads available to export.");
+      return;
+    }
+
+    const headers = [
+      "ID",
+      "Full Name",
+      "Email",
+      "Phone",
+      "Preferred Contact Time",
+      "Timeline",
+      "Target Price",
+      "Monthly Budget",
+      "Down Payment / Savings",
+      "Grant Interest",
+      "Credit Score Tier",
+      "Preferred Locations",
+      "Property Type",
+      "Assigned Loan Officer",
+      "Lead Source",
+      "Intent Score",
+      "Status",
+      "Notes",
+      "Created At"
+    ];
+
+    const rows = leads.map(l => {
+      const lo = guidesState.loanOfficers.find(o => o.id === l.assignedLoId);
+      return [
+        `"${l.id}"`,
+        `"${l.fullName || ""}"`,
+        `"${l.email || ""}"`,
+        `"${l.phone || ""}"`,
+        `"${l.preferredContactTime || ""}"`,
+        `"${l.timeline || ""}"`,
+        `"${l.targetPriceRange || ""}"`,
+        `"${l.targetMonthlyBudget || ""}"`,
+        `"${l.downPaymentSavings || ""}"`,
+        `"${l.grantInterest ? "Yes" : "No"}"`,
+        `"${l.creditScoreTier || ""}"`,
+        `"${l.preferredLocations || ""}"`,
+        `"${l.propertyType || ""}"`,
+        `"${lo?.name || l.assignedLoId}"`,
+        `"${l.leadSource || ""}"`,
+        `"${l.intentScore || "hot"}"`,
+        `"${l.status || "new"}"`,
+        `"${(l.notes || "").replace(/"/g, '""')}"`,
+        `"${l.createdAt || ""}"`
+      ].join(",");
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `homebuyer_leads_export_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    triggerToast("Leads successfully exported to CSV / CRM format!");
+  };
+
   // URL Helpers
   const origin = typeof window !== "undefined" ? window.location.origin : "https://manus-homebuyer.app";
   const activePairingUrl = `${origin}/?lo=${currentLo.id}&agent=${activeAgent?.id || ""}`;
@@ -453,6 +556,25 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8">
         {/* Navigation Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#EAE7E0]">
+          <button
+            onClick={() => setActiveTab("leads")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "leads"
+                ? "bg-[#4A5D4E] text-white shadow-xs"
+                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
+            }`}
+          >
+            <Inbox className="w-4 h-4 text-[#E7C19D]" />
+            <span>Buyer Leads & Inquiries CRM</span>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              activeTab === "leads" 
+                ? "bg-white/20 text-white" 
+                : "bg-[#4A5D4E]/10 text-[#4A5D4E]"
+            }`}>
+              {guidesState.leads?.length || 0}
+            </span>
+          </button>
+
           {isSuperAdmin && (
             <button
               onClick={() => setActiveTab("team_distribution")}
@@ -527,6 +649,329 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             <span>Meta & Google Ads Campaign Builder</span>
           </button>
         </div>
+
+        {/* Tab 0: Leads & Inquiries CRM */}
+        {activeTab === "leads" && (
+          <div className="space-y-6">
+            {/* Header & Export Banner */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-serif font-bold text-2xl text-[#2D362E]">
+                    Buyer Lead Intake & Inquiries CRM
+                  </h3>
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-300">
+                    24/7 AI Synced
+                  </span>
+                </div>
+                <p className="text-xs text-[#606C5D] mt-1 max-w-2xl">
+                  Real-time prospective homebuyers qualified by the interactive AI Intake Chatbot, social ads, and co-branded marketing landing pages. Includes complete buyer blueprints and chat transcripts.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={handleExportLeadsCSV}
+                  className="px-4 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Download className="w-4 h-4 text-[#E7C19D]" />
+                  <span>Export to CSV / CRM</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            {(() => {
+              const allLeads = guidesState.leads || [];
+              const hotCount = allLeads.filter(l => l.intentScore === "hot" || l.timeline.includes("30-60")).length;
+              const grantsCount = allLeads.filter(l => l.grantInterest).length;
+              const newCount = allLeads.filter(l => l.status === "new").length;
+              const preApprovedCount = allLeads.filter(l => l.status === "pre_approved").length;
+
+              return (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white p-4 rounded-2xl border border-[#EAE7E0] shadow-2xs">
+                    <div className="flex items-center justify-between text-xs text-[#606C5D]">
+                      <span>Total Captured Leads</span>
+                      <Inbox className="w-4 h-4 text-[#4A5D4E]" />
+                    </div>
+                    <div className="text-2xl font-serif font-bold text-[#2D362E] mt-1">{allLeads.length}</div>
+                    <div className="text-[10px] text-emerald-600 font-semibold mt-1">From all channels & pairings</div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-2xl border border-[#EAE7E0] shadow-2xs">
+                    <div className="flex items-center justify-between text-xs text-[#606C5D]">
+                      <span>Hot / Ready Now</span>
+                      <Flame className="w-4 h-4 text-orange-500" />
+                    </div>
+                    <div className="text-2xl font-serif font-bold text-orange-600 mt-1">{hotCount}</div>
+                    <div className="text-[10px] text-[#606C5D] mt-1">Purchasing within 30-60 days</div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-2xl border border-[#EAE7E0] shadow-2xs">
+                    <div className="flex items-center justify-between text-xs text-[#606C5D]">
+                      <span>Grant / DPA Inquiries</span>
+                      <Award className="w-4 h-4 text-[#C18C5D]" />
+                    </div>
+                    <div className="text-2xl font-serif font-bold text-[#C18C5D] mt-1">{grantsCount}</div>
+                    <div className="text-[10px] text-[#606C5D] mt-1">First-time buyer grant seekers</div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-2xl border border-[#EAE7E0] shadow-2xs">
+                    <div className="flex items-center justify-between text-xs text-[#606C5D]">
+                      <span>Action Needed (New)</span>
+                      <Clock className="w-4 h-4 text-blue-500" />
+                    </div>
+                    <div className="text-2xl font-serif font-bold text-blue-600 mt-1">{newCount}</div>
+                    <div className="text-[10px] text-[#606C5D] mt-1">{preApprovedCount} pre-approved to date</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Filter & Search Bar */}
+            <div className="bg-white p-4 rounded-2xl border border-[#EAE7E0] flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs">
+              <div className="relative w-full md:w-80">
+                <Search className="w-4 h-4 text-[#9A9488] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text"
+                  placeholder="Search lead name, email, phone, city..."
+                  value={leadSearchQuery}
+                  onChange={(e) => setLeadSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+                {/* Status Filter */}
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-[#606C5D] font-semibold">Status:</span>
+                  <select
+                    value={leadStatusFilter}
+                    onChange={(e) => setLeadStatusFilter(e.target.value)}
+                    className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-2.5 py-1.5 text-xs font-semibold text-[#2D362E] focus:outline-none"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="new">New (Uncontacted)</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="pre_approved">Pre-Approved</option>
+                    <option value="in_escrow">In Escrow</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+
+                {/* Loan Officer Filter */}
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-[#606C5D] font-semibold">Assigned LO:</span>
+                  <select
+                    value={leadLoFilter}
+                    onChange={(e) => setLeadLoFilter(e.target.value)}
+                    className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-2.5 py-1.5 text-xs font-semibold text-[#2D362E] focus:outline-none"
+                  >
+                    <option value="all">All Loan Officers</option>
+                    {guidesState.loanOfficers.map(lo => (
+                      <option key={lo.id} value={lo.id}>{lo.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Leads Cards Grid */}
+            {(() => {
+              const allLeads = guidesState.leads || [];
+              const filtered = allLeads.filter(lead => {
+                const matchQuery = !leadSearchQuery || 
+                  lead.fullName.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
+                  lead.email.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
+                  lead.phone.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
+                  lead.preferredLocations.toLowerCase().includes(leadSearchQuery.toLowerCase());
+                
+                const matchStatus = leadStatusFilter === "all" || lead.status === leadStatusFilter;
+                const matchLo = leadLoFilter === "all" || lead.assignedLoId === leadLoFilter;
+
+                return matchQuery && matchStatus && matchLo;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="bg-white p-12 rounded-3xl border border-[#EAE7E0] text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-[#FAF9F5] text-[#4A5D4E] flex items-center justify-center mx-auto">
+                      <Inbox className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-serif font-bold text-lg text-[#2D362E]">No Leads Match Your Filters</h4>
+                    <p className="text-xs text-[#606C5D] max-w-md mx-auto">
+                      Try adjusting your search query or status filter, or test the 24/7 AI Lead Intake Chatbot on the public homebuyer site to generate a new live lead.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {filtered.map(lead => {
+                    const assignedLo = guidesState.loanOfficers.find(o => o.id === lead.assignedLoId);
+                    const assignedAgent = guidesState.agentRoster.find(a => a.id === lead.assignedAgentId);
+
+                    return (
+                      <div 
+                        key={lead.id} 
+                        className="bg-white rounded-3xl border border-[#EAE7E0] p-6 shadow-sm hover:shadow-md transition-shadow space-y-5"
+                      >
+                        {/* Top Row: Buyer Name & Status Controls */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#EAE7E0]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-2xl bg-[#4A5D4E] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                              {lead.fullName.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-base text-[#2D362E]">{lead.fullName}</h4>
+                                {lead.intentScore === "hot" && (
+                                  <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+                                    <Flame className="w-3 h-3 text-orange-600 fill-orange-500" />
+                                    <span>Hot Lead</span>
+                                  </span>
+                                )}
+                                {lead.grantInterest && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                    Grant Seeking
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-[#606C5D] mt-0.5 flex-wrap">
+                                <span>{lead.leadSource}</span>
+                                <span>•</span>
+                                <span>{new Date(lead.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Status Selector Dropdown */}
+                          <div className="flex items-center gap-2 self-start sm:self-auto">
+                            <span className="text-[11px] font-semibold text-[#606C5D]">Status:</span>
+                            <select
+                              value={lead.status}
+                              onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value as CapturedLead['status'])}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border focus:outline-none transition-colors ${
+                                lead.status === "new"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : lead.status === "pre_approved"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : lead.status === "contacted"
+                                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                                      : lead.status === "in_escrow"
+                                        ? "bg-purple-50 text-purple-700 border-purple-200"
+                                        : "bg-gray-100 text-gray-700 border-gray-200"
+                              }`}
+                            >
+                              <option value="new">🔵 New / Uncontacted</option>
+                              <option value="contacted">🟡 Contacted</option>
+                              <option value="pre_approved">🟢 Pre-Approved</option>
+                              <option value="in_escrow">🟣 In Escrow</option>
+                              <option value="closed">🏁 Closed</option>
+                              <option value="archived">⚪ Archived</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Middle Grid: Buyer Financial Profile & Goal Parameters */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                          <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0]/80">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#9A9488] block">Timeline</span>
+                            <span className="font-bold text-[#2D362E] block mt-0.5">{lead.timeline}</span>
+                          </div>
+
+                          <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0]/80">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#9A9488] block">Target Price / Budget</span>
+                            <span className="font-bold text-[#4A5D4E] block mt-0.5">{lead.targetPriceRange}</span>
+                          </div>
+
+                          <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0]/80">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#9A9488] block">Down Payment</span>
+                            <span className="font-semibold text-[#2D362E] block mt-0.5">{lead.downPaymentSavings}</span>
+                          </div>
+
+                          <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0]/80">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#9A9488] block">Credit Tier</span>
+                            <span className="font-semibold text-[#2D362E] block mt-0.5">{lead.creditScoreTier}</span>
+                          </div>
+
+                          <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0]/80">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#9A9488] block">Target Areas</span>
+                            <span className="font-semibold text-[#2D362E] block mt-0.5 truncate" title={lead.preferredLocations}>
+                              {lead.preferredLocations}
+                            </span>
+                          </div>
+
+                          <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0]/80">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#9A9488] block">Best Time</span>
+                            <span className="font-semibold text-[#2D362E] block mt-0.5 truncate" title={lead.preferredContactTime}>
+                              {lead.preferredContactTime}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Attribution & Action Bar */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                          <div className="flex items-center gap-4 text-xs text-[#606C5D] flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold">LO Assigned:</span>
+                              <span className="font-bold text-[#2D362E]">{assignedLo?.name || "Mike Ford"}</span>
+                            </div>
+                            {assignedAgent && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold">Partner Agent:</span>
+                                <span className="font-bold text-[#2D362E]">{assignedAgent.name}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 1-Click Action Buttons */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <a
+                              href={`tel:${lead.phone}`}
+                              className="px-3 py-1.5 bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
+                            >
+                              <Phone className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                              <span>{lead.phone}</span>
+                            </a>
+
+                            <a
+                              href={`mailto:${lead.email}?subject=Your First-Time Homebuyer Pre-Approval Blueprint&body=Hi ${lead.fullName.split(" ")[0]},%0D%0A%0D%0AThank you for completing your intake on our portal. Based on your target budget of ${lead.targetPriceRange} and timeline (${lead.timeline}), we have prepared your customized mortgage and grant options.%0D%0A%0D%0ALet's connect at your preferred time: ${lead.preferredContactTime}.%0D%0A%0D%0ABest regards,%0D%0A${assignedLo?.name || "Mike Ford"}%0D%0ANMLS #${assignedLo?.nmlsId || "184209"}`}
+                              className="px-3 py-1.5 bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
+                            >
+                              <Mail className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                              <span>Email Blueprint</span>
+                            </a>
+
+                            {lead.chatTranscript && lead.chatTranscript.length > 0 && (
+                              <button
+                                onClick={() => setViewingTranscriptLead(lead)}
+                                className="px-3 py-1.5 bg-[#F1EFE9] hover:bg-[#EAE7E0] text-[#4A5D4E] font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                <span>Chat Transcript ({lead.chatTranscript.length})</span>
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => handleDeleteLead(lead.id)}
+                              className="p-1.5 text-[#9A9488] hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                              title="Delete lead"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Tab 1: Team LO Roster & Distribution (Admin for Mike Ford) */}
         {activeTab === "team_distribution" && (
@@ -1486,6 +1931,107 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Transcript Modal */}
+      {viewingTranscriptLead && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#EAE7E0] overflow-hidden">
+            {/* Header */}
+            <div className="bg-[#4A5D4E] p-4 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center font-bold text-sm">
+                  {viewingTranscriptLead.fullName.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">{viewingTranscriptLead.fullName} • AI Chat Transcript</h3>
+                  <p className="text-[11px] text-white/80">
+                    {viewingTranscriptLead.leadSource} • {new Date(viewingTranscriptLead.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setViewingTranscriptLead(null)}
+                className="p-1 text-white/80 hover:text-white rounded-lg hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Buyer Goal Summary Banner */}
+            <div className="bg-[#FAF9F5] p-4 border-b border-[#EAE7E0] grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs shrink-0">
+              <div>
+                <span className="text-[10px] text-[#9A9488] font-bold uppercase">Timeline</span>
+                <p className="font-semibold text-[#2D362E]">{viewingTranscriptLead.timeline}</p>
+              </div>
+              <div>
+                <span className="text-[10px] text-[#9A9488] font-bold uppercase">Target Price</span>
+                <p className="font-semibold text-[#4A5D4E]">{viewingTranscriptLead.targetPriceRange}</p>
+              </div>
+              <div>
+                <span className="text-[10px] text-[#9A9488] font-bold uppercase">Down Payment</span>
+                <p className="font-semibold text-[#2D362E]">{viewingTranscriptLead.downPaymentSavings}</p>
+              </div>
+              <div>
+                <span className="text-[10px] text-[#9A9488] font-bold uppercase">Credit Tier</span>
+                <p className="font-semibold text-[#2D362E]">{viewingTranscriptLead.creditScoreTier}</p>
+              </div>
+            </div>
+
+            {/* Transcript Messages Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 bg-[#F9F8F4]">
+              {viewingTranscriptLead.chatTranscript && viewingTranscriptLead.chatTranscript.length > 0 ? (
+                viewingTranscriptLead.chatTranscript.map((msg, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`flex items-start gap-2.5 ${msg.sender === "user" ? "flex-row-reverse" : ""}`}
+                  >
+                    <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${
+                      msg.sender === "user" ? "bg-[#4A5D4E] text-white" : "bg-[#C18C5D] text-white"
+                    }`}>
+                      {msg.sender === "user" ? "B" : "AI"}
+                    </div>
+                    <div className={`max-w-[80%] p-3 rounded-2xl text-xs leading-relaxed ${
+                      msg.sender === "user" 
+                        ? "bg-[#4A5D4E] text-white font-medium" 
+                        : "bg-white border border-[#EAE7E0] text-[#2D362E]"
+                    }`}>
+                      <div className="whitespace-pre-line">{msg.text}</div>
+                      {msg.time && (
+                        <div className={`text-[9px] mt-1 text-right ${msg.sender === "user" ? "text-white/70" : "text-[#9A9488]"}`}>
+                          {msg.time}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-xs text-[#9A9488]">
+                  No chat messages logged for this lead.
+                </div>
+              )}
+            </div>
+
+            {/* Footer Action Bar */}
+            <div className="bg-white p-3 border-t border-[#EAE7E0] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3 text-xs">
+                <a 
+                  href={`tel:${viewingTranscriptLead.phone}`}
+                  className="font-bold text-[#4A5D4E] hover:underline flex items-center gap-1"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Call ({viewingTranscriptLead.phone})</span>
+                </a>
+              </div>
+              <button
+                onClick={() => setViewingTranscriptLead(null)}
+                className="px-4 py-2 bg-[#2D362E] text-white text-xs font-bold rounded-xl"
+              >
+                Close Transcript
+              </button>
+            </div>
           </div>
         </div>
       )}

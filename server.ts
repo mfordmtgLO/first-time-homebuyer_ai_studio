@@ -89,6 +89,64 @@ Key general guidelines:
     }
   });
 
+  // API Route: Lead Intake Chatbot & Pre-Qualification Assistant
+  app.post("/api/gemini/lead-intake", async (req, res) => {
+    try {
+      const { message, leadData, chatHistory, loName, loNmls, agentName } = req.body;
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const ai = getGeminiClient();
+      const systemInstruction = `You are the interactive 24/7 Lead Intake & Pre-Qualification AI Assistant for ${loName || "Mike Ford"} (${loNmls ? "NMLS #" + loNmls : "Senior Loan Officer"}) and paired Real Estate Specialist ${agentName || "Sarah Jenkins"}.
+Your primary goal is to guide prospective first-time homebuyers through an engaging, frictionless, consultative intake process to discover their purchasing power, explore down payment grant opportunities, and collect their profile to generate a Custom Pre-Approval Blueprint.
+
+Rules for response:
+1. Keep responses warm, encouraging, conversational, and concise (under 3-4 short paragraphs or bullet points).
+2. If the user asks specific mortgage or market questions (rates, down payment, FHA vs Conventional, DPA grants, seller concessions), give a clear, accurate, jargon-free answer.
+3. Positively reassure the buyer that first-time homebuying with 3-3.5% down or down payment assistance is very achievable.
+4. Seamlessly transition back to the next step of their intake questionnaire if they haven't finished providing their timeline, target price/budget, down payment, or contact details.
+5. Emphasize that their information is strictly confidential and used only by ${loName || "their local Loan Officer"} and ${agentName || "licensed Realtor"} to craft their customized mortgage options.`;
+
+      let promptContent = `Buyer Profile Context collected so far:\n`;
+      promptContent += `- Full Name: ${leadData?.fullName || "Not provided yet"}\n`;
+      promptContent += `- Timeline: ${leadData?.timeline || "Not provided yet"}\n`;
+      promptContent += `- Target Price / Monthly Budget: ${leadData?.targetPriceRange || leadData?.targetMonthlyBudget || "Not provided yet"}\n`;
+      promptContent += `- Down Payment Savings: ${leadData?.downPaymentSavings || "Not provided yet"}\n`;
+      promptContent += `- Grant Interest: ${leadData?.grantInterest ? "Yes, interested in DPA grants" : "Standard loan"}\n`;
+      promptContent += `- Credit Tier: ${leadData?.creditScoreTier || "Not provided yet"}\n`;
+      promptContent += `- Target Locations: ${leadData?.preferredLocations || "Not provided yet"}\n\n`;
+
+      if (chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0) {
+        promptContent += "Recent Conversation:\n";
+        chatHistory.slice(-6).forEach((h: { sender: string; text: string }) => {
+          promptContent += `${h.sender === "user" ? "Homebuyer" : "Intake Bot"}: ${h.text}\n`;
+        });
+        promptContent += `\nCurrent User Message: ${message}`;
+      } else {
+        promptContent += `User Message: ${message}`;
+      }
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: promptContent,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+        },
+      });
+
+      res.json({ reply: response.text || "I'd love to help you determine your purchasing power and grant options! What timeline are you thinking for your home purchase?" });
+    } catch (error: any) {
+      console.error("Lead Intake API error:", error);
+      res.status(500).json({
+        error: error.message || "Failed to process lead intake",
+        fallback: "Thank you for reaching out! We've noted your preferences and our team is ready to prepare your custom pre-approval options."
+      });
+    }
+  });
+
+
   // API Route: Offer Strategy Generator
   app.post("/api/gemini/offer-strategy", async (req, res) => {
     try {

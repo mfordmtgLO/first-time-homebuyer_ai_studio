@@ -34,6 +34,7 @@ interface NavbarProps {
   profile: FinancialProfile;
   savedCount: number;
   onOpenLoPortal?: () => void;
+  onOpenLeadBot?: () => void;
   loName?: string;
 }
 
@@ -45,6 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   profile,
   savedCount,
   onOpenLoPortal,
+  onOpenLeadBot,
   loName = "Mike Ford"
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
@@ -198,6 +200,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Quick AI Advisor CTA + LO Portal Trigger */}
           <div className="hidden sm:flex items-center gap-2">
+            {onOpenLeadBot && (
+              <button
+                onClick={onOpenLeadBot}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C18C5D] hover:bg-[#a67448] text-white font-semibold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+                <span>24/7 AI Pre-Approval</span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 setActiveMode("dashboard");

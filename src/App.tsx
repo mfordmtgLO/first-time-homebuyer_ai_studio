@@ -16,6 +16,7 @@ import { EscrowTracker } from "./components/EscrowTracker";
 import { Step4AIScenarioSummary } from "./components/Step4AIScenarioSummary";
 import { LoanOfficerPortal } from "./components/LoanOfficerPortal";
 import { LoanOfficerLoginModal } from "./components/LoanOfficerLoginModal";
+import { LeadIntakeChatbot } from "./components/LeadIntakeChatbot";
 import { 
   INITIAL_PROFILE, 
   INITIAL_PROPERTIES, 
@@ -26,19 +27,22 @@ import {
   INITIAL_AGENT_ROSTER,
   INITIAL_PAIRINGS,
   INITIAL_SOCIAL_CAMPAIGNS,
-  INITIAL_AD_DRAFTS
+  INITIAL_AD_DRAFTS,
+  INITIAL_LEADS
 } from "./data/initialData";
 import { 
   FinancialProfile, 
   PropertyListing, 
   RoadmapMilestone, 
   DocumentItem, 
-  ProfessionalGuidesState 
+  ProfessionalGuidesState,
+  CapturedLead
 } from "./types";
 
 export default function App() {
   const [currentMode, setCurrentMode] = useState<"website" | "dashboard">("website");
   const [activeTab, setActiveTab] = useState<string>("hero");
+  const [isLeadBotOpen, setIsLeadBotOpen] = useState<boolean>(false);
 
   // Global State
   const [profile, setProfile] = useState<FinancialProfile>(INITIAL_PROFILE);
@@ -53,6 +57,9 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.loanOfficers && parsed.pairings) {
+          if (!parsed.leads) {
+            parsed.leads = INITIAL_LEADS;
+          }
           return parsed;
         }
       }
@@ -68,7 +75,8 @@ export default function App() {
       activeAgentId: INITIAL_AGENT_ROSTER[0].id,
       pairings: INITIAL_PAIRINGS,
       socialCampaigns: INITIAL_SOCIAL_CAMPAIGNS,
-      adCampaignDrafts: INITIAL_AD_DRAFTS
+      adCampaignDrafts: INITIAL_AD_DRAFTS,
+      leads: INITIAL_LEADS
     };
   });
 
@@ -154,6 +162,15 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleSaveLead = (newLead: CapturedLead) => {
+    const currentLeads = guidesState.leads || [];
+    const updatedLeads = [newLead, ...currentLeads];
+    setGuidesState(prev => ({
+      ...prev,
+      leads: updatedLeads
+    }));
+  };
+
   const activeAgent = guidesState.agentRoster.find(a => a.id === guidesState.activeAgentId) || guidesState.agentRoster[0];
 
   return (
@@ -167,6 +184,7 @@ export default function App() {
         profile={profile}
         savedCount={properties.length}
         onOpenLoPortal={() => setShowLoPortal(true)}
+        onOpenLeadBot={() => setIsLeadBotOpen(true)}
         loName={guidesState.loanOfficer.name}
       />
 
@@ -208,6 +226,7 @@ export default function App() {
                     onOpenRoadmap={() => handleNavigate("roadmap", "website")}
                     onOpenGrants={() => handleNavigate("grants", "website")}
                     onOpenStep4={() => handleNavigate("step4_ai_plan", "dashboard")}
+                    onOpenLeadBot={() => setIsLeadBotOpen(true)}
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
                     onOpenLoPortal={() => setShowLoPortal(true)}
@@ -363,6 +382,19 @@ export default function App() {
           onLoginSuccess={() => {
             setShowLoPortal(true);
           }}
+        />
+      )}
+
+      {/* 24/7 AI Lead Intake & Pre-Approval Chatbot */}
+      {!showLoPortal && (
+        <LeadIntakeChatbot
+          loanOfficer={guidesState.loanOfficer}
+          agent={activeAgent}
+          financialProfile={profile}
+          onSaveLead={handleSaveLead}
+          isOpen={isLeadBotOpen}
+          onClose={() => setIsLeadBotOpen(false)}
+          onOpen={() => setIsLeadBotOpen(true)}
         />
       )}
     </div>

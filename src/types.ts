@@ -228,6 +228,31 @@ export interface AdCampaignDraft {
   lastSaved: string;
 }
 
+export interface CapturedLead {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  preferredContactTime: string;
+  timeline: string;
+  targetPriceRange: string;
+  targetMonthlyBudget: string;
+  downPaymentSavings: string;
+  grantInterest: boolean;
+  creditScoreTier: string;
+  preferredLocations: string;
+  propertyType: string;
+  assignedLoId: string;
+  assignedAgentId?: string;
+  pairingId?: string;
+  leadSource: string;
+  intentScore: 'hot' | 'warm' | 'exploring';
+  status: 'new' | 'contacted' | 'pre_approved' | 'in_escrow' | 'closed' | 'archived';
+  notes?: string;
+  chatTranscript?: { sender: string; text: string; time: string }[];
+  createdAt: string;
+}
+
 export interface ProfessionalGuidesState {
   currentUserId: string; // "lo-mike-ford" or a downstream LO id
   adminLoanOfficerId: string; // "lo-mike-ford"
@@ -238,6 +263,7 @@ export interface ProfessionalGuidesState {
   pairings: LOPairing[];
   socialCampaigns: SocialPushCampaign[];
   adCampaignDrafts: AdCampaignDraft[];
+  leads?: CapturedLead[];
 }
 
 export interface ChatMessage {

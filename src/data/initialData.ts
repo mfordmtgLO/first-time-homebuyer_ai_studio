@@ -1207,3 +1207,82 @@ export const INITIAL_AD_DRAFTS: import("../types").AdCampaignDraft[] = [
   }
 ];
 
+export const INITIAL_LEADS: import("../types").CapturedLead[] = [
+  {
+    id: "lead-101",
+    fullName: "Tyler & Emily Richardson",
+    email: "tyler.richardson89@gmail.com",
+    phone: "(503) 555-0182",
+    preferredContactTime: "Weekday Evenings (After 5 PM)",
+    timeline: "Ready in 30-60 Days",
+    targetPriceRange: "$420,000 - $460,000",
+    targetMonthlyBudget: "Keep total monthly payment under $3,100/mo",
+    downPaymentSavings: "$45,000 (Approx 10% down)",
+    grantInterest: true,
+    creditScoreTier: "740+ Excellent",
+    preferredLocations: "Portland (SE / Sellwood) or Beaverton",
+    propertyType: "Single Family Craftsman or Modern Townhome",
+    assignedLoId: "lo-mike-ford",
+    assignedAgentId: "agent-sarah-jenkins",
+    pairingId: "pair-mike-sarah",
+    leadSource: "Website AI Intake Chatbot",
+    intentScore: "hot",
+    status: "new",
+    notes: "Both employed in tech & healthcare. Want to verify 2/1 rate buydown vs paying permanent discount points.",
+    chatTranscript: [
+      { sender: "advisor", text: "Welcome! I can help check your true monthly payment and grant eligibility. What is your target timeline?", time: "10:14 AM" },
+      { sender: "user", text: "We are renting until October and want to buy in 30-60 days.", time: "10:15 AM" },
+      { sender: "advisor", text: "Great timeline! What target price range or monthly payment feel comfortable for you?", time: "10:15 AM" },
+      { sender: "user", text: "Around $420k-$460k, keeping monthly under $3,100.", time: "10:16 AM" }
+    ],
+    createdAt: "2026-08-24T06:45:00Z"
+  },
+  {
+    id: "lead-102",
+    fullName: "Marcus Holloway",
+    email: "marcus.holloway@outlook.com",
+    phone: "(503) 555-0941",
+    preferredContactTime: "Saturday Morning",
+    timeline: "3 to 6 Months Out",
+    targetPriceRange: "$350,000 - $400,000",
+    targetMonthlyBudget: "Around $2,500/mo",
+    downPaymentSavings: "$18,000 (3.5% - 5% down)",
+    grantInterest: true,
+    creditScoreTier: "680-719 Good",
+    preferredLocations: "Gresham, Oregon City, or Clackamas",
+    propertyType: "Single Family or Starter Ranch",
+    assignedLoId: "lo-jessica-taylor",
+    assignedAgentId: "agent-marcus-vance",
+    pairingId: "pair-jessica-marcus",
+    leadSource: "Meta Feed Ad Campaign",
+    intentScore: "warm",
+    status: "contacted",
+    notes: "Interested in Oregon Bond Residential Loan Program (Cash Advantaged DPA).",
+    createdAt: "2026-08-23T18:20:00Z"
+  },
+  {
+    id: "lead-103",
+    fullName: "Samantha Wei",
+    email: "samantha.wei@designgroup.org",
+    phone: "(503) 555-0337",
+    preferredContactTime: "Lunchtime (12-1 PM)",
+    timeline: "Found a House / In Escrow Soon",
+    targetPriceRange: "$495,000",
+    targetMonthlyBudget: "$3,400/mo",
+    downPaymentSavings: "$65,000 (13% down)",
+    grantInterest: false,
+    creditScoreTier: "760+ Exceptional",
+    preferredLocations: "Lake Oswego / West Linn",
+    propertyType: "Townhouse",
+    assignedLoId: "lo-mike-ford",
+    assignedAgentId: "agent-elena-rodriguez",
+    pairingId: "pair-mike-elena",
+    leadSource: "Website AI Intake Chatbot",
+    intentScore: "hot",
+    status: "pre_approved",
+    notes: "Pre-approval letter issued for $510k. Toured property on Division St.",
+    createdAt: "2026-08-22T14:10:00Z"
+  }
+];
+
+

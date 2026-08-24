@@ -24,6 +24,7 @@ interface HeroWebsiteProps {
   onOpenRoadmap: () => void;
   onOpenGrants: () => void;
   onOpenStep4?: () => void;
+  onOpenLeadBot?: () => void;
   loanOfficer?: LoanOfficerProfile;
   activeAgent?: RealEstateAgentProfile;
   onOpenLoPortal?: () => void;
@@ -37,6 +38,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
   onOpenRoadmap,
   onOpenGrants,
   onOpenStep4,
+  onOpenLeadBot,
   loanOfficer,
   activeAgent,
   onOpenLoPortal,
@@ -77,6 +79,16 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
                 <span>Calculate Your Buying Power</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
+
+              {onOpenLeadBot && (
+                <button
+                  onClick={onOpenLeadBot}
+                  className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-semibold text-sm shadow-xs hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  <Sparkles className="w-4 h-4 text-white" />
+                  <span>24/7 AI Pre-Approval Assistant</span>
+                </button>
+              )}
 
               <button
                 onClick={onOpenDashboard}

@@ -183,6 +183,7 @@ export default function App() {
         activeMode={currentMode}
         setActiveMode={setCurrentMode}
         profile={profile}
+        setProfile={setProfile}
         savedCount={properties.length}
         onOpenLoPortal={() => setShowLoPortal(true)}
         onOpenLeadBot={() => setIsLeadBotOpen(true)}

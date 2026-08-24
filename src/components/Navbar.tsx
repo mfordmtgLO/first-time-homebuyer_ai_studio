@@ -48,6 +48,7 @@ interface NavbarProps {
   activeMode: "website" | "dashboard";
   setActiveMode: (mode: "website" | "dashboard") => void;
   profile: FinancialProfile;
+  setProfile?: React.Dispatch<React.SetStateAction<FinancialProfile>>;
   savedCount: number;
   onOpenLoPortal?: () => void;
   onOpenLeadBot?: () => void;
@@ -60,6 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeMode,
   setActiveMode,
   profile,
+  setProfile,
   savedCount,
   onOpenLoPortal,
   onOpenLeadBot,
@@ -359,11 +361,62 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Right section: Target Budget and Cash Saved Glance */}
-          <div className="hidden lg:flex items-center gap-3 text-[#606C5D] shrink-0">
-            <span>Target Budget: <strong className="text-[#2D362E]">{formatUSD(profile.targetPrice)}</strong></span>
-            <span className="text-[#DEDAD2]">•</span>
-            <span>Cash Saved: <strong className="text-[#4A5D4E]">{formatUSD(profile.downPaymentSavings)}</strong></span>
+          {/* Right section: Interactive Target Purchase Price & Cash Saved Inputs + Gyrating Dark Green GO Button */}
+          <div className="flex items-center gap-2 text-[#606C5D] shrink-0">
+            {/* Target Purchase Price Input Box */}
+            <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-lg border border-[#DEDAD2] shadow-2xs">
+              <span className="text-[11px] font-semibold text-[#606C5D] hidden sm:inline">Target Price:</span>
+              <span className="text-[11px] font-semibold text-[#606C5D] sm:hidden">Target:</span>
+              <div className="relative flex items-center">
+                <span className="text-[11px] font-bold text-[#2D362E] mr-0.5">$</span>
+                <input
+                  id="navbar-target-price-input"
+                  type="number"
+                  min="0"
+                  step="5000"
+                  value={profile.targetPrice}
+                  onChange={(e) => {
+                    const val = Math.max(0, Number(e.target.value) || 0);
+                    setProfile?.(prev => ({ ...prev, targetPrice: val }));
+                  }}
+                  className="w-18 sm:w-22 text-xs font-bold text-[#2D362E] bg-transparent focus:outline-none focus:text-[#1E3B27]"
+                  title="Enter Target Purchase Price"
+                />
+              </div>
+            </div>
+
+            {/* Cash Saved Input Box */}
+            <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-lg border border-[#DEDAD2] shadow-2xs">
+              <span className="text-[11px] font-semibold text-[#606C5D] hidden sm:inline">Cash Saved:</span>
+              <span className="text-[11px] font-semibold text-[#606C5D] sm:hidden">Saved:</span>
+              <div className="relative flex items-center">
+                <span className="text-[11px] font-bold text-[#4A5D4E] mr-0.5">$</span>
+                <input
+                  id="navbar-cash-saved-input"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={profile.downPaymentSavings}
+                  onChange={(e) => {
+                    const val = Math.max(0, Number(e.target.value) || 0);
+                    setProfile?.(prev => ({ ...prev, downPaymentSavings: val }));
+                  }}
+                  className="w-16 sm:w-20 text-xs font-bold text-[#4A5D4E] bg-transparent focus:outline-none focus:text-[#1E3B27]"
+                  title="Enter Cash Saved for Down Payment"
+                />
+              </div>
+            </div>
+
+            {/* Dark Green Gyrating/Active GO Button */}
+            <button
+              id="navbar-scenario-go-btn"
+              type="button"
+              onClick={() => handleNavClick("calculator", "website")}
+              className="bg-[#183922] hover:bg-[#112a19] active:bg-[#0c1e12] text-white border border-[#2b5736] px-3.5 py-0.5 sm:py-1 rounded-lg font-black text-xs sm:text-sm tracking-widest shadow-md animate-gyrate transition-all flex items-center justify-center cursor-pointer select-none"
+              title="Apply numbers & navigate to Step 1: Calculate Buying Power"
+            >
+              <span className="text-white font-black tracking-widest text-xs sm:text-sm">GO</span>
+            </button>
           </div>
 
         </div>

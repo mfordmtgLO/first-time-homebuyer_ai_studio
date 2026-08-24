@@ -459,32 +459,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Mode Pill Toggle (Dashboard Access) */}
-          <div className="hidden xl:flex items-center bg-[#F1EFE9] p-1 rounded-xl border border-[#EAE7E0] shrink-0">
-            <button
-              id="navbar-step3-4-dashboard-btn"
-              type="button"
-              onClick={() => {
-                setActiveMode("dashboard");
-                if (!["dashboard", "step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow", "documents"].includes(currentTab)) {
-                  setCurrentTab("dashboard");
-                }
-                setMobileMenuOpen(false);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all relative cursor-pointer ${
-                activeMode === "dashboard"
-                  ? "bg-[#4A5D4E] text-white shadow-xs"
-                  : "text-[#606C5D] hover:text-[#2D362E] hover:bg-[#FAF9F5]"
-              }`}
-              title="Step 3 & 4: Buyer Dashboard, AI Plan & Local Professional Guides"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>Step 3 & 4: Dashboard</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C18C5D] absolute top-1 right-1" />
-            </button>
-          </div>
-
           {/* ======================================================== */}
           {/* ENHANCED HORIZONTAL SCROLLING MENU WITH LEFT/RIGHT ARROWS */}
           {/* ======================================================== */}
@@ -636,28 +610,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <RotateCcw className="w-3.5 h-3.5 text-[#C18C5D]" />
             <span>Return to Start / Overview</span>
           </button>
-
-          {/* Mode Switcher for Mobile */}
-          <div className="p-1 bg-[#F1EFE9] rounded-xl border border-[#EAE7E0]">
-            <button
-              id="mobile-step3-4-dashboard-btn"
-              type="button"
-              onClick={() => {
-                setActiveMode("dashboard");
-                if (!["dashboard", "step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow", "documents"].includes(currentTab)) {
-                  setCurrentTab("dashboard");
-                }
-                setMobileMenuOpen(false);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-              className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all ${
-                activeMode === "dashboard" ? "bg-[#4A5D4E] text-white shadow-xs" : "text-[#606C5D]"
-              }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              Step 3 & 4: Buyer Dashboard
-            </button>
-          </div>
 
           {/* Menu Items List */}
           <div className="space-y-1">

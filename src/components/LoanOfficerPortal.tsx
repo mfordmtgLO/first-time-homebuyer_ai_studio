@@ -1,0 +1,1494 @@
+import React, { useState } from "react";
+import { 
+  Users, 
+  UserPlus, 
+  Link, 
+  Share2, 
+  QrCode, 
+  CheckCircle2, 
+  ExternalLink, 
+  Trash2, 
+  Edit3, 
+  Save, 
+  Sparkles, 
+  ShieldCheck, 
+  Phone, 
+  Mail, 
+  Calendar, 
+  Layers, 
+  Copy, 
+  Check, 
+  Send,
+  Sliders,
+  DollarSign,
+  ArrowRight,
+  UserCheck,
+  Building,
+  MapPin,
+  ChevronDown
+} from "lucide-react";
+import { 
+  LoanOfficerProfile, 
+  RealEstateAgentProfile, 
+  LOPairing, 
+  ProfessionalGuidesState,
+  SocialPushCampaign,
+  AdCampaignDraft,
+  LoanOfficerAdSettings
+} from "../types";
+import { SocialPushHub } from "./SocialPushHub";
+import { AdsCampaignHub } from "./AdsCampaignHub";
+
+interface LoanOfficerPortalProps {
+  guidesState: ProfessionalGuidesState;
+  onUpdateGuidesState: (newState: ProfessionalGuidesState) => void;
+  onClose: () => void;
+  onViewPublicSite: () => void;
+}
+
+export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
+  guidesState,
+  onUpdateGuidesState,
+  onClose,
+  onViewPublicSite,
+}) => {
+  // Current user / viewing context
+  const [activeTab, setActiveTab] = useState<"team_distribution" | "pairings" | "realtor_roster" | "my_profile" | "social_push" | "ad_campaigns">("team_distribution");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Modals / Editors
+  const [showAddLoModal, setShowAddLoModal] = useState<boolean>(false);
+  const [editingLo, setEditingLo] = useState<LoanOfficerProfile | null>(null);
+  const [showAddAgentModal, setShowAddAgentModal] = useState<boolean>(false);
+  const [editingAgent, setEditingAgent] = useState<RealEstateAgentProfile | null>(null);
+  const [showAddPairingModal, setShowAddPairingModal] = useState<boolean>(false);
+  const [editingPairing, setEditingPairing] = useState<LOPairing | null>(null);
+
+  // New LO Form State
+  const [newLoForm, setNewLoForm] = useState<Partial<LoanOfficerProfile>>({
+    name: "",
+    title: "Mortgage Advisor",
+    nmlsId: "NMLS #",
+    company: "Pacific Coast Lending Partners",
+    branch: "Pacific Northwest Branch",
+    email: "",
+    phone: "",
+    headshotUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80",
+    bio: "Dedicated mortgage specialist helping first-time homebuyers secure the best rates and state grant programs.",
+    specialties: ["First-Time Homebuyers", "FHA & Conventional", "State DPA Grants"],
+    bookingUrl: "https://calendly.com",
+    licenseStates: ["Oregon", "Washington"]
+  });
+
+  // New Agent Form State
+  const [newAgentForm, setNewAgentForm] = useState<Partial<RealEstateAgentProfile>>({
+    name: "",
+    title: "Buyer Specialist, REALTOR®",
+    brokerage: "",
+    licenseNumber: "OR Lic #",
+    email: "",
+    phone: "",
+    headshotUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80",
+    bio: "Passionate about guiding first-time buyers through neighborhood selection and structuring winning offers.",
+    specialties: ["First-Time Homebuyers", "Offer Negotiation", "Neighborhood Tours"],
+    marketAreas: ["Portland Metro", "Beaverton", "Gresham"],
+    websiteUrl: ""
+  });
+
+  // New Pairing Form State
+  const [newPairingForm, setNewPairingForm] = useState<{ loId: string; agentId: string; title: string; customSlug: string; campaignTag: string }>({
+    loId: guidesState.loanOfficer.id,
+    agentId: guidesState.activeAgentId || guidesState.agentRoster[0]?.id || "",
+    title: "",
+    customSlug: "",
+    campaignTag: "first-time-buyer-blast"
+  });
+
+  const isSuperAdmin = guidesState.currentUserId === guidesState.adminLoanOfficerId || guidesState.loanOfficer.isAdmin;
+  const currentLo = guidesState.loanOfficer;
+  const activeAgent = guidesState.agentRoster.find(a => a.id === guidesState.activeAgentId) || guidesState.agentRoster[0];
+
+  const triggerToast = (msg: string) => {
+    setSuccessToast(msg);
+    setTimeout(() => setSuccessToast(null), 3000);
+  };
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2500);
+  };
+
+  // Switch viewing Loan Officer
+  const handleSwitchLoanOfficer = (loId: string) => {
+    const selectedLo = guidesState.loanOfficers.find(lo => lo.id === loId);
+    if (!selectedLo) return;
+
+    // Find first agent assigned to this LO or default to first in roster
+    const assignedAgent = guidesState.agentRoster.find(a => a.assignedLoIds?.includes(loId)) || guidesState.agentRoster[0];
+
+    const updated: ProfessionalGuidesState = {
+      ...guidesState,
+      currentUserId: loId,
+      loanOfficer: selectedLo,
+      activeAgentId: assignedAgent ? assignedAgent.id : guidesState.activeAgentId
+    };
+
+    onUpdateGuidesState(updated);
+    triggerToast(`Switched active Loan Officer dashboard to: ${selectedLo.name}`);
+  };
+
+  // Add / Save Downstream Loan Officer
+  const handleSaveLoanOfficer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingLo) {
+      const updatedLos = guidesState.loanOfficers.map(lo => lo.id === editingLo.id ? editingLo : lo);
+      const isCurrent = guidesState.loanOfficer.id === editingLo.id;
+      onUpdateGuidesState({
+        ...guidesState,
+        loanOfficers: updatedLos,
+        loanOfficer: isCurrent ? editingLo : guidesState.loanOfficer
+      });
+      setEditingLo(null);
+      triggerToast(`Updated Loan Officer profile for ${editingLo.name}!`);
+    } else {
+      const loId = `lo-${Date.now()}`;
+      const createdLo: LoanOfficerProfile = {
+        id: loId,
+        name: newLoForm.name || "New Loan Officer",
+        title: newLoForm.title || "Mortgage Advisor",
+        nmlsId: newLoForm.nmlsId || "NMLS #000000",
+        company: newLoForm.company || "Pacific Coast Lending Partners",
+        branch: newLoForm.branch || "Pacific Northwest Branch",
+        email: newLoForm.email || "",
+        phone: newLoForm.phone || "",
+        headshotUrl: newLoForm.headshotUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80",
+        bio: newLoForm.bio || "",
+        specialties: newLoForm.specialties || ["First-Time Homebuyers"],
+        bookingUrl: newLoForm.bookingUrl || "https://calendly.com",
+        licenseStates: newLoForm.licenseStates || ["Oregon"],
+        isAdmin: false,
+        parentManagerId: guidesState.adminLoanOfficerId,
+        customSlug: (newLoForm.name || "lo").toLowerCase().replace(/\s+/g, "-")
+      };
+
+      // Also create an initial pairing with the first agent
+      const newPairing: LOPairing = {
+        id: `pair-${Date.now()}`,
+        loId: loId,
+        agentId: guidesState.agentRoster[0]?.id || "agent-sarah-jenkins",
+        title: `${createdLo.name} + ${guidesState.agentRoster[0]?.name || "Agent"}`,
+        customSlug: `${createdLo.customSlug}-and-partner`,
+        campaignTag: "team-distribution",
+        createdAt: new Date().toISOString().split("T")[0],
+        active: true,
+        totalViews: 0,
+        totalLeads: 0
+      };
+
+      onUpdateGuidesState({
+        ...guidesState,
+        loanOfficers: [...guidesState.loanOfficers, createdLo],
+        pairings: [...guidesState.pairings, newPairing]
+      });
+
+      setShowAddLoModal(false);
+      setNewLoForm({
+        name: "",
+        title: "Mortgage Advisor",
+        nmlsId: "NMLS #",
+        company: "Pacific Coast Lending Partners",
+        branch: "Pacific Northwest Branch",
+        email: "",
+        phone: "",
+        headshotUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80",
+        bio: "Dedicated mortgage specialist helping first-time homebuyers secure the best rates and state grant programs.",
+        specialties: ["First-Time Homebuyers", "FHA & Conventional", "State DPA Grants"],
+        bookingUrl: "https://calendly.com",
+        licenseStates: ["Oregon", "Washington"]
+      });
+      triggerToast(`Added downstream Loan Officer: ${createdLo.name} and generated unique portal links!`);
+    }
+  };
+
+  // Delete Downstream Loan Officer
+  const handleDeleteLoanOfficer = (loId: string) => {
+    if (loId === guidesState.adminLoanOfficerId) {
+      alert("Cannot delete the Branch Manager / Super Admin account (Mike Ford).");
+      return;
+    }
+    if (!window.confirm("Are you sure you want to remove this loan officer from the team roster?")) return;
+
+    const remainingLos = guidesState.loanOfficers.filter(lo => lo.id !== loId);
+    const remainingPairings = guidesState.pairings.filter(p => p.loId !== loId);
+    const activeLo = guidesState.loanOfficer.id === loId ? remainingLos[0] : guidesState.loanOfficer;
+
+    onUpdateGuidesState({
+      ...guidesState,
+      loanOfficers: remainingLos,
+      pairings: remainingPairings,
+      loanOfficer: activeLo,
+      currentUserId: activeLo.id
+    });
+    triggerToast("Loan Officer removed from roster.");
+  };
+
+  // Add / Save Realtor Agent
+  const handleSaveAgent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingAgent) {
+      const updatedAgents = guidesState.agentRoster.map(a => a.id === editingAgent.id ? editingAgent : a);
+      onUpdateGuidesState({
+        ...guidesState,
+        agentRoster: updatedAgents
+      });
+      setEditingAgent(null);
+      triggerToast(`Updated Real Estate Agent partner profile for ${editingAgent.name}!`);
+    } else {
+      const agentId = `agent-${Date.now()}`;
+      const createdAgent: RealEstateAgentProfile = {
+        id: agentId,
+        name: newAgentForm.name || "New Partner Agent",
+        title: newAgentForm.title || "Buyer Specialist, REALTOR®",
+        brokerage: newAgentForm.brokerage || "Premier Real Estate Group",
+        licenseNumber: newAgentForm.licenseNumber || "OR Lic #000000",
+        email: newAgentForm.email || "",
+        phone: newAgentForm.phone || "",
+        headshotUrl: newAgentForm.headshotUrl || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80",
+        bio: newAgentForm.bio || "",
+        specialties: newAgentForm.specialties || ["First-Time Homebuyers"],
+        marketAreas: newAgentForm.marketAreas || ["Portland Metro"],
+        websiteUrl: newAgentForm.websiteUrl || "",
+        assignedLoIds: [currentLo.id],
+        customSlug: (newAgentForm.name || "agent").toLowerCase().replace(/\s+/g, "-")
+      };
+
+      // Create a pairing between current LO and new agent
+      const newPairing: LOPairing = {
+        id: `pair-${Date.now()}`,
+        loId: currentLo.id,
+        agentId: agentId,
+        title: `${currentLo.name} + ${createdAgent.name}`,
+        customSlug: `${currentLo.customSlug || "lo"}-and-${createdAgent.customSlug}`,
+        campaignTag: "realtor-partnership",
+        createdAt: new Date().toISOString().split("T")[0],
+        active: true,
+        totalViews: 0,
+        totalLeads: 0
+      };
+
+      onUpdateGuidesState({
+        ...guidesState,
+        agentRoster: [...guidesState.agentRoster, createdAgent],
+        pairings: [...guidesState.pairings, newPairing],
+        activeAgentId: agentId
+      });
+
+      setShowAddAgentModal(false);
+      setNewAgentForm({
+        name: "",
+        title: "Buyer Specialist, REALTOR®",
+        brokerage: "",
+        licenseNumber: "OR Lic #",
+        email: "",
+        phone: "",
+        headshotUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80",
+        bio: "Passionate about guiding first-time buyers through neighborhood selection and structuring winning offers.",
+        specialties: ["First-Time Homebuyers", "Offer Negotiation", "Neighborhood Tours"],
+        marketAreas: ["Portland Metro", "Beaverton", "Gresham"],
+        websiteUrl: ""
+      });
+      triggerToast(`Added ${createdAgent.name} to Real Estate Agent partner roster!`);
+    }
+  };
+
+  // Delete Agent
+  const handleDeleteAgent = (agentId: string) => {
+    if (guidesState.agentRoster.length <= 1) {
+      alert("You must keep at least one real estate agent in your roster.");
+      return;
+    }
+    if (!window.confirm("Are you sure you want to remove this real estate agent from your partner roster?")) return;
+
+    const remainingAgents = guidesState.agentRoster.filter(a => a.id !== agentId);
+    const remainingPairings = guidesState.pairings.filter(p => p.agentId !== agentId);
+    const nextActive = guidesState.activeAgentId === agentId ? remainingAgents[0].id : guidesState.activeAgentId;
+
+    onUpdateGuidesState({
+      ...guidesState,
+      agentRoster: remainingAgents,
+      pairings: remainingPairings,
+      activeAgentId: nextActive
+    });
+    triggerToast("Agent removed from roster.");
+  };
+
+  // Save/Create New Pairing
+  const handleSavePairing = (e: React.FormEvent) => {
+    e.preventDefault();
+    const lo = guidesState.loanOfficers.find(l => l.id === newPairingForm.loId) || currentLo;
+    const agent = guidesState.agentRoster.find(a => a.id === newPairingForm.agentId) || guidesState.agentRoster[0];
+
+    const pairingId = `pair-${Date.now()}`;
+    const slug = newPairingForm.customSlug || `${lo.name.split(" ")[0].toLowerCase()}-and-${agent.name.split(" ")[0].toLowerCase()}`;
+
+    const createdPairing: LOPairing = {
+      id: pairingId,
+      loId: lo.id,
+      agentId: agent.id,
+      title: newPairingForm.title || `${lo.name} + ${agent.name} Homebuyer Team`,
+      customSlug: slug,
+      campaignTag: newPairingForm.campaignTag || "partner-co-marketing",
+      createdAt: new Date().toISOString().split("T")[0],
+      active: true,
+      totalViews: 0,
+      totalLeads: 0
+    };
+
+    onUpdateGuidesState({
+      ...guidesState,
+      pairings: [...guidesState.pairings, createdPairing],
+      loanOfficer: lo,
+      activeAgentId: agent.id
+    });
+
+    setShowAddPairingModal(false);
+    triggerToast(`Created new LO + Realtor pairing: ${createdPairing.title}!`);
+  };
+
+  // Set Active Pairing for live site preview
+  const handleActivatePairing = (pairing: LOPairing) => {
+    const lo = guidesState.loanOfficers.find(l => l.id === pairing.loId) || currentLo;
+    const agent = guidesState.agentRoster.find(a => a.id === pairing.agentId) || guidesState.agentRoster[0];
+
+    onUpdateGuidesState({
+      ...guidesState,
+      loanOfficer: lo,
+      activeAgentId: agent.id,
+      currentUserId: lo.id
+    });
+    triggerToast(`Active public pairing updated to: ${lo.name} + ${agent.name}`);
+  };
+
+  // URL Helpers
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://manus-homebuyer.app";
+  const activePairingUrl = `${origin}/?lo=${currentLo.id}&agent=${activeAgent?.id || ""}`;
+
+  return (
+    <div className="min-h-screen bg-[#F7F6F2] text-[#2D362E] pb-24">
+      {/* Toast Notification */}
+      {successToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#2D362E] text-white px-5 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-4 h-4 text-[#D4A373]" />
+          <span>{successToast}</span>
+        </div>
+      )}
+
+      {/* Top Navigation Bar */}
+      <header className="bg-white border-b border-[#EAE7E0] sticky top-0 z-40 px-4 sm:px-8 py-3.5 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#4A5D4E] text-white flex items-center justify-center font-serif font-bold text-lg shadow-sm">
+              M
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-serif font-bold text-base sm:text-lg text-[#2D362E]">
+                  Loan Officer Management & Distribution Portal
+                </span>
+                {isSuperAdmin ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                    👑 Branch Manager / Admin (Mike Ford)
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
+                    Managed Loan Officer Account
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#606C5D]">
+                Pacific Coast Lending Partners • Distribution, Co-Branded URLs & Ad Campaigns
+              </p>
+            </div>
+          </div>
+
+          {/* User Profile Switcher & Actions */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Switch LO View Dropdown */}
+            <div className="flex items-center gap-1.5 bg-[#F1EFE9] px-3 py-1.5 rounded-xl border border-[#EAE7E0] text-xs">
+              <span className="text-[11px] font-bold text-[#606C5D]">Viewing As:</span>
+              <select
+                value={currentLo.id}
+                onChange={(e) => handleSwitchLoanOfficer(e.target.value)}
+                className="bg-transparent font-bold text-[#2D362E] focus:outline-none cursor-pointer"
+              >
+                {guidesState.loanOfficers.map(lo => (
+                  <option key={lo.id} value={lo.id}>
+                    {lo.name} {lo.isAdmin ? "(Admin)" : ""} • {lo.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={onViewPublicSite}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-[#F9F8F4] text-xs font-semibold text-[#4A5D4E] transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Preview Live Site</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 rounded-xl bg-[#2D362E] hover:bg-[#1E241F] text-white text-xs font-bold transition-colors"
+            >
+              Exit Portal
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#EAE7E0]">
+          {isSuperAdmin && (
+            <button
+              onClick={() => setActiveTab("team_distribution")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                activeTab === "team_distribution"
+                  ? "bg-[#4A5D4E] text-white shadow-xs"
+                  : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Team LO Roster & Distribution ({guidesState.loanOfficers.length})</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setActiveTab("pairings")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "pairings"
+                ? "bg-[#4A5D4E] text-white shadow-xs"
+                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
+            }`}
+          >
+            <Link className="w-4 h-4" />
+            <span>LO + Agent Pairings & Custom Links ({guidesState.pairings.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("realtor_roster")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "realtor_roster"
+                ? "bg-[#4A5D4E] text-white shadow-xs"
+                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
+            }`}
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>Realtor Partner Roster ({guidesState.agentRoster.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("my_profile")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "my_profile"
+                ? "bg-[#4A5D4E] text-white shadow-xs"
+                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
+            }`}
+          >
+            <Edit3 className="w-4 h-4" />
+            <span>Edit My Loan Officer Profile</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("social_push")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "social_push"
+                ? "bg-[#C18C5D] text-white shadow-xs"
+                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
+            }`}
+          >
+            <Share2 className="w-4 h-4" />
+            <span>Social Push & CRM Blasts</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("ad_campaigns")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "ad_campaigns"
+                ? "bg-[#1877F2] text-white shadow-xs"
+                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Meta & Google Ads Campaign Builder</span>
+          </button>
+        </div>
+
+        {/* Tab 1: Team LO Roster & Distribution (Admin for Mike Ford) */}
+        {activeTab === "team_distribution" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm">
+              <div>
+                <h3 className="font-serif font-bold text-2xl text-[#2D362E]">
+                  Branch Team Loan Officers & Portal Distribution
+                </h3>
+                <p className="text-xs text-[#606C5D] mt-1 max-w-2xl">
+                  As Branch Manager (Mike Ford), you can add and manage downstream Loan Officers on your team. Each Loan Officer receives their own independent dashboard and custom branded URL links to market with Realtor partners.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowAddLoModal(true)}
+                className="px-5 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] shrink-0"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Add Downstream Loan Officer</span>
+              </button>
+            </div>
+
+            {/* Team LO Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {guidesState.loanOfficers.map(lo => {
+                const loUrl = `${origin}/?lo=${lo.id}`;
+                const loPairings = guidesState.pairings.filter(p => p.loId === lo.id);
+                const isMike = lo.isAdmin;
+
+                return (
+                  <div 
+                    key={lo.id}
+                    className={`bg-white rounded-3xl border ${
+                      currentLo.id === lo.id ? "border-[#4A5D4E] ring-2 ring-[#4A5D4E]/20" : "border-[#EAE7E0]"
+                    } p-6 space-y-4 shadow-sm flex flex-col justify-between relative overflow-hidden`}
+                  >
+                    {isMike && (
+                      <div className="absolute top-0 right-0 px-3 py-1 bg-amber-500 text-white text-[10px] font-bold rounded-bl-xl uppercase tracking-wider">
+                        Branch Manager / Admin
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3.5">
+                        <img
+                          src={lo.headshotUrl}
+                          alt={lo.name}
+                          referrerPolicy="no-referrer"
+                          className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md shrink-0"
+                        />
+                        <div className="space-y-0.5">
+                          <h4 className="font-serif font-bold text-base text-[#2D362E] flex items-center gap-1.5">
+                            <span>{lo.name}</span>
+                            <ShieldCheck className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                          </h4>
+                          <p className="text-xs font-semibold text-[#4A5D4E]">{lo.title}</p>
+                          <p className="text-[11px] text-[#9A9488]">{lo.nmlsId} • {lo.branch || lo.company}</p>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-[#606C5D] line-clamp-2 leading-relaxed">
+                        {lo.bio}
+                      </p>
+
+                      <div className="space-y-1.5 pt-2 border-t border-[#EAE7E0] text-xs">
+                        <div className="flex items-center justify-between text-[#606C5D]">
+                          <span>Active Realtor Pairings:</span>
+                          <span className="font-bold text-[#2D362E]">{loPairings.length} Partnerships</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[#606C5D]">
+                          <span>Licensed States:</span>
+                          <span className="font-semibold text-[#4A5D4E]">{lo.licenseStates.join(", ")}</span>
+                        </div>
+                      </div>
+
+                      {/* Branded Distribution Link */}
+                      <div className="space-y-1 bg-[#F9F8F4] p-2.5 rounded-xl border border-[#EAE7E0]">
+                        <span className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Distributed Public URL:</span>
+                        <div className="flex items-center justify-between gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={loUrl}
+                            className="bg-white border border-[#EAE7E0] rounded-lg px-2 py-1 text-[11px] font-mono text-[#4A5D4E] w-full focus:outline-none"
+                          />
+                          <button
+                            onClick={() => copyToClipboard(loUrl, `lo-url-${lo.id}`)}
+                            className="p-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] rounded-lg text-xs font-bold text-[#4A5D4E] shrink-0"
+                            title="Copy LO Public Link"
+                          >
+                            {copiedKey === `lo-url-${lo.id}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => handleSwitchLoanOfficer(lo.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                          currentLo.id === lo.id 
+                            ? "bg-[#4A5D4E] text-white" 
+                            : "bg-[#F1EFE9] text-[#2D362E] hover:bg-[#EAE7E0]"
+                        }`}
+                      >
+                        {currentLo.id === lo.id ? "Active Dashboard" : "Switch to Sub-LO View"}
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditingLo(lo)}
+                          className="p-2 text-[#606C5D] hover:text-[#2D362E] hover:bg-[#F1EFE9] rounded-xl transition-colors"
+                          title="Edit Profile"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        {!isMike && (
+                          <button
+                            onClick={() => handleDeleteLoanOfficer(lo.id)}
+                            className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors"
+                            title="Delete LO"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: LO + Real Estate Agent Pairings & Custom Co-Branded Links */}
+        {activeTab === "pairings" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm">
+              <div>
+                <h3 className="font-serif font-bold text-2xl text-[#2D362E]">
+                  Loan Officer + Real Estate Agent Pairings & URLs
+                </h3>
+                <p className="text-xs text-[#606C5D] mt-1 max-w-2xl">
+                  Create unique co-branded marketing partnerships. Each pairing generates a dedicated URL link (`?lo=...&agent=...`) that automatically renders both professionals across the website, buying power calculator, and Step 4 AI plan.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowAddPairingModal(true)}
+                className="px-5 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] shrink-0"
+              >
+                <Link className="w-4 h-4" />
+                <span>Create New LO + Realtor Pairing</span>
+              </button>
+            </div>
+
+            {/* Pairings List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {guidesState.pairings.map(pairing => {
+                const lo = guidesState.loanOfficers.find(l => l.id === pairing.loId) || currentLo;
+                const agent = guidesState.agentRoster.find(a => a.id === pairing.agentId) || guidesState.agentRoster[0];
+                const pairingFullUrl = `${origin}/?lo=${lo.id}&agent=${agent?.id || ""}`;
+                const isActive = guidesState.loanOfficer.id === lo.id && guidesState.activeAgentId === agent?.id;
+
+                return (
+                  <div
+                    key={pairing.id}
+                    className={`bg-white rounded-3xl border ${
+                      isActive ? "border-[#4A5D4E] ring-2 ring-[#4A5D4E]/20" : "border-[#EAE7E0]"
+                    } p-6 space-y-4 shadow-sm flex flex-col justify-between`}
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
+                        <div>
+                          <h4 className="font-serif font-bold text-base text-[#2D362E]">
+                            {pairing.title}
+                          </h4>
+                          <span className="text-[10px] text-[#9A9488] font-mono">
+                            Campaign Tag: #{pairing.campaignTag || "co-marketing"}
+                          </span>
+                        </div>
+                        {isActive && (
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                            Live on Public Site
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Dual Headshots */}
+                      <div className="grid grid-cols-2 gap-3 bg-[#F9F8F4] p-3.5 rounded-2xl border border-[#EAE7E0]">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={lo.headshotUrl}
+                            alt={lo.name}
+                            referrerPolicy="no-referrer"
+                            className="w-12 h-12 rounded-xl object-cover border border-white shadow-xs shrink-0"
+                          />
+                          <div>
+                            <span className="text-[9px] font-bold text-[#4A5D4E] uppercase">Loan Officer</span>
+                            <p className="font-bold text-xs text-[#2D362E]">{lo.name}</p>
+                            <p className="text-[10px] text-[#9A9488]">{lo.nmlsId}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={agent?.headshotUrl}
+                            alt={agent?.name}
+                            referrerPolicy="no-referrer"
+                            className="w-12 h-12 rounded-xl object-cover border border-white shadow-xs shrink-0"
+                          />
+                          <div>
+                            <span className="text-[9px] font-bold text-[#C18C5D] uppercase">Real Estate Agent</span>
+                            <p className="font-bold text-xs text-[#2D362E]">{agent?.name}</p>
+                            <p className="text-[10px] text-[#9A9488]">{agent?.brokerage}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* URL Box */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">
+                          Co-Branded Marketing Link:
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={pairingFullUrl}
+                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs font-mono text-[#4A5D4E] focus:outline-none"
+                          />
+                          <button
+                            onClick={() => copyToClipboard(pairingFullUrl, `pair-url-${pairing.id}`)}
+                            className="px-3 py-1.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl transition-colors shrink-0 flex items-center gap-1"
+                          >
+                            {copiedKey === `pair-url-${pairing.id}` ? (
+                              <>
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => handleActivatePairing(pairing)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                          isActive 
+                            ? "bg-emerald-600 text-white" 
+                            : "bg-[#F1EFE9] text-[#2D362E] hover:bg-[#EAE7E0]"
+                        }`}
+                      >
+                        {isActive ? "Currently Active" : "Set as Active Site Guides"}
+                      </button>
+
+                      <div className="flex items-center gap-2 text-xs text-[#606C5D]">
+                        <span>Views: {pairing.totalViews || 0}</span>
+                        <span>•</span>
+                        <span>Leads: {pairing.totalLeads || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Real Estate Agent Partner Roster */}
+        {activeTab === "realtor_roster" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm">
+              <div>
+                <h3 className="font-serif font-bold text-2xl text-[#2D362E]">
+                  Real Estate Agent Partner Roster
+                </h3>
+                <p className="text-xs text-[#606C5D] mt-1 max-w-2xl">
+                  Manage your verified Realtor agent partners. Add new agent profiles, headshots, contact information, and market areas to pair with your loan officer team.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowAddAgentModal(true)}
+                className="px-5 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] shrink-0"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Add Real Estate Agent Partner</span>
+              </button>
+            </div>
+
+            {/* Agent Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {guidesState.agentRoster.map(agent => {
+                const isSelected = guidesState.activeAgentId === agent.id;
+
+                return (
+                  <div
+                    key={agent.id}
+                    className={`bg-white rounded-3xl border ${
+                      isSelected ? "border-[#C18C5D] ring-2 ring-[#C18C5D]/20" : "border-[#EAE7E0]"
+                    } p-6 space-y-4 shadow-sm flex flex-col justify-between`}
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3.5">
+                        <img
+                          src={agent.headshotUrl}
+                          alt={agent.name}
+                          referrerPolicy="no-referrer"
+                          className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md shrink-0"
+                        />
+                        <div className="space-y-0.5">
+                          <h4 className="font-serif font-bold text-base text-[#2D362E]">
+                            {agent.name}
+                          </h4>
+                          <p className="text-xs font-semibold text-[#C18C5D]">{agent.title}</p>
+                          <p className="text-[11px] text-[#9A9488]">{agent.brokerage} • {agent.licenseNumber}</p>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-[#606C5D] line-clamp-3 leading-relaxed">
+                        {agent.bio}
+                      </p>
+
+                      <div className="space-y-1 pt-2 border-t border-[#EAE7E0]">
+                        <span className="text-[10px] font-bold text-[#9A9488] uppercase tracking-wider">Market Areas:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {agent.marketAreas.map((area, i) => (
+                            <span key={i} className="text-[10px] bg-[#F9F8F4] border border-[#EAE7E0] px-2 py-0.5 rounded text-[#2D362E]">
+                              {area}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 text-xs text-[#606C5D] pt-1">
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                          <span>{agent.phone}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Mail className="w-3.5 h-3.5 text-[#4A5D4E] shrink-0" />
+                          <span className="truncate">{agent.email}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => {
+                          onUpdateGuidesState({ ...guidesState, activeAgentId: agent.id });
+                          triggerToast(`Set active agent guide to ${agent.name}`);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                          isSelected 
+                            ? "bg-[#C18C5D] text-white" 
+                            : "bg-[#F1EFE9] text-[#2D362E] hover:bg-[#EAE7E0]"
+                        }`}
+                      >
+                        {isSelected ? "Active Partner" : "Pair on Site"}
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditingAgent(agent)}
+                          className="p-2 text-[#606C5D] hover:text-[#2D362E] hover:bg-[#F1EFE9] rounded-xl transition-colors"
+                          title="Edit Agent"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAgent(agent.id)}
+                          className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors"
+                          title="Delete Agent"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Tab 4: My Loan Officer Profile Editor */}
+        {activeTab === "my_profile" && (
+          <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 space-y-6 shadow-sm">
+            <div className="border-b border-[#EAE7E0] pb-4">
+              <h3 className="font-serif font-bold text-2xl text-[#2D362E]">
+                Edit Loan Officer Profile: {currentLo.name}
+              </h3>
+              <p className="text-xs text-[#606C5D]">
+                Update your contact information, NMLS licensing credentials, branch location, booking link, and bio displayed to public homebuyers.
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const updatedLos = guidesState.loanOfficers.map(l => l.id === currentLo.id ? currentLo : l);
+                onUpdateGuidesState({
+                  ...guidesState,
+                  loanOfficers: updatedLos,
+                  loanOfficer: currentLo
+                });
+                triggerToast("Your Loan Officer profile has been saved!");
+              }}
+              className="space-y-5"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D362E]">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={currentLo.name}
+                    onChange={(e) => onUpdateGuidesState({
+                      ...guidesState,
+                      loanOfficer: { ...currentLo, name: e.target.value }
+                    })}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D362E]">Title / Designation</label>
+                  <input
+                    type="text"
+                    required
+                    value={currentLo.title}
+                    onChange={(e) => onUpdateGuidesState({
+                      ...guidesState,
+                      loanOfficer: { ...currentLo, title: e.target.value }
+                    })}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D362E]">NMLS ID</label>
+                  <input
+                    type="text"
+                    required
+                    value={currentLo.nmlsId}
+                    onChange={(e) => onUpdateGuidesState({
+                      ...guidesState,
+                      loanOfficer: { ...currentLo, nmlsId: e.target.value }
+                    })}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D362E]">Company / Lending Institution</label>
+                  <input
+                    type="text"
+                    required
+                    value={currentLo.company}
+                    onChange={(e) => onUpdateGuidesState({
+                      ...guidesState,
+                      loanOfficer: { ...currentLo, company: e.target.value }
+                    })}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D362E]">Branch Location</label>
+                  <input
+                    type="text"
+                    value={currentLo.branch || ""}
+                    onChange={(e) => onUpdateGuidesState({
+                      ...guidesState,
+                      loanOfficer: { ...currentLo, branch: e.target.value }
+                    })}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D362E]">Headshot Image URL</label>
+                  <input
+                    type="url"
+                    required
+                    value={currentLo.headshotUrl}
+                    onChange={(e) => onUpdateGuidesState({
+                      ...guidesState,
+                      loanOfficer: { ...currentLo, headshotUrl: e.target.value }
+                    })}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D362E]">Phone Number</label>
+                  <input
+                    type="tel"
+                    required
+                    value={currentLo.phone}
+                    onChange={(e) => onUpdateGuidesState({
+                      ...guidesState,
+                      loanOfficer: { ...currentLo, phone: e.target.value }
+                    })}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D362E]">Direct Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={currentLo.email}
+                    onChange={(e) => onUpdateGuidesState({
+                      ...guidesState,
+                      loanOfficer: { ...currentLo, email: e.target.value }
+                    })}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D362E]">Calendly / Booking Link</label>
+                  <input
+                    type="url"
+                    value={currentLo.bookingUrl}
+                    onChange={(e) => onUpdateGuidesState({
+                      ...guidesState,
+                      loanOfficer: { ...currentLo, bookingUrl: e.target.value }
+                    })}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#2D362E]">Professional Bio</label>
+                <textarea
+                  rows={3}
+                  value={currentLo.bio}
+                  onChange={(e) => onUpdateGuidesState({
+                    ...guidesState,
+                    loanOfficer: { ...currentLo, bio: e.target.value }
+                  })}
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl p-3 text-xs focus:outline-none focus:border-[#4A5D4E] leading-relaxed"
+                />
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save Profile Updates</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Tab 5: Multi-Channel Social Push */}
+        {activeTab === "social_push" && (
+          <SocialPushHub
+            loanOfficer={currentLo}
+            activeAgent={activeAgent}
+            socialCampaigns={guidesState.socialCampaigns || []}
+            onAddCampaign={(campaign) => {
+              onUpdateGuidesState({
+                ...guidesState,
+                socialCampaigns: [campaign, ...(guidesState.socialCampaigns || [])]
+              });
+            }}
+            pairingUrl={activePairingUrl}
+          />
+        )}
+
+        {/* Tab 6: Meta (Facebook) & Google Ads Automated Builder */}
+        {activeTab === "ad_campaigns" && (
+          <AdsCampaignHub
+            loanOfficer={currentLo}
+            activeAgent={activeAgent}
+            adCampaignDrafts={guidesState.adCampaignDrafts || []}
+            onSaveAdDraft={(draft) => {
+              onUpdateGuidesState({
+                ...guidesState,
+                adCampaignDrafts: [draft, ...(guidesState.adCampaignDrafts || [])]
+              });
+            }}
+            onUpdateAdSettings={(adSettings) => {
+              const updatedLo = { ...currentLo, adSettings };
+              const updatedLos = guidesState.loanOfficers.map(l => l.id === currentLo.id ? updatedLo : l);
+              onUpdateGuidesState({
+                ...guidesState,
+                loanOfficer: updatedLo,
+                loanOfficers: updatedLos
+              });
+            }}
+            pairingUrl={activePairingUrl}
+          />
+        )}
+      </main>
+
+      {/* Add / Edit Loan Officer Modal */}
+      {(showAddLoModal || editingLo) && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
+              <h4 className="font-serif font-bold text-lg text-[#2D362E]">
+                {editingLo ? `Edit Profile: ${editingLo.name}` : "Add Downstream Managed Loan Officer"}
+              </h4>
+              <button
+                onClick={() => { setShowAddLoModal(false); setEditingLo(null); }}
+                className="text-xs text-[#9A9488] hover:text-[#2D362E]"
+              >
+                ✕ Cancel
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveLoanOfficer} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Officer Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Jessica Taylor"
+                    value={editingLo ? editingLo.name : newLoForm.name}
+                    onChange={(e) => editingLo ? setEditingLo({ ...editingLo, name: e.target.value }) : setNewLoForm(p => ({ ...p, name: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Senior Mortgage Advisor"
+                    value={editingLo ? editingLo.title : newLoForm.title}
+                    onChange={(e) => editingLo ? setEditingLo({ ...editingLo, title: e.target.value }) : setNewLoForm(p => ({ ...p, title: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">NMLS ID</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="NMLS #1234567"
+                    value={editingLo ? editingLo.nmlsId : newLoForm.nmlsId}
+                    onChange={(e) => editingLo ? setEditingLo({ ...editingLo, nmlsId: e.target.value }) : setNewLoForm(p => ({ ...p, nmlsId: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Branch / Metro</label>
+                  <input
+                    type="text"
+                    placeholder="Portland East Branch"
+                    value={editingLo ? editingLo.branch || "" : newLoForm.branch}
+                    onChange={(e) => editingLo ? setEditingLo({ ...editingLo, branch: e.target.value }) : setNewLoForm(p => ({ ...p, branch: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Email</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="jessica@pacificlending.com"
+                    value={editingLo ? editingLo.email : newLoForm.email}
+                    onChange={(e) => editingLo ? setEditingLo({ ...editingLo, email: e.target.value }) : setNewLoForm(p => ({ ...p, email: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Phone</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="(503) 555-0182"
+                    value={editingLo ? editingLo.phone : newLoForm.phone}
+                    onChange={(e) => editingLo ? setEditingLo({ ...editingLo, phone: e.target.value }) : setNewLoForm(p => ({ ...p, phone: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D]">Headshot URL</label>
+                <input
+                  type="url"
+                  required
+                  value={editingLo ? editingLo.headshotUrl : newLoForm.headshotUrl}
+                  onChange={(e) => editingLo ? setEditingLo({ ...editingLo, headshotUrl: e.target.value }) : setNewLoForm(p => ({ ...p, headshotUrl: e.target.value }))}
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D]">Bio / Specialties</label>
+                <textarea
+                  rows={2}
+                  value={editingLo ? editingLo.bio : newLoForm.bio}
+                  onChange={(e) => editingLo ? setEditingLo({ ...editingLo, bio: e.target.value }) : setNewLoForm(p => ({ ...p, bio: e.target.value }))}
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl p-3 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowAddLoModal(false); setEditingLo(null); }}
+                  className="px-4 py-2 text-xs font-semibold text-[#606C5D] hover:bg-[#F1EFE9] rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#38463B] rounded-xl shadow-xs"
+                >
+                  {editingLo ? "Update Loan Officer" : "Add Loan Officer & Generate Links"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Agent Modal */}
+      {(showAddAgentModal || editingAgent) && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
+              <h4 className="font-serif font-bold text-lg text-[#2D362E]">
+                {editingAgent ? `Edit Realtor: ${editingAgent.name}` : "Add Real Estate Agent Partner"}
+              </h4>
+              <button
+                onClick={() => { setShowAddAgentModal(false); setEditingAgent(null); }}
+                className="text-xs text-[#9A9488] hover:text-[#2D362E]"
+              >
+                ✕ Cancel
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAgent} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Agent Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Marcus Vance"
+                    value={editingAgent ? editingAgent.name : newAgentForm.name}
+                    onChange={(e) => editingAgent ? setEditingAgent({ ...editingAgent, name: e.target.value }) : setNewAgentForm(p => ({ ...p, name: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Brokerage</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Willamette Heritage Realty"
+                    value={editingAgent ? editingAgent.brokerage : newAgentForm.brokerage}
+                    onChange={(e) => editingAgent ? setEditingAgent({ ...editingAgent, brokerage: e.target.value }) : setNewAgentForm(p => ({ ...p, brokerage: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">License Number</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="OR Lic #200804192"
+                    value={editingAgent ? editingAgent.licenseNumber : newAgentForm.licenseNumber}
+                    onChange={(e) => editingAgent ? setEditingAgent({ ...editingAgent, licenseNumber: e.target.value }) : setNewAgentForm(p => ({ ...p, licenseNumber: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Phone</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="(503) 555-0177"
+                    value={editingAgent ? editingAgent.phone : newAgentForm.phone}
+                    onChange={(e) => editingAgent ? setEditingAgent({ ...editingAgent, phone: e.target.value }) : setNewAgentForm(p => ({ ...p, phone: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Email</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="marcus@realty.com"
+                    value={editingAgent ? editingAgent.email : newAgentForm.email}
+                    onChange={(e) => editingAgent ? setEditingAgent({ ...editingAgent, email: e.target.value }) : setNewAgentForm(p => ({ ...p, email: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Headshot URL</label>
+                  <input
+                    type="url"
+                    required
+                    value={editingAgent ? editingAgent.headshotUrl : newAgentForm.headshotUrl}
+                    onChange={(e) => editingAgent ? setEditingAgent({ ...editingAgent, headshotUrl: e.target.value }) : setNewAgentForm(p => ({ ...p, headshotUrl: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D]">Bio / Overview</label>
+                <textarea
+                  rows={2}
+                  value={editingAgent ? editingAgent.bio : newAgentForm.bio}
+                  onChange={(e) => editingAgent ? setEditingAgent({ ...editingAgent, bio: e.target.value }) : setNewAgentForm(p => ({ ...p, bio: e.target.value }))}
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl p-3 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowAddAgentModal(false); setEditingAgent(null); }}
+                  className="px-4 py-2 text-xs font-semibold text-[#606C5D] hover:bg-[#F1EFE9] rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#38463B] rounded-xl shadow-xs"
+                >
+                  {editingAgent ? "Save Agent" : "Add Partner Agent"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create New Pairing Modal */}
+      {showAddPairingModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E]">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
+              <h4 className="font-serif font-bold text-lg text-[#2D362E]">
+                Create LO + Realtor Pairing
+              </h4>
+              <button
+                onClick={() => setShowAddPairingModal(false)}
+                className="text-xs text-[#9A9488] hover:text-[#2D362E]"
+              >
+                ✕ Cancel
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePairing} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D]">Select Loan Officer</label>
+                <select
+                  value={newPairingForm.loId}
+                  onChange={(e) => setNewPairingForm(p => ({ ...p, loId: e.target.value }))}
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs font-bold focus:outline-none"
+                >
+                  {guidesState.loanOfficers.map(lo => (
+                    <option key={lo.id} value={lo.id}>
+                      {lo.name} ({lo.nmlsId})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D]">Select Real Estate Agent Partner</label>
+                <select
+                  value={newPairingForm.agentId}
+                  onChange={(e) => setNewPairingForm(p => ({ ...p, agentId: e.target.value }))}
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs font-bold focus:outline-none"
+                >
+                  {guidesState.agentRoster.map(agent => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name} ({agent.brokerage})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D]">Pairing Title</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Mike Ford + Sarah Jenkins (Portland Homebuyer Team)"
+                  value={newPairingForm.title}
+                  onChange={(e) => setNewPairingForm(p => ({ ...p, title: e.target.value }))}
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D]">Campaign Tag</label>
+                <input
+                  type="text"
+                  placeholder="e.g. spring-open-house-co-marketing"
+                  value={newPairingForm.campaignTag}
+                  onChange={(e) => setNewPairingForm(p => ({ ...p, campaignTag: e.target.value }))}
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-[#4A5D4E]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPairingModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-[#606C5D] hover:bg-[#F1EFE9] rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#38463B] rounded-xl shadow-xs"
+                >
+                  Create & Activate Pairing
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

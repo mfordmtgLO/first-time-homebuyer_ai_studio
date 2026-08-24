@@ -1,0 +1,6 @@
+{
+  "name": "Manus First-Time Homebuyer",
+  "description": "Comprehensive first-time homebuyer website and intelligent dashboard with mortgage calculations, property tour scorecards, grant finder, closing tracker, and AI homebuying advisor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

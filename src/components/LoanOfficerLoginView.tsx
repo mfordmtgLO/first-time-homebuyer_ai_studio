@@ -120,7 +120,7 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
           </div>
           <div>
             <span className="font-serif font-bold text-base text-[#2D362E]">
-              Pacific Coast Lending Partners
+              {guidesState.loanOfficer?.company || guidesState.loanOfficers[0]?.company || "Mortgage Lending Organization"}
             </span>
             <p className="text-[11px] text-[#606C5D]">
               Private Loan Officer & Partner Management Hub
@@ -422,7 +422,7 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
 
       {/* Footer */}
       <footer className="max-w-5xl w-full mx-auto text-center py-3 text-[11px] text-[#9A9488] border-t border-[#EAE7E0]/80">
-        Pacific Coast Lending Partners • Confidential & Proprietary Platform • NMLS #184209
+        {guidesState.loanOfficer?.company || guidesState.loanOfficers[0]?.company || "Mortgage Lending Organization"} • Confidential & Proprietary Platform • {guidesState.loanOfficer?.nmlsId || "NMLS Verified"}
       </footer>
     </div>
   );

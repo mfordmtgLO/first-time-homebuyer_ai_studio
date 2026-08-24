@@ -212,7 +212,16 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     triggerToast(`Switched active Loan Officer dashboard to: ${selectedLo.name}`);
   };
 
-  // Password Change Handler
+  // Quick updater for current loan officer profile fields
+  const updateCurrentLoField = (field: keyof LoanOfficerProfile, value: any) => {
+    const updatedLo: LoanOfficerProfile = { ...currentLo, [field]: value };
+    const updatedLos = guidesState.loanOfficers.map(l => l.id === currentLo.id ? updatedLo : l);
+    onUpdateGuidesState({
+      ...guidesState,
+      loanOfficers: updatedLos,
+      loanOfficer: updatedLo
+    });
+  };
   const handleSaveChangedPassword = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordModalError(null);
@@ -630,9 +639,21 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[#606C5D]">
-                Pacific Coast Lending Partners • Private Credentialed Environment
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-xs text-[#606C5D] flex items-center gap-1.5">
+                  <span className="font-semibold text-[#2D362E]">{currentLo.company || "Your Lending Institution"}</span>
+                  <span className="text-[#9A9488]">•</span>
+                  <span>Private Credentialed Environment</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("my_profile")}
+                  className="text-[11px] font-semibold text-[#4A5D4E] hover:text-[#38463B] hover:underline bg-[#4A5D4E]/10 hover:bg-[#4A5D4E]/15 px-2 py-0.5 rounded-md transition-colors"
+                  title="Click to edit company name, NMLS, states, and profile details"
+                >
+                  Edit Company / Profile ✎
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1418,25 +1439,101 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           </button>
                         </div>
                       </div>
+                      {/* Co-Marketing Quick Launch Bar */}
+                      <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0] space-y-2">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold text-[#2D362E] flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-[#4A5D4E]" />
+                            <span>Co-Branded Campaign Launchpad</span>
+                          </span>
+                          <span className="text-[10px] text-[#606C5D] font-mono">LO + Agent Ready</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleActivatePairing(pairing);
+                              setActiveTab("social_push");
+                              triggerToast(`Loaded co-branded social post studio for ${lo.name} + ${agent?.name}`);
+                            }}
+                            className="px-2.5 py-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-xl text-[11px] font-bold text-[#2D362E] flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                          >
+                            <Share2 className="w-3 h-3 text-[#4A5D4E]" />
+                            <span>Social Post</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleActivatePairing(pairing);
+                              setActiveTab("social_push");
+                              triggerToast(`Loaded co-branded email blast templates for ${lo.name} + ${agent?.name}`);
+                            }}
+                            className="px-2.5 py-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-xl text-[11px] font-bold text-[#2D362E] flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                          >
+                            <Mail className="w-3 h-3 text-[#4A5D4E]" />
+                            <span>Email Blast</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleActivatePairing(pairing);
+                              setActiveTab("ad_campaigns");
+                              triggerToast(`Loaded Meta & Google ads builder for ${lo.name} + ${agent?.name}`);
+                            }}
+                            className="px-2.5 py-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-xl text-[11px] font-bold text-[#2D362E] flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                          >
+                            <Sparkles className="w-3 h-3 text-[#C18C5D]" />
+                            <span>Ad Ads Hub</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
-                      <button
-                        onClick={() => handleActivatePairing(pairing)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                          isActive 
-                            ? "bg-emerald-600 text-white" 
-                            : "bg-[#F1EFE9] text-[#2D362E] hover:bg-[#EAE7E0]"
-                        }`}
-                      >
-                        {isActive ? "Currently Active" : "Set as Active Site Guides"}
-                      </button>
+                    <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleActivatePairing(pairing)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                            isActive 
+                              ? "bg-emerald-600 text-white" 
+                              : "bg-[#F1EFE9] text-[#2D362E] hover:bg-[#EAE7E0]"
+                          }`}
+                        >
+                          {isActive ? "Currently Active" : "Set as Active Site Guides"}
+                        </button>
+                        <a
+                          href={pairingFullUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] text-xs font-bold rounded-xl flex items-center gap-1 shadow-2xs transition-colors"
+                          title="Open co-branded First-Time Homebuyer Roadmap in new tab"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Preview Live</span>
+                        </a>
+                      </div>
 
                       <div className="flex items-center gap-2 text-xs text-[#606C5D]">
                         <span>Views: {pairing.totalViews || 0}</span>
                         <span>•</span>
                         <span>Leads: {pairing.totalLeads || 0}</span>
+                        {guidesState.pairings.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = guidesState.pairings.filter(p => p.id !== pairing.id);
+                              onUpdateGuidesState({ ...guidesState, pairings: updated });
+                              triggerToast("Pairing removed");
+                            }}
+                            className="text-[#9A9488] hover:text-red-600 p-1 transition-colors"
+                            title="Delete Pairing"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1595,10 +1692,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     type="text"
                     required
                     value={currentLo.name}
-                    onChange={(e) => onUpdateGuidesState({
-                      ...guidesState,
-                      loanOfficer: { ...currentLo, name: e.target.value }
-                    })}
+                    onChange={(e) => updateCurrentLoField("name", e.target.value)}
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
                   />
                 </div>
@@ -1609,10 +1703,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     type="text"
                     required
                     value={currentLo.title}
-                    onChange={(e) => onUpdateGuidesState({
-                      ...guidesState,
-                      loanOfficer: { ...currentLo, title: e.target.value }
-                    })}
+                    onChange={(e) => updateCurrentLoField("title", e.target.value)}
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
                   />
                 </div>
@@ -1623,26 +1714,28 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     type="text"
                     required
                     value={currentLo.nmlsId}
-                    onChange={(e) => onUpdateGuidesState({
-                      ...guidesState,
-                      loanOfficer: { ...currentLo, nmlsId: e.target.value }
-                    })}
+                    onChange={(e) => updateCurrentLoField("nmlsId", e.target.value)}
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-[#4A5D4E]"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#2D362E]">Company / Lending Institution</label>
+                <div className="space-y-1 bg-amber-50/70 p-2.5 rounded-xl border border-amber-200">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-amber-950 flex items-center gap-1">
+                      <span>🏢</span>
+                      <span>Company / Lending Institution</span>
+                    </label>
+                    <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">Primary Branding</span>
+                  </div>
                   <input
                     type="text"
                     required
+                    placeholder="Enter your real mortgage company name..."
                     value={currentLo.company}
-                    onChange={(e) => onUpdateGuidesState({
-                      ...guidesState,
-                      loanOfficer: { ...currentLo, company: e.target.value }
-                    })}
-                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                    onChange={(e) => updateCurrentLoField("company", e.target.value)}
+                    className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-xs font-semibold text-[#2D362E] focus:outline-none focus:border-[#4A5D4E] focus:ring-1 focus:ring-[#4A5D4E]"
                   />
+                  <p className="text-[10px] text-amber-900/80">Updates the company branding on your dashboard header, public rate guides, and marketing materials.</p>
                 </div>
 
                 <div className="space-y-1">
@@ -1650,10 +1743,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   <input
                     type="text"
                     value={currentLo.branch || ""}
-                    onChange={(e) => onUpdateGuidesState({
-                      ...guidesState,
-                      loanOfficer: { ...currentLo, branch: e.target.value }
-                    })}
+                    onChange={(e) => updateCurrentLoField("branch", e.target.value)}
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
                   />
                 </div>
@@ -1715,10 +1805,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                       type="text"
                       placeholder="https://... (or leave blank to use default professional avatar)"
                       value={currentLo.headshotUrl}
-                      onChange={(e) => onUpdateGuidesState({
-                        ...guidesState,
-                        loanOfficer: { ...currentLo, headshotUrl: e.target.value }
-                      })}
+                      onChange={(e) => updateCurrentLoField("headshotUrl", e.target.value)}
                       className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
                     />
                   </div>
@@ -1731,10 +1818,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     type="tel"
                     required
                     value={currentLo.phone}
-                    onChange={(e) => onUpdateGuidesState({
-                      ...guidesState,
-                      loanOfficer: { ...currentLo, phone: e.target.value }
-                    })}
+                    onChange={(e) => updateCurrentLoField("phone", e.target.value)}
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
                   />
                 </div>
@@ -1745,10 +1829,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     type="email"
                     required
                     value={currentLo.email}
-                    onChange={(e) => onUpdateGuidesState({
-                      ...guidesState,
-                      loanOfficer: { ...currentLo, email: e.target.value }
-                    })}
+                    onChange={(e) => updateCurrentLoField("email", e.target.value)}
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
                   />
                 </div>
@@ -1758,10 +1839,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   <input
                     type="url"
                     value={currentLo.bookingUrl}
-                    onChange={(e) => onUpdateGuidesState({
-                      ...guidesState,
-                      loanOfficer: { ...currentLo, bookingUrl: e.target.value }
-                    })}
+                    onChange={(e) => updateCurrentLoField("bookingUrl", e.target.value)}
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
                   />
                 </div>
@@ -1800,10 +1878,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 <textarea
                   rows={3}
                   value={currentLo.bio}
-                  onChange={(e) => onUpdateGuidesState({
-                    ...guidesState,
-                    loanOfficer: { ...currentLo, bio: e.target.value }
-                  })}
+                  onChange={(e) => updateCurrentLoField("bio", e.target.value)}
                   className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl p-3 text-xs focus:outline-none focus:border-[#4A5D4E] leading-relaxed"
                 />
               </div>

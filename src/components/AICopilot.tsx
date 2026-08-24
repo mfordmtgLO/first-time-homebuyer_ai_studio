@@ -29,7 +29,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => 
     {
       id: "msg-1",
       sender: "advisor",
-      text: `Hello! I am your Manus AI Real Estate Advisor. I'm here to help you navigate every phase of buying your first home—from understanding DTI ratios, grant options, and Interested Party Contribution (IPC) limits to crafting winning offers and negotiating inspection credits. How can I help you today?`,
+      text: `Hello! I am your First-Time Homebuyer Roadmap AI Advisor. I'm here to help you navigate every phase of buying your first home—from understanding DTI ratios, grant options, and Interested Party Contribution (IPC) limits to crafting winning offers and negotiating inspection credits. How can I help you today?`,
       timestamp: "Just now",
       suggestedActions: [
         "What are the seller concession & IPC limits for FHA, Conventional, VA, and USDA?",
@@ -191,7 +191,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => 
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F1EFE9] text-[#4A5D4E] text-xs font-semibold border border-[#EAE7E0]">
               <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
-              <span>Manus AI Real Estate Intelligence • Gemini 2.5 Flash</span>
+              <span>Roadmap Real Estate Intelligence • Gemini 3.7 Flash</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#2D362E]">
               AI Homebuyer Copilot & Strategic Tools
@@ -205,7 +205,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => 
         {/* Tab Switcher */}
         <div className="flex flex-wrap gap-2 pt-2 border-t border-[#EAE7E0]">
           {[
-            { id: "chat", label: "Ask Manus Copilot", icon: Bot },
+            { id: "chat", label: "Ask AI Copilot", icon: Bot },
             { id: "offer", label: "Offer Strategy Generator", icon: Sparkles },
             { id: "inspection", label: "Inspection Report Triage", icon: ShieldCheck },
             { id: "le_decoder", label: "Loan Estimate (LE) Decoder", icon: FileText },
@@ -277,7 +277,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => 
                 <div className="w-8 h-8 rounded-xl bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] flex items-center justify-center">
                   <RefreshCw className="w-4 h-4 animate-spin text-[#C18C5D]" />
                 </div>
-                <span>Manus AI is formulating personalized guidance...</span>
+                <span>AI Copilot is formulating personalized guidance...</span>
               </div>
             )}
           </div>

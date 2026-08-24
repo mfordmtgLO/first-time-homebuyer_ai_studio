@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Compass } from "lucide-react";
 import { Navbar } from "./components/Navbar";
 import { StepNavigationBanner } from "./components/StepNavigationBanner";
 import { HeroWebsite } from "./components/HeroWebsite";
@@ -53,7 +54,7 @@ export default function App() {
   // Loan Officer & Local Professional Guides State
   const [guidesState, setGuidesState] = useState<ProfessionalGuidesState>(() => {
     try {
-      const saved = localStorage.getItem("manus_guides_state_v2");
+      const saved = localStorage.getItem("homebuyer_roadmap_state_v2") || localStorage.getItem("manus_guides_state_v2");
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.loanOfficers && parsed.pairings) {
@@ -83,7 +84,7 @@ export default function App() {
   // Sync to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem("manus_guides_state_v2", JSON.stringify(guidesState));
+      localStorage.setItem("homebuyer_roadmap_state_v2", JSON.stringify(guidesState));
     } catch (e) {
       console.warn("Error saving guides state to localStorage:", e);
     }
@@ -330,11 +331,11 @@ export default function App() {
               onClick={() => handleNavigate("hero", "website")}
               className="flex items-center gap-2.5 text-left group focus:outline-none"
             >
-              <div className="w-8 h-8 rounded-lg bg-[#606C5D] flex items-center justify-center font-bold text-white text-base shadow-sm group-hover:scale-105 transition-transform">
-                M
+              <div className="w-8 h-8 rounded-lg bg-[#606C5D] flex items-center justify-center font-bold text-white shadow-sm group-hover:scale-105 transition-transform">
+                <Compass className="w-4 h-4 text-white" />
               </div>
               <div>
-                <span className="font-bold text-[#2D362E] text-sm">Manus Homebuyer</span>
+                <span className="font-bold text-[#2D362E] text-sm">First-Time Homebuyer Roadmap</span>
                 <p className="text-[11px] text-[#9A9488]">Buy your first home with clarity and total confidence.</p>
               </div>
             </button>

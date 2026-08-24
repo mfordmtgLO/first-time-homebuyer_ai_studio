@@ -475,7 +475,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   };
 
   // URL Helpers
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://manus-homebuyer.app";
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://homebuyer-roadmap.app";
   const activePairingUrl = `${origin}/?lo=${currentLo.id}&agent=${activeAgent?.id || ""}`;
 
   return (

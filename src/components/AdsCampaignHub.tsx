@@ -76,7 +76,7 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
   const metaCampaignUrl = `${pairingUrl}${pairingUrl.includes("?") ? "&" : "?"}utm_source=meta_ads&utm_medium=cpc&utm_campaign=first_time_homebuyer_grants&utm_content=co_branded`;
   
   const metaAdSpec = {
-    campaignName: `[Manus 2026] First-Time Buyer Portal • ${loanOfficer.name} + ${activeAgent.name}`,
+    campaignName: `[Homebuyer Roadmap 2026] First-Time Buyer Portal • ${loanOfficer.name} + ${activeAgent.name}`,
     specialCategory: "Housing (HEC - RESPA / Fair Housing Compliant)",
     objective: "Lead Generation / Instant Interactive Portal",
     dailyBudget: adSettings.dailyBudgetUSD || 25,

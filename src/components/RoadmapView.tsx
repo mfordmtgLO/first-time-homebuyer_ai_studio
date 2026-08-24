@@ -234,7 +234,7 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                     <div className="bg-[#F1EFE9] rounded-xl p-4 border border-[#4A5D4E]/20 space-y-2">
                       <div className="flex items-center gap-1.5 text-[#4A5D4E] font-bold">
                         <Lightbulb className="w-4 h-4 text-[#C18C5D]" />
-                        <span>Manus Pro Tips</span>
+                        <span>Roadmap Pro Tips</span>
                       </div>
                       <ul className="space-y-1.5 text-[#2D362E] pl-4 list-disc marker:text-[#4A5D4E]">
                         {step.keyTips.map((tip, idx) => (

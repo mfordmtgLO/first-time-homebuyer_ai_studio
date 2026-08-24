@@ -473,7 +473,7 @@ export const ROADMAP_MILESTONES: RoadmapMilestone[] = [
     stepNumber: 4,
     stage: "Hunting",
     title: "Home Tours & Structural Scorecard Audits",
-    summary: "Attend open houses and private showings. Use the Manus Home Tour Scorecard to inspect foundation, HVAC age, water pressure, and neighborhood vibes.",
+    summary: "Attend open houses and private showings. Use the interactive Home Tour Scorecard to inspect foundation, HVAC age, water pressure, and neighborhood vibes.",
     duration: "2-6 Weeks",
     completed: false,
     tasks: [
@@ -1132,7 +1132,7 @@ export const INITIAL_SOCIAL_CAMPAIGNS: import("../types").SocialPushCampaign[] =
     title: "Realtor Tour Scorecard & Seller Concession Secret",
     topic: "Home Touring & Inspection",
     hook: "Before you fall in love with staging furniture... here are 3 things we inspect during every single home tour:",
-    bodyCopy: "1️⃣ Age of the water heater & HVAC (avoids $10k surprises)\n2️⃣ Electrical panel & water pressure\n3️⃣ Potential for 2-3% seller repair credits to lower your mortgage rate!\n\nLink in bio to calculate your buying power with our free interactive Manus Homebuyer Hub! 🏡✨",
+    bodyCopy: "1️⃣ Age of the water heater & HVAC (avoids $10k surprises)\n2️⃣ Electrical panel & water pressure\n3️⃣ Potential for 2-3% seller repair credits to lower your mortgage rate!\n\nLink in bio to calculate your buying power with our free interactive First-Time Homebuyer Roadmap! 🏡✨",
     hashtags: ["#PortlandRealtor", "#HomeTour", "#HouseHunting", "#RealEstateTips", "#FirstHome", "#PITI"],
     shareUrl: "",
     status: "draft",

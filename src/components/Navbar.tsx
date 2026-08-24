@@ -113,18 +113,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               className="flex items-center gap-2.5 text-left group focus:outline-none"
-              title="Return to the beginning: Buy your first home with clarity and total confidence"
+              title="Return to the beginning: First-Time Homebuyer Roadmap"
             >
               <div className="w-8 h-8 bg-[#606C5D] rounded-lg flex items-center justify-center text-white font-bold shadow-sm group-hover:scale-105 transition-transform">
-                M
+                <Compass className="w-4 h-4 text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xl font-semibold tracking-tight text-[#4A5D4E]">
-                    Manus
+                  <span className="text-base sm:text-lg font-bold tracking-tight text-[#4A5D4E]">
+                    First-Time Homebuyer
                   </span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0]">
-                    Homebuyer
+                    Roadmap
                   </span>
                 </div>
                 <p className="text-[10px] text-[#9A9488] hidden sm:block font-medium">

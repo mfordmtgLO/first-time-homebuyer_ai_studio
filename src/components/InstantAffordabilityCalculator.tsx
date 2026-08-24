@@ -587,7 +587,7 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-[#4A5D4E] text-xs font-bold">
                 <Sparkles className="w-4 h-4 text-[#C18C5D]" />
-                <span>Manus AI Underwriter Analysis</span>
+                <span>AI Mortgage Underwriter Analysis</span>
               </div>
 
               <button

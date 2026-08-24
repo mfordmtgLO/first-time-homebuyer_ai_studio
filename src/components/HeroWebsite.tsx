@@ -58,7 +58,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#F1EFE9] border border-[#EAE7E0] text-[#4A5D4E] text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
-              <span>Smart First-Time Homebuyer Platform • Powered by Manus AI</span>
+              <span>Smart First-Time Homebuyer Platform • Interactive Roadmap & AI Guidance</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-[#2D362E] leading-tight">
@@ -223,7 +223,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
             The 5 Critical Stages of Buying Your First Home
           </h2>
           <p className="text-sm sm:text-base text-[#606C5D]">
-            Manus guides you step-by-step through every phase—eliminating costly blindspots before they happen.
+            Our roadmap guides you step-by-step through every phase—eliminating costly blindspots before they happen.
           </p>
         </div>
 

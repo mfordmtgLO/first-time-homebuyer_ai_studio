@@ -348,7 +348,6 @@ export default function App() {
             <button onClick={() => handleNavigate("roadmap", "website")} className="hover:text-[#4A5D4E] transition-colors">Step 2: Explore</button>
             <button onClick={() => handleNavigate("dashboard", "dashboard")} className="hover:text-[#4A5D4E] transition-colors">Step 3: Dashboard</button>
             <button onClick={() => handleNavigate("step4_ai_plan", "dashboard")} className="hover:text-[#4A5D4E] transition-colors font-bold text-[#4A5D4E]">Step 4: AI Plan & Guides</button>
-            <button onClick={() => setShowLoPortal(true)} className="hover:text-[#2D362E] transition-colors text-[11px] text-[#9A9488]">LO Hub ({guidesState.loanOfficer.name})</button>
           </div>
 
           <div className="text-center md:text-right text-[11px] text-[#9A9488]">

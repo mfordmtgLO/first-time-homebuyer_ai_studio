@@ -612,7 +612,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Quick CTA Actions (Pre-Approval & LO Hub) */}
+          {/* Quick CTA Actions (Pre-Approval) */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {onOpenLeadBot && (
               <button
@@ -623,18 +623,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Zap className="w-3.5 h-3.5 text-white" />
                 <span className="hidden xl:inline">24/7 AI Pre-Approval</span>
                 <span className="xl:hidden">Pre-Approval</span>
-              </button>
-            )}
-
-            {onOpenLoPortal && (
-              <button
-                id="navbar-lo-portal-btn"
-                onClick={onOpenLoPortal}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#F1EFE9] hover:bg-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] text-xs font-semibold border border-[#EAE7E0] transition-all hover:scale-[1.02] whitespace-nowrap"
-                title={`Loan Officer & Realtor Partner Hub (${loName})`}
-              >
-                <Sliders className="w-3.5 h-3.5 text-[#4A5D4E]" />
-                <span className="hidden lg:inline">LO Hub</span>
               </button>
             )}
 
@@ -769,19 +757,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Sparkles className="w-4 h-4 text-[#D4A373]" />
               <span>Step 4: AI Plan & Local Guides</span>
             </button>
-
-            {onOpenLoPortal && (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenLoPortal();
-                }}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-[#F1EFE9] text-[#606C5D] font-semibold text-xs border border-[#EAE7E0]"
-              >
-                <Sliders className="w-3.5 h-3.5 text-[#4A5D4E]" />
-                <span>Loan Officer & Realtor Hub ({loName})</span>
-              </button>
-            )}
           </div>
         </div>
       )}

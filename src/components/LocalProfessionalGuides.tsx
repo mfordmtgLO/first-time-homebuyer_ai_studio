@@ -58,7 +58,7 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
           </p>
         </div>
 
-        {/* Quick Team CTA + LO Portal Link */}
+        {/* Quick Team CTA */}
         <div className="flex flex-col sm:items-end gap-2 shrink-0">
           <button
             id="contact-guides-btn"
@@ -68,17 +68,6 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
             <MessageSquare className="w-4 h-4 text-[#D4A373]" />
             <span>Message Both Guides</span>
           </button>
-          
-          {onOpenLoPortal && (
-            <button
-              id="lo-partner-portal-btn"
-              onClick={onOpenLoPortal}
-              className="inline-flex items-center gap-1 text-[11px] text-[#9A9488] hover:text-[#4A5D4E] transition-colors"
-            >
-              <Settings className="w-3 h-3" />
-              <span>Loan Officer / Partner Hub</span>
-            </button>
-          )}
         </div>
       </div>
 

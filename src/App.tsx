@@ -59,6 +59,27 @@ export default function App() {
           if (!parsed.leads) {
             parsed.leads = INITIAL_LEADS;
           }
+          // Ensure Mike Ford has the exact correct company and email
+          parsed.loanOfficers = parsed.loanOfficers.map((lo: any) => {
+            const updated = { ...lo };
+            if (!updated.company || updated.company.includes("Pacific Coast")) {
+              updated.company = "Cornerstone First Mortgage";
+            }
+            if (updated.id === "lo-mike-ford" && (!updated.email || updated.email.includes("pacificlending"))) {
+              updated.email = "mford@cfmtg.com";
+            } else if (updated.email && updated.email.includes("pacificlending.com")) {
+              updated.email = updated.email.replace("pacificlending.com", "cfmtg.com");
+            }
+            return updated;
+          });
+          if (parsed.loanOfficer) {
+            if (!parsed.loanOfficer.company || parsed.loanOfficer.company.includes("Pacific Coast")) {
+              parsed.loanOfficer.company = "Cornerstone First Mortgage";
+            }
+            if (parsed.loanOfficer.id === "lo-mike-ford" && (!parsed.loanOfficer.email || parsed.loanOfficer.email.includes("pacificlending"))) {
+              parsed.loanOfficer.email = "mford@cfmtg.com";
+            }
+          }
           return parsed;
         }
       }
@@ -96,6 +117,26 @@ export default function App() {
   // Check URL params for partner link or LO access
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const pathname = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+
+    // Check if URL path or hash indicates LO portal or specific LO
+    const isPortalPath = 
+      pathname.includes("/portal") || 
+      pathname.includes("/admin") || 
+      pathname.includes("/login") ||
+      pathname.includes("first-time_homebuyer_portal") ||
+      pathname.includes("first-time-homebuyer-portal") ||
+      hash.includes("portal") || 
+      hash.includes("admin") ||
+      params.get("portal") === "lo" || 
+      params.get("admin") === "lo";
+
+    const isMikePath = 
+      pathname.includes("mike-ford") || 
+      hash.includes("mike-ford") ||
+      pathname.includes("mford");
+
     const loParam = params.get("lo");
     const agentParam = params.get("agent");
     const pairParam = params.get("pair");
@@ -104,13 +145,23 @@ export default function App() {
       let updatedLo = prev.loanOfficer;
       let updatedAgentId = prev.activeAgentId;
 
+      // Check if any team loan officer slug is in the pathname or hash
+      const matchedLoBySlug = prev.loanOfficers.find(l => 
+        (l.customSlug && (pathname.includes(l.customSlug.toLowerCase()) || hash.includes(l.customSlug.toLowerCase()))) ||
+        pathname.includes(l.id.toLowerCase()) ||
+        hash.includes(l.id.toLowerCase())
+      );
+      if (matchedLoBySlug) {
+        updatedLo = matchedLoBySlug;
+      }
+
       if (loParam) {
-        const matchedLo = prev.loanOfficers.find(l => l.id === loParam || l.customSlug === loParam);
+        const matchedLo = prev.loanOfficers.find(l => l.id === loParam || l.customSlug === loParam || l.customSlug === loParam.replace("lo-", ""));
         if (matchedLo) updatedLo = matchedLo;
       }
 
       if (agentParam) {
-        const matchedAgent = prev.agentRoster.find(a => a.id === agentParam || a.customSlug === agentParam);
+        const matchedAgent = prev.agentRoster.find(a => a.id === agentParam || a.customSlug === agentParam || a.customSlug === agentParam.replace("agent-", ""));
         if (matchedAgent) updatedAgentId = matchedAgent.id;
       }
 
@@ -130,7 +181,7 @@ export default function App() {
       };
     });
 
-    if (params.get("portal") === "lo" || params.get("admin") === "lo") {
+    if (isPortalPath) {
       setShowLoPortal(true);
     }
 

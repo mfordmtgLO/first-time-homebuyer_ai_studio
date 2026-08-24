@@ -1335,9 +1335,70 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                         </div>
                       </div>
 
-                      {/* Branded Distribution Link */}
+                      {/* LO Private Dashboard Login & Portal Access URL */}
+                      <div className="space-y-1.5 bg-[#F4F6F4] p-3 rounded-2xl border border-[#D5DDD6]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-[#38463B] uppercase tracking-wider flex items-center gap-1">
+                            <Key className="w-3 h-3 text-[#4A5D4E]" />
+                            <span>{isMike ? "Admin Portal Login URL:" : "LO Dashboard Login URL:"}</span>
+                          </span>
+                          <span className="text-[10px] text-[#606C5D] font-mono">
+                            {lo.email}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-1.5">
+                          <input
+                            type="text"
+                            readOnly
+                            value={`${origin}/first-time_homebuyer_portal/${lo.customSlug || lo.id.replace("lo-", "")}`}
+                            className="bg-white border border-[#D5DDD6] rounded-xl px-2.5 py-1.5 text-[11px] font-mono text-[#2D362E] font-semibold w-full focus:outline-none truncate"
+                          />
+                          <button
+                            onClick={() => copyToClipboard(`${origin}/first-time_homebuyer_portal/${lo.customSlug || lo.id.replace("lo-", "")}`, `lo-login-${lo.id}`)}
+                            className="p-1.5 bg-white hover:bg-[#EAE7E0] border border-[#D5DDD6] rounded-xl text-xs font-bold text-[#4A5D4E] shrink-0 flex items-center gap-1 shadow-2xs"
+                            title="Copy LO Dashboard Login Link"
+                          >
+                            {copiedKey === `lo-login-${lo.id}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span className="text-[10px] hidden sm:inline">Copy Link</span>
+                          </button>
+                          <a
+                            href={`${origin}/first-time_homebuyer_portal/${lo.customSlug || lo.id.replace("lo-", "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-xl text-xs font-bold shrink-0 flex items-center gap-1 shadow-2xs"
+                            title="Open Login Portal in New Tab"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+
+                        {/* Quick Action: Copy Login Details Email for LO */}
+                        <div className="flex items-center justify-between pt-1 border-t border-[#E1E8E2] text-[10px]">
+                          <span className="text-[#606C5D]">
+                            Password: <strong className="text-[#2D362E]">{lo.password || (lo.isAdmin ? "admin123" : "pass123")}</strong>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const loginLink = `${origin}/first-time_homebuyer_portal/${lo.customSlug || lo.id.replace("lo-", "")}`;
+                              const emailBody = `Hi ${lo.name.split(" ")[0]},\n\nHere is your private Cornerstone First Mortgage dashboard login details:\n\n🔗 Dashboard Login: ${loginLink}\n📧 Login Email: ${lo.email}\n🔑 Temporary Password: ${lo.password || "pass123"}\n\nOnce logged in, you can manage your Realtor partnerships, download co-branded QR codes, and review incoming borrower pre-approval leads.\n\nBest,\nMike Ford`;
+                              copyToClipboard(emailBody, `lo-invite-${lo.id}`);
+                            }}
+                            className="text-[#4A5D4E] hover:text-[#2D362E] font-bold flex items-center gap-1 underline underline-offset-2"
+                          >
+                            {copiedKey === `lo-invite-${lo.id}` ? (
+                              <span className="text-emerald-700 font-bold">✓ Credentials Copied!</span>
+                            ) : (
+                              <span>📋 Copy Login Info to Send LO</span>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Branded Distribution Link for Borrowers */}
                       <div className="space-y-1 bg-[#F9F8F4] p-2.5 rounded-xl border border-[#EAE7E0]">
-                        <span className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Distributed Public URL:</span>
+                        <span className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Public Homebuyer URL:</span>
                         <div className="flex items-center justify-between gap-2">
                           <input
                             type="text"

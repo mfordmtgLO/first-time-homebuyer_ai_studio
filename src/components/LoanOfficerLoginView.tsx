@@ -37,8 +37,8 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
   const [activeTab, setActiveTab] = useState<"signin" | "setup_password" | "demo_accounts">("signin");
   
   // Sign-in Form
-  const [email, setEmail] = useState<string>("mike.ford@pacificlending.com");
-  const [password, setPassword] = useState<string>("admin123");
+  const [email, setEmail] = useState<string>(() => guidesState.loanOfficer?.email || "mford@cfmtg.com");
+  const [password, setPassword] = useState<string>(() => guidesState.loanOfficer?.password || (guidesState.loanOfficer?.isAdmin ? "admin123" : "pass123"));
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -61,7 +61,8 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
 
     const cleanEmail = email.trim().toLowerCase();
     const matchedLo = guidesState.loanOfficers.find(
-      lo => lo.email.toLowerCase() === cleanEmail
+      lo => lo.email.toLowerCase() === cleanEmail || 
+            (lo.isAdmin && (cleanEmail === "mford@cfmtg.com" || cleanEmail === "fordmj@gmail.com"))
     );
 
     if (!matchedLo) {
@@ -193,11 +194,11 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
       <header className="max-w-5xl w-full mx-auto flex items-center justify-between py-2 border-b border-[#EAE7E0]/80">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-[#4A5D4E] text-white flex items-center justify-center font-serif font-bold text-lg shadow-sm">
-            M
+            {(guidesState.loanOfficer?.company || guidesState.loanOfficers[0]?.company || "Cornerstone First Mortgage")[0]}
           </div>
           <div>
             <span className="font-serif font-bold text-base text-[#2D362E]">
-              {guidesState.loanOfficer?.company || guidesState.loanOfficers[0]?.company || "Mortgage Lending Organization"}
+              {guidesState.loanOfficer?.company || guidesState.loanOfficers[0]?.company || "Cornerstone First Mortgage"}
             </span>
             <p className="text-[11px] text-[#606C5D]">
               Private Loan Officer & Partner Management Hub
@@ -297,7 +298,7 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
                     <input
                       type="email"
                       required
-                      placeholder="e.g. mike.ford@pacificlending.com"
+                      placeholder="e.g. mford@cfmtg.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl pl-10 pr-3 py-2.5 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"

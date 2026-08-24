@@ -43,8 +43,8 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({ profile }) => {
     profile.targetPrice,
     profile.downPaymentSavings,
     currentRent,
-    3.5,
-    2.8,
+    3.0,
+    2.0,
     profile.interestRate
   );
 
@@ -338,7 +338,7 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({ profile }) => {
           <div className="bg-white rounded-2xl border border-[#EAE7E0] p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
             <div className="space-y-1">
               <h3 className="text-lg font-serif font-bold text-[#2D362E]">10-Year Net Wealth Projection: Renting vs Buying</h3>
-              <p className="text-xs text-[#606C5D]">Based on 3.5% annual home appreciation and 2.8% annual rent inflation.</p>
+              <p className="text-xs text-[#606C5D]">Based on 3.0% annual home appreciation and 2.0% annual rent inflation.</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -362,7 +362,7 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({ profile }) => {
               <span className="text-2xl font-bold text-[#4A5D4E]">
                 {formatUSD(rentVsBuyTimeline[9]?.homeValue || 0)}
               </span>
-              <span className="text-[11px] text-[#9A9488] block">+3.5% compound annual growth</span>
+              <span className="text-[11px] text-[#9A9488] block">+3.0% compound annual growth</span>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-[#EAE7E0] space-y-1 text-center shadow-sm">

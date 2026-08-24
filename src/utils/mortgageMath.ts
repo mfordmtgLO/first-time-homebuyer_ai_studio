@@ -301,8 +301,8 @@ export function calculateRentVsBuy(
   homePrice: number,
   downPayment: number,
   monthlyRent: number,
-  appreciationRate: number = 3.5, // 3.5% per year
-  rentGrowthRate: number = 2.8, // 2.8% per year
+  appreciationRate: number = 3.0, // 3.0% per year
+  rentGrowthRate: number = 2.0, // 2.0% per year
   interestRate: number = 6.625
 ) {
   const loanAmount = homePrice - downPayment;

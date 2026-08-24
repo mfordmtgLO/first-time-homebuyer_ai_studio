@@ -161,20 +161,90 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
                 />
               </div>
 
-              <div>
-                <div className="flex justify-between text-xs text-[#606C5D] mb-1.5 font-medium">
-                  <span>Cash Saved for Down Payment</span>
-                  <span className="text-[#4A5D4E] font-bold">{formatUSD(profile.downPaymentSavings)}</span>
+              <div className="bg-[#FAF9F5] p-3 rounded-xl border border-[#EAE7E0] space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                  <div>
+                    <span className="text-xs text-[#606C5D] font-medium block">Down Payment</span>
+                    <span className="text-[10px] text-[#9A9488]">
+                      {breakdown.downPaymentPercent.toFixed(1)}% of {formatUSD(profile.targetPrice)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {/* Dollar Input */}
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold text-[#606C5D]">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max={profile.targetPrice}
+                        step="1000"
+                        value={profile.downPaymentSavings}
+                        onChange={(e) => {
+                          const val = Math.max(0, Math.min(profile.targetPrice, Number(e.target.value) || 0));
+                          setProfile(prev => ({ ...prev, downPaymentSavings: val }));
+                        }}
+                        className="w-22 pl-4 pr-1.5 py-0.5 bg-white border border-[#DEDAD2] rounded text-xs font-bold text-[#4A5D4E] focus:outline-none focus:border-[#4A5D4E] text-right"
+                        title="Down payment dollar amount"
+                      />
+                    </div>
+
+                    {/* % Input */}
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={Math.round(breakdown.downPaymentPercent * 10) / 10}
+                        onChange={(e) => {
+                          const pct = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                          const calculatedDollar = Math.round(profile.targetPrice * (pct / 100));
+                          setProfile(prev => ({ ...prev, downPaymentSavings: calculatedDollar }));
+                        }}
+                        className="w-14 pl-1.5 pr-4 py-0.5 bg-white border border-[#DEDAD2] rounded text-xs font-bold text-[#4A5D4E] focus:outline-none focus:border-[#4A5D4E] text-right"
+                        title="Down payment percentage"
+                      />
+                      <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4A5D4E]">%</span>
+                    </div>
+                  </div>
                 </div>
+
                 <input
                   type="range"
-                  min="5000"
-                  max="150000"
-                  step="2500"
+                  min="0"
+                  max={Math.max(150000, profile.targetPrice * 0.4)}
+                  step="1000"
                   value={profile.downPaymentSavings}
                   onChange={(e) => setProfile(prev => ({ ...prev, downPaymentSavings: Number(e.target.value) }))}
                   className="w-full h-1.5 bg-[#DEDAD2] rounded-lg appearance-none cursor-pointer accent-[#4A5D4E]"
                 />
+
+                {/* Quick % buttons */}
+                <div className="flex items-center justify-between gap-1 pt-0.5">
+                  <div className="flex items-center gap-1">
+                    {[3.5, 5, 10, 20].map((pct) => (
+                      <button
+                        key={pct}
+                        type="button"
+                        onClick={() => {
+                          const dollar = Math.round(profile.targetPrice * (pct / 100));
+                          setProfile(prev => ({ ...prev, downPaymentSavings: dollar }));
+                        }}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                          Math.abs(breakdown.downPaymentPercent - pct) < 0.3
+                            ? "bg-[#4A5D4E] text-white font-bold"
+                            : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+                        }`}
+                      >
+                        {pct}%
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-[#606C5D]">
+                    {breakdown.downPaymentPercent >= 20 ? "No PMI" : "PMI active"}
+                  </span>
+                </div>
               </div>
             </div>
 

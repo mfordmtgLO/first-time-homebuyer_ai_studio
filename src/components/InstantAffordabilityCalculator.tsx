@@ -320,27 +320,122 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
               </div>
             </div>
 
-            {/* Down Payment */}
-            <div>
-              <div className="flex justify-between text-xs text-[#606C5D] mb-1.5 font-semibold">
-                <span>Down Payment Available</span>
-                <span className="text-[#4A5D4E] font-bold text-sm">
-                  {formatUSD(profile.downPaymentSavings)} ({breakdown.downPaymentPercent}%)
-                </span>
+            {/* Down Payment Section with % vs $ Dual Mode, Direct Inputs & Quick Presets */}
+            <div className="bg-[#FAF9F5] p-3.5 rounded-xl border border-[#EAE7E0] space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#2D362E]">
+                    <DollarSign className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                    <span>Down Payment Available</span>
+                  </div>
+                  <div className="text-[11px] text-[#606C5D]">
+                    {breakdown.downPaymentPercent >= 20 ? (
+                      <span className="text-[#4A5D4E] font-semibold flex items-center gap-1 mt-0.5">
+                        <ShieldCheck className="w-3 h-3 text-[#4A5D4E]" /> 20%+ Down (No PMI required)
+                      </span>
+                    ) : (
+                      <span className="text-[#9A9488] block mt-0.5">
+                        {formatUSD(Math.max(0, profile.targetPrice * 0.2 - profile.downPaymentSavings))} more to reach 20% no-PMI milestone
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Input Toggle and Direct Input Fields */}
+                <div className="flex items-center gap-2">
+                  {/* Dollar Amount Input */}
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#606C5D]">$</span>
+                    <input
+                      id="down-payment-dollar-input"
+                      type="number"
+                      min="0"
+                      max={profile.targetPrice}
+                      step="1000"
+                      value={profile.downPaymentSavings}
+                      onChange={(e) => {
+                        const val = Math.max(0, Math.min(profile.targetPrice, Number(e.target.value) || 0));
+                        setProfile(prev => ({ ...prev, downPaymentSavings: val }));
+                      }}
+                      className="w-24 sm:w-28 pl-5 pr-2 py-1 bg-white border border-[#DEDAD2] rounded-lg text-xs font-bold text-[#2D362E] focus:outline-none focus:border-[#4A5D4E] shadow-2xs text-right"
+                      title="Direct Dollar Amount"
+                    />
+                  </div>
+
+                  {/* Percentage Input */}
+                  <div className="relative">
+                    <input
+                      id="down-payment-percent-input"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={Math.round(breakdown.downPaymentPercent * 10) / 10}
+                      onChange={(e) => {
+                        const pct = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                        const calculatedDollar = Math.round(profile.targetPrice * (pct / 100));
+                        setProfile(prev => ({ ...prev, downPaymentSavings: calculatedDollar }));
+                      }}
+                      className="w-16 sm:w-18 pl-2 pr-5 py-1 bg-white border border-[#DEDAD2] rounded-lg text-xs font-bold text-[#4A5D4E] focus:outline-none focus:border-[#4A5D4E] shadow-2xs text-right"
+                      title="Direct Percentage of Purchase Price"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4A5D4E]">%</span>
+                  </div>
+                </div>
               </div>
-              <input
-                type="range"
-                min="5000"
-                max="250000"
-                step="2500"
-                value={profile.downPaymentSavings}
-                onChange={(e) => setProfile(prev => ({ ...prev, downPaymentSavings: Number(e.target.value) }))}
-                className="w-full h-2 bg-[#DEDAD2] rounded-lg appearance-none cursor-pointer accent-[#4A5D4E]"
-              />
-              <div className="flex justify-between text-[11px] text-[#9A9488] mt-1">
-                <span>Min 3% ($12k)</span>
-                <span>10% ($42k)</span>
-                <span>20% ($85k - No PMI)</span>
+
+              {/* Slider Bar */}
+              <div className="space-y-1">
+                <input
+                  id="down-payment-slider"
+                  type="range"
+                  min="0"
+                  max={Math.max(150000, profile.targetPrice * 0.5)}
+                  step="1000"
+                  value={profile.downPaymentSavings}
+                  onChange={(e) => setProfile(prev => ({ ...prev, downPaymentSavings: Number(e.target.value) }))}
+                  className="w-full h-2.5 bg-[#DEDAD2] rounded-lg appearance-none cursor-pointer accent-[#4A5D4E]"
+                  title={`Down payment: ${formatUSD(profile.downPaymentSavings)} (${breakdown.downPaymentPercent}%)`}
+                />
+              </div>
+
+              {/* Quick % and Program Presets */}
+              <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-[#EAE7E0]/80">
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-[10px] font-bold text-[#9A9488] uppercase mr-1">Quick %:</span>
+                  {[
+                    { label: "3% (Conv)", pct: 3 },
+                    { label: "3.5% (FHA)", pct: 3.5 },
+                    { label: "5%", pct: 5 },
+                    { label: "10%", pct: 10 },
+                    { label: "15%", pct: 15 },
+                    { label: "20% (No PMI)", pct: 20 },
+                  ].map((preset) => {
+                    const presetDollar = Math.round(profile.targetPrice * (preset.pct / 100));
+                    const isSelected = Math.abs(profile.downPaymentSavings - presetDollar) < 100 || Math.abs(breakdown.downPaymentPercent - preset.pct) < 0.2;
+                    return (
+                      <button
+                        key={preset.pct}
+                        type="button"
+                        onClick={() => {
+                          setProfile(prev => ({ ...prev, downPaymentSavings: presetDollar }));
+                        }}
+                        className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                          isSelected
+                            ? "bg-[#4A5D4E] text-white shadow-2xs font-bold"
+                            : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9] hover:text-[#2D362E]"
+                        }`}
+                        title={`Set down payment to ${preset.pct}% (${formatUSD(presetDollar)})`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="text-[11px] text-[#606C5D] font-medium ml-auto">
+                  Loan: <strong className="text-[#2D362E]">{formatUSD(breakdown.loanAmount)}</strong> ({Math.round(100 - breakdown.downPaymentPercent)}% LTV)
+                </div>
               </div>
             </div>
 

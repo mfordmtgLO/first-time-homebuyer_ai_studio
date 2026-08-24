@@ -353,16 +353,53 @@ export const SavingsGoalTracker: React.FC<SavingsGoalTrackerProps> = ({
         </div>
 
         {selectedPreset === "custom" && (
-          <div className="flex items-center gap-3 pt-2">
-            <label className="text-xs font-semibold text-[#606C5D]">Custom Goal Amount ($):</label>
-            <input
-              id="custom-down-payment-input"
-              type="number"
-              step="1000"
-              value={customGoalAmount}
-              onChange={(e) => setCustomGoalAmount(Number(e.target.value))}
-              className="w-36 bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs text-[#2D362E] font-bold focus:outline-none focus:border-[#4A5D4E]"
-            />
+          <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[#EAE7E0]">
+            <span className="text-xs font-semibold text-[#606C5D]">Custom Down Payment Target:</span>
+            
+            <div className="flex items-center gap-2">
+              {/* Dollar Input */}
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#606C5D]">$</span>
+                <input
+                  id="custom-down-payment-input"
+                  type="number"
+                  step="1000"
+                  min="0"
+                  max={targetPrice}
+                  value={customGoalAmount}
+                  onChange={(e) => {
+                    const dollar = Math.max(0, Math.min(targetPrice, Number(e.target.value) || 0));
+                    setCustomGoalAmount(dollar);
+                  }}
+                  className="w-32 pl-5 pr-2 py-1.5 bg-white border border-[#DEDAD2] rounded-xl text-xs text-[#2D362E] font-bold focus:outline-none focus:border-[#4A5D4E] text-right"
+                  title="Custom target dollar amount"
+                />
+              </div>
+
+              {/* % Input */}
+              <div className="relative">
+                <input
+                  id="custom-down-payment-percent-input"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="100"
+                  value={targetPrice > 0 ? Number(((customGoalAmount / targetPrice) * 100).toFixed(1)) : 0}
+                  onChange={(e) => {
+                    const pct = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                    const calculatedDollar = Math.round(targetPrice * (pct / 100));
+                    setCustomGoalAmount(calculatedDollar);
+                  }}
+                  className="w-20 pl-2 pr-5 py-1.5 bg-white border border-[#DEDAD2] rounded-xl text-xs text-[#4A5D4E] font-bold focus:outline-none focus:border-[#4A5D4E] text-right"
+                  title="Custom target percentage of purchase price"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4A5D4E]">%</span>
+              </div>
+            </div>
+
+            <span className="text-[11px] text-[#9A9488]">
+              ({targetPrice > 0 ? ((customGoalAmount / targetPrice) * 100).toFixed(1) : 0}% of {formatUSD(targetPrice)})
+            </span>
           </div>
         )}
       </div>

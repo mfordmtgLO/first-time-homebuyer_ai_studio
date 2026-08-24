@@ -161,6 +161,10 @@ export interface LoanOfficerProfile {
   parentManagerId?: string;
   customSlug?: string;
   password?: string;
+  passwordResetAuthorized?: boolean; // Must be authorized by Branch Manager (Mike Ford)
+  passwordResetRequestedAt?: string;
+  passwordResetAuthorizedAt?: string;
+  passwordResetPin?: string;
   lastLogin?: string;
   adSettings?: LoanOfficerAdSettings;
 }

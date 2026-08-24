@@ -222,6 +222,69 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       loanOfficer: updatedLo
     });
   };
+
+  // Branch Manager Authorization for Downstream LO Password Reset
+  const handleAuthorizePasswordReset = (loId: string) => {
+    const targetLo = guidesState.loanOfficers.find(l => l.id === loId);
+    if (!targetLo) return;
+
+    const pin = Math.floor(1000 + Math.random() * 9000).toString();
+    const now = new Date().toISOString();
+
+    const updatedLos = guidesState.loanOfficers.map(l => {
+      if (l.id === loId) {
+        return {
+          ...l,
+          passwordResetAuthorized: true,
+          passwordResetAuthorizedAt: now,
+          passwordResetPin: pin
+        };
+      }
+      return l;
+    });
+
+    onUpdateGuidesState({
+      ...guidesState,
+      loanOfficers: updatedLos,
+      loanOfficer: currentLo.id === loId ? { ...currentLo, passwordResetAuthorized: true, passwordResetAuthorizedAt: now, passwordResetPin: pin } : guidesState.loanOfficer
+    });
+
+    triggerToast(`Password reset authorized for ${targetLo.name}! Authorization PIN: ${pin}`);
+  };
+
+  // Revoke password reset authorization
+  const handleRevokePasswordReset = (loId: string) => {
+    const targetLo = guidesState.loanOfficers.find(l => l.id === loId);
+    if (!targetLo) return;
+
+    const updatedLos = guidesState.loanOfficers.map(l => {
+      if (l.id === loId) {
+        return {
+          ...l,
+          passwordResetAuthorized: false,
+          passwordResetRequestedAt: undefined,
+          passwordResetAuthorizedAt: undefined,
+          passwordResetPin: undefined
+        };
+      }
+      return l;
+    });
+
+    onUpdateGuidesState({
+      ...guidesState,
+      loanOfficers: updatedLos,
+      loanOfficer: currentLo.id === loId ? { 
+        ...currentLo, 
+        passwordResetAuthorized: false, 
+        passwordResetRequestedAt: undefined, 
+        passwordResetAuthorizedAt: undefined, 
+        passwordResetPin: undefined 
+      } : guidesState.loanOfficer
+    });
+
+    triggerToast(`Password reset authorization revoked for ${targetLo.name}.`);
+  };
+
   const handleSaveChangedPassword = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordModalError(null);
@@ -312,6 +375,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         licenseStates: newLoForm.licenseStates || ["Oregon"],
         isAdmin: false,
         parentManagerId: guidesState.adminLoanOfficerId,
+        password: newLoForm.password || "pass123",
+        passwordResetAuthorized: false,
         customSlug: (newLoForm.name || "lo").toLowerCase().replace(/\s+/g, "-")
       };
 
@@ -789,6 +854,12 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             >
               <Users className="w-4 h-4" />
               <span>Team LO Roster & Distribution ({guidesState.loanOfficers.length})</span>
+              {guidesState.loanOfficers.some(l => !l.isAdmin && l.passwordResetRequestedAt && !l.passwordResetAuthorized) && (
+                <span className="text-[10px] bg-amber-500 text-white font-bold px-2 py-0.5 rounded-full animate-pulse shadow-xs flex items-center gap-1">
+                  <Key className="w-2.5 h-2.5" />
+                  <span>Reset Requested</span>
+                </span>
+              )}
             </button>
           )}
 
@@ -1283,6 +1354,94 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           </button>
                         </div>
                       </div>
+
+                      {/* Password Security & Reset Authorization Hub */}
+                      {!isMike && (
+                        <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0] space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-[#2D362E] flex items-center gap-1.5 text-[11px]">
+                              <Lock className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                              <span>Password Security</span>
+                            </span>
+                            {lo.passwordResetAuthorized ? (
+                              <span className="text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                                <span>Reset Authorized</span>
+                              </span>
+                            ) : lo.passwordResetRequestedAt ? (
+                              <span className="text-[10px] bg-amber-100 text-amber-900 border border-amber-300 font-bold px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5 text-amber-700" />
+                                <span>Reset Requested</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] bg-gray-100 text-gray-700 border border-gray-200 font-medium px-2 py-0.5 rounded-full">
+                                Locked (Protected)
+                              </span>
+                            )}
+                          </div>
+
+                          {lo.passwordResetRequestedAt && !lo.passwordResetAuthorized && (
+                            <div className="bg-amber-50/90 border border-amber-300 rounded-xl p-2.5 space-y-1.5 text-[11px]">
+                              <p className="text-amber-900 font-medium leading-tight">
+                                ⚠️ <strong>{lo.name}</strong> requested a password reset on {new Date(lo.passwordResetRequestedAt).toLocaleDateString()} at {new Date(lo.passwordResetRequestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => handleAuthorizePasswordReset(lo.id)}
+                                className="w-full py-1.5 px-3 bg-amber-800 hover:bg-amber-900 text-white font-bold rounded-lg flex items-center justify-center gap-1.5 shadow-2xs transition-colors text-xs"
+                              >
+                                <Key className="w-3 h-3 text-amber-300" />
+                                <span>Authorize LO Password Reset</span>
+                              </button>
+                            </div>
+                          )}
+
+                          {lo.passwordResetAuthorized && (
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 space-y-1.5 text-[11px]">
+                              <div className="flex items-center justify-between text-emerald-900 font-semibold">
+                                <span>Reset Auth Active</span>
+                                {lo.passwordResetPin && (
+                                  <span className="font-mono bg-white px-2 py-0.5 rounded border border-emerald-300 text-emerald-950 font-bold">
+                                    PIN: {lo.passwordResetPin}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-emerald-800 text-[10px]">
+                                {lo.name} can now reset their password on the login view using this PIN.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => handleRevokePasswordReset(lo.id)}
+                                className="w-full py-1 px-2.5 bg-white hover:bg-rose-50 border border-rose-200 text-rose-700 font-bold rounded-lg flex items-center justify-center gap-1 transition-colors text-[11px]"
+                              >
+                                <X className="w-3 h-3" />
+                                <span>Revoke Reset Authorization</span>
+                              </button>
+                            </div>
+                          )}
+
+                          {!lo.passwordResetRequestedAt && !lo.passwordResetAuthorized && (
+                            <div className="flex items-center gap-2 pt-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleAuthorizePasswordReset(lo.id)}
+                                className="flex-1 py-1.5 px-2.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-xl text-[11px] font-bold text-[#2D362E] flex items-center justify-center gap-1 shadow-2xs transition-colors"
+                              >
+                                <Key className="w-3 h-3 text-[#4A5D4E]" />
+                                <span>Authorize LO Password Reset</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingLo(lo)}
+                                className="py-1.5 px-2.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] rounded-xl text-[11px] font-semibold text-[#606C5D] hover:text-[#2D362E] transition-colors"
+                                title="Edit password or profile"
+                              >
+                                <span>Edit</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Actions */}
@@ -2131,6 +2290,89 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   onChange={(e) => editingLo ? setEditingLo({ ...editingLo, bio: e.target.value }) : setNewLoForm(p => ({ ...p, bio: e.target.value }))}
                   className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl p-3 text-xs focus:outline-none focus:border-[#4A5D4E]"
                 />
+              </div>
+
+              {/* Password & Reset Authorization Management */}
+              <div className="pt-2 border-t border-[#EAE7E0] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                    <span>Account Password & Security Authorization</span>
+                  </label>
+                  <span className="text-[10px] text-[#606C5D]">Branch Admin Controls</span>
+                </div>
+
+                <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#EAE7E0] space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#606C5D]">Direct Private Password</label>
+                    <div className="relative">
+                      <Key className="w-3.5 h-3.5 text-[#9A9488] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="e.g. pass123"
+                        value={editingLo ? (editingLo.password || "") : (newLoForm.password || "")}
+                        onChange={(e) => {
+                          if (editingLo) {
+                            setEditingLo({ ...editingLo, password: e.target.value });
+                          } else {
+                            setNewLoForm(p => ({ ...p, password: e.target.value }));
+                          }
+                        }}
+                        className="w-full bg-white border border-[#EAE7E0] rounded-xl pl-9 pr-3 py-1.5 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
+                      />
+                    </div>
+                    <p className="text-[10px] text-[#9A9488]">Admin can directly override this LO&apos;s password here.</p>
+                  </div>
+
+                  {editingLo && !editingLo.isAdmin && (
+                    <div className="pt-2 border-t border-[#EAE7E0] flex items-center justify-between gap-3 flex-wrap">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-bold text-[#2D362E] block">
+                          Authorize LO Password Reset on Login View
+                        </span>
+                        <p className="text-[10px] text-[#606C5D]">
+                          {editingLo.passwordResetAuthorized 
+                            ? `✅ Authorized ${editingLo.passwordResetAuthorizedAt ? `on ${new Date(editingLo.passwordResetAuthorizedAt).toLocaleDateString()}` : ''} (PIN: ${editingLo.passwordResetPin || 'Active'})`
+                            : (editingLo.passwordResetRequestedAt 
+                                ? `⚠️ Reset requested on ${new Date(editingLo.passwordResetRequestedAt).toLocaleDateString()} by ${editingLo.name}`
+                                : "🔒 Locked. Non-admin LO cannot reset password until authorized."
+                              )
+                          }
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (editingLo.passwordResetAuthorized) {
+                            setEditingLo({
+                              ...editingLo,
+                              passwordResetAuthorized: false,
+                              passwordResetRequestedAt: undefined,
+                              passwordResetAuthorizedAt: undefined,
+                              passwordResetPin: undefined
+                            });
+                          } else {
+                            const pin = Math.floor(1000 + Math.random() * 9000).toString();
+                            setEditingLo({
+                              ...editingLo,
+                              passwordResetAuthorized: true,
+                              passwordResetAuthorizedAt: new Date().toISOString(),
+                              passwordResetPin: pin
+                            });
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                          editingLo.passwordResetAuthorized
+                            ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                            : "bg-[#4A5D4E] hover:bg-[#38463B] text-white shadow-2xs"
+                        }`}
+                      >
+                        {editingLo.passwordResetAuthorized ? "Revoke Reset Authorization" : "Authorize LO Password Reset"}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">

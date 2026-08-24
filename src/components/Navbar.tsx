@@ -669,6 +669,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Sparkles className="w-4 h-4 text-[#D4A373]" />
               <span>Step 4: AI Plan & Local Guides</span>
             </button>
+
+            {onOpenLoPortal && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenLoPortal();
+                }}
+                className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-[#9A9488] hover:text-[#4A5D4E] transition-colors"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[#C18C5D]" />
+                <span>Loan Officer / Partner Access</span>
+              </button>
+            )}
           </div>
         </div>
       )}

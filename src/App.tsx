@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Compass } from "lucide-react";
+import { Compass, ShieldCheck } from "lucide-react";
 import { Navbar } from "./components/Navbar";
 import { StepNavigationBanner } from "./components/StepNavigationBanner";
 import { HeroWebsite } from "./components/HeroWebsite";
@@ -135,6 +135,34 @@ export default function App() {
     if (params.get("portal") === "lo" || params.get("admin") === "lo") {
       setShowLoPortal(true);
     }
+
+    // Global non-conflicting keyboard shortcuts for Loan Officer access:
+    // 1. Ctrl + Alt + L (or Cmd + Option + L)
+    // 2. Alt + M (Mortgage / Mike)
+    // 3. Ctrl + Alt + P (Portal)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is actively typing in an input/textarea
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") {
+        return;
+      }
+
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      const isAlt = e.altKey;
+
+      // Ctrl + Alt + L or Alt + M or Ctrl + Alt + P
+      if (
+        (isCtrlOrCmd && isAlt && (e.key === "l" || e.key === "L")) ||
+        (isAlt && (e.key === "m" || e.key === "M")) ||
+        (isCtrlOrCmd && isAlt && (e.key === "p" || e.key === "P"))
+      ) {
+        e.preventDefault();
+        setShowLoPortal(prev => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Navigation Helper
@@ -340,6 +368,15 @@ export default function App() {
             <button onClick={() => handleNavigate("roadmap", "website")} className="hover:text-[#4A5D4E] transition-colors">Step 2: Explore</button>
             <button onClick={() => handleNavigate("dashboard", "dashboard")} className="hover:text-[#4A5D4E] transition-colors">Step 3: Dashboard</button>
             <button onClick={() => handleNavigate("step4_ai_plan", "dashboard")} className="hover:text-[#4A5D4E] transition-colors font-bold text-[#4A5D4E]">Step 4: AI Plan & Guides</button>
+            <button 
+              id="footer-lo-portal-btn"
+              onClick={() => setShowLoPortal(true)}
+              className="text-xs text-[#9A9488] hover:text-[#4A5D4E] flex items-center gap-1.5 transition-colors border-l border-[#EAE7E0] pl-4 ml-1"
+              title="Loan Officer & Real Estate Agent Management Portal (Shortcut: Alt+M or Ctrl+Alt+L)"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-[#C18C5D]" />
+              <span>LO / Partner Hub</span>
+            </button>
           </div>
 
           <div className="text-center md:text-right text-[11px] text-[#9A9488]">

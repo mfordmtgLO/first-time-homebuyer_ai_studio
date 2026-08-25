@@ -67,17 +67,46 @@ export default function App() {
             }
             if (updated.id === "lo-mike-ford" || updated.name === "Mike Ford" || updated.isAdmin) {
               updated.email = "mford@cfmtg.com";
+              updated.branch = "Team Lonn Kilstrom Branch (Manager / Admin)";
+              updated.websiteUrl = updated.websiteUrl || "https://cfmtg.com/lo/mike-ford/";
             } else if (updated.email) {
               updated.email = updated.email.replace("pacificlending.com", "cfmtg.com").replace("cfm1.com", "cfmtg.com");
             }
             return updated;
           });
+
+          // Merge any Team Lonn Kilstrom LOs that aren't yet in the saved state
+          INITIAL_TEAM_LOAN_OFFICERS.forEach(defaultLo => {
+            const exists = parsed.loanOfficers.some((lo: any) => lo.id === defaultLo.id);
+            if (!exists) {
+              parsed.loanOfficers.push(defaultLo);
+            } else {
+              // Ensure websiteUrl is populated
+              parsed.loanOfficers = parsed.loanOfficers.map((lo: any) => {
+                if (lo.id === defaultLo.id) {
+                  return { ...lo, websiteUrl: lo.websiteUrl || defaultLo.websiteUrl, branch: defaultLo.branch };
+                }
+                return lo;
+              });
+            }
+          });
+
+          // Merge initial pairings
+          INITIAL_PAIRINGS.forEach(defaultPairing => {
+            const pairingExists = parsed.pairings.some((p: any) => p.id === defaultPairing.id);
+            if (!pairingExists) {
+              parsed.pairings.push(defaultPairing);
+            }
+          });
+
           if (parsed.loanOfficer) {
             if (!parsed.loanOfficer.company || parsed.loanOfficer.company.includes("Pacific Coast")) {
               parsed.loanOfficer.company = "Cornerstone First Mortgage";
             }
             if (parsed.loanOfficer.id === "lo-mike-ford" || parsed.loanOfficer.name === "Mike Ford" || parsed.loanOfficer.isAdmin) {
               parsed.loanOfficer.email = "mford@cfmtg.com";
+              parsed.loanOfficer.branch = "Team Lonn Kilstrom Branch (Manager / Admin)";
+              parsed.loanOfficer.websiteUrl = parsed.loanOfficer.websiteUrl || "https://cfmtg.com/lo/mike-ford/";
             } else if (parsed.loanOfficer.email) {
               parsed.loanOfficer.email = parsed.loanOfficer.email.replace("pacificlending.com", "cfmtg.com").replace("cfm1.com", "cfmtg.com");
             }

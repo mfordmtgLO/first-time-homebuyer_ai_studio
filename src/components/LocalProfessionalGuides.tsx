@@ -11,7 +11,8 @@ import {
   MessageSquare,
   Sparkles,
   Users,
-  Settings
+  Settings,
+  Globe
 } from "lucide-react";
 import { LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 
@@ -149,6 +150,19 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
                 <span className="font-semibold truncate">{loanOfficer.email}</span>
               </a>
             </div>
+
+            {loanOfficer.websiteUrl && (
+              <a
+                href={loanOfficer.websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold text-[#4A5D4E] hover:text-[#2D362E] hover:underline"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>View {loanOfficer.name}&apos;s Official CFMTG Branch Page</span>
+                <ExternalLink className="w-3 h-3 opacity-70" />
+              </a>
+            )}
 
             <a
               href={loanOfficer.bookingUrl}

@@ -43,7 +43,8 @@ import {
   LogOut,
   ShieldAlert,
   KeyRound,
-  AlertTriangle
+  AlertTriangle,
+  Globe
 } from "lucide-react";
 import { 
   LoanOfficerProfile, 
@@ -366,11 +367,12 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         name: newLoForm.name || "New Loan Officer",
         title: newLoForm.title || "Mortgage Advisor",
         nmlsId: newLoForm.nmlsId || "NMLS #000000",
-        company: newLoForm.company || "Pacific Coast Lending Partners",
-        branch: newLoForm.branch || "Pacific Northwest Branch",
+        company: newLoForm.company || "Cornerstone First Mortgage",
+        branch: newLoForm.branch || "Team Lonn Kilstrom Branch",
         email: newLoForm.email || "",
         phone: newLoForm.phone || "",
         headshotUrl: newLoForm.headshotUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80",
+        websiteUrl: newLoForm.websiteUrl || "",
         bio: newLoForm.bio || "",
         specialties: newLoForm.specialties || ["First-Time Homebuyers"],
         bookingUrl: newLoForm.bookingUrl || "https://calendly.com",
@@ -407,11 +409,12 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         name: "",
         title: "Mortgage Advisor",
         nmlsId: "NMLS #",
-        company: "Pacific Coast Lending Partners",
-        branch: "Pacific Northwest Branch",
+        company: "Cornerstone First Mortgage",
+        branch: "Team Lonn Kilstrom Branch",
         email: "",
         phone: "",
         headshotUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80",
+        websiteUrl: "",
         bio: "Dedicated mortgage specialist helping first-time homebuyers secure the best rates and state grant programs.",
         specialties: ["First-Time Homebuyers", "FHA & Conventional", "State DPA Grants"],
         bookingUrl: "https://calendly.com",
@@ -1345,6 +1348,37 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                       <p className="text-xs text-[#606C5D] line-clamp-2 leading-relaxed">
                         {lo.bio}
                       </p>
+
+                      {/* Direct Phone, Email & Website Profile */}
+                      <div className="flex flex-wrap gap-1.5 text-[11px] text-[#606C5D] pt-0.5">
+                        <a 
+                          href={`tel:${lo.phone.replace(/[^0-9]/g, "")}`}
+                          className="inline-flex items-center gap-1 text-[#4A5D4E] hover:text-[#2D362E] font-medium bg-[#FAF9F5] px-2 py-0.5 rounded-lg border border-[#EAE7E0]"
+                        >
+                          <Phone className="w-3 h-3 text-[#4A5D4E]" />
+                          <span>{lo.phone}</span>
+                        </a>
+                        <a 
+                          href={`mailto:${lo.email}`}
+                          className="inline-flex items-center gap-1 text-[#4A5D4E] hover:text-[#2D362E] font-medium bg-[#FAF9F5] px-2 py-0.5 rounded-lg border border-[#EAE7E0] truncate max-w-[170px]"
+                        >
+                          <Mail className="w-3 h-3 text-[#4A5D4E] shrink-0" />
+                          <span className="truncate">{lo.email}</span>
+                        </a>
+                        {lo.websiteUrl && (
+                          <a 
+                            href={lo.websiteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-emerald-800 hover:text-emerald-950 font-bold bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-lg border border-emerald-200"
+                            title="Open Official CFMTG Branch Bio Page"
+                          >
+                            <Globe className="w-3 h-3 text-emerald-700" />
+                            <span>CFMTG Page</span>
+                            <ExternalLink className="w-2.5 h-2.5 opacity-70" />
+                          </a>
+                        )}
+                      </div>
 
                       <div className="space-y-1.5 pt-2 border-t border-[#EAE7E0] text-xs">
                         <div className="flex items-center justify-between text-[#606C5D]">
@@ -2316,7 +2350,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   <input
                     type="email"
                     required
-                    placeholder="jessica@pacificlending.com"
+                    placeholder="lonn.kilstrom@cfmtg.com"
                     value={editingLo ? editingLo.email : newLoForm.email}
                     onChange={(e) => editingLo ? setEditingLo({ ...editingLo, email: e.target.value }) : setNewLoForm(p => ({ ...p, email: e.target.value }))}
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
@@ -2328,10 +2362,27 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   <input
                     type="tel"
                     required
-                    placeholder="(503) 555-0182"
+                    placeholder="(503) 849-3478"
                     value={editingLo ? editingLo.phone : newLoForm.phone}
                     onChange={(e) => editingLo ? setEditingLo({ ...editingLo, phone: e.target.value }) : setNewLoForm(p => ({ ...p, phone: e.target.value }))}
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D] flex items-center justify-between">
+                  <span>Official Website / CFMTG Bio Link</span>
+                  <span className="text-[10px] text-[#9A9488]">Optional (e.g. https://cfmtg.com/lo/...)</span>
+                </label>
+                <div className="relative">
+                  <Globe className="w-3.5 h-3.5 text-[#9A9488] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="url"
+                    placeholder="https://cfmtg.com/lo/your-name/"
+                    value={editingLo ? (editingLo.websiteUrl || "") : (newLoForm.websiteUrl || "")}
+                    onChange={(e) => editingLo ? setEditingLo({ ...editingLo, websiteUrl: e.target.value }) : setNewLoForm(p => ({ ...p, websiteUrl: e.target.value }))}
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
                   />
                 </div>
               </div>

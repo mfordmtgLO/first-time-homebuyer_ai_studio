@@ -157,7 +157,7 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
               className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-semibold shadow-xs transition-colors"
             >
               <Calendar className="w-3.5 h-3.5 text-[#D4A373]" />
-              <span>Schedule Free Pre-Approval Call with Mike</span>
+              <span>Schedule Free Pre-Approval Call with {loanOfficer.name.split(" ")[0]}</span>
               <ExternalLink className="w-3 h-3 opacity-70" />
             </a>
           </div>

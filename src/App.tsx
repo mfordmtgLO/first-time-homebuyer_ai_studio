@@ -65,10 +65,10 @@ export default function App() {
             if (!updated.company || updated.company.includes("Pacific Coast")) {
               updated.company = "Cornerstone First Mortgage";
             }
-            if (updated.id === "lo-mike-ford" && (!updated.email || updated.email.includes("pacificlending"))) {
+            if (updated.id === "lo-mike-ford" || updated.name === "Mike Ford" || updated.isAdmin) {
               updated.email = "mford@cfmtg.com";
-            } else if (updated.email && updated.email.includes("pacificlending.com")) {
-              updated.email = updated.email.replace("pacificlending.com", "cfmtg.com");
+            } else if (updated.email) {
+              updated.email = updated.email.replace("pacificlending.com", "cfmtg.com").replace("cfm1.com", "cfmtg.com");
             }
             return updated;
           });
@@ -76,8 +76,10 @@ export default function App() {
             if (!parsed.loanOfficer.company || parsed.loanOfficer.company.includes("Pacific Coast")) {
               parsed.loanOfficer.company = "Cornerstone First Mortgage";
             }
-            if (parsed.loanOfficer.id === "lo-mike-ford" && (!parsed.loanOfficer.email || parsed.loanOfficer.email.includes("pacificlending"))) {
+            if (parsed.loanOfficer.id === "lo-mike-ford" || parsed.loanOfficer.name === "Mike Ford" || parsed.loanOfficer.isAdmin) {
               parsed.loanOfficer.email = "mford@cfmtg.com";
+            } else if (parsed.loanOfficer.email) {
+              parsed.loanOfficer.email = parsed.loanOfficer.email.replace("pacificlending.com", "cfmtg.com").replace("cfm1.com", "cfmtg.com");
             }
           }
           return parsed;
@@ -417,15 +419,6 @@ export default function App() {
             <button onClick={() => handleNavigate("roadmap", "website")} className="hover:text-[#4A5D4E] transition-colors">Step 2: Explore</button>
             <button onClick={() => handleNavigate("dashboard", "dashboard")} className="hover:text-[#4A5D4E] transition-colors">Step 3: Dashboard</button>
             <button onClick={() => handleNavigate("step4_ai_plan", "dashboard")} className="hover:text-[#4A5D4E] transition-colors font-bold text-[#4A5D4E]">Step 4: AI Plan & Guides</button>
-            <button 
-              id="footer-lo-portal-btn"
-              onClick={() => setShowLoPortal(true)}
-              className="text-xs text-[#9A9488] hover:text-[#4A5D4E] flex items-center gap-1.5 transition-colors border-l border-[#EAE7E0] pl-4 ml-1"
-              title="Loan Officer & Real Estate Agent Management Portal (Shortcut: Alt+M or Ctrl+Alt+L)"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-[#C18C5D]" />
-              <span>LO / Partner Hub</span>
-            </button>
           </div>
 
           <div className="text-center md:text-right text-[11px] text-[#9A9488]">

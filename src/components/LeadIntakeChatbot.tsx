@@ -131,6 +131,30 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [showTeaser, setShowTeaser] = useState<boolean>(true);
+  const [isScrolling, setIsScrolling] = useState<boolean>(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Detect scroll to expand or make compact
+  useEffect(() => {
+    const handleWindowScroll = () => {
+      setIsScrolling(true);
+      if (!isOpen) {
+        onOpen(); // Pop out to full size when scrolling up or down
+      }
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsScrolling(false);
+      }, 1500); // return to compact after 1.5s of stillness
+    };
+
+    window.addEventListener("scroll", handleWindowScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleWindowScroll);
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    };
+  }, [isOpen, onOpen]);
 
   // Form data for step 6 contact info
   const [contactForm, setContactForm] = useState({

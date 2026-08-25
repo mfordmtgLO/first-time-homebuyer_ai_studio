@@ -138,9 +138,6 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   useEffect(() => {
     const handleWindowScroll = () => {
       setIsScrolling(true);
-      if (!isOpen) {
-        onOpen(); // Pop out to full size when scrolling up or down
-      }
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
@@ -154,7 +151,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       window.removeEventListener("scroll", handleWindowScroll);
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     };
-  }, [isOpen, onOpen]);
+  }, []);
 
   // Form data for step 6 contact info
   const [contactForm, setContactForm] = useState({
@@ -387,8 +384,8 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       {!isOpen && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
           {/* Proactive Teaser Bubble */}
-          {showTeaser && (
-            <div className="relative bg-white rounded-2xl p-4 shadow-xl border border-[#EAE7E0] max-w-xs animate-bounce-subtle">
+          {showTeaser && isScrolling && (
+            <div className="relative bg-white rounded-2xl p-4 shadow-xl border border-[#EAE7E0] max-w-xs transition-all duration-300 animate-fade-in">
               <button 
                 onClick={() => setShowTeaser(false)}
                 className="absolute top-2 right-2 text-[#9A9488] hover:text-[#2D362E] p-1"

@@ -425,37 +425,52 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
             </div>
           )}
 
-          {/* Floating Action Badge */}
+          {/* Floating Action Badge / Compact Icon */}
           <button
             onClick={onOpen}
-            className="group relative flex items-center gap-3 px-4 py-3 bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-full shadow-2xl transition-all hover:scale-105 border-2 border-white/20"
+            className={`group relative flex items-center bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 border-2 border-white/20 ${
+              isScrolling ? "gap-3 px-4 py-3" : "w-14 h-14 justify-center p-0"
+            }`}
             aria-label="Open AI Pre-Approval Chatbot"
           >
-            <div className="relative flex items-center">
-              <img 
-                src={loanOfficer.headshotUrl} 
-                alt={loanOfficer.name} 
-                className="w-8 h-8 rounded-full object-cover border border-white"
-              />
-              <img 
-                src={agent.headshotUrl} 
-                alt={agent.name} 
-                className="w-8 h-8 rounded-full object-cover border border-white -ml-3"
-              />
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#4A5D4E] animate-pulse"></span>
-            </div>
+            {isScrolling ? (
+              <>
+                <div className="relative flex items-center">
+                  <img 
+                    src={loanOfficer.headshotUrl} 
+                    alt={loanOfficer.name} 
+                    className="w-8 h-8 rounded-full object-cover border border-white"
+                  />
+                  <img 
+                    src={agent.headshotUrl} 
+                    alt={agent.name} 
+                    className="w-8 h-8 rounded-full object-cover border border-white -ml-3"
+                  />
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#4A5D4E] animate-pulse"></span>
+                </div>
 
-            <div className="text-left pr-1">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#E7C19D]" />
-                <span className="text-xs font-bold tracking-tight">AI Pre-Approval Guide</span>
+                <div className="text-left pr-1">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#E7C19D]" />
+                    <span className="text-xs font-bold tracking-tight">AI Pre-Approval Guide</span>
+                  </div>
+                  <span className="text-[11px] text-white/80 font-medium">Check grants & buying power</span>
+                </div>
+
+                <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+                  <MessageSquare className="w-3.5 h-3.5 text-white" />
+                </div>
+              </>
+            ) : (
+              <div className="relative flex items-center justify-center w-full h-full p-1">
+                <img 
+                  src={loanOfficer.headshotUrl} 
+                  alt={loanOfficer.name} 
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                />
+                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#4A5D4E]"></span>
               </div>
-              <span className="text-[11px] text-white/80 font-medium">Check grants & buying power</span>
-            </div>
-
-            <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
-              <MessageSquare className="w-3.5 h-3.5 text-white" />
-            </div>
+            )}
           </button>
         </div>
       )}

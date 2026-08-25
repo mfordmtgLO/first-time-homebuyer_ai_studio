@@ -284,21 +284,23 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F9F8F4] text-[#2D362E] flex flex-col selection:bg-[#C18C5D]/25 selection:text-[#2D362E] font-sans antialiased">
       {/* Top Fixed Navigation */}
-      <Navbar
-        currentTab={activeTab}
-        setCurrentTab={setActiveTab}
-        activeMode={currentMode}
-        setActiveMode={setCurrentMode}
-        profile={profile}
-        setProfile={setProfile}
-        savedCount={properties.length}
-        onOpenLoPortal={() => setShowLoPortal(true)}
-        onOpenLeadBot={() => setIsLeadBotOpen(true)}
-        loName={guidesState.loanOfficer.name}
-      />
+      {!showLoPortal && (
+        <Navbar
+          currentTab={activeTab}
+          setCurrentTab={setActiveTab}
+          activeMode={currentMode}
+          setActiveMode={setCurrentMode}
+          profile={profile}
+          setProfile={setProfile}
+          savedCount={properties.length}
+          onOpenLoPortal={() => setShowLoPortal(true)}
+          onOpenLeadBot={() => setIsLeadBotOpen(true)}
+          loName={guidesState.loanOfficer.name}
+        />
+      )}
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6">
+      <main className={showLoPortal ? "flex-1 w-full min-h-screen p-0 m-0" : "flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6"}>
         {/* Step Navigation Banner */}
         {!showLoPortal && (
           <StepNavigationBanner
@@ -425,37 +427,39 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#F1EFE9] border-t border-[#EAE7E0] py-10 px-4 sm:px-6 lg:px-8 mt-16 text-xs text-[#606C5D]">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => handleNavigate("hero", "website")}
-              className="flex items-center gap-2.5 text-left group focus:outline-none"
-            >
-              <div className="w-8 h-8 rounded-lg bg-[#606C5D] flex items-center justify-center font-bold text-white shadow-sm group-hover:scale-105 transition-transform">
-                <Compass className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <span className="font-bold text-[#2D362E] text-sm">First-Time Homebuyer Roadmap</span>
-                <p className="text-[11px] text-[#9A9488]">Buy your first home with clarity and total confidence.</p>
-              </div>
-            </button>
-          </div>
+      {!showLoPortal && (
+        <footer className="bg-[#F1EFE9] border-t border-[#EAE7E0] py-10 px-4 sm:px-6 lg:px-8 mt-16 text-xs text-[#606C5D]">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleNavigate("hero", "website")}
+                className="flex items-center gap-2.5 text-left group focus:outline-none"
+              >
+                <div className="w-8 h-8 rounded-lg bg-[#606C5D] flex items-center justify-center font-bold text-white shadow-sm group-hover:scale-105 transition-transform">
+                  <Compass className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <span className="font-bold text-[#2D362E] text-sm">First-Time Homebuyer Roadmap</span>
+                  <p className="text-[11px] text-[#9A9488]">Buy your first home with clarity and total confidence.</p>
+                </div>
+              </button>
+            </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-5 text-[#606C5D]">
-            <button onClick={() => handleNavigate("hero", "website")} className="hover:text-[#4A5D4E] transition-colors font-medium">Overview</button>
-            <button onClick={() => handleNavigate("calculator", "website")} className="hover:text-[#4A5D4E] transition-colors">Step 1: Calculator</button>
-            <button onClick={() => handleNavigate("roadmap", "website")} className="hover:text-[#4A5D4E] transition-colors">Step 2: Explore</button>
-            <button onClick={() => handleNavigate("dashboard", "dashboard")} className="hover:text-[#4A5D4E] transition-colors">Step 3: Dashboard</button>
-            <button onClick={() => handleNavigate("step4_ai_plan", "dashboard")} className="hover:text-[#4A5D4E] transition-colors font-bold text-[#4A5D4E]">Step 4: AI Plan & Guides</button>
-          </div>
+            <div className="flex flex-wrap items-center justify-center gap-5 text-[#606C5D]">
+              <button onClick={() => handleNavigate("hero", "website")} className="hover:text-[#4A5D4E] transition-colors font-medium">Overview</button>
+              <button onClick={() => handleNavigate("calculator", "website")} className="hover:text-[#4A5D4E] transition-colors">Step 1: Calculator</button>
+              <button onClick={() => handleNavigate("roadmap", "website")} className="hover:text-[#4A5D4E] transition-colors">Step 2: Explore</button>
+              <button onClick={() => handleNavigate("dashboard", "dashboard")} className="hover:text-[#4A5D4E] transition-colors">Step 3: Dashboard</button>
+              <button onClick={() => handleNavigate("step4_ai_plan", "dashboard")} className="hover:text-[#4A5D4E] transition-colors font-bold text-[#4A5D4E]">Step 4: AI Plan & Guides</button>
+            </div>
 
-          <div className="text-center md:text-right text-[11px] text-[#9A9488]">
-            <span>Powered by Gemini 3.7 Flash & Natural Tones</span>
-            <div className="text-[#9A9488]/80 mt-0.5">Equal Housing Opportunity Awareness</div>
+            <div className="text-center md:text-right text-[11px] text-[#9A9488]">
+              <span>Powered by Gemini 3.7 Flash & Natural Tones</span>
+              <div className="text-[#9A9488]/80 mt-0.5">Equal Housing Opportunity Awareness</div>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
       {/* Scorecard Modal */}
       {scorecardProperty && (

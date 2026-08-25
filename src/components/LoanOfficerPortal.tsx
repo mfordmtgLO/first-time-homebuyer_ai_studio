@@ -826,6 +826,108 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Sticky Navigation Tabs Bar */}
+        <div className="mt-3 pt-3 border-t border-[#EAE7E0] flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <button
+            onClick={() => setActiveTab("leads")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "leads"
+                ? "bg-[#4A5D4E] text-white shadow-xs"
+                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+            }`}
+          >
+            <Inbox className="w-4 h-4 text-[#E7C19D]" />
+            <span>Buyer Leads & Inquiries CRM</span>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              activeTab === "leads" 
+                ? "bg-white/20 text-white" 
+                : "bg-[#4A5D4E]/10 text-[#4A5D4E]"
+            }`}>
+              {guidesState.leads?.length || 0}
+            </span>
+          </button>
+
+          {isSuperAdmin && (
+            <button
+              onClick={() => setActiveTab("team_distribution")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                activeTab === "team_distribution"
+                  ? "bg-[#4A5D4E] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Team LO Roster & Distribution ({guidesState.loanOfficers.length})</span>
+              {guidesState.loanOfficers.some(l => !l.isAdmin && l.passwordResetRequestedAt && !l.passwordResetAuthorized) && (
+                <span className="text-[10px] bg-amber-500 text-white font-bold px-2 py-0.5 rounded-full animate-pulse shadow-xs flex items-center gap-1">
+                  <Key className="w-2.5 h-2.5" />
+                  <span>Reset Requested</span>
+                </span>
+              )}
+            </button>
+          )}
+
+          <button
+            onClick={() => setActiveTab("pairings")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "pairings"
+                ? "bg-[#4A5D4E] text-white shadow-xs"
+                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+            }`}
+          >
+            <Link className="w-4 h-4" />
+            <span>LO + Agent Pairings & Custom Links ({guidesState.pairings.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("realtor_roster")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "realtor_roster"
+                ? "bg-[#4A5D4E] text-white shadow-xs"
+                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+            }`}
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>Realtor Partner Roster ({guidesState.agentRoster.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("my_profile")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "my_profile"
+                ? "bg-[#4A5D4E] text-white shadow-xs"
+                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+            }`}
+          >
+            <Edit3 className="w-4 h-4" />
+            <span>Edit My Loan Officer Profile</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("social_push")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "social_push"
+                ? "bg-[#C18C5D] text-white shadow-xs"
+                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+            }`}
+          >
+            <Share2 className="w-4 h-4" />
+            <span>Social Push & CRM Blasts</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("ad_campaigns")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeTab === "ad_campaigns"
+                ? "bg-[#1877F2] text-white shadow-xs"
+                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Meta & Google Ads Campaign Builder</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Container */}
@@ -860,108 +962,6 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             </button>
           </div>
         )}
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#EAE7E0]">
-          <button
-            onClick={() => setActiveTab("leads")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "leads"
-                ? "bg-[#4A5D4E] text-white shadow-xs"
-                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
-            }`}
-          >
-            <Inbox className="w-4 h-4 text-[#E7C19D]" />
-            <span>Buyer Leads & Inquiries CRM</span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              activeTab === "leads" 
-                ? "bg-white/20 text-white" 
-                : "bg-[#4A5D4E]/10 text-[#4A5D4E]"
-            }`}>
-              {guidesState.leads?.length || 0}
-            </span>
-          </button>
-
-          {isSuperAdmin && (
-            <button
-              onClick={() => setActiveTab("team_distribution")}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                activeTab === "team_distribution"
-                  ? "bg-[#4A5D4E] text-white shadow-xs"
-                  : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>Team LO Roster & Distribution ({guidesState.loanOfficers.length})</span>
-              {guidesState.loanOfficers.some(l => !l.isAdmin && l.passwordResetRequestedAt && !l.passwordResetAuthorized) && (
-                <span className="text-[10px] bg-amber-500 text-white font-bold px-2 py-0.5 rounded-full animate-pulse shadow-xs flex items-center gap-1">
-                  <Key className="w-2.5 h-2.5" />
-                  <span>Reset Requested</span>
-                </span>
-              )}
-            </button>
-          )}
-
-          <button
-            onClick={() => setActiveTab("pairings")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "pairings"
-                ? "bg-[#4A5D4E] text-white shadow-xs"
-                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
-            }`}
-          >
-            <Link className="w-4 h-4" />
-            <span>LO + Agent Pairings & Custom Links ({guidesState.pairings.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("realtor_roster")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "realtor_roster"
-                ? "bg-[#4A5D4E] text-white shadow-xs"
-                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
-            }`}
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>Realtor Partner Roster ({guidesState.agentRoster.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("my_profile")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "my_profile"
-                ? "bg-[#4A5D4E] text-white shadow-xs"
-                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
-            }`}
-          >
-            <Edit3 className="w-4 h-4" />
-            <span>Edit My Loan Officer Profile</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("social_push")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "social_push"
-                ? "bg-[#C18C5D] text-white shadow-xs"
-                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
-            }`}
-          >
-            <Share2 className="w-4 h-4" />
-            <span>Social Push & CRM Blasts</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("ad_campaigns")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "ad_campaigns"
-                ? "bg-[#1877F2] text-white shadow-xs"
-                : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F9F8F4]"
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Meta & Google Ads Campaign Builder</span>
-          </button>
-        </div>
-
         {/* Tab 0: Leads & Inquiries CRM */}
         {activeTab === "leads" && (
           <div className="space-y-6">
@@ -2104,10 +2104,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                               reader.onload = (uploadEvent) => {
                                 const result = uploadEvent.target?.result as string;
                                 if (result) {
-                                  onUpdateGuidesState({
-                                    ...guidesState,
-                                    loanOfficer: { ...currentLo, headshotUrl: result }
-                                  });
+                                  updateCurrentLoField("headshotUrl", result);
+                                  triggerToast("✅ Admin headshot profile photo updated successfully!");
                                 }
                               };
                               reader.readAsDataURL(file);

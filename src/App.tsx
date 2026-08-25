@@ -106,7 +106,16 @@ export default function App() {
             if (parsed.loanOfficer.id === "lo-mike-ford" || parsed.loanOfficer.name === "Mike Ford" || parsed.loanOfficer.isAdmin) {
               parsed.loanOfficer.email = "mford@cfmtg.com";
               parsed.loanOfficer.branch = "Team Lonn Kilstrom Branch (Manager / Admin)";
+              parsed.loanOfficer.phone = "(541) 729-0819";
               parsed.loanOfficer.websiteUrl = parsed.loanOfficer.websiteUrl || "https://cfmtg.com/lo/mike-ford/";
+            }
+            if (parsed.loanOfficers && Array.isArray(parsed.loanOfficers)) {
+              parsed.loanOfficers = parsed.loanOfficers.map((lo: any) => {
+                if (lo.id === "lo-mike-ford" || lo.name === "Mike Ford" || lo.isAdmin) {
+                  return { ...lo, phone: "(541) 729-0819", email: "mford@cfmtg.com", branch: "Team Lonn Kilstrom Branch (Manager / Admin)" };
+                }
+                return lo;
+              });
             } else if (parsed.loanOfficer.email) {
               parsed.loanOfficer.email = parsed.loanOfficer.email.replace("pacificlending.com", "cfmtg.com").replace("cfm1.com", "cfmtg.com");
             }

@@ -44,7 +44,7 @@ export const HeadshotAvatar: React.FC<HeadshotAvatarProps> = ({
       alt={name}
       title={title || name}
       referrerPolicy="no-referrer"
-      className={`${className} object-cover shrink-0 bg-[#EAE7E0]`}
+      className={`${className} object-cover object-top shrink-0 bg-[#EAE7E0]`}
       style={style}
       onError={() => setImageFailed(true)}
     />

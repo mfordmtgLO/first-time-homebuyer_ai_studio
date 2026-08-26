@@ -31,7 +31,7 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
       branch: branch,
       email: lo.email || "mford@cfmtg.com",
       phone: lo.phone || "(541) 729-0819",
-      headshotUrl: "/mike-ford-headshot.jpg", // Permanently lock to authentic Mike Ford headshot photo
+      headshotUrl: lo.headshotUrl || "/mike-ford-headshot.jpg", // Preserve custom uploaded headshot, fallback to default photo
       websiteUrl: lo.websiteUrl || "https://cfmtg.com/mford/",
       customSlug: lo.customSlug || "mike-ford",
       isAdmin: true

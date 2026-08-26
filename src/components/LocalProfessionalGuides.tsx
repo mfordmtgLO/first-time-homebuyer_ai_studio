@@ -90,10 +90,13 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
           <div className="space-y-4">
             <div className="flex items-start gap-4">
               <img
-                src={loanOfficer.headshotUrl}
+                src={loanOfficer.headshotUrl || "/mike-ford-headshot.jpg"}
                 alt={loanOfficer.name}
                 referrerPolicy="no-referrer"
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-white shadow-md shrink-0"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-white shadow-md shrink-0 bg-[#EAE7E0]"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
+                }}
               />
               <div className="space-y-1">
                 <div className="flex items-center gap-2">

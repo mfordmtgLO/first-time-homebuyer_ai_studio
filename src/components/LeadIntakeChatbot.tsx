@@ -613,11 +613,23 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
               const isUser = msg.sender === "user";
               return (
                 <div key={msg.id} className={`flex items-start gap-2.5 transition-all duration-300 ease-out animate-fade-in ${isUser ? "flex-row-reverse" : ""}`}>
-                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
-                    isUser ? "bg-[#4A5D4E] text-white" : "bg-[#EAE7E0] text-[#4A5D4E]"
-                  }`}>
-                    {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5 text-[#C18C5D]" />}
-                  </div>
+                  {isUser ? (
+                    <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 bg-[#4A5D4E] text-white">
+                      <User className="w-3.5 h-3.5" />
+                    </div>
+                  ) : (
+                    <div className="relative shrink-0">
+                      <img 
+                        src={loanOfficer.headshotUrl || "/mike-ford-headshot.jpg"} 
+                        alt={loanOfficer.name} 
+                        referrerPolicy="no-referrer"
+                        className="w-7 h-7 rounded-xl object-cover border border-[#EAE7E0] bg-[#EAE7E0]"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
+                        }}
+                      />
+                    </div>
+                  )}
 
                   <div className={`max-w-[85%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed shadow-xs ${
                     isUser 
@@ -647,9 +659,15 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 
             {isAiTyping && (
               <div className="flex items-center gap-2 text-xs text-[#606C5D] italic py-1">
-                <div className="w-7 h-7 rounded-xl bg-[#EAE7E0] flex items-center justify-center">
-                  <Bot className="w-3.5 h-3.5 text-[#C18C5D]" />
-                </div>
+                <img 
+                  src={loanOfficer.headshotUrl || "/mike-ford-headshot.jpg"} 
+                  alt={loanOfficer.name} 
+                  referrerPolicy="no-referrer"
+                  className="w-6 h-6 rounded-lg object-cover border border-[#EAE7E0] bg-[#EAE7E0]"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
+                  }}
+                />
                 <span className="animate-pulse">{loanOfficer.name.split(" ")[0]}'s AI is typing...</span>
               </div>
             )}

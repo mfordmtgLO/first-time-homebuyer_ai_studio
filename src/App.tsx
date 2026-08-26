@@ -82,7 +82,7 @@ export default function App() {
               updated.email = "mford@cfmtg.com";
               updated.branch = "Team Lonn Kilstrom Branch (Manager / Admin)";
               updated.nmlsId = "288455";
-              updated.headshotUrl = "/mike-ford-headshot.jpg";
+              updated.headshotUrl = updated.headshotUrl || "/mike-ford-headshot.jpg";
               updated.websiteUrl = updated.websiteUrl || "https://cfmtg.com/lo/mike-ford/";
             } else if (updated.email) {
               updated.email = updated.email.replace("pacificlending.com", "cfmtg.com").replace("cfm1.com", "cfmtg.com");
@@ -122,13 +122,13 @@ export default function App() {
               parsed.loanOfficer.email = parsed.loanOfficer.email || "mford@cfmtg.com";
               parsed.loanOfficer.branch = parsed.loanOfficer.branch || "Team Lonn Kilstrom Branch (Manager / Admin)";
               parsed.loanOfficer.nmlsId = "288455";
-              parsed.loanOfficer.headshotUrl = "/mike-ford-headshot.jpg";
+              parsed.loanOfficer.headshotUrl = parsed.loanOfficer.headshotUrl || "/mike-ford-headshot.jpg";
               parsed.loanOfficer.websiteUrl = parsed.loanOfficer.websiteUrl || "https://cfmtg.com/lo/mike-ford/";
             }
             if (parsed.loanOfficers && Array.isArray(parsed.loanOfficers)) {
               parsed.loanOfficers = parsed.loanOfficers.map((lo: any) => {
                 if (lo.id === "lo-mike-ford" || lo.name === "Mike Ford" || lo.isAdmin) {
-                  return { ...lo, email: lo.email || "mford@cfmtg.com", branch: lo.branch || "Team Lonn Kilstrom Branch (Manager / Admin)", nmlsId: "288455", headshotUrl: "/mike-ford-headshot.jpg" };
+                  return { ...lo, email: lo.email || "mford@cfmtg.com", branch: lo.branch || "Team Lonn Kilstrom Branch (Manager / Admin)", nmlsId: "288455", headshotUrl: lo.headshotUrl || "/mike-ford-headshot.jpg" };
                 }
                 return lo;
               });

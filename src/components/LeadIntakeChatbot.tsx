@@ -179,14 +179,31 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     status: "new"
   });
 
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+  const [userIsScrollingUp, setUserIsScrollingUp] = useState<boolean>(false);
 
-  // Scroll to bottom on message
+  const handleScroll = () => {
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 80;
+    setUserIsScrollingUp(!isNearBottom);
+  };
+
+  // Scroll to bottom on message if user isn't scrolling up
   useEffect(() => {
-    if (isOpen && chatBottomRef.current) {
+    if (isOpen && chatBottomRef.current && !userIsScrollingUp) {
       chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isAiTyping, isOpen, currentStepIndex]);
+
+  const handleRevisitStep = (stepIndex: number) => {
+    setCurrentStepIndex(stepIndex);
+    setIsCompleted(false);
+    const targetCount = 1 + (stepIndex * 2);
+    setMessages(prev => prev.slice(0, Math.min(prev.length, targetCount)));
+    setUserIsScrollingUp(false);
+  };
 
   // Handle Option Select
   const handleSelectOption = async (step: IntakeStep, optionValue: string) => {
@@ -531,22 +548,24 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
               <span className="font-semibold text-[#2D362E]">Pre-Approval Intake</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               {INTAKE_STEPS.map((step, idx) => (
-                <div 
+                <button
                   key={step.id} 
-                  className={`w-2 h-2 rounded-full transition-all ${
+                  onClick={() => idx <= currentStepIndex && handleRevisitStep(idx)}
+                  disabled={idx > currentStepIndex && !isCompleted}
+                  className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
                     idx < currentStepIndex || isCompleted
-                      ? "bg-[#4A5D4E]" 
+                      ? "bg-[#4A5D4E] hover:scale-125" 
                       : idx === currentStepIndex 
                         ? "bg-[#C18C5D] scale-125 ring-2 ring-[#C18C5D]/30" 
-                        : "bg-[#D5D0C6]"
+                        : "bg-[#D5D0C6] opacity-60 cursor-not-allowed"
                   }`}
-                  title={step.question}
+                  title={`Revisit ${step.id}`}
                 />
               ))}
               <div 
-                className={`w-2 h-2 rounded-full ${
+                className={`w-2.5 h-2.5 rounded-full ${
                   isCompleted ? "bg-[#4A5D4E]" : "bg-[#D5D0C6]"
                 }`}
                 title="Blueprint"
@@ -554,12 +573,29 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
             </div>
           </div>
 
-          {/* Chat Messages Body */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-[#FAF9F5]">
-            {messages.map((msg) => {
+          {/* Chat Messages Body with Free Scroll & Smooth Transitions */}
+          <div 
+            ref={chatContainerRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-[#FAF9F5] scroll-smooth"
+          >
+            {/* Quick Revisit Bar if user scrolled up or has answered steps */}
+            {currentStepIndex > 0 && !isCompleted && (
+              <div className="bg-white/80 backdrop-blur-xs border border-[#EAE7E0] rounded-xl p-2.5 text-center text-xs text-[#606C5D] flex items-center justify-between shadow-2xs">
+                <span>💡 You can scroll up/down or jump back to edit prior answers:</span>
+                <button
+                  onClick={() => handleRevisitStep(0)}
+                  className="text-xs font-bold text-[#4A5D4E] hover:underline px-2 py-1 bg-[#F1EFE9] rounded-lg"
+                >
+                  Restart Intake
+                </button>
+              </div>
+            )}
+
+            {messages.map((msg, index) => {
               const isUser = msg.sender === "user";
               return (
-                <div key={msg.id} className={`flex items-start gap-2.5 ${isUser ? "flex-row-reverse" : ""}`}>
+                <div key={msg.id} className={`flex items-start gap-2.5 transition-all duration-300 ease-out animate-fade-in ${isUser ? "flex-row-reverse" : ""}`}>
                   <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
                     isUser ? "bg-[#4A5D4E] text-white" : "bg-[#EAE7E0] text-[#4A5D4E]"
                   }`}>
@@ -568,10 +604,25 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 
                   <div className={`max-w-[85%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed shadow-xs ${
                     isUser 
-                      ? "bg-[#4A5D4E] text-white font-medium" 
+                      ? "bg-[#4A5D4E] text-white font-medium flex items-center justify-between gap-3" 
                       : "bg-white text-[#2D362E] border border-[#EAE7E0]"
                   }`}>
                     <div className="whitespace-pre-line">{msg.text}</div>
+                    {isUser && (
+                      <button
+                        onClick={() => {
+                          // Find which step this user message corresponds to
+                          const stepIdx = Math.floor(index / 2);
+                          if (stepIdx < INTAKE_STEPS.length) {
+                            handleRevisitStep(stepIdx);
+                          }
+                        }}
+                        className="text-[10px] bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded-lg font-semibold shrink-0 transition-colors"
+                        title="Click to edit or change this answer"
+                      >
+                        Edit / Change
+                      </button>
+                    )}
                   </div>
                 </div>
               );

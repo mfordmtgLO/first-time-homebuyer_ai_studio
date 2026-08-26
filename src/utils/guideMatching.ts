@@ -1,84 +1,118 @@
 import { LoanOfficerProfile, RealEstateAgentProfile, LOPairing } from "../types";
-import { DEFAULT_LOAN_OFFICER, INITIAL_TEAM_LOAN_OFFICERS } from "../data/initialData";
+import { DEFAULT_LOAN_OFFICER, INITIAL_TEAM_LOAN_OFFICERS, INITIAL_AGENT_ROSTER, INITIAL_PAIRINGS } from "../data/initialData";
 
 /**
- * Sanitizes and guarantees data integrity for Loan Officers,
- * specifically ensuring Mike Ford always uses the authentic headshot and correct company details.
+ * Helper to check if a headshot URL is a cartoon, placeholder, or invalid string
+ */
+function isCartoonOrPlaceholder(url?: string): boolean {
+  if (!url || url.length < 5) return true;
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("dicebear") ||
+    lower.includes("avataaars") ||
+    lower.includes("multavatar") ||
+    lower.includes("placeholder") ||
+    lower.includes("cartoon")
+  );
+}
+
+/**
+ * Sanitizes and guarantees data integrity for Loan Officers across the entire platform.
+ * Ensures authentic professional headshots for Mike Ford, Lonn Kilstrom, and all team members.
  */
 export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile {
   if (!lo) return DEFAULT_LOAN_OFFICER;
 
-  const isMike = 
-    lo.id === "lo-mike-ford" || 
-    lo.id === "mike-ford" ||
-    lo.name.toLowerCase().includes("mike ford") || 
-    lo.isAdmin === true ||
-    (lo.email && (lo.email.toLowerCase() === "mford@cfmtg.com" || lo.email.toLowerCase() === "fordmj@gmail.com"));
+  const rawId = (lo.id || "").toLowerCase();
+  const rawSlug = (lo.customSlug || "").toLowerCase();
+  const rawName = (lo.name || "").toLowerCase();
+  const rawEmail = (lo.email || "").toLowerCase();
+  const rawNmls = (lo.nmlsId || "").replace(/[^0-9]/g, "");
 
-  if (isMike) {
-    // Fix branch location if empty or if containing the old placeholder "Team Lonn Kilstrom Branch (Manager / Admin)"
-    const branch = (!lo.branch || lo.branch.includes("Team Lonn Kilstrom Branch (Manager / Admin)"))
+  // Find matching default team profile
+  const matchedDefault = INITIAL_TEAM_LOAN_OFFICERS.find(d => {
+    const dId = d.id.toLowerCase();
+    const dSlug = (d.customSlug || "").toLowerCase();
+    const dName = d.name.toLowerCase();
+    const dEmail = (d.email || "").toLowerCase();
+    const dNmls = (d.nmlsId || "").replace(/[^0-9]/g, "");
+
+    return (
+      dId === rawId || 
+      `lo-${dSlug}` === rawId ||
+      dSlug === rawSlug || 
+      dName === rawName ||
+      (rawName && (rawName.includes("mike ford") && dName.includes("mike ford"))) ||
+      (rawName && (rawName.includes("lonn") && dName.includes("lonn"))) ||
+      (rawName && (rawName.includes("alan") && dName.includes("alan"))) ||
+      (rawName && (rawName.includes("mark") && dName.includes("mark"))) ||
+      (rawName && (rawName.includes("darryl") && dName.includes("darryl"))) ||
+      (rawName && (rawName.includes("christopher") && dName.includes("christopher"))) ||
+      (rawName && (rawName.includes("derek") && dName.includes("derek"))) ||
+      (rawName && (rawName.includes("emanuel") && dName.includes("emanuel"))) ||
+      (rawEmail && dEmail && rawEmail === dEmail) ||
+      (rawNmls && dNmls && rawNmls === dNmls)
+    );
+  });
+
+  const canonicalId = matchedDefault?.id || lo.id || `lo-${lo.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+  const canonicalSlug = matchedDefault?.customSlug || lo.customSlug || canonicalId.replace(/^lo-/, "");
+
+  // Determine headshotUrl: preserve custom uploads (data:image/ or custom links), replace cartoon/placeholders with real photos
+  let finalHeadshot = lo.headshotUrl;
+  if (isCartoonOrPlaceholder(finalHeadshot)) {
+    if (matchedDefault && matchedDefault.headshotUrl && !isCartoonOrPlaceholder(matchedDefault.headshotUrl)) {
+      finalHeadshot = matchedDefault.headshotUrl;
+    } else if (canonicalId === "lo-mike-ford" || rawName.includes("mike ford")) {
+      finalHeadshot = "/mike-ford-headshot.jpg";
+    } else if (canonicalId === "lo-lonn-kilstrom" || rawName.includes("lonn")) {
+      finalHeadshot = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80";
+    } else if (canonicalId === "lo-alan-burkhart" || rawName.includes("alan")) {
+      finalHeadshot = "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&auto=format&fit=crop&q=80";
+    } else if (canonicalId === "lo-mark-saftich" || rawName.includes("mark")) {
+      finalHeadshot = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=600&auto=format&fit=crop&q=80";
+    } else if (canonicalId === "lo-darryl-symonds" || rawName.includes("darryl")) {
+      finalHeadshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80";
+    } else if (canonicalId === "lo-christopher-vargas" || rawName.includes("christopher")) {
+      finalHeadshot = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&auto=format&fit=crop&q=80";
+    } else if (canonicalId === "lo-derek-richards" || rawName.includes("derek")) {
+      finalHeadshot = "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=600&auto=format&fit=crop&q=80";
+    } else if (canonicalId === "lo-emanuel-etuks" || rawName.includes("emanuel")) {
+      finalHeadshot = "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=600&auto=format&fit=crop&q=80";
+    } else {
+      finalHeadshot = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80";
+    }
+  }
+
+  // Branch fixes
+  let branch = lo.branch || matchedDefault?.branch || "Team Lonn Kilstrom Branch";
+  if (canonicalId === "lo-mike-ford") {
+    branch = (!lo.branch || lo.branch.includes("Team Lonn Kilstrom Branch (Manager / Admin)"))
       ? "Lake Oswego, OR (serving Oregonians state-wide since 2000)"
       : lo.branch;
-
-    return {
-      ...lo,
-      id: "lo-mike-ford",
-      name: lo.name || "Mike Ford",
-      title: lo.title || "Senior Loan Officer & Branch Admin",
-      nmlsId: lo.nmlsId || "288455",
-      company: lo.company || "Cornerstone First Mortgage",
-      branch: branch,
-      email: lo.email || "mford@cfmtg.com",
-      phone: lo.phone || "(541) 729-0819",
-      headshotUrl: lo.headshotUrl || "/mike-ford-headshot.jpg", // Preserve custom uploaded headshot, fallback to default photo
-      websiteUrl: lo.websiteUrl || "https://cfmtg.com/mford/",
-      customSlug: lo.customSlug || "mike-ford",
-      isAdmin: true
-    };
   }
 
-  const isLonn = 
-    lo.id === "lo-lonn-kilstrom" || 
-    lo.id === "lonn-kilstrom" ||
-    lo.name.toLowerCase().includes("lonn kilstrom") || 
-    lo.name.toLowerCase() === "lonn" ||
-    (lo.email && lo.email.toLowerCase().includes("lkilstrom"));
-
-  if (isLonn) {
-    return {
-      ...lo,
-      id: "lo-lonn-kilstrom",
-      name: lo.name || "Lonn Kilstrom",
-      title: lo.title || "Branch Manager",
-      nmlsId: lo.nmlsId || "117954",
-      company: lo.company || "Cornerstone First Mortgage",
-      branch: lo.branch || "Team Lonn Kilstrom Branch",
-      email: lo.email || "LKilstrom@cfmtg.com",
-      phone: lo.phone || "(503) 849-3478",
-      headshotUrl: (lo.headshotUrl && lo.headshotUrl.length > 5)
-        ? lo.headshotUrl
-        : "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=800&q=80",
-      websiteUrl: lo.websiteUrl || "https://cfmtg.com/lkilstrom/",
-      customSlug: lo.customSlug || "lonn-kilstrom",
-      isAdmin: false
-    };
-  }
-
-  // Normalize other team members
-  const matchedDefault = INITIAL_TEAM_LOAN_OFFICERS.find(d => d.id === lo.id || d.customSlug === lo.customSlug || d.name.toLowerCase() === (lo.name || "").toLowerCase());
   return {
+    ...matchedDefault,
     ...lo,
-    company: lo.company || "Cornerstone First Mortgage",
-    customSlug: lo.customSlug || lo.id.replace(/^lo-/, ""),
-    headshotUrl: (lo.headshotUrl && lo.headshotUrl.length > 5) ? lo.headshotUrl : (matchedDefault?.headshotUrl || ""),
-    websiteUrl: lo.websiteUrl && !lo.websiteUrl.includes("/lo/") ? lo.websiteUrl : (matchedDefault?.websiteUrl || `https://cfmtg.com/${lo.customSlug || lo.id.replace(/^lo-/, "")}/`)
+    id: canonicalId,
+    name: lo.name || matchedDefault?.name || "Loan Officer",
+    title: lo.title || matchedDefault?.title || "Senior Loan Officer",
+    nmlsId: lo.nmlsId || matchedDefault?.nmlsId || "",
+    company: lo.company || matchedDefault?.company || "Cornerstone First Mortgage",
+    branch: branch,
+    email: lo.email || matchedDefault?.email || "",
+    phone: lo.phone || matchedDefault?.phone || "",
+    headshotUrl: finalHeadshot,
+    websiteUrl: lo.websiteUrl && !lo.websiteUrl.includes("/lo/") ? lo.websiteUrl : (matchedDefault?.websiteUrl || `https://cfmtg.com/${canonicalSlug}/`),
+    customSlug: canonicalSlug,
+    isAdmin: matchedDefault?.isAdmin ?? lo.isAdmin ?? false
   };
 }
 
 /**
- * Robust matcher for Loan Officers supporting any URL param variation:
- * ?lo=mike-ford, ?lo=lo-mike-ford, ?lo=mike, ?lo=mford, ?lo=288455, etc.
+ * Robust matcher for Loan Officers supporting any URL param variation or short path:
+ * ?lo=mike-ford, ?lo=lonn-kilstrom, ?lo=lkilstrom, ?lo=lonn, ?lo=117954, /lonn-kilstrom, /lkilstrom, /lonn, etc.
  */
 export function findMatchingLoanOfficer(
   query: string | null | undefined,
@@ -90,47 +124,36 @@ export function findMatchingLoanOfficer(
 
   const clean = raw.replace(/^lo-/, "").replace(/[^a-z0-9]/g, "");
 
-  // Priority 1: Exact Mike Ford shortcuts
-  if (
-    clean === "mikeford" || 
-    clean === "mike" || 
-    clean === "mford" || 
-    clean === "288455" || 
-    raw === "lo-mike-ford" || 
-    raw === "mike-ford" ||
-    raw === "fordmj@gmail.com" ||
-    raw === "mford@cfmtg.com"
-  ) {
-    const foundMike = loanOfficers.find(l => 
-      l.id === "lo-mike-ford" || 
-      l.id === "mike-ford" ||
-      l.customSlug === "mike-ford" || 
-      l.name.toLowerCase().includes("mike ford") || 
-      l.isAdmin
-    );
-    return sanitizeLoanOfficer(foundMike || DEFAULT_LOAN_OFFICER);
-  }
+  const allOfficers = [...loanOfficers];
+  INITIAL_TEAM_LOAN_OFFICERS.forEach(defaultLo => {
+    if (!allOfficers.some(l => l.id === defaultLo.id || l.customSlug === defaultLo.customSlug)) {
+      allOfficers.push(defaultLo);
+    }
+  });
 
-  // Priority 2: Direct lookup across the roster
-  const matched = loanOfficers.find(lo => {
+  const matched = allOfficers.find(lo => {
     const id = lo.id.toLowerCase();
     const idClean = id.replace(/^lo-/, "").replace(/[^a-z0-9]/g, "");
     const slug = (lo.customSlug || "").toLowerCase();
     const slugClean = slug.replace(/^lo-/, "").replace(/[^a-z0-9]/g, "");
     const nameClean = lo.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const firstNameClean = lo.name.split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
     const emailPrefix = (lo.email || "").split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
     const nmlsDigits = (lo.nmlsId || "").replace(/[^0-9]/g, "");
 
-    // Exact matches
+    // Direct matches
     if (id === raw || id === `lo-${raw}` || `lo-${id}` === raw) return true;
     if (slug && (slug === raw || slug === `lo-${raw}` || `lo-${slug}` === raw)) return true;
     if (idClean === clean || slugClean === clean || nameClean === clean) return true;
+    if (firstNameClean && (firstNameClean === clean || firstNameClean === raw)) return true;
     if (emailPrefix && (emailPrefix === clean || emailPrefix === raw)) return true;
     if (nmlsDigits && (nmlsDigits === clean || nmlsDigits === raw)) return true;
 
-    // First name & Handle helpers
+    // Direct shortcut handles
     if (clean === "lonn" && (idClean.includes("lonn") || nameClean.includes("lonn"))) return true;
     if (clean === "lkilstrom" && (idClean.includes("lonn") || emailPrefix === "lkilstrom")) return true;
+    if (clean === "mike" && (idClean.includes("mike") || nameClean.includes("mike"))) return true;
+    if (clean === "mford" && (idClean.includes("mike") || emailPrefix === "mford")) return true;
     if (clean === "alan" && (idClean.includes("alan") || nameClean.includes("alan"))) return true;
     if (clean === "aburkhart" && (idClean.includes("alan") || emailPrefix === "aburkhart")) return true;
     if (clean === "mark" && (idClean.includes("mark") || nameClean.includes("mark"))) return true;
@@ -164,22 +187,25 @@ export function findMatchingAgent(
 
   const clean = raw.replace(/^agent-/, "").replace(/[^a-z0-9]/g, "");
 
-  return agents.find(ag => {
+  const allAgents = [...agents];
+  INITIAL_AGENT_ROSTER.forEach(defaultAgent => {
+    if (!allAgents.some(a => a.id === defaultAgent.id || a.customSlug === defaultAgent.customSlug)) {
+      allAgents.push(defaultAgent);
+    }
+  });
+
+  return allAgents.find(ag => {
     const id = ag.id.toLowerCase();
     const idClean = id.replace(/^agent-/, "").replace(/[^a-z0-9]/g, "");
     const slug = (ag.customSlug || "").toLowerCase();
     const slugClean = slug.replace(/^agent-/, "").replace(/[^a-z0-9]/g, "");
     const nameClean = ag.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const firstNameClean = ag.name.split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
 
     if (id === raw || id === `agent-${raw}` || `agent-${id}` === raw) return true;
     if (slug && (slug === raw || slug === `agent-${slug}` || `agent-${slug}` === raw)) return true;
     if (idClean === clean || slugClean === clean || nameClean === clean) return true;
-
-    // First name match
-    if (clean === "sarah" && nameClean.includes("sarah")) return true;
-    if (clean === "marcus" && nameClean.includes("marcus")) return true;
-    if (clean === "elena" && nameClean.includes("elena")) return true;
-    if (clean === "tyler" && nameClean.includes("tyler")) return true;
+    if (firstNameClean && (firstNameClean === clean || firstNameClean === raw)) return true;
 
     return false;
   });
@@ -187,7 +213,7 @@ export function findMatchingAgent(
 
 /**
  * Robust matcher for Co-Branded Pairings supporting any URL param variation:
- * ?pair=mike-and-sarah, ?pair=pair-1, ?pair=lonn-and-marcus, etc.
+ * ?pair=mike-and-sarah, ?pair=pair-1, ?pair=lonn-and-marcus, ?pair=lonn-and-sarah, etc.
  */
 export function findMatchingPairing(
   query: string | null | undefined,
@@ -199,7 +225,14 @@ export function findMatchingPairing(
 
   const clean = raw.replace(/^pair-/, "").replace(/[^a-z0-9]/g, "");
 
-  return pairings.find(p => {
+  const allPairings = [...pairings];
+  INITIAL_PAIRINGS.forEach(ip => {
+    if (!allPairings.some(p => p.id === ip.id || p.customSlug === ip.customSlug)) {
+      allPairings.push(ip);
+    }
+  });
+
+  return allPairings.find(p => {
     const id = p.id.toLowerCase();
     const idClean = id.replace(/^pair-/, "").replace(/[^a-z0-9]/g, "");
     const slug = (p.customSlug || "").toLowerCase();
@@ -208,35 +241,27 @@ export function findMatchingPairing(
     if (id === raw || slug === raw) return true;
     if (idClean === clean || slugClean === clean) return true;
 
-    if (clean.includes("mike") && clean.includes("sarah")) {
-      if (id.includes("mike") || slug.includes("mike") || id === "pair-1") return true;
-    }
+    // Checks for composite pair slugs
+    if (clean === "lonnandmarcus" && (slugClean.includes("lonn") && slugClean.includes("marcus"))) return true;
+    if (clean === "lonnandsarah" && (slugClean.includes("lonn") && slugClean.includes("sarah"))) return true;
+    if (clean === "lonnandelena" && (slugClean.includes("lonn") && slugClean.includes("elena"))) return true;
+    if (clean === "lonnandtyler" && (slugClean.includes("lonn") && slugClean.includes("tyler"))) return true;
+    if (clean === "mikeandsarah" && (slugClean.includes("mike") && slugClean.includes("sarah"))) return true;
+
     if (clean.includes("lonn") && clean.includes("marcus")) {
-      if (id.includes("lonn") || slug.includes("lonn") || id === "pair-2" || slug === "lonn-and-marcus") return true;
+      if (id === "pair-2" || slug === "lonn-and-marcus" || (p.loId.includes("lonn") && p.agentId.includes("marcus"))) return true;
     }
     if (clean.includes("lonn") && clean.includes("sarah")) {
-      if (id.includes("lonn") || slug.includes("lonn") || id === "pair-lonn-sarah" || slug === "lonn-and-sarah") return true;
+      if (id === "pair-lonn-sarah" || slug === "lonn-and-sarah" || (p.loId.includes("lonn") && p.agentId.includes("sarah"))) return true;
     }
     if (clean.includes("lonn") && clean.includes("elena")) {
-      if (id.includes("lonn") || slug.includes("lonn") || id === "pair-lonn-elena" || slug === "lonn-and-elena") return true;
+      if (id === "pair-lonn-elena" || slug === "lonn-and-elena" || (p.loId.includes("lonn") && p.agentId.includes("elena"))) return true;
     }
     if (clean.includes("lonn") && clean.includes("tyler")) {
-      if (id.includes("lonn") || slug.includes("lonn") || id === "pair-lonn-tyler" || slug === "lonn-and-tyler") return true;
+      if (id === "pair-lonn-tyler" || slug === "lonn-and-tyler" || (p.loId.includes("lonn") && p.agentId.includes("tyler"))) return true;
     }
-    if (clean.includes("alan") && clean.includes("marcus")) {
-      if (id.includes("alan") || slug.includes("alan") || id === "pair-3") return true;
-    }
-    if (clean.includes("mark") && clean.includes("elena")) {
-      if (id.includes("mark") || slug.includes("mark") || id === "pair-4") return true;
-    }
-    if (clean.includes("darryl") && clean.includes("tyler")) {
-      if (id.includes("darryl") || slug.includes("darryl") || id === "pair-5") return true;
-    }
-    if (clean.includes("christopher") && clean.includes("sarah")) {
-      if (id.includes("christopher") || slug.includes("christopher") || id === "pair-6") return true;
-    }
-    if (clean.includes("derek") && clean.includes("tyler")) {
-      if (id.includes("derek") || slug.includes("derek") || id === "pair-7") return true;
+    if (clean.includes("mike") && clean.includes("sarah")) {
+      if (id === "pair-1" || slug === "mike-and-sarah" || (p.loId.includes("mike") && p.agentId.includes("sarah"))) return true;
     }
 
     return false;
@@ -244,7 +269,7 @@ export function findMatchingPairing(
 }
 
 /**
- * Resolves Loan Officer, Agent, and Pairing from any path (e.g. /mike-ford, /mford, /mike, /mike-and-sarah, /lonn-and-marcus, /sarah-jenkins, /lo/mike-ford)
+ * Resolves Loan Officer, Agent, and Pairing from any path (e.g. /mike-ford, /mford, /mike, /lonn-kilstrom, /lkilstrom, /lonn, /lonn-and-marcus, /sarah-jenkins)
  */
 export function resolveFromUrlPath(
   pathname: string,
@@ -258,7 +283,6 @@ export function resolveFromUrlPath(
   matchedPairing?: LOPairing;
   isPairing: boolean;
 } {
-  // Extract all segment candidates from pathname and hash
   const rawSegments = [
     ...pathname.split("/"),
     ...hash.replace("#", "").split("/")
@@ -283,15 +307,8 @@ export function resolveFromUrlPath(
     return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pairByPath, isPairing: true };
   }
 
-  // Check if segment has "and" or "-" joining LO and Agent (e.g. lonn-and-sarah, mike-and-sarah, lonn-and-marcus)
+  // Check if segment has "and" or "-" joining LO and Agent (e.g. lonn-and-sarah, lonn-and-marcus)
   for (const seg of rawSegments) {
-    const pair = findMatchingPairing(seg, pairings);
-    if (pair) {
-      const pairLo = findMatchingLoanOfficer(pair.loId, loanOfficers);
-      const pairAgent = findMatchingAgent(pair.agentId, agents);
-      return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pair, isPairing: true };
-    }
-
     if (seg.includes("-and-") || seg.includes("and")) {
       const parts = seg.split(/-and-|\band\b/).map(p => p.trim()).filter(Boolean);
       if (parts.length >= 2) {
@@ -340,3 +357,4 @@ export function resolveFromUrlPath(
 
   return { matchedLo, matchedAgent, isPairing: false };
 }
+

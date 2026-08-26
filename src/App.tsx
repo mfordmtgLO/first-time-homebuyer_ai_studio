@@ -314,6 +314,19 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Direct Navigate to Local Guides Section (Loan Officer & Agent Profiles)
+  const handleNavigateToGuides = () => {
+    setShowLoPortal(false);
+    setCurrentMode("dashboard");
+    setActiveTab("step4_ai_plan");
+    setTimeout(() => {
+      const el = document.getElementById("local-professional-guides-section");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 150);
+  };
+
   const handleScorecardSave = (updated: PropertyListing) => {
     setProperties(prev => prev.map(p => (p.id === updated.id ? updated : p)));
     setScorecardProperty(null);
@@ -355,6 +368,7 @@ export default function App() {
             savedCount={properties.length}
             onOpenLoPortal={() => setShowLoPortal(true)}
             onOpenLeadBot={() => setIsLeadBotOpen(true)}
+            onNavigateToGuides={handleNavigateToGuides}
             loName={guidesState.loanOfficer.name}
           />
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
@@ -362,6 +376,7 @@ export default function App() {
               currentTab={activeTab}
               currentMode={currentMode}
               onNavigate={handleNavigate}
+              onNavigateToGuides={handleNavigateToGuides}
               loanOfficerName={guidesState.loanOfficer.name}
               activeAgentName={activeAgent.name}
             />

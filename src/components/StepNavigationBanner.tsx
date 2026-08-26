@@ -6,7 +6,8 @@ import {
   Sparkles, 
   ArrowRight,
   RotateCcw,
-  Check
+  Check,
+  Users
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -15,6 +16,7 @@ interface StepNavigationBannerProps {
   currentMode?: "website" | "dashboard";
   activeMode?: "website" | "dashboard";
   onNavigate: (tab: string, mode: "website" | "dashboard") => void;
+  onNavigateToGuides?: () => void;
   loanOfficerName?: string;
   activeAgentName?: string;
 }
@@ -22,6 +24,9 @@ interface StepNavigationBannerProps {
 export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   currentTab,
   onNavigate,
+  onNavigateToGuides,
+  loanOfficerName,
+  activeAgentName,
 }) => {
   // Determine current active step index (0 = Home, 1 = Step 1, 2 = Step 2, 3 = Step 3, 4 = Step 4)
   let activeStep = 0;
@@ -77,7 +82,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
       id="guided-4-step-journey-banner"
       className="w-full bg-white/95 backdrop-blur-md rounded-2xl border border-[#EAE7E0] p-2.5 sm:p-3.5 shadow-sm transition-all"
     >
-      {/* Top Header: Return to Beginning link + Guided Workflow label */}
+      {/* Top Header: Return to Beginning link + Guided Workflow label + Sticky Local Guides button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 mb-2 border-b border-[#EAE7E0]/80">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold tracking-wider uppercase bg-[#F1EFE9] text-[#4A5D4E] px-2.5 py-0.5 rounded-full border border-[#EAE7E0]">
@@ -88,17 +93,42 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
           </span>
         </div>
 
-        {/* Quick Return to Beginning / Home Button */}
-        <button
-          id="return-to-start-btn"
-          type="button"
-          onClick={() => onNavigate("hero", "website")}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4A5D4E] hover:text-[#2D362E] bg-[#F9F8F4] hover:bg-[#F1EFE9] px-2.5 py-1 rounded-lg border border-[#EAE7E0] transition-colors cursor-pointer self-start sm:self-auto"
-          title="Return to the beginning: Buy your first home with clarity and total confidence"
-        >
-          <RotateCcw className="w-3 h-3 text-[#C18C5D]" />
-          <span>Return to Start / Home</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {/* Sticky Local Guides Quick Button */}
+          <button
+            id="step-banner-local-guides-btn"
+            type="button"
+            onClick={() => {
+              if (onNavigateToGuides) {
+                onNavigateToGuides();
+              } else {
+                onNavigate("step4_ai_plan", "dashboard");
+              }
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2D362E] hover:text-[#4A5D4E] bg-[#FAF9F5] hover:bg-[#F1EFE9] px-2.5 py-1 rounded-lg border border-[#EAE7E0] hover:border-[#DCD7CD] transition-colors cursor-pointer"
+            title="Meet your dedicated Local Professional Guides (Loan Officer and Real Estate Agent)"
+          >
+            <Users className="w-3.5 h-3.5 text-[#C18C5D]" />
+            <span>Local Guides</span>
+            {(loanOfficerName || activeAgentName) && (
+              <span className="hidden lg:inline text-[10px] text-[#606C5D] font-medium">
+                ({loanOfficerName || "Loan Officer"} & {activeAgentName || "Agent"})
+              </span>
+            )}
+          </button>
+
+          {/* Quick Return to Beginning / Home Button */}
+          <button
+            id="return-to-start-btn"
+            type="button"
+            onClick={() => onNavigate("hero", "website")}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4A5D4E] hover:text-[#2D362E] bg-[#F9F8F4] hover:bg-[#F1EFE9] px-2.5 py-1 rounded-lg border border-[#EAE7E0] transition-colors cursor-pointer"
+            title="Return to the beginning: Buy your first home with clarity and total confidence"
+          >
+            <RotateCcw className="w-3 h-3 text-[#C18C5D]" />
+            <span>Return to Start / Home</span>
+          </button>
+        </div>
       </div>
 
       {/* Horizontal Progress Bar */}

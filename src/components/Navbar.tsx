@@ -16,6 +16,7 @@ import {
   Minus,
   FileText,
   UserCheck,
+  Users,
   RotateCcw,
   Zap,
   ChevronLeft,
@@ -53,6 +54,7 @@ interface NavbarProps {
   savedCount: number;
   onOpenLoPortal?: () => void;
   onOpenLeadBot?: () => void;
+  onNavigateToGuides?: () => void;
   loName?: string;
 }
 
@@ -66,6 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   savedCount,
   onOpenLoPortal,
   onOpenLeadBot,
+  onNavigateToGuides,
   loName = "Mike Ford"
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -538,7 +541,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             data-nav-id="hero"
             onClick={() => handleNavClick("hero", "website")}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer shadow-xs group z-20 ${
+            className={`flex items-center gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer shadow-xs group z-20 ${
               currentTab === "hero"
                 ? "bg-[#4A5D4E] text-white shadow-xs ring-1 ring-[#38463B]"
                 : "text-[#4A5D4E] hover:bg-[#F1EFE9] hover:text-[#2D362E] bg-[#FAF9F5] border border-[#EAE7E0] hover:border-[#DCD7CD]"
@@ -549,6 +552,38 @@ export const Navbar: React.FC<NavbarProps> = ({
               currentTab === "hero" ? "text-white" : "text-[#606C5D]"
             }`} />
             <span>Home / Overview</span>
+          </button>
+
+          {/* PERMANENTLY VISIBLE PINNED "Local Guides" STICKY BUTTON */}
+          <button
+            id="navbar-pinned-local-guides-btn"
+            type="button"
+            data-nav-id="local-guides"
+            onClick={() => {
+              if (onNavigateToGuides) {
+                onNavigateToGuides();
+              } else {
+                handleNavClick("step4_ai_plan", "dashboard");
+              }
+            }}
+            className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer shadow-xs group z-20 ${
+              currentTab === "step4_ai_plan"
+                ? "bg-[#C18C5D] text-white shadow-xs ring-1 ring-[#9E6E45]"
+                : "text-[#2D362E] hover:bg-[#F1EFE9] bg-[#FAF9F5] border border-[#EAE7E0] hover:border-[#DCD7CD]"
+            }`}
+            title="Meet Your Local Guides (Loan Officer & Agent Profiles)"
+          >
+            <Users className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
+              currentTab === "step4_ai_plan" ? "text-white" : "text-[#C18C5D]"
+            }`} />
+            <span>Local Guides</span>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide leading-none ${
+              currentTab === "step4_ai_plan"
+                ? "bg-white/20 text-white"
+                : "bg-[#C18C5D]/15 text-[#C18C5D]"
+            }`}>
+              Profiles
+            </span>
           </button>
 
           {/* Subtle Vertical Divider */}
@@ -721,13 +756,29 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => {
+                setMobileMenuOpen(false);
+                if (onNavigateToGuides) {
+                  onNavigateToGuides();
+                } else {
+                  setActiveMode("dashboard");
+                  handleNavClick("step4_ai_plan", "dashboard");
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#FAF9F5] text-[#2D362E] font-semibold text-sm border border-[#EAE7E0] hover:bg-[#F1EFE9] shadow-2xs"
+            >
+              <Users className="w-4 h-4 text-[#C18C5D]" />
+              <span>Meet Your Local Guides (LO & Agent)</span>
+            </button>
+
+            <button
+              onClick={() => {
                 setActiveMode("dashboard");
                 handleNavClick("step4_ai_plan", "dashboard");
               }}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#4A5D4E] text-white font-semibold text-sm shadow-xs"
             >
               <Sparkles className="w-4 h-4 text-[#D4A373]" />
-              <span>Step 4: AI Plan & Local Guides</span>
+              <span>Step 4: AI Plan & Summary</span>
             </button>
 
             {onOpenLoPortal && (

@@ -37,6 +37,12 @@ import {
   ProfessionalGuidesState,
   CapturedLead
 } from "./types";
+import { 
+  sanitizeLoanOfficer, 
+  findMatchingLoanOfficer, 
+  findMatchingAgent, 
+  findMatchingPairing 
+} from "./utils/guideMatching";
 
 export default function App() {
   const [currentMode, setCurrentMode] = useState<"website" | "dashboard">("website");
@@ -54,8 +60,8 @@ export default function App() {
     let initialState: ProfessionalGuidesState = {
       currentUserId: DEFAULT_LOAN_OFFICER.id,
       adminLoanOfficerId: DEFAULT_LOAN_OFFICER.id,
-      loanOfficers: INITIAL_TEAM_LOAN_OFFICERS,
-      loanOfficer: DEFAULT_LOAN_OFFICER,
+      loanOfficers: INITIAL_TEAM_LOAN_OFFICERS.map(sanitizeLoanOfficer),
+      loanOfficer: sanitizeLoanOfficer(DEFAULT_LOAN_OFFICER),
       agentRoster: INITIAL_AGENT_ROSTER,
       activeAgentId: INITIAL_AGENT_ROSTER[0].id,
       pairings: INITIAL_PAIRINGS,
@@ -72,37 +78,14 @@ export default function App() {
           if (!parsed.leads) {
             parsed.leads = INITIAL_LEADS;
           }
-          // Ensure Mike Ford has the exact correct company and email
-          parsed.loanOfficers = parsed.loanOfficers.map((lo: any) => {
-            const updated = { ...lo };
-            if (!updated.company || updated.company.includes("Pacific Coast")) {
-              updated.company = "Cornerstone First Mortgage";
-            }
-            if (updated.id === "lo-mike-ford" || updated.name === "Mike Ford" || updated.isAdmin) {
-              updated.email = "mford@cfmtg.com";
-              updated.branch = "Team Lonn Kilstrom Branch (Manager / Admin)";
-              updated.nmlsId = "288455";
-              updated.headshotUrl = updated.headshotUrl || "/mike-ford-headshot.jpg";
-              updated.websiteUrl = updated.websiteUrl || "https://cfmtg.com/lo/mike-ford/";
-            } else if (updated.email) {
-              updated.email = updated.email.replace("pacificlending.com", "cfmtg.com").replace("cfm1.com", "cfmtg.com");
-            }
-            return updated;
-          });
+          // Sanitize all loan officers and guarantee Mike Ford's real headshot and data
+          parsed.loanOfficers = (parsed.loanOfficers as any[]).map(lo => sanitizeLoanOfficer(lo));
 
           // Merge any Team Lonn Kilstrom LOs that aren't yet in the saved state
           INITIAL_TEAM_LOAN_OFFICERS.forEach(defaultLo => {
             const exists = parsed.loanOfficers.some((lo: any) => lo.id === defaultLo.id);
             if (!exists) {
-              parsed.loanOfficers.push(defaultLo);
-            } else {
-              // Ensure websiteUrl is populated
-              parsed.loanOfficers = parsed.loanOfficers.map((lo: any) => {
-                if (lo.id === defaultLo.id) {
-                  return { ...lo, websiteUrl: lo.websiteUrl || defaultLo.websiteUrl, branch: defaultLo.branch };
-                }
-                return lo;
-              });
+              parsed.loanOfficers.push(sanitizeLoanOfficer(defaultLo));
             }
           });
 
@@ -115,27 +98,11 @@ export default function App() {
           });
 
           if (parsed.loanOfficer) {
-            if (!parsed.loanOfficer.company || parsed.loanOfficer.company.includes("Pacific Coast")) {
-              parsed.loanOfficer.company = "Cornerstone First Mortgage";
-            }
-            if (parsed.loanOfficer.id === "lo-mike-ford" || parsed.loanOfficer.name === "Mike Ford" || parsed.loanOfficer.isAdmin) {
-              parsed.loanOfficer.email = parsed.loanOfficer.email || "mford@cfmtg.com";
-              parsed.loanOfficer.branch = parsed.loanOfficer.branch || "Team Lonn Kilstrom Branch (Manager / Admin)";
-              parsed.loanOfficer.nmlsId = "288455";
-              parsed.loanOfficer.headshotUrl = parsed.loanOfficer.headshotUrl || "/mike-ford-headshot.jpg";
-              parsed.loanOfficer.websiteUrl = parsed.loanOfficer.websiteUrl || "https://cfmtg.com/lo/mike-ford/";
-            }
-            if (parsed.loanOfficers && Array.isArray(parsed.loanOfficers)) {
-              parsed.loanOfficers = parsed.loanOfficers.map((lo: any) => {
-                if (lo.id === "lo-mike-ford" || lo.name === "Mike Ford" || lo.isAdmin) {
-                  return { ...lo, email: lo.email || "mford@cfmtg.com", branch: lo.branch || "Team Lonn Kilstrom Branch (Manager / Admin)", nmlsId: "288455", headshotUrl: lo.headshotUrl || "/mike-ford-headshot.jpg" };
-                }
-                return lo;
-              });
-            } else if (parsed.loanOfficer.email) {
-              parsed.loanOfficer.email = parsed.loanOfficer.email.replace("pacificlending.com", "cfmtg.com").replace("cfm1.com", "cfmtg.com");
-            }
+            parsed.loanOfficer = sanitizeLoanOfficer(parsed.loanOfficer);
+          } else {
+            parsed.loanOfficer = sanitizeLoanOfficer(DEFAULT_LOAN_OFFICER);
           }
+
           initialState = parsed;
         }
       }
@@ -155,35 +122,33 @@ export default function App() {
       let updatedLo = initialState.loanOfficer;
       let updatedAgentId = initialState.activeAgentId;
 
-      const matchedLoBySlug = initialState.loanOfficers.find((l: any) => 
-        (l.customSlug && (pathname.includes(l.customSlug.toLowerCase()) || hash.includes(l.customSlug.toLowerCase()))) ||
-        pathname.includes(l.id.toLowerCase()) ||
-        hash.includes(l.id.toLowerCase())
-      );
-      if (matchedLoBySlug) {
-        updatedLo = matchedLoBySlug;
-      }
-
-      if (loParam) {
-        const matchedLo = initialState.loanOfficers.find((l: any) => l.id === loParam || l.customSlug === loParam || l.customSlug === loParam.replace("lo-", ""));
-        if (matchedLo) updatedLo = matchedLo;
-      }
-
-      if (agentParam) {
-        const matchedAgent = initialState.agentRoster.find((a: any) => a.id === agentParam || a.customSlug === agentParam || a.customSlug === agentParam.replace("agent-", ""));
-        if (matchedAgent) updatedAgentId = matchedAgent.id;
-      }
-
+      // Match pairing first if present
       if (pairParam) {
-        const matchedPair = initialState.pairings.find((p: any) => p.id === pairParam || p.customSlug === pairParam);
+        const matchedPair = findMatchingPairing(pairParam, initialState.pairings);
         if (matchedPair) {
-          const pairLo = initialState.loanOfficers.find((l: any) => l.id === matchedPair.loId);
+          const pairLo = findMatchingLoanOfficer(matchedPair.loId, initialState.loanOfficers);
           if (pairLo) updatedLo = pairLo;
-          updatedAgentId = matchedPair.agentId;
+          const pairAgent = findMatchingAgent(matchedPair.agentId, initialState.agentRoster);
+          if (pairAgent) updatedAgentId = pairAgent.id;
         }
       }
 
-      initialState.loanOfficer = updatedLo;
+      // Match specific LO param (e.g. ?lo=mike-ford, ?lo=lo-mike-ford, ?lo=mford)
+      if (loParam) {
+        const matchedLo = findMatchingLoanOfficer(loParam, initialState.loanOfficers);
+        if (matchedLo) updatedLo = matchedLo;
+      } else if (pathname.includes("mike-ford") || pathname.includes("mford") || hash.includes("mike-ford")) {
+        const matchedLo = findMatchingLoanOfficer("mike-ford", initialState.loanOfficers);
+        if (matchedLo) updatedLo = matchedLo;
+      }
+
+      // Match agent param
+      if (agentParam) {
+        const matchedAgent = findMatchingAgent(agentParam, initialState.agentRoster);
+        if (matchedAgent) updatedAgentId = matchedAgent.id;
+      }
+
+      initialState.loanOfficer = sanitizeLoanOfficer(updatedLo);
       initialState.activeAgentId = updatedAgentId;
     }
 
@@ -222,11 +187,6 @@ export default function App() {
       params.get("portal") === "lo" || 
       params.get("admin") === "lo";
 
-    const isMikePath = 
-      pathname.includes("mike-ford") || 
-      hash.includes("mike-ford") ||
-      pathname.includes("mford");
-
     const loParam = params.get("lo");
     const agentParam = params.get("agent");
     const pairParam = params.get("pair");
@@ -235,38 +195,32 @@ export default function App() {
       let updatedLo = prev.loanOfficer;
       let updatedAgentId = prev.activeAgentId;
 
-      // Check if any team loan officer slug is in the pathname or hash
-      const matchedLoBySlug = prev.loanOfficers.find(l => 
-        (l.customSlug && (pathname.includes(l.customSlug.toLowerCase()) || hash.includes(l.customSlug.toLowerCase()))) ||
-        pathname.includes(l.id.toLowerCase()) ||
-        hash.includes(l.id.toLowerCase())
-      );
-      if (matchedLoBySlug) {
-        updatedLo = matchedLoBySlug;
+      if (pairParam) {
+        const matchedPair = findMatchingPairing(pairParam, prev.pairings);
+        if (matchedPair) {
+          const pairLo = findMatchingLoanOfficer(matchedPair.loId, prev.loanOfficers);
+          if (pairLo) updatedLo = pairLo;
+          const pairAgent = findMatchingAgent(matchedPair.agentId, prev.agentRoster);
+          if (pairAgent) updatedAgentId = pairAgent.id;
+        }
       }
 
       if (loParam) {
-        const matchedLo = prev.loanOfficers.find(l => l.id === loParam || l.customSlug === loParam || l.customSlug === loParam.replace("lo-", ""));
+        const matchedLo = findMatchingLoanOfficer(loParam, prev.loanOfficers);
+        if (matchedLo) updatedLo = matchedLo;
+      } else if (pathname.includes("mike-ford") || pathname.includes("mford") || hash.includes("mike-ford")) {
+        const matchedLo = findMatchingLoanOfficer("mike-ford", prev.loanOfficers);
         if (matchedLo) updatedLo = matchedLo;
       }
 
       if (agentParam) {
-        const matchedAgent = prev.agentRoster.find(a => a.id === agentParam || a.customSlug === agentParam || a.customSlug === agentParam.replace("agent-", ""));
+        const matchedAgent = findMatchingAgent(agentParam, prev.agentRoster);
         if (matchedAgent) updatedAgentId = matchedAgent.id;
-      }
-
-      if (pairParam) {
-        const matchedPair = prev.pairings.find(p => p.id === pairParam || p.customSlug === pairParam);
-        if (matchedPair) {
-          const pairLo = prev.loanOfficers.find(l => l.id === matchedPair.loId);
-          if (pairLo) updatedLo = pairLo;
-          updatedAgentId = matchedPair.agentId;
-        }
       }
 
       return {
         ...prev,
-        loanOfficer: updatedLo,
+        loanOfficer: sanitizeLoanOfficer(updatedLo),
         activeAgentId: updatedAgentId
       };
     });

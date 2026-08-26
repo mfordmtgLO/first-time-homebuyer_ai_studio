@@ -748,8 +748,13 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   };
 
   // URL Helpers
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://homebuyer-roadmap.app";
-  const activePairingUrl = `${origin}/?lo=${currentLo.id}&agent=${activeAgent?.id || ""}`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://first-time-homebuyer.ai.studio";
+  const currentLoSlug = currentLo.customSlug || currentLo.id.replace(/^lo-/, "");
+  const activeAgentSlug = activeAgent?.customSlug || activeAgent?.id.replace(/^agent-/, "") || "";
+  const matchedActivePairing = guidesState.pairings.find(p => p.loId === currentLo.id && p.agentId === activeAgent?.id);
+  const activePairingUrl = matchedActivePairing?.customSlug 
+    ? `${origin}/?pair=${matchedActivePairing.customSlug}`
+    : `${origin}/?lo=${currentLoSlug}&agent=${activeAgentSlug}`;
 
   return (
     <div className="min-h-screen bg-[#F7F6F2] text-[#2D362E] pb-24">
@@ -1438,7 +1443,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             {/* Team LO Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {guidesState.loanOfficers.map(lo => {
-                const loUrl = `${origin}/?lo=${lo.id}`;
+                const loSlug = lo.customSlug || lo.id.replace(/^lo-/, "");
+                const loUrl = `${origin}/?lo=${loSlug}`;
                 const loPairings = guidesState.pairings.filter(p => p.loId === lo.id);
                 const isMike = lo.isAdmin;
 
@@ -1768,7 +1774,9 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               {guidesState.pairings.map(pairing => {
                 const lo = guidesState.loanOfficers.find(l => l.id === pairing.loId) || currentLo;
                 const agent = guidesState.agentRoster.find(a => a.id === pairing.agentId) || guidesState.agentRoster[0];
-                const pairingFullUrl = `${origin}/?lo=${lo.id}&agent=${agent?.id || ""}`;
+                const pairingFullUrl = pairing.customSlug 
+                  ? `${origin}/?pair=${pairing.customSlug}`
+                  : `${origin}/?lo=${lo.customSlug || lo.id.replace(/^lo-/, "")}&agent=${agent?.customSlug || agent?.id.replace(/^agent-/, "") || ""}`;
                 const isActive = guidesState.loanOfficer.id === lo.id && guidesState.activeAgentId === agent?.id;
 
                 return (
@@ -2499,13 +2507,13 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-[#606C5D] flex items-center justify-between">
                   <span>Official Website / CFMTG Bio Link</span>
-                  <span className="text-[10px] text-[#9A9488]">Optional (e.g. https://cfmtg.com/lo/...)</span>
+                  <span className="text-[10px] text-[#9A9488]">Optional (e.g. https://cfmtg.com/mford/)</span>
                 </label>
                 <div className="relative">
                   <Globe className="w-3.5 h-3.5 text-[#9A9488] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="url"
-                    placeholder="https://cfmtg.com/lo/your-name/"
+                    placeholder="https://cfmtg.com/mford/"
                     value={editingLo ? (editingLo.websiteUrl || "") : (newLoForm.websiteUrl || "")}
                     onChange={(e) => editingLo ? setEditingLo({ ...editingLo, websiteUrl: e.target.value }) : setNewLoForm(p => ({ ...p, websiteUrl: e.target.value }))}
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"

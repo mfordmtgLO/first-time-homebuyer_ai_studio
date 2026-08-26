@@ -1,0 +1,201 @@
+import { LoanOfficerProfile, RealEstateAgentProfile, LOPairing } from "../types";
+import { DEFAULT_LOAN_OFFICER, INITIAL_TEAM_LOAN_OFFICERS } from "../data/initialData";
+
+/**
+ * Sanitizes and guarantees data integrity for Loan Officers,
+ * specifically ensuring Mike Ford always uses the authentic headshot and correct company details.
+ */
+export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile {
+  const isMike = 
+    lo.id === "lo-mike-ford" || 
+    lo.id === "mike-ford" ||
+    lo.name.toLowerCase().includes("mike ford") || 
+    lo.isAdmin === true ||
+    (lo.email && (lo.email.toLowerCase() === "mford@cfmtg.com" || lo.email.toLowerCase() === "fordmj@gmail.com"));
+
+  if (isMike) {
+    const isUnsplashPhoto = !lo.headshotUrl || lo.headshotUrl.includes("unsplash");
+    return {
+      ...lo,
+      id: "lo-mike-ford",
+      name: "Mike Ford",
+      title: lo.title || "Senior Loan Officer & Branch Admin",
+      nmlsId: "288455",
+      company: "Cornerstone First Mortgage",
+      branch: "Team Lonn Kilstrom Branch (Manager / Admin)",
+      email: "mford@cfmtg.com",
+      phone: lo.phone || "(541) 729-0819",
+      headshotUrl: isUnsplashPhoto ? "/mike-ford-headshot.jpg" : lo.headshotUrl,
+      websiteUrl: "https://cfmtg.com/mford/",
+      customSlug: "mike-ford",
+      isAdmin: true
+    };
+  }
+
+  // Normalize other team members
+  const matchedDefault = INITIAL_TEAM_LOAN_OFFICERS.find(d => d.id === lo.id || d.customSlug === lo.customSlug);
+  return {
+    ...lo,
+    company: "Cornerstone First Mortgage",
+    customSlug: lo.customSlug || lo.id.replace(/^lo-/, ""),
+    websiteUrl: lo.websiteUrl && !lo.websiteUrl.includes("/lo/") ? lo.websiteUrl : (matchedDefault?.websiteUrl || `https://cfmtg.com/${lo.customSlug || lo.id.replace(/^lo-/, "")}/`)
+  };
+}
+
+/**
+ * Robust matcher for Loan Officers supporting any URL param variation:
+ * ?lo=mike-ford, ?lo=lo-mike-ford, ?lo=mike, ?lo=mford, ?lo=288455, etc.
+ */
+export function findMatchingLoanOfficer(
+  query: string | null | undefined,
+  loanOfficers: LoanOfficerProfile[]
+): LoanOfficerProfile | undefined {
+  if (!query) return undefined;
+  const raw = query.trim().toLowerCase();
+  if (!raw) return undefined;
+
+  const clean = raw.replace(/^lo-/, "").replace(/[^a-z0-9]/g, "");
+
+  // Priority 1: Exact Mike Ford shortcuts
+  if (
+    clean === "mikeford" || 
+    clean === "mike" || 
+    clean === "mford" || 
+    clean === "288455" || 
+    raw === "lo-mike-ford" || 
+    raw === "mike-ford" ||
+    raw === "fordmj@gmail.com" ||
+    raw === "mford@cfmtg.com"
+  ) {
+    const foundMike = loanOfficers.find(l => 
+      l.id === "lo-mike-ford" || 
+      l.id === "mike-ford" ||
+      l.customSlug === "mike-ford" || 
+      l.name.toLowerCase().includes("mike ford") || 
+      l.isAdmin
+    );
+    return sanitizeLoanOfficer(foundMike || DEFAULT_LOAN_OFFICER);
+  }
+
+  // Priority 2: Direct lookup across the roster
+  const matched = loanOfficers.find(lo => {
+    const id = lo.id.toLowerCase();
+    const idClean = id.replace(/^lo-/, "").replace(/[^a-z0-9]/g, "");
+    const slug = (lo.customSlug || "").toLowerCase();
+    const slugClean = slug.replace(/^lo-/, "").replace(/[^a-z0-9]/g, "");
+    const nameClean = lo.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const emailPrefix = (lo.email || "").split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    const nmlsDigits = (lo.nmlsId || "").replace(/[^0-9]/g, "");
+
+    // Exact matches
+    if (id === raw || id === `lo-${raw}` || `lo-${id}` === raw) return true;
+    if (slug && (slug === raw || slug === `lo-${raw}` || `lo-${slug}` === raw)) return true;
+    if (idClean === clean || slugClean === clean || nameClean === clean) return true;
+    if (emailPrefix && (emailPrefix === clean || emailPrefix === raw)) return true;
+    if (nmlsDigits && (nmlsDigits === clean || nmlsDigits === raw)) return true;
+
+    // First name & Handle helpers
+    if (clean === "lonn" && (idClean.includes("lonn") || nameClean.includes("lonn"))) return true;
+    if (clean === "lkilstrom" && (idClean.includes("lonn") || emailPrefix === "lkilstrom")) return true;
+    if (clean === "alan" && (idClean.includes("alan") || nameClean.includes("alan"))) return true;
+    if (clean === "aburkhart" && (idClean.includes("alan") || emailPrefix === "aburkhart")) return true;
+    if (clean === "mark" && (idClean.includes("mark") || nameClean.includes("mark"))) return true;
+    if (clean === "msaftich" && (idClean.includes("mark") || emailPrefix === "msaftich")) return true;
+    if (clean === "darryl" && (idClean.includes("darryl") || nameClean.includes("darryl"))) return true;
+    if (clean === "dsymonds" && (idClean.includes("darryl") || emailPrefix === "dsymonds")) return true;
+    if (clean === "christopher" && (idClean.includes("christopher") || nameClean.includes("christopher"))) return true;
+    if (clean === "cvargas" && (idClean.includes("christopher") || emailPrefix === "cvargas")) return true;
+    if (clean === "derek" && (idClean.includes("derek") || nameClean.includes("derek"))) return true;
+    if (clean === "drichards" && (idClean.includes("derek") || emailPrefix === "drichards")) return true;
+    if (clean === "emanuel" && (idClean.includes("emanuel") || nameClean.includes("emanuel"))) return true;
+    if (clean === "eetuks" && (idClean.includes("emanuel") || emailPrefix === "eetuks")) return true;
+
+    return false;
+  });
+
+  return matched ? sanitizeLoanOfficer(matched) : undefined;
+}
+
+/**
+ * Robust matcher for Real Estate Agents supporting any URL param variation:
+ * ?agent=sarah-jenkins, ?agent=agent-sarah-jenkins, ?agent=sarah, etc.
+ */
+export function findMatchingAgent(
+  query: string | null | undefined,
+  agents: RealEstateAgentProfile[]
+): RealEstateAgentProfile | undefined {
+  if (!query) return undefined;
+  const raw = query.trim().toLowerCase();
+  if (!raw) return undefined;
+
+  const clean = raw.replace(/^agent-/, "").replace(/[^a-z0-9]/g, "");
+
+  return agents.find(ag => {
+    const id = ag.id.toLowerCase();
+    const idClean = id.replace(/^agent-/, "").replace(/[^a-z0-9]/g, "");
+    const slug = (ag.customSlug || "").toLowerCase();
+    const slugClean = slug.replace(/^agent-/, "").replace(/[^a-z0-9]/g, "");
+    const nameClean = ag.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    if (id === raw || id === `agent-${raw}` || `agent-${id}` === raw) return true;
+    if (slug && (slug === raw || slug === `agent-${slug}` || `agent-${slug}` === raw)) return true;
+    if (idClean === clean || slugClean === clean || nameClean === clean) return true;
+
+    // First name match
+    if (clean === "sarah" && nameClean.includes("sarah")) return true;
+    if (clean === "marcus" && nameClean.includes("marcus")) return true;
+    if (clean === "elena" && nameClean.includes("elena")) return true;
+    if (clean === "tyler" && nameClean.includes("tyler")) return true;
+
+    return false;
+  });
+}
+
+/**
+ * Robust matcher for Co-Branded Pairings supporting any URL param variation:
+ * ?pair=mike-and-sarah, ?pair=pair-1, ?pair=lonn-and-marcus, etc.
+ */
+export function findMatchingPairing(
+  query: string | null | undefined,
+  pairings: LOPairing[]
+): LOPairing | undefined {
+  if (!query) return undefined;
+  const raw = query.trim().toLowerCase();
+  if (!raw) return undefined;
+
+  const clean = raw.replace(/^pair-/, "").replace(/[^a-z0-9]/g, "");
+
+  return pairings.find(p => {
+    const id = p.id.toLowerCase();
+    const idClean = id.replace(/^pair-/, "").replace(/[^a-z0-9]/g, "");
+    const slug = (p.customSlug || "").toLowerCase();
+    const slugClean = slug.replace(/^pair-/, "").replace(/[^a-z0-9]/g, "");
+
+    if (id === raw || slug === raw) return true;
+    if (idClean === clean || slugClean === clean) return true;
+
+    if (clean.includes("mike") && clean.includes("sarah")) {
+      if (id.includes("mike") || slug.includes("mike") || id === "pair-1") return true;
+    }
+    if (clean.includes("lonn") && clean.includes("marcus")) {
+      if (id.includes("lonn") || slug.includes("lonn") || id === "pair-2") return true;
+    }
+    if (clean.includes("alan") && clean.includes("marcus")) {
+      if (id.includes("alan") || slug.includes("alan") || id === "pair-3") return true;
+    }
+    if (clean.includes("mark") && clean.includes("elena")) {
+      if (id.includes("mark") || slug.includes("mark") || id === "pair-4") return true;
+    }
+    if (clean.includes("darryl") && clean.includes("tyler")) {
+      if (id.includes("darryl") || slug.includes("darryl") || id === "pair-5") return true;
+    }
+    if (clean.includes("christopher") && clean.includes("sarah")) {
+      if (id.includes("christopher") || slug.includes("christopher") || id === "pair-6") return true;
+    }
+    if (clean.includes("derek") && clean.includes("tyler")) {
+      if (id.includes("derek") || slug.includes("derek") || id === "pair-7") return true;
+    }
+
+    return false;
+  });
+}

@@ -97,9 +97,21 @@ Key general guidelines:
         return res.status(400).json({ error: "Message is required" });
       }
 
+      // Hardcoded SSN detection & blocking on backend endpoint
+      const ssnPattern = /\b(?!000|666|9\d{2})\d{3}[-.\s]?(?!00)\d{2}[-.\s]?(?!0000)\d{4}\b/;
+      if (ssnPattern.test(message)) {
+        return res.json({
+          reply: "🛡️ For your privacy and security, Social Security Numbers are strictly blocked and never stored. No Credit Card or SSN is required to explore prequalification or Down Payment Assistance programs.",
+        });
+      }
+
       const ai = getGeminiClient();
       const systemInstruction = `You are the interactive 24/7 Lead Intake & Pre-Qualification AI Assistant for ${loName || "Mike Ford"} (${loNmls ? "NMLS #" + loNmls : "Senior Loan Officer"}) and paired Real Estate Specialist ${agentName || "Sarah Jenkins"}.
 Your primary goal is to guide prospective first-time homebuyers through an engaging, frictionless, consultative intake process to discover their purchasing power, explore Down Payment Assistance (DPA) opportunities, and collect their profile to generate a Custom Prequalification Blueprint.
+
+Security & Privacy Guarantee:
+- No credit card or Social Security Number (SSN) is ever required. 
+- If a user asks about SSN or credit checks, reassure them that this preliminary inquiry is 100% confidential with NO hard credit pull, NO SSN required, and NO credit card required.
 
 Rules for response:
 1. Keep responses warm, encouraging, conversational, and concise (under 3-4 short paragraphs or bullet points).

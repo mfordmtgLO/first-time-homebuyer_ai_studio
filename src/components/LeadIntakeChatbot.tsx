@@ -28,7 +28,9 @@ import {
   Search,
   CheckSquare,
   Square,
-  Loader2
+  Loader2,
+  Lock,
+  AlertTriangle
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { 
@@ -38,6 +40,7 @@ import {
   FinancialProfile 
 } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
+import { containsSSN, sanitizeSSN } from "../utils/ssnProtection";
 
 // Comprehensive alphabetical listing of cities and towns across the state of Oregon
 export const OREGON_CITIES: string[] = [
@@ -383,13 +386,14 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     {
       id: "intro-1",
       sender: "advisor",
-      text: `👋 Hi there! I'm your 24/7 Homebuyer Intake & Prequalification Guide, working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage}).\n\nLet's calculate your true monthly budget, check Down Payment Assistance (DPA) options, and build your custom Prequalification Blueprint in under 2 minutes.\n\n${INTAKE_STEPS[0].question}`,
+      text: `👋 Hi there! I'm your 24/7 Homebuyer Intake & Prequalification Guide, working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage}).\n\n🔒 **No Credit Card or SSN Required** — Let's calculate your true monthly budget, check Down Payment Assistance (DPA) options, and build your custom Prequalification Blueprint in under 2 minutes.\n\n${INTAKE_STEPS[0].question}`,
       time: "Just now"
     }
   ]);
 
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [inputText, setInputText] = useState<string>("");
+  const [inputError, setInputError] = useState<string>("");
   const [isSubmittingQuery, setIsSubmittingQuery] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
@@ -658,8 +662,28 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 
   // Free-form chat / question handler
   const handleSendMessage = async (textToSend?: string) => {
-    const query = textToSend || inputText;
-    if (!query.trim() || isSubmittingQuery) return;
+    const rawQuery = textToSend || inputText;
+    if (!rawQuery.trim() || isSubmittingQuery) return;
+
+    // Strict SSN Detection & Hardcoded Rejection Rule
+    if (containsSSN(rawQuery)) {
+      setInputError("⚠️ For your security, Social Security Numbers (SSN) are blocked and never accepted here. No SSN or Credit Card is required.");
+      const warningBotMsg = {
+        id: `bot-ssn-${Date.now()}`,
+        sender: "advisor" as const,
+        text: "🛡️ **Security Alert: Social Security Numbers are never accepted here.**\n\nNo SSN, credit check, or credit card is required to explore prequalification or Down Payment Assistance. Please do not share sensitive identifiers.",
+        time: "Just now"
+      };
+      setMessages(prev => [...prev, warningBotMsg]);
+      setInputText("");
+      setTimeout(() => {
+        setInputError("");
+      }, 5000);
+      return;
+    }
+
+    setInputError("");
+    const query = sanitizeSSN(rawQuery);
 
     const userMsg = {
       id: `usr-${Date.now()}`,
@@ -716,11 +740,17 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       return;
     }
 
+    // Check if user accidentally inputted an SSN in any contact field
+    if (containsSSN(contactForm.fullName) || containsSSN(contactForm.email) || containsSSN(contactForm.phone)) {
+      alert("⚠️ For your privacy and security, Social Security Numbers are strictly blocked and never accepted. Please remove any SSN to proceed.");
+      return;
+    }
+
     const newLead: CapturedLead = {
       id: `lead-${Date.now()}`,
-      fullName: contactForm.fullName,
-      email: contactForm.email,
-      phone: contactForm.phone,
+      fullName: sanitizeSSN(contactForm.fullName),
+      email: sanitizeSSN(contactForm.email),
+      phone: sanitizeSSN(contactForm.phone),
       preferredContactTime: contactForm.preferredContactTime,
       timeline: leadState.timeline || "Ready in 30-60 Days",
       targetPriceRange: leadState.targetPriceRange || "$425,000",
@@ -739,7 +769,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       intentScore: (leadState.timeline?.includes("30-60") || leadState.timeline?.includes("Found")) ? "hot" : "warm",
       status: "new",
       notes: `Captured via 24/7 AI Lead Intake Assistant. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}, Low/No Down Homes: ${leadState.sendSampleHomes ? 'YES' : 'NO'}.`,
-      chatTranscript: messages.map(m => ({ sender: m.sender, text: m.text, time: m.time })),
+      chatTranscript: messages.map(m => ({ sender: m.sender, text: sanitizeSSN(m.text), time: m.time })),
       createdAt: new Date().toISOString()
     };
 
@@ -967,11 +997,15 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
             </div>
           </div>
 
-          {/* Progress Indicator */}
-          <div className="bg-[#F1EFE9] px-4 py-2 border-b border-[#EAE7E0] flex items-center justify-between text-xs text-[#606C5D] shrink-0">
+          {/* Progress & Privacy Indicator */}
+          <div className="bg-[#F1EFE9] px-4 py-2 border-b border-[#EAE7E0] flex flex-wrap items-center justify-between gap-1.5 text-xs text-[#606C5D] shrink-0">
             <div className="flex items-center gap-2">
               <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
               <span className="font-semibold text-[#2D362E]">Prequalification Intake</span>
+              <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-300">
+                <Lock className="w-2.5 h-2.5" />
+                No Credit Card or SSN Required
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               {INTAKE_STEPS.map((step, idx) => (
@@ -1600,29 +1634,54 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
             <div ref={chatBottomRef} className="h-1 shrink-0" />
           </div>
 
-          {/* Chat Input Bar */}
-          <div className="p-3 bg-white border-t border-[#EAE7E0] flex items-center gap-2 shrink-0">
-            <input 
-              type="text" 
-              placeholder={isCompleted ? "Ask a question about rates, DPA options, or closing..." : "Type your question or reply..."}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-              disabled={isSubmittingQuery}
-              className="flex-1 bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:border-[#4A5D4E]"
-            />
-            <button
-              onClick={() => handleSendMessage()}
-              disabled={isSubmittingQuery || !inputText.trim()}
-              className="p-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white disabled:opacity-40 transition-all shadow-sm shrink-0 flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
-              title="Send message"
-            >
-              {isSubmittingQuery ? (
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </button>
+          {/* Chat Input Bar & Security Notice */}
+          <div className="p-3 bg-white border-t border-[#EAE7E0] space-y-1.5 shrink-0">
+            {inputError && (
+              <div className="flex items-center gap-1.5 bg-rose-50 border border-rose-200 text-rose-800 px-3 py-1.5 rounded-xl text-[11px] font-semibold animate-shake">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                <span>{inputError}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <input 
+                type="text" 
+                placeholder={isCompleted ? "Ask a question about rates, DPA options, or closing..." : "Type your question or reply..."}
+                value={inputText}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (containsSSN(val)) {
+                    setInputError("⚠️ SSNs are blocked for your privacy. No SSN or Credit Card required.");
+                  } else if (inputError) {
+                    setInputError("");
+                  }
+                  setInputText(val);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                disabled={isSubmittingQuery}
+                className={`flex-1 bg-[#FAF9F5] border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#2D362E] placeholder-[#9A9488] focus:outline-none transition-colors ${
+                  inputError ? "border-rose-400 bg-rose-50/30 focus:border-rose-500" : "border-[#EAE7E0] focus:border-[#4A5D4E]"
+                }`}
+              />
+              <button
+                onClick={() => handleSendMessage()}
+                disabled={isSubmittingQuery || !inputText.trim()}
+                className="p-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white disabled:opacity-40 transition-all shadow-sm shrink-0 flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                title="Send message"
+              >
+                {isSubmittingQuery ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-[#9A9488] px-1">
+              <span className="flex items-center gap-1">
+                <Lock className="w-2.5 h-2.5 text-emerald-600" />
+                <span>No Credit Card or SSN Required</span>
+              </span>
+              <span>256-bit encrypted prequalification</span>
+            </div>
           </div>
         </div>
       )}

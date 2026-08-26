@@ -103,34 +103,6 @@ export function analyzeRateTrends(
   // Check if today is the 1-Year High
   const isOneYearHigh = currentRate >= oneYearHighRate - 0.01;
 
-  // If not the highest, find the last time the rate matched today's rate
-  let lastMatchedDate: string | null = null;
-  let lastMatchedDateFormatted: string | null = null;
-
-  if (!isOneYearHigh) {
-    // Search backward from prior entries (excluding current 2 weeks)
-    for (let i = history.length - 3; i >= 0; i--) {
-      const point = history[i];
-      // Check if within 0.03% margin of today's rate or exact match
-      if (Math.abs(point.rate - currentRate) <= 0.03) {
-        lastMatchedDate = point.date;
-        lastMatchedDateFormatted = formatRateDate(point.date);
-        break;
-      }
-    }
-    // Fallback search: check for closest crossing point in the past 12 months
-    if (!lastMatchedDate) {
-      for (let i = oneYearHistory.length - 3; i >= 0; i--) {
-        const point = oneYearHistory[i];
-        if (Math.abs(point.rate - currentRate) <= 0.08) {
-          lastMatchedDate = point.date;
-          lastMatchedDateFormatted = formatRateDate(point.date);
-          break;
-        }
-      }
-    }
-  }
-
   // Determine comparison data point based on chosen horizon
   let comparisonPoint: RateDataPoint;
   let horizonLabel: string;
@@ -150,6 +122,10 @@ export function analyzeRateTrends(
     comparisonPoint = history.find((p) => p.date <= targetDate) || history[Math.max(0, history.length - 13)];
     horizonLabel = "6 Months";
   }
+
+  // Last matched level date dynamically wired to the selected horizon's benchmark point
+  const lastMatchedDate: string | null = comparisonPoint.date;
+  const lastMatchedDateFormatted: string | null = formatRateDate(comparisonPoint.date);
 
   const rateDiff = Math.round((currentRate - comparisonPoint.rate) * 100) / 100;
   const diffBasisPoints = Math.round(rateDiff * 100);

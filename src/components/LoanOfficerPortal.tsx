@@ -1150,6 +1150,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                     Grant Seeking
                                   </span>
                                 )}
+                                {lead.sendSampleHomes && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    🏠 Wants $0/Low Down Homes
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-2 text-xs text-[#606C5D] mt-0.5 flex-wrap">
                                 <span>{lead.leadSource}</span>
@@ -1188,7 +1193,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                         </div>
 
                         {/* Middle Grid: Buyer Financial Profile & Goal Parameters */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 text-xs">
                           <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0]/80">
                             <span className="text-[10px] uppercase tracking-wider font-semibold text-[#9A9488] block">Timeline</span>
                             <span className="font-bold text-[#2D362E] block mt-0.5">{lead.timeline}</span>
@@ -1197,6 +1202,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0]/80">
                             <span className="text-[10px] uppercase tracking-wider font-semibold text-[#9A9488] block">Target Price / Budget</span>
                             <span className="font-bold text-[#4A5D4E] block mt-0.5">{lead.targetPriceRange}</span>
+                          </div>
+
+                          <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0]/80">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#9A9488] block">Annual Income</span>
+                            <span className="font-bold text-[#2D362E] block mt-0.5">{lead.annualIncome || "Not specified"}</span>
                           </div>
 
                           <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0]/80">
@@ -2985,7 +2995,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             </div>
 
             {/* Buyer Goal Summary Banner */}
-            <div className="bg-[#FAF9F5] p-4 border-b border-[#EAE7E0] grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs shrink-0">
+            <div className="bg-[#FAF9F5] p-4 border-b border-[#EAE7E0] grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs shrink-0">
               <div>
                 <span className="text-[10px] text-[#9A9488] font-bold uppercase">Timeline</span>
                 <p className="font-semibold text-[#2D362E]">{viewingTranscriptLead.timeline}</p>
@@ -2993,6 +3003,10 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               <div>
                 <span className="text-[10px] text-[#9A9488] font-bold uppercase">Target Price</span>
                 <p className="font-semibold text-[#4A5D4E]">{viewingTranscriptLead.targetPriceRange}</p>
+              </div>
+              <div>
+                <span className="text-[10px] text-[#9A9488] font-bold uppercase">Annual Income</span>
+                <p className="font-semibold text-[#2D362E]">{viewingTranscriptLead.annualIncome || "N/A"}</p>
               </div>
               <div>
                 <span className="text-[10px] text-[#9A9488] font-bold uppercase">Down Payment</span>

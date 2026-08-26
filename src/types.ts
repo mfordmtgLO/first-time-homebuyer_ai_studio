@@ -249,8 +249,11 @@ export interface CapturedLead {
   downPaymentSavings: string;
   grantInterest: boolean;
   creditScoreTier: string;
+  annualIncome?: string;
   preferredLocations: string;
   propertyType: string;
+  sendSampleHomes?: boolean;
+  sendSampleHomesOption?: string;
   assignedLoId: string;
   assignedAgentId?: string;
   pairingId?: string;

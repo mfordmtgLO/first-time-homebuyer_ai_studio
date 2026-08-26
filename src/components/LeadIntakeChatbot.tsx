@@ -340,10 +340,33 @@ const INTAKE_STEPS: IntakeStep[] = [
     ]
   },
   {
+    id: "annualIncome",
+    question: "What is your approximate gross annual household income before taxes?",
+    field: "annualIncome",
+    options: [] // Custom interactive slider ($0 - $1,000,000) and currency formatted input
+  },
+  {
     id: "location",
     question: "Which cities are you most excited to explore?",
     field: "preferredLocations",
     options: [] // Replaced by the comprehensive Oregon cities dropdown selector
+  },
+  {
+    id: "sampleHomes",
+    question: "Would you like us to send you a few recently available homes for sale in your desired city or surrounding areas that have potential for low or no down payment financing options?",
+    field: "sendSampleHomesOption",
+    options: [
+      { 
+        label: "YES", 
+        value: "YES - Please send available homes with low/no down payment options", 
+        sub: "Curated listings in my target Oregon areas" 
+      },
+      { 
+        label: "NO", 
+        value: "NO - Just send my Pre-Approval Blueprint", 
+        sub: "Only my customized blueprint for now" 
+      }
+    ]
   }
 ];
 
@@ -407,6 +430,40 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   const [citySearchQuery, setCitySearchQuery] = useState<string>("");
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState<boolean>(true);
 
+  // Annual Income interactive state ($0 to $1,000,000)
+  const [annualIncomeAmount, setAnnualIncomeAmount] = useState<number>(120000);
+  const [annualIncomeInputStr, setAnnualIncomeInputStr] = useState<string>("$120,000");
+
+  const formatIncomeCurrency = (val: number) => {
+    return `$${val.toLocaleString()}`;
+  };
+
+  const handleIncomeSliderChange = (val: number) => {
+    const clamped = Math.min(1000000, Math.max(0, val));
+    setAnnualIncomeAmount(clamped);
+    setAnnualIncomeInputStr(formatIncomeCurrency(clamped));
+  };
+
+  const handleIncomeInputChange = (raw: string) => {
+    const digits = raw.replace(/[^0-9]/g, "");
+    if (!digits) {
+      setAnnualIncomeAmount(0);
+      setAnnualIncomeInputStr("$");
+      return;
+    }
+    const num = Math.min(1000000, parseInt(digits, 10));
+    setAnnualIncomeAmount(num);
+    setAnnualIncomeInputStr(formatIncomeCurrency(num));
+  };
+
+  const handleConfirmAnnualIncome = () => {
+    const step = INTAKE_STEPS[currentStepIndex];
+    if (step && step.id === "annualIncome") {
+      const formatted = `${formatIncomeCurrency(annualIncomeAmount)} / year`;
+      handleSelectOption(step, formatted);
+    }
+  };
+
   // Collected Lead State
   const [leadState, setLeadState] = useState<Partial<CapturedLead>>({
     timeline: "",
@@ -415,6 +472,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     downPaymentSavings: "",
     grantInterest: true,
     creditScoreTier: "",
+    annualIncome: "",
     preferredLocations: "",
     propertyType: "Single Family",
     assignedLoId: loanOfficer.id,
@@ -425,39 +483,45 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   });
 
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
-  const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const messageElementsRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
-  const [userIsScrollingUp, setUserIsScrollingUp] = useState<boolean>(false);
 
-  const handleScroll = () => {
+  const scrollToActiveMessage = (msgId?: string) => {
     if (!chatContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 80;
-    setUserIsScrollingUp(!isNearBottom);
+    const container = chatContainerRef.current;
+    
+    let targetEl: HTMLElement | null = null;
+    if (msgId && messageElementsRef.current[msgId]) {
+      targetEl = messageElementsRef.current[msgId];
+    } else if (messages.length > 0) {
+      // Find the latest advisor message or the last message in general
+      const lastAdvisorMsg = [...messages].reverse().find(m => m.sender === "advisor");
+      const lastMsg = lastAdvisorMsg || messages[messages.length - 1];
+      if (lastMsg && messageElementsRef.current[lastMsg.id]) {
+        targetEl = messageElementsRef.current[lastMsg.id];
+      }
+    }
+
+    if (targetEl) {
+      const containerRect = container.getBoundingClientRect();
+      const elemRect = targetEl.getBoundingClientRect();
+      const currentScroll = container.scrollTop;
+      // Precisely align the top of the message with 12px padding below the header
+      const targetScroll = currentScroll + (elemRect.top - containerRect.top) - 12;
+      
+      container.scrollTo({
+        top: Math.max(0, targetScroll),
+        behavior: "smooth"
+      });
+    }
   };
 
-  // Scroll to ensure the newest message's top is fully visible without being cut off at the top
+  // Scroll to ensure the newest advisor message is fully visible without being cut off at the top
   useEffect(() => {
     if (!isOpen) return;
 
     const timer = setTimeout(() => {
-      if (userIsScrollingUp) return;
-
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage && messageElementsRef.current[lastMessage.id] && chatContainerRef.current) {
-        const container = chatContainerRef.current;
-        const element = messageElementsRef.current[lastMessage.id]!;
-        
-        // Align so the message top begins with generous clearance from the top header
-        const targetScrollTop = Math.max(0, element.offsetTop - 16);
-        container.scrollTo({
-          top: targetScrollTop,
-          behavior: "smooth"
-        });
-      } else if (chatBottomRef.current) {
-        chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
-      }
-    }, 40);
+      scrollToActiveMessage();
+    }, 60);
 
     return () => clearTimeout(timer);
   }, [messages, currentStepIndex, isOpen, isCompleted, isCityDropdownOpen]);
@@ -467,8 +531,16 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     setIsCompleted(false);
     const targetCount = 1 + (stepIndex * 2);
     setMessages(prev => prev.slice(0, Math.min(prev.length, targetCount)));
-    setUserIsScrollingUp(false);
-
+    if (INTAKE_STEPS[stepIndex]?.id === "annualIncome") {
+      if (leadState.annualIncome) {
+        const digits = leadState.annualIncome.replace(/[^0-9]/g, "");
+        if (digits) {
+          const num = Math.min(1000000, parseInt(digits, 10));
+          setAnnualIncomeAmount(num);
+          setAnnualIncomeInputStr(formatIncomeCurrency(num));
+        }
+      }
+    }
     if (INTAKE_STEPS[stepIndex]?.id === "location") {
       setIsCityDropdownOpen(true);
       if (leadState.preferredLocations) {
@@ -499,8 +571,15 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       ...leadState,
       [step.field]: optionValue
     };
+    if (step.id === "annualIncome") {
+      updatedLead.annualIncome = optionValue;
+    }
     if (step.id === "downPayment" && optionValue.includes("Grants")) {
       updatedLead.grantInterest = true;
+    }
+    if (step.id === "sampleHomes") {
+      updatedLead.sendSampleHomes = optionValue.startsWith("YES");
+      updatedLead.sendSampleHomesOption = optionValue;
     }
     setLeadState(updatedLead);
 
@@ -608,14 +687,17 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       downPaymentSavings: leadState.downPaymentSavings || "3% - 5% Down",
       grantInterest: leadState.grantInterest ?? true,
       creditScoreTier: leadState.creditScoreTier || "Good (680+)",
+      annualIncome: leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)} / year`,
       preferredLocations: leadState.preferredLocations || "Portland Metro",
       propertyType: contactForm.propertyType || "Single Family",
+      sendSampleHomes: leadState.sendSampleHomes ?? (leadState.sendSampleHomesOption?.startsWith("YES") ?? true),
+      sendSampleHomesOption: leadState.sendSampleHomesOption || "YES - Please send available homes with low/no down payment options",
       assignedLoId: loanOfficer.id,
       assignedAgentId: agent.id,
       leadSource: "Website AI Intake Chatbot",
       intentScore: (leadState.timeline?.includes("30-60") || leadState.timeline?.includes("Found")) ? "hot" : "warm",
       status: "new",
-      notes: `Captured via 24/7 AI Lead Intake Assistant. Target: ${leadState.targetPriceRange || "N/A"}, Timeline: ${leadState.timeline || "N/A"}.`,
+      notes: `Captured via 24/7 AI Lead Intake Assistant. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}, Low/No Down Homes: ${leadState.sendSampleHomes ? 'YES' : 'NO'}.`,
       chatTranscript: messages.map(m => ({ sender: m.sender, text: m.text, time: m.time })),
       createdAt: new Date().toISOString()
     };
@@ -650,6 +732,8 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     setSelectedCities([]);
     setCitySearchQuery("");
     setIsCityDropdownOpen(true);
+    setAnnualIncomeAmount(120000);
+    setAnnualIncomeInputStr("$120,000");
     setLeadState({
       timeline: "",
       targetPriceRange: "",
@@ -657,8 +741,11 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       downPaymentSavings: "",
       grantInterest: true,
       creditScoreTier: "",
+      annualIncome: "",
       preferredLocations: "",
       propertyType: "Single Family",
+      sendSampleHomes: true,
+      sendSampleHomesOption: "",
       assignedLoId: loanOfficer.id,
       assignedAgentId: agent.id,
       leadSource: "Website AI Intake Chatbot",
@@ -788,7 +875,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           className={`fixed z-50 transition-all duration-300 shadow-2xl bg-white flex flex-col overflow-hidden border border-[#EAE7E0] ${
             isExpanded 
               ? "inset-4 sm:inset-10 rounded-3xl" 
-              : "bottom-4 right-4 sm:bottom-6 sm:right-6 w-[95vw] sm:w-[440px] h-[660px] max-h-[90vh] rounded-3xl"
+              : "bottom-4 right-4 sm:bottom-6 sm:right-6 w-[95vw] sm:w-[460px] h-[690px] max-h-[92vh] rounded-3xl"
           }`}
         >
           {/* Header Bar */}
@@ -873,8 +960,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           {/* Chat Messages Body with Free Scroll & Smooth Transitions */}
           <div 
             ref={chatContainerRef}
-            onScroll={handleScroll}
-            className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-[#FAF9F5] scroll-smooth"
+            className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-[#FAF9F5] scroll-smooth relative"
           >
             {/* Quick Revisit Bar if user scrolled up or has answered steps */}
             {currentStepIndex > 0 && !isCompleted && (
@@ -1135,6 +1221,137 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                       )}
                     </div>
                   </div>
+                ) : INTAKE_STEPS[currentStepIndex].id === "annualIncome" ? (
+                  /* Custom Interactive Annual Income Slider & Currency Formatted Input */
+                  <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 shadow-sm space-y-3.5 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#4A5D4E]">
+                        <DollarSign className="w-4 h-4 text-emerald-600" />
+                        <span>Approximate Gross Annual Income</span>
+                      </div>
+                      <span className="text-[10px] text-[#9A9488] font-medium">Household total before taxes</span>
+                    </div>
+
+                    {/* Currency Input Field */}
+                    <div className="space-y-1">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={annualIncomeInputStr}
+                          onChange={(e) => handleIncomeInputChange(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleConfirmAnnualIncome();
+                            }
+                          }}
+                          className="w-full bg-[#FAF9F5] border-2 border-[#4A5D4E]/30 focus:border-[#4A5D4E] rounded-xl px-4 py-2.5 text-center text-xl font-extrabold text-[#2D362E] focus:outline-none shadow-xs transition-colors tracking-tight"
+                          placeholder="$0"
+                        />
+                      </div>
+                      <p className="text-[10px] text-center text-[#606C5D]">
+                        Type any amount or use the slider below ($0 to $1,000,000)
+                      </p>
+                    </div>
+
+                    {/* Range Slider */}
+                    <div className="space-y-1.5 pt-1">
+                      <input
+                        type="range"
+                        min="0"
+                        max="1000000"
+                        step="5000"
+                        value={annualIncomeAmount}
+                        onChange={(e) => handleIncomeSliderChange(Number(e.target.value))}
+                        className="w-full h-2 bg-[#EAE7E0] rounded-lg appearance-none cursor-pointer accent-[#4A5D4E]"
+                      />
+                      <div className="flex justify-between text-[10px] text-[#9A9488] font-semibold px-0.5">
+                        <span>$0</span>
+                        <span>$250k</span>
+                        <span>$500k</span>
+                        <span>$750k</span>
+                        <span>$1.0M</span>
+                      </div>
+                    </div>
+
+                    {/* Quick Preset Buttons */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488] block">
+                        Quick Presets:
+                      </span>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {[60000, 95000, 140000, 220000].map((presetVal) => (
+                          <button
+                            key={presetVal}
+                            type="button"
+                            onClick={() => handleIncomeSliderChange(presetVal)}
+                            className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold transition-all border cursor-pointer ${
+                              annualIncomeAmount === presetVal
+                                ? "bg-[#4A5D4E] text-white border-[#4A5D4E]"
+                                : "bg-[#FAF9F5] hover:bg-[#F1EFE9] text-[#2D362E] border-[#EAE7E0]"
+                            }`}
+                          >
+                            ${presetVal >= 1000 ? `${presetVal / 1000}k` : presetVal}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Confirm Button */}
+                    <button
+                      type="button"
+                      onClick={handleConfirmAnnualIncome}
+                      className="w-full py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-[#E7C19D]" />
+                      <span>Confirm Annual Income ({formatIncomeCurrency(annualIncomeAmount)}/yr)</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : INTAKE_STEPS[currentStepIndex].id === "sampleHomes" ? (
+                  /* Specialized YES / NO Box Selection Controls */
+                  <div className="space-y-2.5 animate-fade-in">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488]">
+                      Please choose an option to continue:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* YES Box */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectOption(INTAKE_STEPS[currentStepIndex], "YES - Please send available homes with low/no down payment options")}
+                        className="p-4 rounded-2xl border-2 border-emerald-600/40 bg-emerald-50/60 hover:bg-emerald-100 hover:border-emerald-600 transition-all text-left group shadow-xs cursor-pointer flex flex-col justify-between"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-extrabold text-emerald-800 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            YES
+                          </span>
+                          <ChevronRight className="w-4 h-4 text-emerald-600 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                        <p className="text-[11px] text-emerald-900/80 mt-1.5 font-medium leading-snug">
+                          Send curated homes in my target areas with low or 0% down financing options
+                        </p>
+                      </button>
+
+                      {/* NO Box */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectOption(INTAKE_STEPS[currentStepIndex], "NO - Just send my Pre-Approval Blueprint")}
+                        className="p-4 rounded-2xl border-2 border-[#EAE7E0] bg-white hover:bg-[#F1EFE9] hover:border-[#9A9488] transition-all text-left group shadow-xs cursor-pointer flex flex-col justify-between"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold text-[#606C5D] flex items-center gap-1.5">
+                            <X className="w-4 h-4 text-[#9A9488]" />
+                            NO
+                          </span>
+                          <ChevronRight className="w-4 h-4 text-[#9A9488] group-hover:translate-x-1 transition-transform" />
+                        </div>
+                        <p className="text-[11px] text-[#606C5D] mt-1.5 font-medium leading-snug">
+                          No thank you, just send my customized Pre-Approval Blueprint for now
+                        </p>
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   /* Standard Option Buttons for other intake steps */
                   <>
@@ -1269,13 +1486,25 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                     <span className="text-[#606C5D]">Target Price:</span>
                     <span className="font-bold text-[#4A5D4E]">{leadState.targetPriceRange || "$425,000"}</span>
                   </div>
+                  {leadState.annualIncome && (
+                    <div className="flex justify-between items-center pb-2 border-b border-[#EAE7E0]">
+                      <span className="text-[#606C5D]">Annual Income:</span>
+                      <span className="font-bold text-[#2D362E]">{leadState.annualIncome}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center pb-2 border-b border-[#EAE7E0]">
                     <span className="text-[#606C5D]">Timeline:</span>
                     <span className="font-semibold text-[#2D362E]">{leadState.timeline}</span>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center pb-2 border-b border-[#EAE7E0]">
                     <span className="text-[#606C5D]">Eligible Loan Programs:</span>
                     <span className="text-emerald-700 font-semibold">Conventional 97, FHA 3.5%, State DPA</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#606C5D]">Low/No Down Homes:</span>
+                    <span className={`font-semibold ${leadState.sendSampleHomes ? 'text-emerald-700' : 'text-[#606C5D]'}`}>
+                      {leadState.sendSampleHomes ? '✓ Curated Listings Requested' : 'Blueprint Only'}
+                    </span>
                   </div>
                 </div>
 
@@ -1299,8 +1528,6 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                 </div>
               </div>
             )}
-
-            <div ref={chatBottomRef} />
           </div>
 
           {/* Chat Input Bar */}

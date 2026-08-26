@@ -38,13 +38,40 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
     };
   }
 
+  const isLonn = 
+    lo.id === "lo-lonn-kilstrom" || 
+    lo.id === "lonn-kilstrom" ||
+    lo.name.toLowerCase().includes("lonn kilstrom") || 
+    lo.name.toLowerCase() === "lonn" ||
+    (lo.email && lo.email.toLowerCase().includes("lkilstrom"));
+
+  if (isLonn) {
+    return {
+      ...lo,
+      id: "lo-lonn-kilstrom",
+      name: lo.name || "Lonn Kilstrom",
+      title: lo.title || "Branch Manager",
+      nmlsId: lo.nmlsId || "117954",
+      company: lo.company || "Cornerstone First Mortgage",
+      branch: lo.branch || "Team Lonn Kilstrom Branch",
+      email: lo.email || "LKilstrom@cfmtg.com",
+      phone: lo.phone || "(503) 849-3478",
+      headshotUrl: (lo.headshotUrl && lo.headshotUrl.length > 5)
+        ? lo.headshotUrl
+        : "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=800&q=80",
+      websiteUrl: lo.websiteUrl || "https://cfmtg.com/lkilstrom/",
+      customSlug: lo.customSlug || "lonn-kilstrom",
+      isAdmin: false
+    };
+  }
+
   // Normalize other team members
   const matchedDefault = INITIAL_TEAM_LOAN_OFFICERS.find(d => d.id === lo.id || d.customSlug === lo.customSlug || d.name.toLowerCase() === (lo.name || "").toLowerCase());
   return {
     ...lo,
     company: lo.company || "Cornerstone First Mortgage",
     customSlug: lo.customSlug || lo.id.replace(/^lo-/, ""),
-    headshotUrl: lo.headshotUrl || matchedDefault?.headshotUrl || "",
+    headshotUrl: (lo.headshotUrl && lo.headshotUrl.length > 5) ? lo.headshotUrl : (matchedDefault?.headshotUrl || ""),
     websiteUrl: lo.websiteUrl && !lo.websiteUrl.includes("/lo/") ? lo.websiteUrl : (matchedDefault?.websiteUrl || `https://cfmtg.com/${lo.customSlug || lo.id.replace(/^lo-/, "")}/`)
   };
 }

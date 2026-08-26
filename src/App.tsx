@@ -51,6 +51,19 @@ export default function App() {
 
   // Loan Officer & Local Professional Guides State
   const [guidesState, setGuidesState] = useState<ProfessionalGuidesState>(() => {
+    let initialState: ProfessionalGuidesState = {
+      currentUserId: DEFAULT_LOAN_OFFICER.id,
+      adminLoanOfficerId: DEFAULT_LOAN_OFFICER.id,
+      loanOfficers: INITIAL_TEAM_LOAN_OFFICERS,
+      loanOfficer: DEFAULT_LOAN_OFFICER,
+      agentRoster: INITIAL_AGENT_ROSTER,
+      activeAgentId: INITIAL_AGENT_ROSTER[0].id,
+      pairings: INITIAL_PAIRINGS,
+      socialCampaigns: INITIAL_SOCIAL_CAMPAIGNS,
+      adCampaignDrafts: INITIAL_AD_DRAFTS,
+      leads: INITIAL_LEADS
+    };
+
     try {
       const saved = localStorage.getItem("homebuyer_roadmap_state_v2") || localStorage.getItem("manus_guides_state_v2");
       if (saved) {
@@ -120,24 +133,58 @@ export default function App() {
               parsed.loanOfficer.email = parsed.loanOfficer.email.replace("pacificlending.com", "cfmtg.com").replace("cfm1.com", "cfmtg.com");
             }
           }
-          return parsed;
+          initialState = parsed;
         }
       }
     } catch (e) {
       console.warn("Could not load saved guides state:", e);
     }
-    return {
-      currentUserId: DEFAULT_LOAN_OFFICER.id,
-      adminLoanOfficerId: DEFAULT_LOAN_OFFICER.id,
-      loanOfficers: INITIAL_TEAM_LOAN_OFFICERS,
-      loanOfficer: DEFAULT_LOAN_OFFICER,
-      agentRoster: INITIAL_AGENT_ROSTER,
-      activeAgentId: INITIAL_AGENT_ROSTER[0].id,
-      pairings: INITIAL_PAIRINGS,
-      socialCampaigns: INITIAL_SOCIAL_CAMPAIGNS,
-      adCampaignDrafts: INITIAL_AD_DRAFTS,
-      leads: INITIAL_LEADS
-    };
+
+    // Immediately resolve URL params on first render
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const pathname = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      const loParam = params.get("lo");
+      const agentParam = params.get("agent");
+      const pairParam = params.get("pair");
+
+      let updatedLo = initialState.loanOfficer;
+      let updatedAgentId = initialState.activeAgentId;
+
+      const matchedLoBySlug = initialState.loanOfficers.find((l: any) => 
+        (l.customSlug && (pathname.includes(l.customSlug.toLowerCase()) || hash.includes(l.customSlug.toLowerCase()))) ||
+        pathname.includes(l.id.toLowerCase()) ||
+        hash.includes(l.id.toLowerCase())
+      );
+      if (matchedLoBySlug) {
+        updatedLo = matchedLoBySlug;
+      }
+
+      if (loParam) {
+        const matchedLo = initialState.loanOfficers.find((l: any) => l.id === loParam || l.customSlug === loParam || l.customSlug === loParam.replace("lo-", ""));
+        if (matchedLo) updatedLo = matchedLo;
+      }
+
+      if (agentParam) {
+        const matchedAgent = initialState.agentRoster.find((a: any) => a.id === agentParam || a.customSlug === agentParam || a.customSlug === agentParam.replace("agent-", ""));
+        if (matchedAgent) updatedAgentId = matchedAgent.id;
+      }
+
+      if (pairParam) {
+        const matchedPair = initialState.pairings.find((p: any) => p.id === pairParam || p.customSlug === pairParam);
+        if (matchedPair) {
+          const pairLo = initialState.loanOfficers.find((l: any) => l.id === matchedPair.loId);
+          if (pairLo) updatedLo = pairLo;
+          updatedAgentId = matchedPair.agentId;
+        }
+      }
+
+      initialState.loanOfficer = updatedLo;
+      initialState.activeAgentId = updatedAgentId;
+    }
+
+    return initialState;
   });
 
   // Sync to localStorage

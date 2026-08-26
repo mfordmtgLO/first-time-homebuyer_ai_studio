@@ -39,11 +39,12 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
   }
 
   // Normalize other team members
-  const matchedDefault = INITIAL_TEAM_LOAN_OFFICERS.find(d => d.id === lo.id || d.customSlug === lo.customSlug);
+  const matchedDefault = INITIAL_TEAM_LOAN_OFFICERS.find(d => d.id === lo.id || d.customSlug === lo.customSlug || d.name.toLowerCase() === (lo.name || "").toLowerCase());
   return {
     ...lo,
     company: lo.company || "Cornerstone First Mortgage",
     customSlug: lo.customSlug || lo.id.replace(/^lo-/, ""),
+    headshotUrl: lo.headshotUrl || matchedDefault?.headshotUrl || "",
     websiteUrl: lo.websiteUrl && !lo.websiteUrl.includes("/lo/") ? lo.websiteUrl : (matchedDefault?.websiteUrl || `https://cfmtg.com/${lo.customSlug || lo.id.replace(/^lo-/, "")}/`)
   };
 }

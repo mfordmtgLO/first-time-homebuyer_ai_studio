@@ -1601,23 +1601,56 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                         </div>
                       </div>
 
-                      {/* Branded Distribution Link for Borrowers */}
-                      <div className="space-y-1 bg-[#F9F8F4] p-2.5 rounded-xl border border-[#EAE7E0]">
-                        <span className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Public Homebuyer URL:</span>
-                        <div className="flex items-center justify-between gap-2">
-                          <input
-                            type="text"
-                            readOnly
-                            value={loUrl}
-                            className="bg-white border border-[#EAE7E0] rounded-lg px-2 py-1 text-[11px] font-mono text-[#4A5D4E] w-full focus:outline-none"
-                          />
-                          <button
-                            onClick={() => copyToClipboard(loUrl, `lo-url-${lo.id}`)}
-                            className="p-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] rounded-lg text-xs font-bold text-[#4A5D4E] shrink-0"
-                            title="Copy LO Public Link"
-                          >
-                            {copiedKey === `lo-url-${lo.id}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                          </button>
+                      {/* Branded Distribution Links for Borrowers & Print */}
+                      <div className="space-y-2 bg-[#F9F8F4] p-3 rounded-2xl border border-[#EAE7E0]">
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="font-bold text-[#38463B] uppercase tracking-wider">Print-Ready Short URL:</span>
+                            <span className="text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">Direct Match</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-1.5">
+                            <input
+                              type="text"
+                              readOnly
+                              value={`${origin}/${loSlug}`}
+                              className="bg-white border border-[#EAE7E0] rounded-xl px-2.5 py-1 text-[11px] font-mono text-[#2D362E] font-bold w-full focus:outline-none truncate"
+                            />
+                            <button
+                              onClick={() => copyToClipboard(`${origin}/${loSlug}`, `lo-short-url-${lo.id}`)}
+                              className="p-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] rounded-xl text-xs font-bold text-[#4A5D4E] shrink-0 shadow-2xs"
+                              title="Copy Short URL"
+                            >
+                              {copiedKey === `lo-short-url-${lo.id}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                            <a
+                              href={`${origin}/${loSlug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-xl text-xs font-bold shrink-0 flex items-center gap-1 shadow-2xs"
+                              title="Test Short URL in New Tab"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 pt-1 border-t border-[#EAE7E0]">
+                          <span className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Parameter URL:</span>
+                          <div className="flex items-center justify-between gap-1.5">
+                            <input
+                              type="text"
+                              readOnly
+                              value={loUrl}
+                              className="bg-white border border-[#EAE7E0] rounded-lg px-2 py-1 text-[10px] font-mono text-[#606C5D] w-full focus:outline-none truncate"
+                            />
+                            <button
+                              onClick={() => copyToClipboard(loUrl, `lo-url-${lo.id}`)}
+                              className="p-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] rounded-lg text-xs font-bold text-[#4A5D4E] shrink-0"
+                              title="Copy Param Link"
+                            >
+                              {copiedKey === `lo-url-${lo.id}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
                         </div>
                       </div>
 
@@ -1776,7 +1809,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               {guidesState.pairings.map(pairing => {
                 const lo = guidesState.loanOfficers.find(l => l.id === pairing.loId) || currentLo;
                 const agent = guidesState.agentRoster.find(a => a.id === pairing.agentId) || guidesState.agentRoster[0];
-                const pairingFullUrl = pairing.customSlug 
+                const pairingShortUrl = `${origin}/${pairing.customSlug || pairing.id}`;
+                const pairingParamUrl = pairing.customSlug 
                   ? `${origin}/?pair=${pairing.customSlug}`
                   : `${origin}/?lo=${lo.customSlug || lo.id.replace(/^lo-/, "")}&agent=${agent?.customSlug || agent?.id.replace(/^agent-/, "") || ""}`;
                 const isActive = guidesState.loanOfficer.id === lo.id && guidesState.activeAgentId === agent?.id;
@@ -1856,34 +1890,65 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                         </div>
                       </div>
 
-                      {/* URL Box */}
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">
-                          Co-Branded Marketing Link:
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            readOnly
-                            value={pairingFullUrl}
-                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs font-mono text-[#4A5D4E] focus:outline-none"
-                          />
-                          <button
-                            onClick={() => copyToClipboard(pairingFullUrl, `pair-url-${pairing.id}`)}
-                            className="px-3 py-1.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl transition-colors shrink-0 flex items-center gap-1"
-                          >
-                            {copiedKey === `pair-url-${pairing.id}` ? (
-                              <>
-                                <Check className="w-3.5 h-3.5" />
-                                <span>Copied</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3.5 h-3.5" />
-                                <span>Copy</span>
-                              </>
-                            )}
-                          </button>
+                      {/* Short & Param URL Box */}
+                      <div className="space-y-2 bg-[#F9F8F4] p-3 rounded-2xl border border-[#EAE7E0]">
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="font-bold text-[#38463B] uppercase tracking-wider">Print-Ready Co-Branded Short URL:</span>
+                            <span className="text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">Dual Branded</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={pairingShortUrl}
+                              className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs font-mono text-[#2D362E] font-bold focus:outline-none truncate"
+                            />
+                            <button
+                              onClick={() => copyToClipboard(pairingShortUrl, `pair-short-url-${pairing.id}`)}
+                              className="px-3 py-1.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl transition-colors shrink-0 flex items-center gap-1 shadow-2xs"
+                            >
+                              {copiedKey === `pair-short-url-${pairing.id}` ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+                            <a
+                              href={pairingShortUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-xl text-xs font-bold shrink-0 flex items-center gap-1 shadow-2xs"
+                              title="Test Pairing Link in New Tab"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 pt-1 border-t border-[#EAE7E0]">
+                          <span className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Parameter URL:</span>
+                          <div className="flex items-center justify-between gap-1.5">
+                            <input
+                              type="text"
+                              readOnly
+                              value={pairingParamUrl}
+                              className="bg-white border border-[#EAE7E0] rounded-lg px-2 py-1 text-[10px] font-mono text-[#606C5D] w-full focus:outline-none truncate"
+                            />
+                            <button
+                              onClick={() => copyToClipboard(pairingParamUrl, `pair-param-url-${pairing.id}`)}
+                              className="p-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] rounded-lg text-xs font-bold text-[#4A5D4E] shrink-0"
+                              title="Copy Param Link"
+                            >
+                              {copiedKey === `pair-param-url-${pairing.id}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
                         </div>
                       </div>
                       {/* Co-Marketing Quick Launch Bar */}
@@ -1952,7 +2017,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           {isActive ? "Currently Active" : "Set as Active Site Guides"}
                         </button>
                         <a
-                          href={pairingFullUrl}
+                          href={pairingShortUrl}
                           target="_blank"
                           rel="noreferrer"
                           className="px-2.5 py-1.5 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] text-xs font-bold rounded-xl flex items-center gap-1 shadow-2xs transition-colors"

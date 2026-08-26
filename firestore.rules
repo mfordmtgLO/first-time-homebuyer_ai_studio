@@ -7,6 +7,11 @@ service cloud.firestore {
     
     // We allow open read and write for the prototype CMS.
     // In production, we would use Firebase Auth to restrict access.
+    match /guides_state/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
     match /loan_officers/{loId} {
       allow read: if true;
       allow write: if true; 

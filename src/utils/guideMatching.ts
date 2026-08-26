@@ -16,9 +16,6 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
     (lo.email && (lo.email.toLowerCase() === "mford@cfmtg.com" || lo.email.toLowerCase() === "fordmj@gmail.com"));
 
   if (isMike) {
-    const isUnsplashPhoto = !lo.headshotUrl || lo.headshotUrl.includes("unsplash");
-    const headshot = isUnsplashPhoto ? "/mike-ford-headshot.jpg" : lo.headshotUrl;
-
     // Fix branch location if empty or if containing the old placeholder "Team Lonn Kilstrom Branch (Manager / Admin)"
     const branch = (!lo.branch || lo.branch.includes("Team Lonn Kilstrom Branch (Manager / Admin)"))
       ? "Lake Oswego, OR (serving Oregonians state-wide since 2000)"
@@ -34,7 +31,7 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
       branch: branch,
       email: lo.email || "mford@cfmtg.com",
       phone: lo.phone || "(541) 729-0819",
-      headshotUrl: headshot,
+      headshotUrl: "/mike-ford-headshot.jpg", // Permanently lock to authentic Mike Ford headshot photo
       websiteUrl: lo.websiteUrl || "https://cfmtg.com/mford/",
       customSlug: lo.customSlug || "mike-ford",
       isAdmin: true

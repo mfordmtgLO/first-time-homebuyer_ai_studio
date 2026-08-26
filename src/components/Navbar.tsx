@@ -527,6 +527,28 @@ export const Navbar: React.FC<NavbarProps> = ({
             <ChevronLeft className="w-4 h-4" />
           </button>
 
+          {/* PERMANENTLY VISIBLE PINNED "Home / Overview" BUTTON */}
+          <button
+            id="navbar-pinned-home-btn"
+            type="button"
+            data-nav-id="hero"
+            onClick={() => handleNavClick("hero", "website")}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer shadow-xs group z-20 ${
+              currentTab === "hero"
+                ? "bg-[#4A5D4E] text-white shadow-xs ring-1 ring-[#38463B]"
+                : "text-[#4A5D4E] hover:bg-[#F1EFE9] hover:text-[#2D362E] bg-[#FAF9F5] border border-[#EAE7E0] hover:border-[#DCD7CD]"
+            }`}
+            title="Home / Overview (Return to Start)"
+          >
+            <Home className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
+              currentTab === "hero" ? "text-white" : "text-[#606C5D]"
+            }`} />
+            <span>Home / Overview</span>
+          </button>
+
+          {/* Subtle Vertical Divider */}
+          <div className="h-6 w-px bg-[#EAE7E0] shrink-0 mx-0.5" aria-hidden="true" />
+
           {/* Scrollable Container with dedicated horizontal scrollbar */}
           <div 
             className="flex-1 relative min-w-0 group/nav"
@@ -549,7 +571,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-2 overflow-x-auto dashboard-horizontal-scrollbar scroll-smooth py-1 px-1 flex-1 min-w-0"
               style={{ WebkitOverflowScrolling: "touch" }}
             >
-              {allNavItems.map((item) => {
+              {allNavItems.filter((item) => item.id !== "hero").map((item) => {
                 const Icon = item.icon;
                 const isActive = currentTab === item.id;
 

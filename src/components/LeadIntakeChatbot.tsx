@@ -483,6 +483,8 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   });
 
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const activeOptionsRef = useRef<HTMLDivElement | null>(null);
+  const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const messageElementsRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const scrollToActiveMessage = (msgId?: string) => {
@@ -501,29 +503,62 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       }
     }
 
-    if (targetEl) {
+    if (targetEl && activeOptionsRef.current) {
+      const containerRect = container.getBoundingClientRect();
+      const elemRect = targetEl.getBoundingClientRect();
+      const optionsRect = activeOptionsRef.current.getBoundingClientRect();
+      const currentScroll = container.scrollTop;
+
+      const totalBlockHeight = optionsRect.bottom - elemRect.top;
+      
+      if (totalBlockHeight <= containerRect.height - 28) {
+        // Fits comfortably: align to top of message
+        const targetScroll = currentScroll + (elemRect.top - containerRect.top) - 12;
+        container.scrollTo({
+          top: Math.max(0, targetScroll),
+          behavior: "smooth"
+        });
+      } else {
+        // Taller than viewport: scroll so the interactive options / question controls are fully visible in view
+        const targetScroll = currentScroll + (optionsRect.bottom - containerRect.bottom) + 20;
+        container.scrollTo({
+          top: Math.max(0, targetScroll),
+          behavior: "smooth"
+        });
+      }
+    } else if (targetEl) {
       const containerRect = container.getBoundingClientRect();
       const elemRect = targetEl.getBoundingClientRect();
       const currentScroll = container.scrollTop;
-      // Precisely align the top of the message with 12px padding below the header
       const targetScroll = currentScroll + (elemRect.top - containerRect.top) - 12;
-      
       container.scrollTo({
         top: Math.max(0, targetScroll),
+        behavior: "smooth"
+      });
+    } else {
+      container.scrollTo({
+        top: container.scrollHeight,
         behavior: "smooth"
       });
     }
   };
 
-  // Scroll to ensure the newest advisor message is fully visible without being cut off at the top
+  // Scroll to ensure the newest advisor message and interactive options are fully visible
   useEffect(() => {
     if (!isOpen) return;
 
-    const timer = setTimeout(() => {
+    const timer1 = setTimeout(() => {
       scrollToActiveMessage();
-    }, 60);
+    }, 40);
 
-    return () => clearTimeout(timer);
+    const timer2 = setTimeout(() => {
+      scrollToActiveMessage();
+    }, 180);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, [messages, currentStepIndex, isOpen, isCompleted, isCityDropdownOpen]);
 
   const handleRevisitStep = (stepIndex: number) => {
@@ -551,15 +586,21 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   };
 
   const handleToggleCity = (city: string) => {
-    setSelectedCities(prev => 
-      prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]
-    );
+    setSelectedCities(prev => {
+      const next = prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city];
+      return next;
+    });
+    // Ensure the confirm button / bottom is scrolled into view when selecting cities
+    setTimeout(() => {
+      scrollToActiveMessage();
+    }, 60);
   };
 
   const handleConfirmCitiesSelection = () => {
     if (selectedCities.length === 0) return;
     const citiesString = selectedCities.join(", ");
     const step = INTAKE_STEPS[currentStepIndex];
+    setIsCityDropdownOpen(false);
     if (step) {
       handleSelectOption(step, citiesString);
     }
@@ -1031,7 +1072,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 
             {/* Current Step Option Controls (if intake not yet completed) */}
             {!isCompleted && currentStepIndex < INTAKE_STEPS.length && (
-              <div className="pt-2 pl-0 sm:pl-9 space-y-2">
+              <div ref={activeOptionsRef} className="pt-2 pl-0 sm:pl-9 space-y-2">
                 {INTAKE_STEPS[currentStepIndex].id === "location" ? (
                   /* Oregon Cities Multi-Select Dropdown with Checkboxes */
                   <div className="space-y-2.5 animate-fade-in">
@@ -1041,20 +1082,26 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                         Select Oregon Cities (One or Multiple):
                       </span>
                       {selectedCities.length > 0 && (
-                        <span className="text-[10px] font-bold text-[#4A5D4E] bg-[#EAE7E0] px-2 py-0.5 rounded-full">
-                          {selectedCities.length} selected
-                        </span>
+                        <button
+                          type="button"
+                          onClick={handleConfirmCitiesSelection}
+                          className="text-[11px] font-extrabold text-[#4A5D4E] hover:text-[#38463B] bg-[#EAE7E0] hover:bg-[#dedad0] px-2.5 py-0.5 rounded-full flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Confirm and proceed to next question"
+                        >
+                          <span>{selectedCities.length} selected</span>
+                          <span className="text-[10px] underline">Confirm →</span>
+                        </button>
                       )}
                     </div>
 
                     <div className="bg-white rounded-2xl border border-[#EAE7E0] shadow-sm overflow-hidden">
                       {/* Dropdown Toggle Header */}
-                      <button
-                        type="button"
-                        onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
-                        className="w-full p-3 bg-[#FAF9F5] border-b border-[#EAE7E0] flex items-center justify-between cursor-pointer hover:bg-[#F1EFE9] transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-2 text-xs font-semibold text-[#2D362E] min-w-0 pr-2">
+                      <div className="w-full p-2.5 sm:p-3 bg-[#FAF9F5] border-b border-[#EAE7E0] flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
+                          className="flex items-center gap-2 text-xs font-semibold text-[#2D362E] min-w-0 pr-2 cursor-pointer text-left flex-1"
+                        >
                           <MapPin className="w-4 h-4 text-[#4A5D4E] shrink-0" />
                           {selectedCities.length === 0 ? (
                             <span className="text-[#9A9488]">Select Oregon cities from alphabetical list...</span>
@@ -1063,12 +1110,29 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                               <strong className="text-[#4A5D4E]">{selectedCities.length} {selectedCities.length === 1 ? 'City' : 'Cities'}:</strong> {selectedCities.slice(0, 3).join(", ")}{selectedCities.length > 3 ? ` +${selectedCities.length - 3} more` : ''}
                             </span>
                           )}
+                        </button>
+                        
+                        <div className="flex items-center gap-2 shrink-0">
+                          {selectedCities.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={handleConfirmCitiesSelection}
+                              className="px-2.5 py-1 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-[11px] font-bold rounded-lg shadow-xs flex items-center gap-1 transition-all cursor-pointer"
+                            >
+                              <span>Confirm</span>
+                              <ChevronRight className="w-3 h-3" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
+                            className="flex items-center gap-1 text-[#606C5D] hover:text-[#2D362E] text-[11px] font-medium p-1 cursor-pointer"
+                          >
+                            <span className="hidden sm:inline">{isCityDropdownOpen ? "Collapse" : "Browse"}</span>
+                            {isCityDropdownOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
                         </div>
-                        <div className="flex items-center gap-1 text-[#606C5D] shrink-0">
-                          <span className="text-[11px] font-medium hidden sm:inline">{isCityDropdownOpen ? "Collapse List" : "Browse Cities"}</span>
-                          {isCityDropdownOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </div>
-                      </button>
+                      </div>
 
                       {/* Dropdown Content */}
                       {isCityDropdownOpen && (
@@ -1097,7 +1161,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 
                           {/* Selected Tags Display */}
                           {selectedCities.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto py-1">
+                            <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto py-1">
                               {selectedCities.map((city) => (
                                 <span
                                   key={city}
@@ -1126,7 +1190,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                                   key={pop}
                                   type="button"
                                   onClick={() => handleToggleCity(pop)}
-                                  className={`px-1.5 py-0.5 rounded-md border transition-all ${
+                                  className={`px-1.5 py-0.5 rounded-md border transition-all cursor-pointer ${
                                     selectedCities.includes(pop)
                                       ? "bg-[#4A5D4E] text-white border-[#4A5D4E] font-bold"
                                       : "bg-[#FAF9F5] text-[#2D362E] border-[#EAE7E0] hover:border-[#4A5D4E]"
@@ -1141,7 +1205,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                               <button
                                 type="button"
                                 onClick={() => setSelectedCities([])}
-                                className="text-[#9A9488] hover:text-rose-600 underline font-medium text-[10px]"
+                                className="text-[#9A9488] hover:text-rose-600 underline font-medium text-[10px] cursor-pointer"
                               >
                                 Clear All
                               </button>
@@ -1149,7 +1213,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                           </div>
 
                           {/* Alphabetical Scrollable List with Checkboxes */}
-                          <div className="max-h-48 overflow-y-auto border border-[#EAE7E0] rounded-xl divide-y divide-[#EAE7E0] bg-[#FAF9F5]/40 pr-1">
+                          <div className="max-h-36 overflow-y-auto border border-[#EAE7E0] rounded-xl divide-y divide-[#EAE7E0] bg-[#FAF9F5]/40 pr-1">
                             {OREGON_CITIES.filter((c) =>
                               c.toLowerCase().includes(citySearchQuery.toLowerCase().trim())
                             ).map((city) => {
@@ -1207,13 +1271,17 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                             type="button"
                             onClick={handleConfirmCitiesSelection}
                             disabled={selectedCities.length === 0}
-                            className="w-full py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] disabled:opacity-40 disabled:hover:bg-[#4A5D4E] text-white font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:cursor-not-allowed"
+                            className={`w-full py-2.5 rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                              selectedCities.length > 0
+                                ? "bg-[#4A5D4E] hover:bg-[#38463B] text-white ring-2 ring-[#C18C5D]/40"
+                                : "bg-[#FAF9F5] text-[#9A9488] border border-[#EAE7E0] opacity-60 cursor-not-allowed"
+                            }`}
                           >
                             <CheckCircle2 className="w-4 h-4 text-[#E7C19D]" />
                             <span>
                               {selectedCities.length === 0
-                                ? "Check One or Multiple Cities Above to Continue"
-                                : `Confirm ${selectedCities.length} Selected ${selectedCities.length === 1 ? "City" : "Cities"}`}
+                                ? "Select One or Multiple Cities Above to Continue"
+                                : `Confirm ${selectedCities.length} Selected ${selectedCities.length === 1 ? "City" : "Cities"} & Continue`}
                             </span>
                             <ChevronRight className="w-3.5 h-3.5" />
                           </button>
@@ -1528,6 +1596,8 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                 </div>
               </div>
             )}
+
+            <div ref={chatBottomRef} className="h-1 shrink-0" />
           </div>
 
           {/* Chat Input Bar */}

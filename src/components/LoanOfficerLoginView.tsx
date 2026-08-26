@@ -580,7 +580,7 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
                             alt={lo.name}
                             className="w-11 h-11 rounded-xl object-cover border border-white shadow-xs shrink-0"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80";
+                              (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
                             }}
                           />
                           <div>

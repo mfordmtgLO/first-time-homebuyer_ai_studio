@@ -413,9 +413,13 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
               <div className="flex items-start gap-3">
                 <div className="relative shrink-0">
                   <img 
-                    src={loanOfficer.headshotUrl} 
+                    src={loanOfficer.headshotUrl || "/mike-ford-headshot.jpg"} 
                     alt={loanOfficer.name} 
+                    referrerPolicy="no-referrer"
                     className="w-10 h-10 rounded-full object-cover border-2 border-[#4A5D4E]"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
+                    }}
                   />
                   <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></span>
                 </div>
@@ -451,13 +455,18 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
               <>
                 <div className="relative flex items-center">
                   <img 
-                    src={loanOfficer.headshotUrl} 
+                    src={loanOfficer.headshotUrl || "/mike-ford-headshot.jpg"} 
                     alt={loanOfficer.name} 
+                    referrerPolicy="no-referrer"
                     className="w-8 h-8 rounded-full object-cover border border-white"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
+                    }}
                   />
                   <img 
                     src={agent.headshotUrl} 
                     alt={agent.name} 
+                    referrerPolicy="no-referrer"
                     className="w-8 h-8 rounded-full object-cover border border-white -ml-3"
                   />
                   <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#4A5D4E] animate-pulse"></span>
@@ -478,9 +487,13 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
             ) : (
               <div className="relative flex items-center justify-center w-full h-full p-1">
                 <img 
-                  src={loanOfficer.headshotUrl} 
+                  src={loanOfficer.headshotUrl || "/mike-ford-headshot.jpg"} 
                   alt={loanOfficer.name} 
+                  referrerPolicy="no-referrer"
                   className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
+                  }}
                 />
                 <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#4A5D4E]"></span>
               </div>
@@ -503,9 +516,13 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
             <div className="flex items-center gap-3">
               <div className="relative">
                 <img 
-                  src={loanOfficer.headshotUrl} 
+                  src={loanOfficer.headshotUrl || "/mike-ford-headshot.jpg"} 
                   alt={loanOfficer.name} 
+                  referrerPolicy="no-referrer"
                   className="w-10 h-10 rounded-full object-cover border-2 border-white/40"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
+                  }}
                 />
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#4A5D4E]"></span>
               </div>

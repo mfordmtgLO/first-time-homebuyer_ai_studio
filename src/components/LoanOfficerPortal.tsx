@@ -371,7 +371,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         branch: newLoForm.branch || "Team Lonn Kilstrom Branch",
         email: newLoForm.email || "",
         phone: newLoForm.phone || "",
-        headshotUrl: newLoForm.headshotUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80",
+        headshotUrl: newLoForm.headshotUrl || "/mike-ford-headshot.jpg",
         websiteUrl: newLoForm.websiteUrl || "",
         bio: newLoForm.bio || "",
         specialties: newLoForm.specialties || ["First-Time Homebuyers"],
@@ -2078,12 +2078,12 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3.5 pt-1">
                   <div className="relative shrink-0">
                     <img
-                      src={currentLo.headshotUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80"}
+                      src={currentLo.headshotUrl || "/mike-ford-headshot.jpg"}
                       alt={currentLo.name}
                       referrerPolicy="no-referrer"
                       className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md bg-[#EAE7E0]"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80";
+                        (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
                       }}
                     />
                   </div>
@@ -2403,7 +2403,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                       referrerPolicy="no-referrer"
                       className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md bg-[#EAE7E0]"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80";
+                        (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
                       }}
                     />
                   </div>

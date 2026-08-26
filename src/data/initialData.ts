@@ -849,7 +849,7 @@ export const DEFAULT_LOAN_OFFICER: LoanOfficerProfile = {
   branch: "Team Lonn Kilstrom Branch (Manager / Admin)",
   email: "mford@cfmtg.com",
   phone: "(541) 729-0819",
-  headshotUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80",
+  headshotUrl: "/mike-ford-headshot.jpg",
   websiteUrl: "https://cfmtg.com/lo/mike-ford/",
   bio: "With over 16 years specializing exclusively in first-time homebuyers across Oregon and Washington, Mike specializes in low-stress pre-approvals, maximum Interested Party Contribution (IPC) seller concession strategies, and locking in state Down Payment Assistance (DPA) grant programs.",
   specialties: [

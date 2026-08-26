@@ -1229,6 +1229,45 @@ export const INITIAL_PAIRINGS: import("../types").LOPairing[] = [
     totalLeads: 24
   },
   {
+    id: "pair-lonn-sarah",
+    loId: "lo-lonn-kilstrom",
+    agentId: "agent-sarah-jenkins",
+    title: "Lonn Kilstrom + Sarah Jenkins (Portland Metro Co-Branded)",
+    customSlug: "lonn-and-sarah",
+    campaignTag: "pdx-metro-cobranded",
+    notes: "Co-branded for Portland Metro first-time buyers and down payment assistance.",
+    createdAt: "2026-08-06",
+    active: true,
+    totalViews: 198,
+    totalLeads: 18
+  },
+  {
+    id: "pair-lonn-elena",
+    loId: "lo-lonn-kilstrom",
+    agentId: "agent-elena-rostova",
+    title: "Lonn Kilstrom + Elena Rostova (Silicon Forest Co-Branded)",
+    customSlug: "lonn-and-elena",
+    campaignTag: "silicon-forest-cobranded",
+    notes: "Co-branded for Beaverton & Hillsboro tech buyers and starter homes.",
+    createdAt: "2026-08-07",
+    active: true,
+    totalViews: 172,
+    totalLeads: 15
+  },
+  {
+    id: "pair-lonn-tyler",
+    loId: "lo-lonn-kilstrom",
+    agentId: "agent-tyler-brooks",
+    title: "Lonn Kilstrom + Tyler Brooks (Willamette Valley Co-Branded)",
+    customSlug: "lonn-and-tyler",
+    campaignTag: "willamette-valley-cobranded",
+    notes: "Co-branded for Salem, Eugene & Willamette Valley homebuyers.",
+    createdAt: "2026-08-08",
+    active: true,
+    totalViews: 154,
+    totalLeads: 12
+  },
+  {
     id: "pair-3",
     loId: "lo-alan-burkhart",
     agentId: "agent-marcus-vance",

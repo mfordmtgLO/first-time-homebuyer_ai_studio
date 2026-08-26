@@ -184,7 +184,16 @@ export function findMatchingPairing(
       if (id.includes("mike") || slug.includes("mike") || id === "pair-1") return true;
     }
     if (clean.includes("lonn") && clean.includes("marcus")) {
-      if (id.includes("lonn") || slug.includes("lonn") || id === "pair-2") return true;
+      if (id.includes("lonn") || slug.includes("lonn") || id === "pair-2" || slug === "lonn-and-marcus") return true;
+    }
+    if (clean.includes("lonn") && clean.includes("sarah")) {
+      if (id.includes("lonn") || slug.includes("lonn") || id === "pair-lonn-sarah" || slug === "lonn-and-sarah") return true;
+    }
+    if (clean.includes("lonn") && clean.includes("elena")) {
+      if (id.includes("lonn") || slug.includes("lonn") || id === "pair-lonn-elena" || slug === "lonn-and-elena") return true;
+    }
+    if (clean.includes("lonn") && clean.includes("tyler")) {
+      if (id.includes("lonn") || slug.includes("lonn") || id === "pair-lonn-tyler" || slug === "lonn-and-tyler") return true;
     }
     if (clean.includes("alan") && clean.includes("marcus")) {
       if (id.includes("alan") || slug.includes("alan") || id === "pair-3") return true;
@@ -246,14 +255,23 @@ export function resolveFromUrlPath(
     return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pairByPath, isPairing: true };
   }
 
-  // Check if segment has "and" or "-" joining LO and Agent (e.g. mike-and-sarah or mike-sarah)
+  // Check if segment has "and" or "-" joining LO and Agent (e.g. lonn-and-sarah, mike-and-sarah, lonn-and-marcus)
   for (const seg of rawSegments) {
-    if (seg.includes("-and-") || (seg.includes("mike") && seg.includes("sarah")) || (seg.includes("lonn") && seg.includes("marcus"))) {
-      const pair = findMatchingPairing(seg, pairings);
-      if (pair) {
-        const pairLo = findMatchingLoanOfficer(pair.loId, loanOfficers);
-        const pairAgent = findMatchingAgent(pair.agentId, agents);
-        return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pair, isPairing: true };
+    const pair = findMatchingPairing(seg, pairings);
+    if (pair) {
+      const pairLo = findMatchingLoanOfficer(pair.loId, loanOfficers);
+      const pairAgent = findMatchingAgent(pair.agentId, agents);
+      return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pair, isPairing: true };
+    }
+
+    if (seg.includes("-and-") || seg.includes("and")) {
+      const parts = seg.split(/-and-|\band\b/).map(p => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        const potentialLo = findMatchingLoanOfficer(parts[0], loanOfficers) || findMatchingLoanOfficer(parts[1], loanOfficers);
+        const potentialAgent = findMatchingAgent(parts[1], agents) || findMatchingAgent(parts[0], agents);
+        if (potentialLo && potentialAgent) {
+          return { matchedLo: potentialLo, matchedAgent: potentialAgent, isPairing: true };
+        }
       }
     }
   }

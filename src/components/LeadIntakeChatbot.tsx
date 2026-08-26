@@ -282,7 +282,8 @@ export const OREGON_CITIES: string[] = [
 
 interface LeadIntakeChatbotProps {
   loanOfficer: LoanOfficerProfile;
-  agent: RealEstateAgentProfile;
+  agent?: RealEstateAgentProfile;
+  isCoBranded?: boolean;
   financialProfile?: FinancialProfile;
   onSaveLead: (lead: CapturedLead) => void;
   isOpen: boolean;
@@ -376,20 +377,29 @@ const INTAKE_STEPS: IntakeStep[] = [
 export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   loanOfficer,
   agent,
+  isCoBranded = false,
   financialProfile,
   onSaveLead,
   isOpen,
   onClose,
   onOpen,
 }) => {
-  const [messages, setMessages] = useState<{ id: string; sender: 'user' | 'advisor'; text: string; time: string }[]>([
-    {
-      id: "intro-1",
-      sender: "advisor",
-      text: `👋 Hi there! I'm your 24/7 Homebuyer Intake & Prequalification Guide, working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage}).\n\n🔒 **No Credit Card or SSN Required** — Let's calculate your true monthly budget, check Down Payment Assistance (DPA) options, and build your custom Prequalification Blueprint in under 2 minutes.\n\n${INTAKE_STEPS[0].question}`,
-      time: "Just now"
-    }
-  ]);
+  const showAgent = isCoBranded && !!agent;
+
+  const [messages, setMessages] = useState<{ id: string; sender: 'user' | 'advisor'; text: string; time: string }[]>(() => {
+    const partnerInfo = (isCoBranded && agent)
+      ? `working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage})`
+      : `working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId})`;
+
+    return [
+      {
+        id: "intro-1",
+        sender: "advisor",
+        text: `👋 Hi there! I'm your 24/7 Homebuyer Intake & Prequalification Guide, ${partnerInfo}.\n\n🔒 **No Credit Card or SSN Required** — Let's calculate your true monthly budget, check Down Payment Assistance (DPA) options, and build your custom Prequalification Blueprint in under 2 minutes.\n\n${INTAKE_STEPS[0].question}`,
+        time: "Just now"
+      }
+    ];
+  });
 
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [inputText, setInputText] = useState<string>("");
@@ -480,7 +490,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     preferredLocations: "",
     propertyType: "Single Family",
     assignedLoId: loanOfficer.id,
-    assignedAgentId: agent.id,
+    assignedAgentId: showAgent && agent ? agent.id : undefined,
     leadSource: "Website AI Intake Chatbot",
     intentScore: "hot",
     status: "new"
@@ -901,12 +911,14 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                       (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
                     }}
                   />
-                  <img 
-                    src={agent.headshotUrl} 
-                    alt={agent.name} 
-                    referrerPolicy="no-referrer"
-                    className="w-8 h-8 rounded-full object-cover border border-white -ml-3"
-                  />
+                  {showAgent && agent && (
+                    <img 
+                      src={agent.headshotUrl} 
+                      alt={agent.name} 
+                      referrerPolicy="no-referrer"
+                      className="w-8 h-8 rounded-full object-cover border border-white -ml-3"
+                    />
+                  )}
                   <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#4A5D4E] animate-pulse"></span>
                 </div>
 
@@ -972,8 +984,12 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-white/80 flex items-center gap-1">
-                  <span>Co-Guide: {agent.name}</span>
-                  <span>•</span>
+                  {showAgent && agent && (
+                    <>
+                      <span>Co-Guide: {agent.name}</span>
+                      <span>•</span>
+                    </>
+                  )}
                   <span className="text-emerald-300 font-semibold">24/7 AI Online</span>
                 </p>
               </div>

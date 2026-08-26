@@ -561,6 +561,7 @@ export default function App() {
         <LeadIntakeChatbot
           loanOfficer={guidesState.loanOfficer}
           agent={activeAgent}
+          isCoBranded={guidesState.isCoBranded}
           financialProfile={profile}
           onSaveLead={handleSaveLead}
           isOpen={isLeadBotOpen}

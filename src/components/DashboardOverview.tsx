@@ -32,6 +32,7 @@ interface DashboardOverviewProps {
   onOpenNewPropertyModal: () => void;
   loanOfficer?: LoanOfficerProfile;
   activeAgent?: RealEstateAgentProfile;
+  isCoBranded?: boolean;
   onOpenLoPortal?: () => void;
 }
 
@@ -46,6 +47,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onOpenNewPropertyModal,
   loanOfficer,
   activeAgent,
+  isCoBranded = false,
   onOpenLoPortal,
 }) => {
   const breakdown = calculateMortgageBreakdown(profile);
@@ -384,7 +386,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                       </span>
                     </div>
                     <p className="text-xs text-[#606C5D]">
-                      Paired with {loanOfficer.name} (LO) & {activeAgent.name} (Agent).
+                      {isCoBranded && activeAgent 
+                        ? `Paired with ${loanOfficer.name} (LO) & ${activeAgent.name} (Agent).`
+                        : `Dedicated Mortgage Specialist: ${loanOfficer.name} (LO).`}
                     </p>
                   </div>
                 </div>
@@ -414,7 +418,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </h3>
 
             <p className="text-xs sm:text-sm text-[#DEDAD2] leading-relaxed">
-              Synthesize your complete purchasing scenario into actionable next steps and connect directly with your dedicated Loan Officer {loanOfficer ? `(${loanOfficer.name})` : ""} and Real Estate Agent {activeAgent ? `(${activeAgent.name})` : ""}.
+              Synthesize your complete purchasing scenario into actionable next steps and connect directly with your dedicated Loan Officer {loanOfficer ? `(${loanOfficer.name})` : ""}{isCoBranded && activeAgent ? ` and Real Estate Agent (${activeAgent.name})` : ""}.
             </p>
           </div>
 

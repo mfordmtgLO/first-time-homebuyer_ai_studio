@@ -58,12 +58,12 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
   const canonicalId = matchedDefault?.id || lo.id || `lo-${lo.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
   const canonicalSlug = matchedDefault?.customSlug || lo.customSlug || canonicalId.replace(/^lo-/, "");
 
-  // Determine headshotUrl: preserve custom uploads (data:image/ or custom links), replace cartoon/placeholders with real photos
+  // Determine headshotUrl: preserve custom uploaded photos (data:image/), otherwise enforce authentic high-res photos for roster team members
   let finalHeadshot = lo.headshotUrl;
-  if (isCartoonOrPlaceholder(finalHeadshot)) {
-    if (matchedDefault && matchedDefault.headshotUrl && !isCartoonOrPlaceholder(matchedDefault.headshotUrl)) {
-      finalHeadshot = matchedDefault.headshotUrl;
-    } else if (canonicalId === "lo-mike-ford" || rawName.includes("mike ford")) {
+  const isCustomUpload = finalHeadshot && finalHeadshot.startsWith("data:image/");
+
+  if (!isCustomUpload) {
+    if (canonicalId === "lo-mike-ford" || rawName.includes("mike ford")) {
       finalHeadshot = "/mike-ford-headshot.jpg";
     } else if (canonicalId === "lo-lonn-kilstrom" || rawName.includes("lonn")) {
       finalHeadshot = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80";
@@ -79,7 +79,9 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
       finalHeadshot = "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=600&auto=format&fit=crop&q=80";
     } else if (canonicalId === "lo-emanuel-etuks" || rawName.includes("emanuel")) {
       finalHeadshot = "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=600&auto=format&fit=crop&q=80";
-    } else {
+    } else if (matchedDefault?.headshotUrl) {
+      finalHeadshot = matchedDefault.headshotUrl;
+    } else if (isCartoonOrPlaceholder(finalHeadshot)) {
       finalHeadshot = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80";
     }
   }

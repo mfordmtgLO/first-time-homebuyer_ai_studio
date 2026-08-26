@@ -303,7 +303,7 @@ const INTAKE_STEPS: IntakeStep[] = [
       { label: "Ready Now (30-60 Days)", value: "Ready in 30-60 Days", sub: "Actively searching" },
       { label: "3 to 6 Months Out", value: "3 to 6 Months Out", sub: "Planning & saving" },
       { label: "6 to 12 Months", value: "6 to 12 Months", sub: "Exploring options" },
-      { label: "Found a Home Already!", value: "Found a House / In Escrow Soon", sub: "Need fast pre-approval" },
+      { label: "Found a Home Already!", value: "Found a House / In Escrow Soon", sub: "Need fast prequalification" },
     ]
   },
   {
@@ -363,7 +363,7 @@ const INTAKE_STEPS: IntakeStep[] = [
       },
       { 
         label: "NO", 
-        value: "NO - Just send my Pre-Approval Blueprint", 
+        value: "NO - Just send my Prequalification Blueprint", 
         sub: "Only my customized blueprint for now" 
       }
     ]
@@ -383,7 +383,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     {
       id: "intro-1",
       sender: "advisor",
-      text: `👋 Hi there! I'm your 24/7 Homebuyer Intake & Pre-Approval Guide, working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage}).\n\nLet's calculate your true monthly budget, check Down Payment Assistance (DPA) options, and build your custom Pre-Approval Blueprint in under 2 minutes.\n\n${INTAKE_STEPS[0].question}`,
+      text: `👋 Hi there! I'm your 24/7 Homebuyer Intake & Prequalification Guide, working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage}).\n\nLet's calculate your true monthly budget, check Down Payment Assistance (DPA) options, and build your custom Prequalification Blueprint in under 2 minutes.\n\n${INTAKE_STEPS[0].question}`,
       time: "Just now"
     }
   ]);
@@ -608,7 +608,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       const botMsg = {
         id: `bot-${Date.now() + 1}`,
         sender: "advisor" as const,
-        text: `🎉 Excellent! Based on your answers, you have strong pre-approval potential for FHA & Conventional 97 financing with Down Payment Assistance (DPA). Who should ${loanOfficer.name} send your custom Pre-Approval Blueprint to?`,
+        text: `🎉 Excellent! Based on your answers, you have strong prequalification potential for FHA & Conventional 97 financing with Down Payment Assistance (DPA). Who should ${loanOfficer.name} send your custom Prequalification Blueprint to?`,
         time: "Just now"
       };
       setMessages(prev => [...prev, userMsg, botMsg]);
@@ -649,7 +649,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       const botMsg = {
         id: `bot-${Date.now()}`,
         sender: "advisor" as const,
-        text: data.reply || data.fallback || "I can help guide your pre-approval steps and Down Payment Assistance (DPA) options!",
+        text: data.reply || data.fallback || "I can help guide your prequalification steps and Down Payment Assistance (DPA) options!",
         time: "Just now"
       };
       setMessages(prev => [...prev, botMsg]);
@@ -720,7 +720,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     const botConfirmMsg = {
       id: `bot-confirm-${Date.now()}`,
       sender: "advisor" as const,
-      text: `🎉 Congratulations ${contactForm.fullName.split(" ")[0]}! Your Pre-Approval Blueprint has been generated and dispatched to ${loanOfficer.name}. You can also schedule a direct 1-on-1 strategy call below!`,
+      text: `🎉 Congratulations ${contactForm.fullName.split(" ")[0]}! Your Prequalification Blueprint has been generated and dispatched to ${loanOfficer.name}. You can also schedule a direct 1-on-1 strategy call below!`,
       time: "Just now"
     };
     setMessages(prev => [...prev, botConfirmMsg]);
@@ -756,7 +756,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       {
         id: `intro-${Date.now()}`,
         sender: "advisor",
-        text: `👋 Let's build your new Pre-Approval Blueprint!\n\n${INTAKE_STEPS[0].question}`,
+        text: `👋 Let's build your new Prequalification Blueprint!\n\n${INTAKE_STEPS[0].question}`,
         time: "Just now"
       }
     ]);
@@ -802,7 +802,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                     onClick={onOpen}
                     className="inline-flex items-center gap-1 text-xs font-bold text-[#4A5D4E] hover:text-[#38463B] pt-1"
                   >
-                    <span>Start 2-Min Pre-Approval</span>
+                    <span>Start 2-Min Prequal</span>
                     <ArrowRight className="w-3 h-3" />
                   </button>
                 </div>
@@ -816,7 +816,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
             className={`group relative flex items-center bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 border-2 border-white/20 ${
               isScrolling ? "gap-3 px-4 py-3" : "w-14 h-14 justify-center p-0"
             }`}
-            aria-label="Open AI Pre-Approval Chatbot"
+            aria-label="Open AI Prequal Chatbot"
           >
             {isScrolling ? (
               <>
@@ -842,7 +842,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                 <div className="text-left pr-1">
                   <div className="flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-[#E7C19D]" />
-                    <span className="text-xs font-bold tracking-tight">AI Pre-Approval Guide</span>
+                    <span className="text-xs font-bold tracking-tight">AI Prequal Guide</span>
                   </div>
                   <span className="text-[11px] text-white/80 font-medium">Check DPA & buying power</span>
                 </div>
@@ -930,7 +930,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           <div className="bg-[#F1EFE9] px-4 py-2 border-b border-[#EAE7E0] flex items-center justify-between text-xs text-[#606C5D] shrink-0">
             <div className="flex items-center gap-2">
               <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
-              <span className="font-semibold text-[#2D362E]">Pre-Approval Intake</span>
+              <span className="font-semibold text-[#2D362E]">Prequalification Intake</span>
             </div>
             <div className="flex items-center gap-1.5">
               {INTAKE_STEPS.map((step, idx) => (
@@ -1336,7 +1336,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                       {/* NO Box */}
                       <button
                         type="button"
-                        onClick={() => handleSelectOption(INTAKE_STEPS[currentStepIndex], "NO - Just send my Pre-Approval Blueprint")}
+                        onClick={() => handleSelectOption(INTAKE_STEPS[currentStepIndex], "NO - Just send my Prequalification Blueprint")}
                         className="p-4 rounded-2xl border-2 border-[#EAE7E0] bg-white hover:bg-[#F1EFE9] hover:border-[#9A9488] transition-all text-left group shadow-xs cursor-pointer flex flex-col justify-between"
                       >
                         <div className="flex items-center justify-between">
@@ -1347,7 +1347,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                           <ChevronRight className="w-4 h-4 text-[#9A9488] group-hover:translate-x-1 transition-transform" />
                         </div>
                         <p className="text-[11px] text-[#606C5D] mt-1.5 font-medium leading-snug">
-                          No thank you, just send my customized Pre-Approval Blueprint for now
+                          No thank you, just send my customized Prequalification Blueprint for now
                         </p>
                       </button>
                     </div>
@@ -1385,7 +1385,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
               <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 shadow-sm space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-[#4A5D4E]">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Where should we deliver your Pre-Approval Blueprint?</span>
+                  <span>Where should we deliver your Prequalification Blueprint?</span>
                 </div>
 
                 <form onSubmit={handleSubmitLead} className="space-y-3 text-xs">
@@ -1460,7 +1460,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                     className="w-full py-3 bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-2 transition-all"
                   >
                     <Award className="w-4 h-4 text-[#E7C19D]" />
-                    <span>Generate & Send My Pre-Approval Blueprint</span>
+                    <span>Generate & Send My Prequalification Blueprint</span>
                   </button>
                   <p className="text-[10px] text-center text-[#9A9488]">
                     🔒 Confidential. Zero spam. Directly reviewed by licensed professionals.

@@ -458,7 +458,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Renter Conversion Subtitle: Clear Purpose & Actionable Excitement */}
           <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm md:text-base text-[#606C5D] max-w-3xl font-medium leading-relaxed px-2">
-            Calculate your true buying power, check verified state Down Payment Assistance (DPA), and model pre-approval scenarios across <strong className="text-[#2D362E] font-bold">Steps 1–4</strong> with zero guesswork.
+            Calculate your true buying power, check verified Down Payment Assistance (DPA), and model prequal scenarios across <strong className="text-[#2D362E] font-bold">Steps 1–4</strong> with zero guesswork.
           </p>
 
           {/* Quick Renter Trust Chips */}
@@ -477,16 +477,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
 
-          {/* Absolute Top-Right Controls on Desktop (Pre-Approval CTA + Mobile Hamburger) */}
+          {/* Absolute Top-Right Controls on Desktop (Prequal CTA + Mobile Hamburger) */}
           <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
             {onOpenLeadBot && (
               <button
                 onClick={onOpenLeadBot}
                 className="hidden lg:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-bold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer"
-                title="Start 24/7 AI Pre-Approval Assessment"
+                title="Start 24/7 AI Prequalification Assessment"
               >
                 <Zap className="w-4 h-4 text-white" />
-                <span>24/7 AI Pre-Approval</span>
+                <span>24/7 AI Prequal</span>
               </button>
             )}
 
@@ -611,15 +611,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             <ChevronRight className="w-4 h-4" />
           </button>
 
-          {/* Quick Pre-Approval CTA on Tablet/Desktop for Instant Chatbot Access */}
+          {/* Quick Prequal CTA on Tablet/Desktop for Instant Chatbot Access */}
           {onOpenLeadBot && (
             <button
               onClick={onOpenLeadBot}
               className="hidden sm:flex lg:hidden items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-bold text-xs shadow-xs transition-all shrink-0 cursor-pointer"
-              title="Start 24/7 AI Pre-Approval Assessment"
+              title="Start 24/7 AI Prequalification Assessment"
             >
               <Zap className="w-3.5 h-3.5 text-white" />
-              <span>Pre-Approval</span>
+              <span>AI Prequal</span>
             </button>
           )}
 
@@ -688,7 +688,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#C18C5D] text-white font-semibold text-sm shadow-xs"
               >
                 <Zap className="w-4 h-4 text-white" />
-                <span>Start 24/7 AI Pre-Approval</span>
+                <span>Start 24/7 AI Prequal</span>
               </button>
             )}
 

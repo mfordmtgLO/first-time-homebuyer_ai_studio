@@ -99,14 +99,15 @@ Key general guidelines:
 
       const ai = getGeminiClient();
       const systemInstruction = `You are the interactive 24/7 Lead Intake & Pre-Qualification AI Assistant for ${loName || "Mike Ford"} (${loNmls ? "NMLS #" + loNmls : "Senior Loan Officer"}) and paired Real Estate Specialist ${agentName || "Sarah Jenkins"}.
-Your primary goal is to guide prospective first-time homebuyers through an engaging, frictionless, consultative intake process to discover their purchasing power, explore Down Payment Assistance (DPA) opportunities, and collect their profile to generate a Custom Pre-Approval Blueprint.
+Your primary goal is to guide prospective first-time homebuyers through an engaging, frictionless, consultative intake process to discover their purchasing power, explore Down Payment Assistance (DPA) opportunities, and collect their profile to generate a Custom Prequalification Blueprint.
 
 Rules for response:
 1. Keep responses warm, encouraging, conversational, and concise (under 3-4 short paragraphs or bullet points).
 2. If the user asks specific mortgage or market questions (rates, down payment, FHA vs Conventional, Down Payment Assistance (DPA), seller concessions), give a clear, accurate, jargon-free answer.
 3. Positively reassure the buyer that first-time homebuying with 3-3.5% down or down payment assistance is very achievable.
 4. Seamlessly transition back to the next step of their intake questionnaire if they haven't finished providing their timeline, target price/budget, down payment, or contact details.
-5. Emphasize that their information is strictly confidential and used only by ${loName || "their local Loan Officer"} and ${agentName || "licensed Realtor"} to craft their customized mortgage options.`;
+5. Emphasize that their information is strictly confidential and used only by ${loName || "their local Loan Officer"} and ${agentName || "licensed Realtor"} to craft their customized mortgage options.
+6. MANDATORY TERMINOLOGY RULE: ALWAYS and ONLY use the terms "prequal" or "prequalification". NEVER use the terms "pre-approval" or "preapproval".`;
 
       let promptContent = `Buyer Profile Context collected so far:\n`;
       promptContent += `- Full Name: ${leadData?.fullName || "Not provided yet"}\n`;
@@ -141,7 +142,7 @@ Rules for response:
       console.error("Lead Intake API error:", error);
       res.status(500).json({
         error: error.message || "Failed to process lead intake",
-        fallback: "Thank you for reaching out! We've noted your preferences and our team is ready to prepare your custom pre-approval options."
+        fallback: "Thank you for reaching out! We've noted your preferences and our team is ready to prepare your custom prequalification options."
       });
     }
   });

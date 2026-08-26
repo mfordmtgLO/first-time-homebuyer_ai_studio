@@ -537,7 +537,7 @@ export default function App() {
         />
       )}
 
-      {/* 24/7 AI Lead Intake & Pre-Approval Chatbot */}
+      {/* 24/7 AI Lead Intake & Prequal Chatbot */}
       {!showLoPortal && (
         <LeadIntakeChatbot
           loanOfficer={guidesState.loanOfficer}

@@ -89,7 +89,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
                   className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-bold text-sm shadow-xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-white" />
-                  <span>24/7 AI Pre-Approval Chatbot</span>
+                  <span>24/7 AI Prequal Chatbot</span>
                 </button>
               )}
 

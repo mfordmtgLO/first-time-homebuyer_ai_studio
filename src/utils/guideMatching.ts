@@ -12,7 +12,8 @@ function isCartoonOrPlaceholder(url?: string): boolean {
     lower.includes("avataaars") ||
     lower.includes("multavatar") ||
     lower.includes("placeholder") ||
-    lower.includes("cartoon")
+    lower.includes("cartoon") ||
+    lower.includes("unsplash")
   );
 }
 
@@ -58,31 +59,15 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
   const canonicalId = matchedDefault?.id || lo.id || `lo-${lo.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
   const canonicalSlug = matchedDefault?.customSlug || lo.customSlug || canonicalId.replace(/^lo-/, "");
 
-  // Determine headshotUrl: preserve custom uploaded photos (data:image/), otherwise enforce authentic high-res photos for roster team members
+  // Determine headshotUrl: preserve custom uploaded photos (data:image/ or valid real URLs), otherwise blank it out to use the elegant Initials Avatar
   let finalHeadshot = lo.headshotUrl;
-  const isCustomUpload = finalHeadshot && finalHeadshot.startsWith("data:image/");
+  const isCustomUpload = finalHeadshot && (finalHeadshot.startsWith("data:image/") || finalHeadshot.startsWith("blob:") || (finalHeadshot.length > 10 && !isCartoonOrPlaceholder(finalHeadshot)));
 
   if (!isCustomUpload) {
     if (canonicalId === "lo-mike-ford" || rawName.includes("mike ford")) {
       finalHeadshot = "/mike-ford-headshot.jpg";
-    } else if (canonicalId === "lo-lonn-kilstrom" || rawName.includes("lonn")) {
-      finalHeadshot = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80";
-    } else if (canonicalId === "lo-alan-burkhart" || rawName.includes("alan")) {
-      finalHeadshot = "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&auto=format&fit=crop&q=80";
-    } else if (canonicalId === "lo-mark-saftich" || rawName.includes("mark")) {
-      finalHeadshot = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=600&auto=format&fit=crop&q=80";
-    } else if (canonicalId === "lo-darryl-symonds" || rawName.includes("darryl")) {
-      finalHeadshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80";
-    } else if (canonicalId === "lo-christopher-vargas" || rawName.includes("christopher")) {
-      finalHeadshot = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&auto=format&fit=crop&q=80";
-    } else if (canonicalId === "lo-derek-richards" || rawName.includes("derek")) {
-      finalHeadshot = "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=600&auto=format&fit=crop&q=80";
-    } else if (canonicalId === "lo-emanuel-etuks" || rawName.includes("emanuel")) {
-      finalHeadshot = "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=600&auto=format&fit=crop&q=80";
-    } else if (matchedDefault?.headshotUrl) {
-      finalHeadshot = matchedDefault.headshotUrl;
-    } else if (isCartoonOrPlaceholder(finalHeadshot)) {
-      finalHeadshot = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&auto=format&fit=crop&q=80";
+    } else {
+      finalHeadshot = ""; // Empty string triggers the HeadshotAvatar to display a professional initials badge (e.g. "LK" for Lonn Kilstrom)
     }
   }
 

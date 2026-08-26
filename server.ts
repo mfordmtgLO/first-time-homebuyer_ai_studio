@@ -99,11 +99,11 @@ Key general guidelines:
 
       const ai = getGeminiClient();
       const systemInstruction = `You are the interactive 24/7 Lead Intake & Pre-Qualification AI Assistant for ${loName || "Mike Ford"} (${loNmls ? "NMLS #" + loNmls : "Senior Loan Officer"}) and paired Real Estate Specialist ${agentName || "Sarah Jenkins"}.
-Your primary goal is to guide prospective first-time homebuyers through an engaging, frictionless, consultative intake process to discover their purchasing power, explore down payment grant opportunities, and collect their profile to generate a Custom Pre-Approval Blueprint.
+Your primary goal is to guide prospective first-time homebuyers through an engaging, frictionless, consultative intake process to discover their purchasing power, explore Down Payment Assistance (DPA) opportunities, and collect their profile to generate a Custom Pre-Approval Blueprint.
 
 Rules for response:
 1. Keep responses warm, encouraging, conversational, and concise (under 3-4 short paragraphs or bullet points).
-2. If the user asks specific mortgage or market questions (rates, down payment, FHA vs Conventional, DPA grants, seller concessions), give a clear, accurate, jargon-free answer.
+2. If the user asks specific mortgage or market questions (rates, down payment, FHA vs Conventional, Down Payment Assistance (DPA), seller concessions), give a clear, accurate, jargon-free answer.
 3. Positively reassure the buyer that first-time homebuying with 3-3.5% down or down payment assistance is very achievable.
 4. Seamlessly transition back to the next step of their intake questionnaire if they haven't finished providing their timeline, target price/budget, down payment, or contact details.
 5. Emphasize that their information is strictly confidential and used only by ${loName || "their local Loan Officer"} and ${agentName || "licensed Realtor"} to craft their customized mortgage options.`;
@@ -113,7 +113,7 @@ Rules for response:
       promptContent += `- Timeline: ${leadData?.timeline || "Not provided yet"}\n`;
       promptContent += `- Target Price / Monthly Budget: ${leadData?.targetPriceRange || leadData?.targetMonthlyBudget || "Not provided yet"}\n`;
       promptContent += `- Down Payment Savings: ${leadData?.downPaymentSavings || "Not provided yet"}\n`;
-      promptContent += `- Grant Interest: ${leadData?.grantInterest ? "Yes, interested in DPA grants" : "Standard loan"}\n`;
+      promptContent += `- DPA Interest: ${leadData?.grantInterest ? "Yes, interested in Down Payment Assistance (DPA)" : "Standard loan"}\n`;
       promptContent += `- Credit Tier: ${leadData?.creditScoreTier || "Not provided yet"}\n`;
       promptContent += `- Target Locations: ${leadData?.preferredLocations || "Not provided yet"}\n\n`;
 
@@ -136,7 +136,7 @@ Rules for response:
         },
       });
 
-      res.json({ reply: response.text || "I'd love to help you determine your purchasing power and grant options! What timeline are you thinking for your home purchase?" });
+      res.json({ reply: response.text || "I'd love to help you determine your purchasing power and Down Payment Assistance (DPA) options! What timeline are you thinking for your home purchase?" });
     } catch (error: any) {
       console.error("Lead Intake API error:", error);
       res.status(500).json({
@@ -242,7 +242,7 @@ Provide:
 1. Debt-to-Income (DTI) health evaluation (Front-end & Back-end assessment)
 2. Risk Level (Low, Moderate, Stretched, High)
 3. Estimated monthly payment breakdown and safety buffer recommendations
-4. First-time buyer grant or special program opportunities (FHA, Conventional 97, USDA, State DPA)
+4. First-time buyer Down Payment Assistance (DPA) or special program opportunities (FHA, Conventional 97, USDA, State DPA)
 5. Actionable tips to improve purchasing power or interest rate before applying.`;
 
       const response = await ai.models.generateContent({

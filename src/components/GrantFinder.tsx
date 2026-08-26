@@ -31,7 +31,7 @@ export const GrantFinder: React.FC = () => {
 
   const types = [
     "All", 
-    "Forgivable Grant", 
+    "Down Payment Assistance (DPA)", 
     "Silent Second Loan", 
     "Matched Savings", 
     "0% Down Program"
@@ -72,10 +72,10 @@ export const GrantFinder: React.FC = () => {
         </div>
 
         <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#2D362E]">
-          Oregon Down Payment Assistance, Grants & 0% Down Programs
+          Oregon Down Payment Assistance (DPA) & 0% Down Programs
         </h2>
         <p className="text-sm text-[#606C5D] max-w-3xl leading-relaxed">
-          Comprehensive directory of state-funded assistance programs, forgivable grants, matched savings IDAs, and zero-down mortgage options specifically eligible for first-time homebuyers in Oregon.
+          Comprehensive directory of state-funded assistance programs, Down Payment Assistance (DPA), matched savings IDAs, and zero-down mortgage options specifically eligible for first-time homebuyers in Oregon.
         </p>
 
         {/* Quick Highlights Banner */}
@@ -86,7 +86,7 @@ export const GrantFinder: React.FC = () => {
           </div>
           <div className="p-3 bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] text-xs space-y-0.5">
             <span className="font-bold text-[#C18C5D] block">DevNW Matched Savings (5:1)</span>
-            <span className="text-[#606C5D]">Up to $20,000 free equity match through Oregon IDA Initiative.</span>
+            <span className="text-[#606C5D]">Up to $20,000 equity match through Oregon IDA Initiative.</span>
           </div>
           <div className="p-3 bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] text-xs space-y-0.5">
             <span className="font-bold text-[#2D362E] block">Portland DPAL (Up to $100k)</span>

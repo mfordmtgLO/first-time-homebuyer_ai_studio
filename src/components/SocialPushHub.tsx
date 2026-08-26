@@ -74,8 +74,8 @@ ${attribution}
 Questions on pre-approval or current market inventory? Send us a DM or book a free 15-min strategy call!`;
 
         return {
-          title: "Facebook Feed Post • 2026 Grants & Affordability Reality Check",
-          hook: "Most first-time buyers have NO idea they may qualify for up to $30,000 in forgivable state grants.",
+          title: "Facebook Feed Post • 2026 DPA & Affordability Reality Check",
+          hook: "Most first-time buyers have NO idea they may qualify for up to $30,000 in state Down Payment Assistance (DPA).",
           body: text,
           hashtags: ["#FirstTimeHomeBuyer", "#OregonRealEstate", "#PortlandHomes", "#MortgageAdvisor", "#DownPaymentAssistance", "#BuyAHome2026"],
           shareActionUrl: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pairingUrl)}`
@@ -86,7 +86,7 @@ Questions on pre-approval or current market inventory? Send us a DM or book a fr
         const text = `Before you assume homeownership is out of reach in 2026... read this 👇
 
 1️⃣ You DO NOT need 20% down. (Most of our clients buy with 3% to 3.5% down).
-2️⃣ State & County grants can provide $15,000 to $30,000+ in forgivable down payment assistance.
+2️⃣ State & County programs can provide $15,000 to $30,000+ in Down Payment Assistance (DPA).
 3️⃣ When your Loan Officer (${loFirstName}) and Realtor (${agentFirstName}) work together in real-time, we structure offers to capture maximum seller closing credits.
 
 We built an interactive Homebuyer Hub to test your real numbers, calculate monthly PITI payments, and track homes with a structural scorecard.
@@ -115,7 +115,7 @@ Co-branded by ${loanOfficer.name} (${loanOfficer.nmlsId}) & ${activeAgent.name} 
 (Show the interactive payment slider turning green/amber/red on screen)
 
 [Body - 0:03 to 0:25]:
-"Most calculators only show principal & interest. But in Oregon & Washington, property taxes, HOA, and home insurance can add $600+ a month. Plus, there are state programs that give first-time buyers up to $30,000 in down payment grants."
+"Most calculators only show principal & interest. But in Oregon & Washington, property taxes, HOA, and home insurance can add $600+ a month. Plus, there are state programs that give first-time buyers up to $30,000 in Down Payment Assistance (DPA)."
 
 [Call To Action - 0:25 to 0:35]:
 "My team (${loFirstName} & ${agentFirstName}) put together a free interactive portal where you can calculate your exact numbers with zero pressure. Link in bio to try it!"
@@ -126,7 +126,7 @@ Test your true buying power with our free interactive 2026 Homebuyer Hub! Link i
 
         return {
           title: "TikTok Video Hook & Script • The Real Monthly Payment Reality",
-          hook: "POV: You tested your true monthly mortgage budget with actual taxes and grants...",
+          hook: "POV: You tested your true monthly mortgage budget with actual taxes and DPA...",
           body: text,
           hashtags: ["#MortgageTok", "#HomebuyerTips", "#HouseHunting", "#RealEstateTok", "#FirstHome"],
           shareActionUrl: null
@@ -134,7 +134,7 @@ Test your true buying power with our free interactive 2026 Homebuyer Hub! Link i
       }
 
       if (selectedPlatform === "crm_email") {
-        const text = `SUBJECT: Your Interactive 2026 First-Time Homebuyer Portal (Instant Affordability & Grants)
+        const text = `SUBJECT: Your Interactive 2026 First-Time Homebuyer Portal (Instant Affordability & DPA)
 
 Hi [First Name],
 
@@ -148,7 +148,7 @@ Inside your interactive portal, you can:
 • Calculate exact monthly mortgage breakdowns (including taxes, insurance, and PMI)
 • Test your self-restricted monthly budget goal with our dynamic green/amber indicator
 • Review our 10-Step Closing Roadmap & Escrow Checklist
-• Explore verified down payment grants (OHCS Cash Assist, DevNW IDA Matched Savings, PHB DPAL)
+• Explore verified Down Payment Assistance (DPA) programs (OHCS Cash Assist, DevNW IDA Matched Savings, PHB DPAL)
 
 Feel free to test out different price points and let us know whenever you'd like to review your pre-approval options or tour homes in person!
 
@@ -172,7 +172,7 @@ Phone: ${activeAgent.phone} | Email: ${activeAgent.email}`;
       }
 
       if (selectedPlatform === "crm_sms") {
-        const text = `Hi [First Name], this is ${loFirstName} & ${agentFirstName}! We put together a free interactive Homebuyer Portal where you can calculate your exact monthly payments and check eligibility for Oregon down payment grants: ${pairingUrl} - Let us know what you think!`;
+        const text = `Hi [First Name], this is ${loFirstName} & ${agentFirstName}! We put together a free interactive Homebuyer Portal where you can calculate your exact monthly payments and check eligibility for Oregon Down Payment Assistance (DPA): ${pairingUrl} - Let us know what you think!`;
 
         return {
           title: "CRM SMS Quick Text Blast • Direct Link Invitation",

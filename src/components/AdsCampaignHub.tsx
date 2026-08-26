@@ -73,7 +73,7 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
   };
 
   // Meta Campaign Spec
-  const metaCampaignUrl = `${pairingUrl}${pairingUrl.includes("?") ? "&" : "?"}utm_source=meta_ads&utm_medium=cpc&utm_campaign=first_time_homebuyer_grants&utm_content=co_branded`;
+  const metaCampaignUrl = `${pairingUrl}${pairingUrl.includes("?") ? "&" : "?"}utm_source=meta_ads&utm_medium=cpc&utm_campaign=first_time_homebuyer_dpa&utm_content=co_branded`;
   
   const metaAdSpec = {
     campaignName: `[Homebuyer Roadmap 2026] First-Time Buyer Portal • ${loanOfficer.name} + ${activeAgent.name}`,
@@ -83,21 +83,21 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
     targetAudience: `Age 24-55 • Geo: ${adSettings.targetCities?.join(", ") || "Portland Metro (25 mi)"} • Interests: First-Time Buyer, Zillow, Mortgage Loans, Down Payment Assistance`,
     primaryText: `Stop guessing what your monthly mortgage payment will be. 🏡 
 
-We created a free, transparent interactive First-Time Homebuyer Portal for Oregon & Washington buyers to calculate exact monthly payments (including taxes, HOA, and home insurance) and check eligibility for up to $30,000 in state down payment grants.
+We created a free, transparent interactive First-Time Homebuyer Portal for Oregon & Washington buyers to calculate exact monthly payments (including taxes, HOA, and home insurance) and check eligibility for up to $30,000 in state Down Payment Assistance (DPA).
 
 ✨ Calculate your true PITI payment in 60 seconds
-✨ Browse verified Oregon & Washington DPA grant programs
+✨ Browse verified Oregon & Washington Down Payment Assistance (DPA) programs
 ✨ Use our home tour scorecard to inspect listings without stress
 
 Tap "Calculate Buying Power" to try the live interactive tool now!`,
-    headline: "Calculate Your True Monthly Payment & Grants in 60 Sec",
+    headline: "Calculate Your True Monthly Payment & DPA in 60 Sec",
     description: `Free Interactive Tool • Powered by ${loanOfficer.name} (${loanOfficer.nmlsId}) & ${activeAgent.name} (REALTOR®)`,
     ctaButton: "Calculate Buying Power / Learn More",
     destinationUrl: metaCampaignUrl
   };
 
   // Google Ads Search Campaign Spec
-  const googleCampaignUrl = `${pairingUrl}${pairingUrl.includes("?") ? "&" : "?"}utm_source=google_ads&utm_medium=search_cpc&utm_campaign=first_time_homebuyer_calculator&utm_term=oregon_dpa_grants`;
+  const googleCampaignUrl = `${pairingUrl}${pairingUrl.includes("?") ? "&" : "?"}utm_source=google_ads&utm_medium=search_cpc&utm_campaign=first_time_homebuyer_calculator&utm_term=oregon_dpa_assistance`;
 
   const googleAdSpec = {
     campaignName: `[Google Search] First Time Homebuyer Oregon • ${loanOfficer.name} + ${activeAgent.name}`,
@@ -107,19 +107,19 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
     headlines: [
       "Oregon First Time Homebuyer Hub",
       "Free 2026 Mortgage Calculator",
-      "Check $30,000 Grant Eligibility",
+      "Check $30,000 DPA Eligibility",
       `Mike Ford NMLS #${loanOfficer.nmlsId.replace(/[^0-9]/g, "") || "184209"}`,
       "Instant Monthly PITI Breakdown"
     ],
     descriptions: [
       "Calculate exact monthly payments including property taxes, HOA & insurance. Zero guesswork.",
-      "Explore verified Oregon DPA grants, 2-1 buydowns, and 10-step closing roadmap. Try free today.",
+      "Explore verified Oregon Down Payment Assistance (DPA), 2-1 buydowns, and 10-step closing roadmap. Try free today.",
       `Co-presented with ${activeAgent.name} (${activeAgent.brokerage}). Transparent homebuying clarity.`,
       "Fast 14-day pre-approval options and custom budget planning. Start your interactive plan."
     ],
     keywords: [
       "first time home buyer oregon",
-      "oregon down payment assistance grants",
+      "oregon down payment assistance dpa",
       "mortgage payment calculator portland or",
       "first time buyer pre approval portland",
       "how much house can i afford oregon",
@@ -138,7 +138,7 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
         agentId: activeAgent.id,
         campaignName: metaAdSpec.campaignName,
         headline: metaAdSpec.headline,
-        secondaryHeadlines: ["Free Pre-Approval & Grant Check", "Instant PITI Calculator"],
+        secondaryHeadlines: ["Free Pre-Approval & DPA Check", "Instant PITI Calculator"],
         primaryText: metaAdSpec.primaryText,
         descriptionText: metaAdSpec.description,
         targetUrl: metaCampaignUrl,

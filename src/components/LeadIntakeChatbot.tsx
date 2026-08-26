@@ -324,7 +324,7 @@ const INTAKE_STEPS: IntakeStep[] = [
     options: [
       { label: "3% to 5% Down ($12k - $25k)", value: "3% - 5% Down ($12k - $25k)", sub: "Conventional 97 / FHA" },
       { label: "10% to 20% Down ($45k+)", value: "10% - 20%+ Down ($45k+)", sub: "Lower monthly PMI" },
-      { label: "Seeking Down Payment Grants", value: "Need First-Time Buyer Grants / DPA", sub: "Up to $30k assistance" },
+      { label: "Seeking Down Payment Assistance", value: "Need Down Payment Assistance (DPA)", sub: "State & local assistance programs" },
       { label: "$0 Down (VA / USDA Rural)", value: "$0 Down (VA / USDA Eligible)", sub: "Zero down payment" },
     ]
   },
@@ -335,7 +335,7 @@ const INTAKE_STEPS: IntakeStep[] = [
     options: [
       { label: "Excellent (740+)", value: "740+ Excellent", sub: "Best interest rates" },
       { label: "Good (680 - 739)", value: "680 - 739 Good", sub: "Strong conventional terms" },
-      { label: "Fair (620 - 679)", value: "620 - 679 Fair", sub: "FHA & grant eligible" },
+      { label: "Fair (620 - 679)", value: "620 - 679 Fair", sub: "FHA & DPA eligible" },
       { label: "Rebuilding / Need Advice", value: "Rebuilding / Need Credit Advice", sub: "Free plan to improve" },
     ]
   },
@@ -383,7 +383,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     {
       id: "intro-1",
       sender: "advisor",
-      text: `👋 Hi there! I'm your 24/7 Homebuyer Intake & Pre-Approval Guide, working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage}).\n\nLet's calculate your true monthly budget, check grant eligibility, and build your custom Pre-Approval Blueprint in under 2 minutes.\n\n${INTAKE_STEPS[0].question}`,
+      text: `👋 Hi there! I'm your 24/7 Homebuyer Intake & Pre-Approval Guide, working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage}).\n\nLet's calculate your true monthly budget, check Down Payment Assistance (DPA) options, and build your custom Pre-Approval Blueprint in under 2 minutes.\n\n${INTAKE_STEPS[0].question}`,
       time: "Just now"
     }
   ]);
@@ -608,7 +608,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       const botMsg = {
         id: `bot-${Date.now() + 1}`,
         sender: "advisor" as const,
-        text: `🎉 Excellent! Based on your answers, you have strong pre-approval potential for FHA & Conventional 97 financing with local grant assistance. Who should ${loanOfficer.name} send your custom Pre-Approval Blueprint to?`,
+        text: `🎉 Excellent! Based on your answers, you have strong pre-approval potential for FHA & Conventional 97 financing with Down Payment Assistance (DPA). Who should ${loanOfficer.name} send your custom Pre-Approval Blueprint to?`,
         time: "Just now"
       };
       setMessages(prev => [...prev, userMsg, botMsg]);
@@ -649,7 +649,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       const botMsg = {
         id: `bot-${Date.now()}`,
         sender: "advisor" as const,
-        text: data.reply || data.fallback || "I can help guide your pre-approval steps and grant options!",
+        text: data.reply || data.fallback || "I can help guide your pre-approval steps and Down Payment Assistance (DPA) options!",
         time: "Just now"
       };
       setMessages(prev => [...prev, botMsg]);
@@ -796,7 +796,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                     <span className="text-[10px] bg-[#F1EFE9] text-[#4A5D4E] px-1.5 py-0.5 rounded font-semibold">24/7 AI</span>
                   </div>
                   <p className="text-xs text-[#606C5D] leading-tight">
-                    Want to see your true monthly buying power & check down payment grants?
+                    Want to see your true monthly buying power & check Down Payment Assistance (DPA)?
                   </p>
                   <button
                     onClick={onOpen}
@@ -844,7 +844,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                     <Sparkles className="w-3.5 h-3.5 text-[#E7C19D]" />
                     <span className="text-xs font-bold tracking-tight">AI Pre-Approval Guide</span>
                   </div>
-                  <span className="text-[11px] text-white/80 font-medium">Check grants & buying power</span>
+                  <span className="text-[11px] text-white/80 font-medium">Check DPA & buying power</span>
                 </div>
 
                 <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
@@ -1534,7 +1534,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           <div className="p-3 bg-white border-t border-[#EAE7E0] flex items-center gap-2 shrink-0">
             <input 
               type="text" 
-              placeholder={isCompleted ? "Ask a question about rates, grants, or closing..." : "Type your question or reply..."}
+              placeholder={isCompleted ? "Ask a question about rates, DPA options, or closing..." : "Type your question or reply..."}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}

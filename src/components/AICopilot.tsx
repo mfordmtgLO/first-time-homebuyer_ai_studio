@@ -29,7 +29,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => 
     {
       id: "msg-1",
       sender: "advisor",
-      text: `Hello! I am your First-Time Homebuyer Roadmap AI Advisor. I'm here to help you navigate every phase of buying your first home—from understanding DTI ratios, grant options, and Interested Party Contribution (IPC) limits to crafting winning offers and negotiating inspection credits. How can I help you today?`,
+      text: `Hello! I am your First-Time Homebuyer Roadmap AI Advisor. I'm here to help you navigate every phase of buying your first home—from understanding DTI ratios, Down Payment Assistance (DPA) options, and Interested Party Contribution (IPC) limits to crafting winning offers and negotiating inspection credits. How can I help you today?`,
       timestamp: "Just now",
       suggestedActions: [
         "What are the seller concession & IPC limits for FHA, Conventional, VA, and USDA?",

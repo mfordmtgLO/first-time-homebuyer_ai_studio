@@ -324,7 +324,7 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({ profile }) => {
               </h4>
               <ul className="space-y-1.5 list-disc pl-4 text-[#606C5D] marker:text-[#4A5D4E]">
                 <li>Ask for <strong className="text-[#2D362E]">Seller Concessions</strong> (e.g. 2% credit paid by seller at closing).</li>
-                <li>Apply for local <strong className="text-[#2D362E]">Down Payment Assistance (DPA)</strong> closing grants.</li>
+                <li>Apply for <strong className="text-[#2D362E]">Down Payment Assistance (DPA)</strong> closing assistance.</li>
                 <li>Compare <strong className="text-[#2D362E]">Title Company rates</strong> (buyers have the legal right to shop title services).</li>
               </ul>
             </div>

@@ -57,45 +57,48 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           {/* Left Column: Value Prop */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#F1EFE9] border border-[#EAE7E0] text-[#4A5D4E] text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
-              <span>Smart First-Time Homebuyer Platform • Interactive Roadmap & AI Guidance</span>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#F1EFE9] border border-[#EAE7E0] text-[#4A5D4E] text-xs font-bold shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 text-[#C18C5D] animate-pulse" />
+              <span className="text-[#C18C5D] uppercase tracking-wider font-extrabold">Stop Paying Rent</span>
+              <span>•</span>
+              <span>2026 First-Time Homebuyer Interactive Blueprint & AI Advisor</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-[#2D362E] leading-tight">
-              Buy your first home with <span className="text-[#4A5D4E]">clarity</span> and total confidence.
+              Stop paying rent. Buy your first home with <span className="text-[#4A5D4E]">clarity</span> and confidence.
             </h1>
 
             <p className="text-base sm:text-lg text-[#606C5D] max-w-2xl leading-relaxed">
-              Navigate down payments, pre-approvals, hidden closing costs, and competitive offer strategies. Complete with real-time affordability simulations, grant finders, and an intelligent Gemini-powered real estate advisor.
+              Find out what you can truly afford, uncover state Down Payment Assistance (DPA) programs from $0 down, and test real monthly mortgage scenarios across <strong className="text-[#2D362E] font-bold">Steps 1–4</strong> with zero guesswork and zero sales pressure.
             </p>
 
             {/* CTAs */}
             <div className="flex flex-wrap gap-3.5 pt-2">
               <button
                 onClick={onOpenCalculator}
-                className="flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-sm shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-sm shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
               >
                 <DollarSign className="w-4 h-4 text-[#D4A373]" />
-                <span>Calculate Your Buying Power</span>
+                <span>Step 1: Calculate Buying Power</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               {onOpenLeadBot && (
                 <button
                   onClick={onOpenLeadBot}
-                  className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-semibold text-sm shadow-xs hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-bold text-sm shadow-xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-white" />
-                  <span>24/7 AI Pre-Approval Assistant</span>
+                  <span>24/7 AI Pre-Approval Chatbot</span>
                 </button>
               )}
 
               <button
-                onClick={onOpenDashboard}
-                className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] font-semibold text-sm transition-all"
+                onClick={onOpenRoadmap}
+                className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] font-bold text-sm transition-all cursor-pointer"
               >
-                <span>Launch Homebuyer Dashboard</span>
+                <Compass className="w-4 h-4 text-[#4A5D4E]" />
+                <span>Step 2: Explore 10-Step Roadmap & DPA</span>
               </button>
             </div>
 
@@ -107,7 +110,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#4A5D4E] shrink-0" />
-                <span>Oregon DPA Grant Search</span>
+                <span>Oregon DPA Program Search</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#4A5D4E] shrink-0" />
@@ -349,13 +352,13 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
               02
             </div>
             <h3 className="font-bold text-[#2D362E] text-sm group-hover:text-[#4A5D4E] transition-colors">
-              Pre-Approval & Grants
+              Pre-Approval & DPA
             </h3>
             <p className="text-xs text-[#606C5D] leading-relaxed">
-              Shop 3 lenders in 14-day window, unlock state DPA grants and Fannie Mae 3% programs.
+              Shop 3 lenders in 14-day window, explore Down Payment Assistance (DPA) and Fannie Mae 3% programs.
             </p>
             <div className="text-[11px] font-semibold text-[#4A5D4E] flex items-center gap-1">
-              <span>Find Grants</span>
+              <span>Find DPA Programs</span>
               <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { 
   Users, 
   UserPlus, 
@@ -26,6 +26,8 @@ import {
   Building,
   MapPin,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Inbox,
   Flame,
   Search,
@@ -87,6 +89,58 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
+  // Horizontal Menu Navigation Scroll State & Ref
+  const menuScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
+  const [canScrollRight, setCanScrollRight] = useState<boolean>(true);
+
+  const checkMenuScroll = useCallback(() => {
+    const el = menuScrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 6);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 6);
+  }, []);
+
+  const handleMenuScroll = (direction: "left" | "right") => {
+    const el = menuScrollRef.current;
+    if (!el) return;
+    const scrollAmount = Math.max(260, Math.floor(el.clientWidth * 0.6));
+    const target = direction === "left" ? el.scrollLeft - scrollAmount : el.scrollLeft + scrollAmount;
+    el.scrollTo({ left: target, behavior: "smooth" });
+    setTimeout(checkMenuScroll, 320);
+  };
+
+  useEffect(() => {
+    const el = menuScrollRef.current;
+    if (!el) return;
+
+    checkMenuScroll();
+    const handleResize = () => checkMenuScroll();
+    window.addEventListener("resize", handleResize);
+
+    const timer1 = setTimeout(checkMenuScroll, 150);
+    const timer2 = setTimeout(checkMenuScroll, 500);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [checkMenuScroll]);
+
+  // Center active tab when it changes
+  useEffect(() => {
+    const el = menuScrollRef.current;
+    if (!el) return;
+    const activeEl = el.querySelector<HTMLElement>(`[data-tab-id="${activeTab}"]`);
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+    const timer = setTimeout(checkMenuScroll, 350);
+    return () => clearTimeout(timer);
+  }, [activeTab, checkMenuScroll]);
+
   // Password Management Modal State
   const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
   const [newPasswordInput, setNewPasswordInput] = useState<string>("");
@@ -138,8 +192,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     email: "",
     phone: "",
     headshotUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80",
-    bio: "Dedicated mortgage specialist helping first-time homebuyers secure the best rates and state grant programs.",
-    specialties: ["First-Time Homebuyers", "FHA & Conventional", "State DPA Grants"],
+    bio: "Dedicated mortgage specialist helping first-time homebuyers secure the best rates and state DPA programs.",
+    specialties: ["First-Time Homebuyers", "FHA & Conventional", "State DPA Programs"],
     bookingUrl: "https://calendly.com",
     licenseStates: ["Oregon", "Washington"],
     initialPassword: "pass123"
@@ -415,8 +469,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         phone: "",
         headshotUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80",
         websiteUrl: "",
-        bio: "Dedicated mortgage specialist helping first-time homebuyers secure the best rates and state grant programs.",
-        specialties: ["First-Time Homebuyers", "FHA & Conventional", "State DPA Grants"],
+        bio: "Dedicated mortgage specialist helping first-time homebuyers secure the best rates and state DPA programs.",
+        specialties: ["First-Time Homebuyers", "FHA & Conventional", "State DPA Programs"],
         bookingUrl: "https://calendly.com",
         licenseStates: ["Oregon", "Washington"]
       });
@@ -645,7 +699,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       "Target Price",
       "Monthly Budget",
       "Down Payment / Savings",
-      "Grant Interest",
+      "DPA Interest",
       "Credit Score Tier",
       "Preferred Locations",
       "Property Type",
@@ -827,105 +881,169 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           </div>
         </div>
 
-        {/* Sticky Navigation Tabs Bar */}
-        <div className="mt-3 pt-3 border-t border-[#EAE7E0] flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {/* Sticky Navigation Tabs Bar with Horizontal Scrollbar & Quick Navigation Arrows */}
+        <div className="mt-3 pt-3 border-t border-[#EAE7E0] relative flex items-center gap-1.5 group">
+          {/* Left Scroll Navigation Button */}
           <button
-            onClick={() => setActiveTab("leads")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "leads"
-                ? "bg-[#4A5D4E] text-white shadow-xs"
-                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+            type="button"
+            onClick={() => handleMenuScroll("left")}
+            disabled={!canScrollLeft}
+            aria-label="Scroll menu left"
+            title="Scroll menu left"
+            className={`shrink-0 w-8 h-8 rounded-xl border flex items-center justify-center transition-all duration-200 shadow-2xs z-20 ${
+              canScrollLeft
+                ? "bg-white border-[#DCD7CD] text-[#2D362E] hover:bg-[#F1EFE9] hover:border-[#606C5D] cursor-pointer hover:scale-105 active:scale-95"
+                : "bg-white/40 border-[#EAE7E0]/60 text-[#C4BEB5] cursor-not-allowed opacity-40"
             }`}
           >
-            <Inbox className="w-4 h-4 text-[#E7C19D]" />
-            <span>Buyer Leads & Inquiries CRM</span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              activeTab === "leads" 
-                ? "bg-white/20 text-white" 
-                : "bg-[#4A5D4E]/10 text-[#4A5D4E]"
-            }`}>
-              {guidesState.leads?.length || 0}
-            </span>
+            <ChevronLeft className="w-4 h-4" />
           </button>
 
-          {isSuperAdmin && (
+          {/* Left Gradient Edge Fade */}
+          {canScrollLeft && (
+            <div 
+              aria-hidden="true" 
+              className="absolute left-8 top-3 bottom-0 w-6 bg-gradient-to-r from-white via-white/80 to-transparent z-10 pointer-events-none transition-opacity duration-200" 
+            />
+          )}
+
+          {/* Scrollable Container with dedicated visible horizontal scrollbar */}
+          <nav
+            ref={menuScrollRef}
+            onScroll={checkMenuScroll}
+            aria-label="Loan Officer Dashboard Sections"
+            className="flex-1 flex items-center gap-2 overflow-x-auto pb-2.5 pt-0.5 scroll-smooth dashboard-horizontal-scrollbar min-w-0"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             <button
-              onClick={() => setActiveTab("team_distribution")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                activeTab === "team_distribution"
+              data-tab-id="leads"
+              onClick={() => setActiveTab("leads")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "leads"
                   ? "bg-[#4A5D4E] text-white shadow-xs"
                   : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
               }`}
             >
-              <Users className="w-4 h-4" />
-              <span>Team LO Roster & Distribution ({guidesState.loanOfficers.length})</span>
-              {guidesState.loanOfficers.some(l => !l.isAdmin && l.passwordResetRequestedAt && !l.passwordResetAuthorized) && (
-                <span className="text-[10px] bg-amber-500 text-white font-bold px-2 py-0.5 rounded-full animate-pulse shadow-xs flex items-center gap-1">
-                  <Key className="w-2.5 h-2.5" />
-                  <span>Reset Requested</span>
-                </span>
-              )}
+              <Inbox className="w-4 h-4 text-[#E7C19D]" />
+              <span>Buyer Leads & Inquiries CRM</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "leads" 
+                  ? "bg-white/20 text-white" 
+                  : "bg-[#4A5D4E]/10 text-[#4A5D4E]"
+              }`}>
+                {guidesState.leads?.length || 0}
+              </span>
             </button>
+
+            {isSuperAdmin && (
+              <button
+                data-tab-id="team_distribution"
+                onClick={() => setActiveTab("team_distribution")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                  activeTab === "team_distribution"
+                    ? "bg-[#4A5D4E] text-white shadow-xs"
+                    : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Team LO Roster & Distribution ({guidesState.loanOfficers.length})</span>
+                {guidesState.loanOfficers.some(l => !l.isAdmin && l.passwordResetRequestedAt && !l.passwordResetAuthorized) && (
+                  <span className="text-[10px] bg-amber-500 text-white font-bold px-2 py-0.5 rounded-full animate-pulse shadow-xs flex items-center gap-1">
+                    <Key className="w-2.5 h-2.5" />
+                    <span>Reset Requested</span>
+                  </span>
+                )}
+              </button>
+            )}
+
+            <button
+              data-tab-id="pairings"
+              onClick={() => setActiveTab("pairings")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "pairings"
+                  ? "bg-[#4A5D4E] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Link className="w-4 h-4" />
+              <span>LO + Agent Pairings & Custom Links ({guidesState.pairings.length})</span>
+            </button>
+
+            <button
+              data-tab-id="realtor_roster"
+              onClick={() => setActiveTab("realtor_roster")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "realtor_roster"
+                  ? "bg-[#4A5D4E] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Realtor Partner Roster ({guidesState.agentRoster.length})</span>
+            </button>
+
+            <button
+              data-tab-id="my_profile"
+              onClick={() => setActiveTab("my_profile")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "my_profile"
+                  ? "bg-[#4A5D4E] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>Edit My Loan Officer Profile</span>
+            </button>
+
+            <button
+              data-tab-id="social_push"
+              onClick={() => setActiveTab("social_push")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "social_push"
+                  ? "bg-[#C18C5D] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Share2 className="w-4 h-4" />
+              <span>Social Push & CRM Blasts</span>
+            </button>
+
+            <button
+              data-tab-id="ad_campaigns"
+              onClick={() => setActiveTab("ad_campaigns")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "ad_campaigns"
+                  ? "bg-[#1877F2] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Meta & Google Ads Campaign Builder</span>
+            </button>
+          </nav>
+
+          {/* Right Gradient Edge Fade */}
+          {canScrollRight && (
+            <div 
+              aria-hidden="true" 
+              className="absolute right-8 top-3 bottom-0 w-6 bg-gradient-to-l from-white via-white/80 to-transparent z-10 pointer-events-none transition-opacity duration-200" 
+            />
           )}
 
+          {/* Right Scroll Navigation Button */}
           <button
-            onClick={() => setActiveTab("pairings")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "pairings"
-                ? "bg-[#4A5D4E] text-white shadow-xs"
-                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+            type="button"
+            onClick={() => handleMenuScroll("right")}
+            disabled={!canScrollRight}
+            aria-label="Scroll menu right"
+            title="Scroll menu right"
+            className={`shrink-0 w-8 h-8 rounded-xl border flex items-center justify-center transition-all duration-200 shadow-2xs z-20 ${
+              canScrollRight
+                ? "bg-white border-[#DCD7CD] text-[#2D362E] hover:bg-[#F1EFE9] hover:border-[#606C5D] cursor-pointer hover:scale-105 active:scale-95"
+                : "bg-white/40 border-[#EAE7E0]/60 text-[#C4BEB5] cursor-not-allowed opacity-40"
             }`}
           >
-            <Link className="w-4 h-4" />
-            <span>LO + Agent Pairings & Custom Links ({guidesState.pairings.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("realtor_roster")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "realtor_roster"
-                ? "bg-[#4A5D4E] text-white shadow-xs"
-                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
-            }`}
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>Realtor Partner Roster ({guidesState.agentRoster.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("my_profile")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "my_profile"
-                ? "bg-[#4A5D4E] text-white shadow-xs"
-                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
-            }`}
-          >
-            <Edit3 className="w-4 h-4" />
-            <span>Edit My Loan Officer Profile</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("social_push")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "social_push"
-                ? "bg-[#C18C5D] text-white shadow-xs"
-                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
-            }`}
-          >
-            <Share2 className="w-4 h-4" />
-            <span>Social Push & CRM Blasts</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("ad_campaigns")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === "ad_campaigns"
-                ? "bg-[#1877F2] text-white shadow-xs"
-                : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Meta & Google Ads Campaign Builder</span>
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </header>
@@ -1022,11 +1140,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
                   <div className="bg-white p-4 rounded-2xl border border-[#EAE7E0] shadow-2xs">
                     <div className="flex items-center justify-between text-xs text-[#606C5D]">
-                      <span>Grant / DPA Inquiries</span>
+                      <span>DPA Inquiries</span>
                       <Award className="w-4 h-4 text-[#C18C5D]" />
                     </div>
                     <div className="text-2xl font-serif font-bold text-[#C18C5D] mt-1">{grantsCount}</div>
-                    <div className="text-[10px] text-[#606C5D] mt-1">First-time buyer grant seekers</div>
+                    <div className="text-[10px] text-[#606C5D] mt-1">First-time buyer DPA seekers</div>
                   </div>
 
                   <div className="bg-white p-4 rounded-2xl border border-[#EAE7E0] shadow-2xs">
@@ -1147,7 +1265,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                 )}
                                 {lead.grantInterest && (
                                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                                    Grant Seeking
+                                    DPA Seeking
                                   </span>
                                 )}
                                 {lead.sendSampleHomes && (
@@ -1260,7 +1378,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                             </a>
 
                             <a
-                              href={`mailto:${lead.email}?subject=Your First-Time Homebuyer Pre-Approval Blueprint&body=Hi ${lead.fullName.split(" ")[0]},%0D%0A%0D%0AThank you for completing your intake on our portal. Based on your target budget of ${lead.targetPriceRange} and timeline (${lead.timeline}), we have prepared your customized mortgage and grant options.%0D%0A%0D%0ALet's connect at your preferred time: ${lead.preferredContactTime}.%0D%0A%0D%0ABest regards,%0D%0A${assignedLo?.name || "Mike Ford"}%0D%0ANMLS #${assignedLo?.nmlsId || "184209"}`}
+                              href={`mailto:${lead.email}?subject=Your First-Time Homebuyer Pre-Approval Blueprint&body=Hi ${lead.fullName.split(" ")[0]},%0D%0A%0D%0AThank you for completing your intake on our portal. Based on your target budget of ${lead.targetPriceRange} and timeline (${lead.timeline}), we have prepared your customized mortgage and DPA options.%0D%0A%0D%0ALet's connect at your preferred time: ${lead.preferredContactTime}.%0D%0A%0D%0ABest regards,%0D%0A${assignedLo?.name || "Mike Ford"}%0D%0ANMLS #${assignedLo?.nmlsId || "184209"}`}
                               className="px-3 py-1.5 bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
                             >
                               <Mail className="w-3.5 h-3.5 text-[#4A5D4E]" />

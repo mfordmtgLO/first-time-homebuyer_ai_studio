@@ -212,19 +212,19 @@ export const GRANT_PROGRAMS: GrantProgram[] = [
   },
   {
     id: "grant-or-hap-grant",
-    name: "OHCS Homeownership Assistance Program (HAP) Grants",
+    name: "OHCS Homeownership Assistance Program (HAP) DPA",
     provider: "Oregon Housing & Community Services / Regional CDCs",
     scope: "State",
     state: "OR",
-    assistanceType: "Forgivable Grant",
-    maxAssistance: "Up to $15,000 - $30,000 (100% Forgivable Grant)",
+    assistanceType: "Down Payment Assistance (DPA)",
+    maxAssistance: "Up to $15,000 - $30,000 Down Payment Assistance",
     incomeLimitDescription: "Household income ≤80% of Oregon Area Median Income (AMI)",
     minCreditScore: 620,
     firstTimeBuyerRequired: true,
-    description: "State-funded down payment assistance grants administered locally across Oregon through regional non-profits (such as DevNW, Proud Ground, Hacienda CDC, and NeighborWorks).",
+    description: "State-funded down payment assistance (DPA) administered across Oregon through regional non-profits (such as DevNW, Proud Ground, Hacienda CDC, and NeighborWorks).",
     link: "https://www.oregon.gov/ohcs/homeownership/pages/downpayment-assistance.aspx",
     highlights: [
-      "100% forgivable grant over residency period (never needs repayment)",
+      "State-funded down payment assistance (DPA) program",
       "Up to $30,000 for qualifying low-to-moderate income Oregon homebuyers",
       "Includes HUD-approved Oregon homebuyer counseling & certification"
     ]
@@ -236,15 +236,15 @@ export const GRANT_PROGRAMS: GrantProgram[] = [
     scope: "State",
     state: "OR",
     assistanceType: "Matched Savings",
-    maxAssistance: "Up to $12,000 - $20,000 in Matched Grant Equity (Up to 5:1 Match)",
+    maxAssistance: "Up to $12,000 - $20,000 in Matched Assistance Equity (Up to 5:1 Match)",
     incomeLimitDescription: "Net worth < $20,000; household income ≤80% Oregon Area Median Income",
     minCreditScore: 580,
     firstTimeBuyerRequired: true,
-    description: "Oregon's premier Individual Development Account (IDA) grant. For every $1 you deposit into your dedicated home savings account, Oregon matches it with up to $5 in free grant funds for your down payment.",
+    description: "Oregon's premier Individual Development Account (IDA) matched savings program. For every $1 you deposit into your dedicated home savings account, Oregon matches it with up to $5 in matched assistance funds for your down payment.",
     link: "https://devnw.org/financial-programs/matched-savings-idas/",
     highlights: [
-      "Up to 5:1 match on personal savings (free grant funds, not a debt)",
-      "Zero repayment required — 100% direct homebuyer grant equity",
+      "Up to 5:1 match on personal savings (matched assistance funds, not high-interest debt)",
+      "Direct homebuyer equity assistance",
       "Active in Lane, Marion, Clackamas, Multnomah, Deschutes, and all OR counties"
     ]
   },
@@ -264,7 +264,7 @@ export const GRANT_PROGRAMS: GrantProgram[] = [
     highlights: [
       "0% interest rate with zero required monthly payments for 30 years",
       "Major purchasing power boost up to $100,000 in Portland metro area",
-      "Repayable or forgiven only when home is sold, transferred, or refinanced"
+      "Deferred loan repayable only when home is sold, transferred, or refinanced"
     ]
   },
   {
@@ -288,16 +288,16 @@ export const GRANT_PROGRAMS: GrantProgram[] = [
   },
   {
     id: "grant-or-proudground-clt",
-    name: "Proud Ground Community Land Trust Down Payment Grants",
+    name: "Proud Ground Community Land Trust Down Payment Assistance (DPA)",
     provider: "Proud Ground (Pacific Northwest CLT)",
     scope: "State",
     state: "OR",
-    assistanceType: "Forgivable Grant",
-    maxAssistance: "$50,000 to $75,000 Purchase Price Subsidy Grant",
+    assistanceType: "Down Payment Assistance (DPA)",
+    maxAssistance: "$50,000 to $75,000 Purchase Price Subsidy / DPA",
     incomeLimitDescription: "Household income ≤80% AMI in Multnomah, Washington, Clackamas, Jackson",
     minCreditScore: 620,
     firstTimeBuyerRequired: true,
-    description: "Permanently affordable homeownership model that provides substantial grant subsidies to lower the purchase price of homes in the Portland Metro area and Central/Southern Oregon.",
+    description: "Permanently affordable homeownership model that provides substantial down payment assistance subsidies to lower the purchase price of homes in the Portland Metro area and Central/Southern Oregon.",
     link: "https://proudground.org/buy-a-home/",
     highlights: [
       "Directly reduces purchase price by $50,000 to $75,000+",
@@ -392,11 +392,11 @@ export const GRANT_PROGRAMS: GrantProgram[] = [
     incomeLimitDescription: "Flexible debt ratios; conforms to Oregon county limits ($498k - $600k+ in Portland metro)",
     minCreditScore: 580,
     firstTimeBuyerRequired: false,
-    description: "Government-backed 3.5% down mortgage widely accepted across Oregon with forgiving credit criteria, high debt-to-income limits, and full compatibility with OHCS down payment assistance.",
+    description: "Government-backed 3.5% down mortgage widely accepted across Oregon with flexible credit criteria, high debt-to-income limits, and full compatibility with OHCS down payment assistance.",
     link: "https://www.hud.gov/states/oregon/homeownership/buyingprgms",
     highlights: [
       "580+ credit score for 3.5% down payment in Oregon",
-      "100% of down payment can be gift funds or OHCS state grants",
+      "100% of down payment can be gift funds or OHCS Down Payment Assistance (DPA)",
       "Seller can contribute up to 6% towards buyer closing costs"
     ]
   }
@@ -436,7 +436,7 @@ export const ROADMAP_MILESTONES: RoadmapMilestone[] = [
     tasks: [
       { id: "t2-1", text: "Gather 2 years W-2s, 30 days paystubs, and 2 months bank statements", done: true },
       { id: "t2-2", text: "Compare Loan Estimates (LE) from at least 3 lenders within a 14-45 day window to protect credit", done: true },
-      { id: "t2-3", text: "Explore state Down Payment Assistance (DPA) and Fannie Mae HomeReady grants", done: false }
+      { id: "t2-3", text: "Explore state Down Payment Assistance (DPA) and Fannie Mae HomeReady programs", done: false }
     ],
     keyTips: [
       "Credit bureaus count multiple mortgage inquiries within a 14-45 day window as a single credit pull!",
@@ -683,11 +683,11 @@ export const DOCUMENT_VAULT_ITEMS: DocumentItem[] = [
   },
   {
     id: "doc-8",
-    title: "Proof of Down Payment Assistance (DPA) Grant Approval",
+    title: "Proof of Down Payment Assistance (DPA) Approval",
     category: "Property & Contract",
     required: false,
     status: "pending",
-    description: "State or housing authority grant pre-qualification certificate.",
+    description: "State or housing authority Down Payment Assistance (DPA) pre-qualification certificate.",
     acceptedFormats: "PDF"
   },
   {
@@ -851,11 +851,11 @@ export const DEFAULT_LOAN_OFFICER: LoanOfficerProfile = {
   phone: "(541) 729-0819",
   headshotUrl: "/mike-ford-headshot.jpg",
   websiteUrl: "https://cfmtg.com/lo/mike-ford/",
-  bio: "With over 16 years specializing exclusively in first-time homebuyers across Oregon and Washington, Mike specializes in low-stress pre-approvals, maximum Interested Party Contribution (IPC) seller concession strategies, and locking in state Down Payment Assistance (DPA) grant programs.",
+  bio: "With over 16 years specializing exclusively in first-time homebuyers across Oregon and Washington, Mike specializes in low-stress pre-approvals, maximum Interested Party Contribution (IPC) seller concession strategies, and locking in state Down Payment Assistance (DPA) programs.",
   specialties: [
     "First-Time Homebuyer Programs",
     "FHA, Conventional, VA & USDA",
-    "Oregon DPA & Forgivable Grants",
+    "Oregon Down Payment Assistance (DPA)",
     "Seller Concession (IPC) Optimization",
     "2/1 Rate Buydown Engineering"
   ],
@@ -896,7 +896,7 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
       "Branch Leadership & Advisory",
       "First-Time Homebuyer Solutions",
       "Conventional, FHA & VA Loans",
-      "Down Payment Assistance Grants",
+      "Down Payment Assistance (DPA)",
       "Rate Buydown Strategies"
     ],
     bookingUrl: "https://calendly.com",
@@ -958,10 +958,10 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     phone: "(503) 555-0177",
     headshotUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&auto=format&fit=crop&q=80",
     websiteUrl: "https://cfmtg.com/lo/mark-saftich/",
-    bio: "With over 28 years of experience in mortgage and real estate finance, Mark delivers structured lending solutions, grant programs, and expert advisory for first-time buyers and growing families.",
+    bio: "With over 28 years of experience in mortgage and real estate finance, Mark delivers structured lending solutions, Down Payment Assistance (DPA) programs, and expert advisory for first-time buyers and growing families.",
     specialties: [
       "28+ Years Lending Experience",
-      "Down Payment Assistance & Grants",
+      "Down Payment Assistance (DPA)",
       "Conventional, FHA & Jumbo",
       "Mortgage Planning & Advisory"
     ],
@@ -1027,7 +1027,7 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     bio: "Dedicated Loan Officer with Team Lonn Kilstrom specializing in modern digital pre-approvals, down payment assistance programs, and strategic first-time buyer financing.",
     specialties: [
       "Digital Pre-Approval FastTrack",
-      "First-Time Buyer Grants",
+      "First-Time Buyer DPA Programs",
       "FHA & 100% Financing Programs",
       "Credit Optimization Coaching"
     ],
@@ -1148,7 +1148,7 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     bio: "Marcus has closed over 350+ transactions for first-time buyers in Clackamas, Oregon City, and Gresham, combining deep neighborhood knowledge with razor-sharp contract terms.",
     specialties: [
       "Competitive Offer Structuring",
-      "Down Payment Grant Synergy",
+      "Down Payment Assistance (DPA) Synergy",
       "Appraisal Gap Protections",
       "East County Neighborhoods"
     ],
@@ -1234,8 +1234,8 @@ export const INITIAL_PAIRINGS: import("../types").LOPairing[] = [
     agentId: "agent-marcus-vance",
     title: "Alan Burkhart + Marcus Vance (East County Homeownership)",
     customSlug: "alan-and-marcus",
-    campaignTag: "east-county-grants",
-    notes: "Targeting Clackamas & Gresham first-time buyers seeking grant assistance.",
+    campaignTag: "east-county-dpa",
+    notes: "Targeting Clackamas & Gresham first-time buyers seeking Down Payment Assistance (DPA).",
     createdAt: "2026-08-08",
     active: true,
     totalViews: 218,
@@ -1260,8 +1260,8 @@ export const INITIAL_PAIRINGS: import("../types").LOPairing[] = [
     agentId: "agent-tyler-brooks",
     title: "Darryl Symonds + Tyler Brooks (Willamette Valley DPA Initiative)",
     customSlug: "darryl-and-tyler",
-    campaignTag: "valley-dpa-grants",
-    notes: "Focusing on 0% down USDA and OHCS state grants in South Metro & Valley.",
+    campaignTag: "valley-dpa-assistance",
+    notes: "Focusing on 0% down USDA and OHCS state DPA in South Metro & Valley.",
     createdAt: "2026-08-12",
     active: true,
     totalViews: 162,
@@ -1286,7 +1286,7 @@ export const INITIAL_PAIRINGS: import("../types").LOPairing[] = [
     agentId: "agent-tyler-brooks",
     title: "Derek Richards + Tyler Brooks (New Construction Buyers)",
     customSlug: "derek-and-tyler",
-    campaignTag: "new-home-grants",
+    campaignTag: "new-home-dpa",
     notes: "Specialized for townhomes and builder incentive programs.",
     createdAt: "2026-08-16",
     active: true,
@@ -1299,7 +1299,7 @@ export const INITIAL_PAIRINGS: import("../types").LOPairing[] = [
     agentId: "agent-elena-rostova",
     title: "Emanuel Etuks + Elena Rostova (Inclusive First-Time Homebuyers)",
     customSlug: "emanuel-and-elena",
-    campaignTag: "multilingual-home-grants",
+    campaignTag: "multilingual-home-dpa",
     notes: "Dedicated first-generation and multi-state homebuyer advisory.",
     createdAt: "2026-08-18",
     active: true,
@@ -1315,10 +1315,10 @@ export const INITIAL_SOCIAL_CAMPAIGNS: import("../types").SocialPushCampaign[] =
     senderMode: "dual",
     loId: "lo-mike-ford",
     agentId: "agent-sarah-jenkins",
-    title: "Oregon First-Time Buyer Grant & Payment Reality Check",
-    topic: "Affordability & Grants",
+    title: "Oregon First-Time Buyer DPA & Payment Reality Check",
+    topic: "Affordability & DPA",
     hook: "Thinking about buying your first home in 2026? Most buyers have NO IDEA they may qualify for up to $30,000 in state down payment assistance!",
-    bodyCopy: "Stop guessing your monthly mortgage payment. We built a free, transparent interactive homebuyer portal where you can calculate exact PITI + taxes, browse verified Oregon grants, and track homes with a structural tour scorecard.\n\n👉 Test your numbers right now on our live interactive dashboard:",
+    bodyCopy: "Stop guessing your monthly mortgage payment. We built a free, transparent interactive homebuyer portal where you can calculate exact PITI + taxes, browse verified Oregon Down Payment Assistance (DPA), and track homes with a structural tour scorecard.\n\n👉 Test your numbers right now on our live interactive dashboard:",
     hashtags: ["#FirstTimeHomeBuyer", "#OregonRealEstate", "#PortlandHomes", "#MortgageAdvisor", "#DownPaymentAssistance", "#BuyAHome2026"],
     shareUrl: "",
     status: "pushed",
@@ -1348,7 +1348,7 @@ export const INITIAL_SOCIAL_CAMPAIGNS: import("../types").SocialPushCampaign[] =
     title: "Loan Officer Myth Buster: The 20% Down Lie",
     topic: "Mortgage Myth Busting",
     hook: "POV: You thought you needed 20% down to buy a house in Oregon... 🤯",
-    bodyCopy: "Here is the truth: Over 73% of our first-time homebuyer clients buy with 3% to 3.5% down—and many use forgivable state grants to cover closing costs! Tap the link to test your true monthly budget with our interactive calculator.",
+    bodyCopy: "Here is the truth: Over 73% of our first-time homebuyer clients buy with 3% to 3.5% down—and many use Down Payment Assistance (DPA) to cover down payment and closing costs! Tap the link to test your true monthly budget with our interactive calculator.",
     hashtags: ["#MortgageTok", "#HomebuyerHack", "#RealEstateTok", "#FinanceTips", "#MortgageBroker", "#Oregon"],
     shareUrl: "",
     status: "draft",
@@ -1362,10 +1362,10 @@ export const INITIAL_AD_DRAFTS: import("../types").AdCampaignDraft[] = [
     platform: "meta",
     loId: "lo-mike-ford",
     agentId: "agent-sarah-jenkins",
-    campaignName: "Meta Feed - 2026 Oregon First-Time Homebuyer Portal & Grants",
-    headline: "Calculate Your True Monthly Payment & Grants in 60 Sec",
-    secondaryHeadlines: ["Get Free Pre-Approval Roadmap", "Oregon Down Payment Grants Available"],
-    primaryText: "Don't guess what your mortgage payment will be. Use our free, transparent First-Time Homebuyer Interactive Portal to model exact monthly payments, test self-restricted budget goals, and check eligibility for up to $30,000 in Oregon down payment grants.",
+    campaignName: "Meta Feed - 2026 Oregon First-Time Homebuyer Portal & DPA",
+    headline: "Calculate Your True Monthly Payment & DPA in 60 Sec",
+    secondaryHeadlines: ["Get Free Pre-Approval Roadmap", "Oregon Down Payment Assistance (DPA) Available"],
+    primaryText: "Don't guess what your mortgage payment will be. Use our free, transparent First-Time Homebuyer Interactive Portal to model exact monthly payments, test self-restricted budget goals, and check eligibility for up to $30,000 in Oregon Down Payment Assistance (DPA).",
     descriptionText: "Free Interactive Tool • No Credit Card Required • Powered by Mike Ford (NMLS #184209) & Sarah Jenkins (REALTOR®)",
     targetUrl: "",
     dailyBudget: 25,
@@ -1384,19 +1384,19 @@ export const INITIAL_AD_DRAFTS: import("../types").AdCampaignDraft[] = [
     campaignName: "Google Search - First Time Home Buyer Oregon Calculator & Pre-Approval",
     headline: "Oregon First Time Homebuyer Hub | Free Payment Calculator",
     secondaryHeadlines: [
-      "Check 2026 Grant Eligibility",
+      "Check 2026 DPA Eligibility",
       "Instant Affordability Breakdown",
       "Mike Ford NMLS #184209",
       "Toured Home Inspection Scorecards"
     ],
     primaryText: "Interactive First-Time Homebuyer Portal. Calculate accurate monthly PITI payments, review 10-step closing roadmap, and book a personalized strategy session.",
-    descriptionText: "Explore Oregon DPA Grants & Seller Concession Strategies. Zero Obligation. Start Your Plan Today.",
+    descriptionText: "Explore Oregon Down Payment Assistance (DPA) & Seller Concession Strategies. Zero Obligation. Start Your Plan Today.",
     targetUrl: "",
     dailyBudget: 30,
     targetLocations: ["Portland, OR", "Washington County, OR", "Clackamas County, OR", "Multnomah County, OR"],
     keywords: [
       "first time home buyer oregon",
-      "oregon down payment assistance grants",
+      "oregon down payment assistance dpa",
       "mortgage calculator portland or",
       "first time buyer pre approval portland",
       "how much house can i afford oregon"
@@ -1431,7 +1431,7 @@ export const INITIAL_LEADS: import("../types").CapturedLead[] = [
     status: "new",
     notes: "Both employed in tech & healthcare. Want to verify 2/1 rate buydown vs paying permanent discount points.",
     chatTranscript: [
-      { sender: "advisor", text: "Welcome! I can help check your true monthly payment and grant eligibility. What is your target timeline?", time: "10:14 AM" },
+      { sender: "advisor", text: "Welcome! I can help check your true monthly payment and Down Payment Assistance (DPA) eligibility. What is your target timeline?", time: "10:14 AM" },
       { sender: "user", text: "We are renting until October and want to buy in 30-60 days.", time: "10:15 AM" },
       { sender: "advisor", text: "Great timeline! What target price range or monthly payment feel comfortable for you?", time: "10:15 AM" },
       { sender: "user", text: "Around $420k-$460k, keeping monthly under $3,100.", time: "10:16 AM" }

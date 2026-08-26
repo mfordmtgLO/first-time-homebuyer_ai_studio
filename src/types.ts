@@ -78,7 +78,7 @@ export interface GrantProgram {
   provider: string;
   scope: 'National' | 'State' | 'County';
   state?: string;
-  assistanceType: 'Forgivable Grant' | 'Silent Second Loan' | 'Matched Savings' | 'Tax Credit (MCC)' | '0% Down Program';
+  assistanceType: 'Down Payment Assistance (DPA)' | 'Silent Second Loan' | 'Matched Savings' | 'Tax Credit (MCC)' | '0% Down Program';
   maxAssistance: string;
   incomeLimitDescription: string;
   minCreditScore: number;

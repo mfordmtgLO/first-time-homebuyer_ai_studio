@@ -31,6 +31,32 @@
   background: #9A9488;
 }
 
+/* Dedicated visible horizontal scrollbar for dashboard menu navigation */
+.dashboard-horizontal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #9A9488 #EAE7E0;
+}
+
+.dashboard-horizontal-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+
+.dashboard-horizontal-scrollbar::-webkit-scrollbar-track {
+  background: #EAE7E0;
+  border-radius: 9999px;
+  margin: 0 8px;
+}
+
+.dashboard-horizontal-scrollbar::-webkit-scrollbar-thumb {
+  background: #9A9488;
+  border-radius: 9999px;
+  border: 1.5px solid #EAE7E0;
+}
+
+.dashboard-horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #4A5D4E;
+}
+
 @keyframes gyrate {
   0%, 100% {
     transform: scale(1) rotate(0deg);

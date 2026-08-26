@@ -790,13 +790,13 @@ export const SavingsGoalTracker: React.FC<SavingsGoalTrackerProps> = ({
           </div>
         </div>
 
-        {/* DPA Grants Prompt */}
+        {/* DPA Prompt */}
         {onNavigate && (
           <div className="bg-[#C18C5D]/10 p-3.5 rounded-2xl border border-[#C18C5D]/25 flex items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 text-[#2D362E]">
               <Sparkles className="w-4 h-4 text-[#C18C5D] shrink-0" />
               <span>
-                Want to accelerate your goal? You may be eligible for up to <strong className="text-[#A87447]">$15,000+ in Oregon Down Payment Assistance Grants</strong>.
+                Want to accelerate your goal? You may be eligible for up to <strong className="text-[#A87447]">$15,000+ in Oregon Down Payment Assistance (DPA)</strong>.
               </span>
             </div>
             <button
@@ -804,7 +804,7 @@ export const SavingsGoalTracker: React.FC<SavingsGoalTrackerProps> = ({
               onClick={() => onNavigate("grants", "website")}
               className="shrink-0 px-3 py-1.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#C18C5D] font-bold border border-[#C18C5D]/30 flex items-center gap-1 transition-colors shadow-xs text-[11px]"
             >
-              <span>Explore Oregon Grants</span>
+              <span>Explore Oregon DPA</span>
               <ArrowRight className="w-3 h-3" />
             </button>
           </div>

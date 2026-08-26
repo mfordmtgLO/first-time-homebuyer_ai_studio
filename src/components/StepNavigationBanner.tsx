@@ -48,7 +48,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
       id: "roadmap",
       mode: "website" as const,
       label: "Explore & Learn",
-      tagline: "10-step roadmap & DPA grants",
+      tagline: "10-step roadmap & DPA programs",
       icon: Compass
     },
     {

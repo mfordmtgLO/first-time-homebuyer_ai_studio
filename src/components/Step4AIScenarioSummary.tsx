@@ -271,7 +271,7 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
           </h3>
 
           <p className="text-xs sm:text-sm text-[#DEDAD2] leading-relaxed">
-            You've completed Step 1 (Calculated Buying Power), Step 2 (Explored Grants & Roadmap), and Step 3 (Built Your Command Center).
+            You've completed Step 1 (Calculated Buying Power), Step 2 (Explored DPA & Roadmap), and Step 3 (Built Your Command Center).
             Online estimates only take you so far. The essential next step is having <strong className="text-white">{loanOfficer.name}</strong> issue a fully underwritten pre-approval letter and synchronizing with <strong className="text-white">{activeAgent.name}</strong> to view off-market and on-market homes within your exact comfort zone.
           </p>
 

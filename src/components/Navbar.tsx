@@ -104,7 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "roadmap", label: "Step 2: Explore Roadmap", shortLabel: "Step 2: Roadmap", icon: Compass, mode: "website" },
     { id: "dashboard", label: "Step 3: Buyer Dashboard", shortLabel: "Step 3: Dashboard", icon: LayoutDashboard, mode: "dashboard" },
     { id: "step4_ai_plan", label: "Step 4: AI Plan & Guides", shortLabel: "Step 4: AI Plan", icon: Sparkles, badge: "AI Plan", mode: "dashboard", highlight: true },
-    { id: "grants", label: "Grants & DPA Finder", shortLabel: "Grants & DPA", icon: Award, mode: "website" },
+    { id: "grants", label: "Down Payment Assistance (DPA) Finder", shortLabel: "DPA Finder", icon: Award, mode: "website" },
     { id: "properties", label: `Saved Homes (${savedCount})`, shortLabel: `Homes (${savedCount})`, icon: Building, mode: "dashboard" },
     { id: "mortgagelab", label: "Mortgage Lab & PITI", shortLabel: "Mortgage Lab", icon: TrendingUp, mode: "dashboard" },
     { id: "ai_copilot", label: "AI Advisor Copilot", shortLabel: "AI Advisor", icon: Sparkles, badge: "Gemini 3.7", mode: "dashboard" },
@@ -352,12 +352,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* DPA Grant Quick Badge */}
+            {/* DPA Quick Badge */}
             <button
               onClick={() => handleNavClick("grants", "website")}
               className="text-[#C18C5D] font-medium hidden md:flex items-center gap-1 hover:text-[#a67448] transition-colors"
             >
-              <Award className="w-3 h-3" /> State & Local DPA Grants Available
+              <Award className="w-3 h-3" /> State & Local DPA Programs Available
             </button>
           </div>
 
@@ -422,74 +422,122 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Main Header Bar with Brand, Guided Mode Switcher, Horizontal Scroll Menu, and Action CTAs */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-18 gap-2 lg:gap-3">
+      {/* Main Header Brand & Value Proposition Line (Moved to its own dedicated centered row) */}
+      <div className="border-b border-[#EAE7E0] bg-[#FAF9F5]/70 py-3 sm:py-4 px-3 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col items-center text-center relative">
           
-          {/* Brand Logo & Title */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <button
-              id="navbar-brand-logo-btn"
-              type="button"
-              onClick={() => {
-                setActiveMode("website");
-                setCurrentTab("hero");
-                setMobileMenuOpen(false);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-              className="flex items-center gap-2 sm:gap-2.5 text-left group focus:outline-none cursor-pointer"
-              title="Return to start: First-Time Homebuyer Roadmap"
-            >
-              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-[#606C5D] rounded-xl flex items-center justify-center text-white font-bold shadow-xs group-hover:scale-105 transition-transform shrink-0">
-                <Compass className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm sm:text-base font-bold tracking-tight text-[#4A5D4E] whitespace-nowrap">
-                    First-Time Homebuyer
-                  </span>
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] uppercase tracking-wider">
-                    Roadmap
-                  </span>
-                </div>
-                <p className="text-[10px] text-[#9A9488] hidden sm:block font-medium">
-                  Clarity & Confidence from Search to Closing
-                </p>
-              </div>
-            </button>
+          {/* Top Pill / Trust Hook for Renters */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAE7E0]/80 border border-[#DCD7CD] text-[11px] sm:text-xs font-bold text-[#4A5D4E] mb-1.5 shadow-2xs">
+            <Sparkles className="w-3.5 h-3.5 text-[#C18C5D] animate-pulse" />
+            <span className="font-extrabold uppercase tracking-wider text-[#C18C5D]">Stop Paying Rent</span>
+            <span className="text-[#606C5D]">•</span>
+            <span className="text-[#2D362E]">2026 Interactive First-Time Homebuyer Blueprint</span>
           </div>
 
-          {/* ======================================================== */}
-          {/* ENHANCED HORIZONTAL SCROLLING MENU WITH LEFT/RIGHT ARROWS */}
-          {/* ======================================================== */}
+          {/* Centered Main Title: Larger Font, High Impact, Return to Start Button */}
+          <button
+            id="navbar-brand-logo-btn"
+            type="button"
+            onClick={() => {
+              setActiveMode("website");
+              setCurrentTab("hero");
+              setMobileMenuOpen(false);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="group inline-flex items-center justify-center gap-2.5 sm:gap-3 cursor-pointer focus:outline-none transition-transform hover:scale-[1.01]"
+            title="Return to First-Time Homebuyer Roadmap Overview"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#4A5D4E] rounded-2xl flex items-center justify-center text-white font-bold shadow-sm group-hover:bg-[#38463B] transition-colors shrink-0">
+              <Compass className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:rotate-45 transition-transform duration-300" />
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-black tracking-tight text-[#2D362E] drop-shadow-2xs">
+              First-Time Homebuyer <span className="text-[#4A5D4E] font-serif">Roadmap</span>
+            </h1>
+          </button>
+
+          {/* Renter Conversion Subtitle: Clear Purpose & Actionable Excitement */}
+          <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm md:text-base text-[#606C5D] max-w-3xl font-medium leading-relaxed px-2">
+            Calculate your true buying power, check verified state Down Payment Assistance (DPA), and model pre-approval scenarios across <strong className="text-[#2D362E] font-bold">Steps 1–4</strong> with zero guesswork.
+          </p>
+
+          {/* Quick Renter Trust Chips */}
+          <div className="mt-2 hidden sm:flex items-center justify-center gap-3 sm:gap-5 text-[11px] font-semibold text-[#606C5D]">
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
+              100% Free & Transparent
+            </span>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
+              No Credit Card or SSN Required
+            </span>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
+              FHA 3.5% & Conv 3% Models
+            </span>
+          </div>
+
+          {/* Absolute Top-Right Controls on Desktop (Pre-Approval CTA + Mobile Hamburger) */}
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            {onOpenLeadBot && (
+              <button
+                onClick={onOpenLeadBot}
+                className="hidden lg:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-bold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer"
+                title="Start 24/7 AI Pre-Approval Assessment"
+              >
+                <Zap className="w-4 h-4 text-white" />
+                <span>24/7 AI Pre-Approval</span>
+              </button>
+            )}
+
+            {/* Mobile menu hamburger button */}
+            <div className="flex md:hidden items-center">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded-xl bg-white text-[#606C5D] hover:text-[#2D362E] border border-[#EAE7E0] shadow-2xs focus:outline-none cursor-pointer"
+                aria-label="Toggle Navigation Menu"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* FULL-WIDTH HORIZONTAL SCROLLING MENU WITH LEFT/RIGHT CONTROLS */}
+      {/* ======================================================== */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 bg-white">
+        <div className="flex items-center justify-between gap-2">
+          
+          {/* Scroll Navigation Left Button */}
+          <button
+            type="button"
+            onClick={() => handleScroll("left")}
+            disabled={!canScrollLeft}
+            aria-label="Scroll navigation menu left"
+            className={`shrink-0 w-8 h-8 rounded-xl border flex items-center justify-center transition-all duration-200 shadow-2xs z-20 ${
+              canScrollLeft
+                ? "bg-white border-[#DCD7CD] text-[#2D362E] hover:bg-[#F1EFE9] hover:border-[#606C5D] hover:scale-105 cursor-pointer"
+                : "bg-white/40 border-[#EAE7E0]/60 text-[#C4BEB5] cursor-not-allowed opacity-40"
+            }`}
+            title="Scroll menu left"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          {/* Scrollable Container with dedicated horizontal scrollbar */}
           <div 
-            className="hidden md:flex items-center flex-1 min-w-0 mx-1 lg:mx-2 relative group/nav"
+            className="flex-1 relative min-w-0 group/nav"
             onMouseEnter={() => setIsHoveringNav(true)}
             onMouseLeave={() => setIsHoveringNav(false)}
           >
-            {/* Left Scroll Navigation Button */}
-            <div className="relative shrink-0 z-20 flex items-center pr-1">
-              <button
-                type="button"
-                onClick={() => handleScroll("left")}
-                disabled={!canScrollLeft}
-                aria-label="Scroll navigation menu left"
-                className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all duration-200 shadow-xs ${
-                  canScrollLeft
-                    ? "bg-white border-[#DCD7CD] text-[#2D362E] hover:bg-[#F1EFE9] hover:border-[#606C5D] hover:scale-105 cursor-pointer"
-                    : "bg-white/40 border-[#EAE7E0]/60 text-[#C4BEB5] cursor-not-allowed opacity-40"
-                }`}
-                title="Scroll menu left"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Left Gradient Edge Fade (Visual cue that more items exist to the left) */}
+            {/* Left Gradient Edge Fade */}
             {canScrollLeft && (
               <div 
                 aria-hidden="true" 
-                className="absolute left-7 top-0 bottom-0 w-6 bg-gradient-to-r from-white via-white/80 to-transparent z-10 pointer-events-none transition-opacity duration-200" 
+                className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-white via-white/80 to-transparent z-10 pointer-events-none transition-opacity duration-200" 
               />
             )}
 
@@ -497,28 +545,28 @@ export const Navbar: React.FC<NavbarProps> = ({
             <nav
               ref={scrollContainerRef}
               onScroll={checkScroll}
-              className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-1 flex-1 min-w-0"
+              aria-label="First-Time Homebuyer Navigation Sections"
+              className="flex items-center gap-2 overflow-x-auto dashboard-horizontal-scrollbar scroll-smooth py-1 px-1 flex-1 min-w-0"
               style={{ WebkitOverflowScrolling: "touch" }}
             >
               {allNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentTab === item.id;
-                const isWebsiteMode = item.mode === "website";
 
                 return (
                   <button
                     key={item.id}
                     data-nav-id={item.id}
                     onClick={() => handleNavClick(item.id, item.mode)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 group ${
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer group ${
                       isActive
-                        ? "bg-[#606C5D] text-white shadow-xs ring-1 ring-[#4A5D4E]"
+                        ? "bg-[#4A5D4E] text-white shadow-xs ring-1 ring-[#38463B]"
                         : item.highlight
-                        ? "bg-[#C18C5D]/10 text-[#C18C5D] hover:bg-[#C18C5D] hover:text-white border border-[#C18C5D]/30"
-                        : "text-[#4A5D4E] hover:bg-[#F1EFE9] hover:text-[#2D362E] bg-white/70 border border-[#EAE7E0]"
+                        ? "bg-[#C18C5D]/10 text-[#C18C5D] hover:bg-[#C18C5D] hover:text-white border border-[#C18C5D]/30 shadow-2xs"
+                        : "text-[#4A5D4E] hover:bg-[#F1EFE9] hover:text-[#2D362E] bg-[#FAF9F5] border border-[#EAE7E0] hover:border-[#DCD7CD]"
                     }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-110 ${
+                    <Icon className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
                       isActive ? "text-white" : item.highlight ? "text-[#C18C5D] group-hover:text-white" : "text-[#606C5D]"
                     }`} />
                     <span>{item.label}</span>
@@ -538,58 +586,42 @@ export const Navbar: React.FC<NavbarProps> = ({
               })}
             </nav>
 
-            {/* Right Gradient Edge Fade (Visual cue that more items exist to the right) */}
+            {/* Right Gradient Edge Fade */}
             {canScrollRight && (
               <div 
                 aria-hidden="true" 
-                className="absolute right-7 top-0 bottom-0 w-6 bg-gradient-to-l from-white via-white/80 to-transparent z-10 pointer-events-none transition-opacity duration-200" 
+                className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-white via-white/80 to-transparent z-10 pointer-events-none transition-opacity duration-200" 
               />
             )}
-
-            {/* Right Scroll Navigation Button */}
-            <div className="relative shrink-0 z-20 flex items-center pl-1">
-              <button
-                type="button"
-                onClick={() => handleScroll("right")}
-                disabled={!canScrollRight}
-                aria-label="Scroll navigation menu right"
-                className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all duration-200 shadow-xs ${
-                  canScrollRight
-                    ? "bg-white border-[#DCD7CD] text-[#2D362E] hover:bg-[#F1EFE9] hover:border-[#606C5D] hover:scale-105 cursor-pointer"
-                    : "bg-white/40 border-[#EAE7E0]/60 text-[#C4BEB5] cursor-not-allowed opacity-40"
-                }`}
-                title="Scroll menu right"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
           </div>
 
-          {/* Quick CTA Actions (Pre-Approval) */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {onOpenLeadBot && (
-              <button
-                onClick={onOpenLeadBot}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-semibold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
-                title="Start 24/7 AI Pre-Approval Assessment"
-              >
-                <Zap className="w-3.5 h-3.5 text-white" />
-                <span className="hidden xl:inline">24/7 AI Pre-Approval</span>
-                <span className="xl:hidden">Pre-Approval</span>
-              </button>
-            )}
+          {/* Scroll Navigation Right Button */}
+          <button
+            type="button"
+            onClick={() => handleScroll("right")}
+            disabled={!canScrollRight}
+            aria-label="Scroll navigation menu right"
+            className={`shrink-0 w-8 h-8 rounded-xl border flex items-center justify-center transition-all duration-200 shadow-2xs z-20 ${
+              canScrollRight
+                ? "bg-white border-[#DCD7CD] text-[#2D362E] hover:bg-[#F1EFE9] hover:border-[#606C5D] hover:scale-105 cursor-pointer"
+                : "bg-white/40 border-[#EAE7E0]/60 text-[#C4BEB5] cursor-not-allowed opacity-40"
+            }`}
+            title="Scroll menu right"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
 
-            {/* Mobile menu hamburger button */}
-            <div className="flex md:hidden items-center">
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-xl bg-[#F1EFE9] text-[#606C5D] hover:text-[#2D362E] border border-[#EAE7E0] focus:outline-none"
-                aria-label="Toggle Navigation Menu"
-              >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
+          {/* Quick Pre-Approval CTA on Tablet/Desktop for Instant Chatbot Access */}
+          {onOpenLeadBot && (
+            <button
+              onClick={onOpenLeadBot}
+              className="hidden sm:flex lg:hidden items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-bold text-xs shadow-xs transition-all shrink-0 cursor-pointer"
+              title="Start 24/7 AI Pre-Approval Assessment"
+            >
+              <Zap className="w-3.5 h-3.5 text-white" />
+              <span>Pre-Approval</span>
+            </button>
+          )}
 
         </div>
       </div>

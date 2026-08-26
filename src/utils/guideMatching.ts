@@ -199,3 +199,67 @@ export function findMatchingPairing(
     return false;
   });
 }
+
+/**
+ * Resolves Loan Officer, Agent, and Pairing from any path (e.g. /mike-ford, /mford, /mike-and-sarah, /lonn-and-marcus, /sarah-jenkins, /lo/mike-ford)
+ */
+export function resolveFromUrlPath(
+  pathname: string,
+  hash: string,
+  loanOfficers: LoanOfficerProfile[],
+  agents: RealEstateAgentProfile[],
+  pairings: LOPairing[]
+): {
+  matchedLo?: LoanOfficerProfile;
+  matchedAgent?: RealEstateAgentProfile;
+  matchedPairing?: LOPairing;
+} {
+  // Extract all segment candidates from pathname and hash
+  const rawSegments = [
+    ...pathname.split("/"),
+    ...hash.replace("#", "").split("/")
+  ].map(s => s.trim().toLowerCase()).filter(Boolean);
+
+  // 1. Check for Pairing in any segment or composite path
+  for (const seg of rawSegments) {
+    const pair = findMatchingPairing(seg, pairings);
+    if (pair) {
+      const pairLo = findMatchingLoanOfficer(pair.loId, loanOfficers);
+      const pairAgent = findMatchingAgent(pair.agentId, agents);
+      return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pair };
+    }
+  }
+
+  // Check if entire path or hash matches a pair
+  const cleanPath = pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+  const pairByPath = findMatchingPairing(cleanPath, pairings);
+  if (pairByPath) {
+    const pairLo = findMatchingLoanOfficer(pairByPath.loId, loanOfficers);
+    const pairAgent = findMatchingAgent(pairByPath.agentId, agents);
+    return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pairByPath };
+  }
+
+  // 2. Check for Loan Officer in segments
+  let matchedLo: LoanOfficerProfile | undefined;
+  for (const seg of rawSegments) {
+    if (seg === "portal" || seg === "admin" || seg === "lo" || seg === "api" || seg === "assets") continue;
+    const lo = findMatchingLoanOfficer(seg, loanOfficers);
+    if (lo) {
+      matchedLo = lo;
+      break;
+    }
+  }
+
+  // 3. Check for Agent in segments
+  let matchedAgent: RealEstateAgentProfile | undefined;
+  for (const seg of rawSegments) {
+    if (seg === "portal" || seg === "admin" || seg === "agent" || seg === "api" || seg === "assets") continue;
+    const ag = findMatchingAgent(seg, agents);
+    if (ag) {
+      matchedAgent = ag;
+      break;
+    }
+  }
+
+  return { matchedLo, matchedAgent };
+}

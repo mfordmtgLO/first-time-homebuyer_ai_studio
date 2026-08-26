@@ -41,7 +41,8 @@ import {
   sanitizeLoanOfficer, 
   findMatchingLoanOfficer, 
   findMatchingAgent, 
-  findMatchingPairing 
+  findMatchingPairing,
+  resolveFromUrlPath 
 } from "./utils/guideMatching";
 
 export default function App() {
@@ -110,7 +111,7 @@ export default function App() {
       console.warn("Could not load saved guides state:", e);
     }
 
-    // Immediately resolve URL params on first render
+    // Immediately resolve URL params or clean path on first render
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const pathname = window.location.pathname.toLowerCase();
@@ -122,7 +123,24 @@ export default function App() {
       let updatedLo = initialState.loanOfficer;
       let updatedAgentId = initialState.activeAgentId;
 
-      // Match pairing first if present
+      // 1. Resolve from clean path / hash (e.g. /mike-ford, /mike-and-sarah, /lonn-kilstrom, /mford)
+      const fromPath = resolveFromUrlPath(
+        pathname,
+        hash,
+        initialState.loanOfficers,
+        initialState.agentRoster,
+        initialState.pairings
+      );
+
+      if (fromPath.matchedPairing) {
+        if (fromPath.matchedLo) updatedLo = fromPath.matchedLo;
+        if (fromPath.matchedAgent) updatedAgentId = fromPath.matchedAgent.id;
+      } else {
+        if (fromPath.matchedLo) updatedLo = fromPath.matchedLo;
+        if (fromPath.matchedAgent) updatedAgentId = fromPath.matchedAgent.id;
+      }
+
+      // 2. Query params take precedence if present
       if (pairParam) {
         const matchedPair = findMatchingPairing(pairParam, initialState.pairings);
         if (matchedPair) {
@@ -133,16 +151,11 @@ export default function App() {
         }
       }
 
-      // Match specific LO param (e.g. ?lo=mike-ford, ?lo=lo-mike-ford, ?lo=mford)
       if (loParam) {
         const matchedLo = findMatchingLoanOfficer(loParam, initialState.loanOfficers);
         if (matchedLo) updatedLo = matchedLo;
-      } else if (pathname.includes("mike-ford") || pathname.includes("mford") || hash.includes("mike-ford")) {
-        const matchedLo = findMatchingLoanOfficer("mike-ford", initialState.loanOfficers);
-        if (matchedLo) updatedLo = matchedLo;
       }
 
-      // Match agent param
       if (agentParam) {
         const matchedAgent = findMatchingAgent(agentParam, initialState.agentRoster);
         if (matchedAgent) updatedAgentId = matchedAgent.id;
@@ -195,6 +208,24 @@ export default function App() {
       let updatedLo = prev.loanOfficer;
       let updatedAgentId = prev.activeAgentId;
 
+      // 1. Resolve from clean path / hash (e.g. /mike-ford, /mike-and-sarah, /lonn-kilstrom, /mford)
+      const fromPath = resolveFromUrlPath(
+        pathname,
+        hash,
+        prev.loanOfficers,
+        prev.agentRoster,
+        prev.pairings
+      );
+
+      if (fromPath.matchedPairing) {
+        if (fromPath.matchedLo) updatedLo = fromPath.matchedLo;
+        if (fromPath.matchedAgent) updatedAgentId = fromPath.matchedAgent.id;
+      } else {
+        if (fromPath.matchedLo) updatedLo = fromPath.matchedLo;
+        if (fromPath.matchedAgent) updatedAgentId = fromPath.matchedAgent.id;
+      }
+
+      // 2. Query params take precedence if present
       if (pairParam) {
         const matchedPair = findMatchingPairing(pairParam, prev.pairings);
         if (matchedPair) {
@@ -207,9 +238,6 @@ export default function App() {
 
       if (loParam) {
         const matchedLo = findMatchingLoanOfficer(loParam, prev.loanOfficers);
-        if (matchedLo) updatedLo = matchedLo;
-      } else if (pathname.includes("mike-ford") || pathname.includes("mford") || hash.includes("mike-ford")) {
-        const matchedLo = findMatchingLoanOfficer("mike-ford", prev.loanOfficers);
         if (matchedLo) updatedLo = matchedLo;
       }
 

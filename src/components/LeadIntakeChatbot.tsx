@@ -27,7 +27,8 @@ import {
   MapPin,
   Search,
   CheckSquare,
-  Square
+  Square,
+  Loader2
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { 
@@ -359,14 +360,14 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     {
       id: "intro-1",
       sender: "advisor",
-      text: `👋 Hi there! I'm your 24/7 Homebuyer Intake & Pre-Approval Guide, working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage}).\n\nI can help you calculate your true monthly budget, check eligibility for first-time buyer grants, and build your custom Pre-Approval Blueprint in under 2 minutes.`,
+      text: `👋 Hi there! I'm your 24/7 Homebuyer Intake & Pre-Approval Guide, working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage}).\n\nLet's calculate your true monthly budget, check grant eligibility, and build your custom Pre-Approval Blueprint in under 2 minutes.\n\n${INTAKE_STEPS[0].question}`,
       time: "Just now"
     }
   ]);
 
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [inputText, setInputText] = useState<string>("");
-  const [isAiTyping, setIsAiTyping] = useState<boolean>(false);
+  const [isSubmittingQuery, setIsSubmittingQuery] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [showTeaser, setShowTeaser] = useState<boolean>(true);
@@ -425,6 +426,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+  const messageElementsRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [userIsScrollingUp, setUserIsScrollingUp] = useState<boolean>(false);
 
   const handleScroll = () => {
@@ -434,12 +436,31 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     setUserIsScrollingUp(!isNearBottom);
   };
 
-  // Scroll to bottom on message if user isn't scrolling up
+  // Scroll to ensure the newest message's top is fully visible without being cut off at the top
   useEffect(() => {
-    if (isOpen && chatBottomRef.current && !userIsScrollingUp) {
-      chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, isAiTyping, isOpen, currentStepIndex, selectedCities.length, isCityDropdownOpen]);
+    if (!isOpen) return;
+
+    const timer = setTimeout(() => {
+      if (userIsScrollingUp) return;
+
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && messageElementsRef.current[lastMessage.id] && chatContainerRef.current) {
+        const container = chatContainerRef.current;
+        const element = messageElementsRef.current[lastMessage.id]!;
+        
+        // Align so the message top begins with generous clearance from the top header
+        const targetScrollTop = Math.max(0, element.offsetTop - 16);
+        container.scrollTo({
+          top: targetScrollTop,
+          behavior: "smooth"
+        });
+      } else if (chatBottomRef.current) {
+        chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 40);
+
+    return () => clearTimeout(timer);
+  }, [messages, currentStepIndex, isOpen, isCompleted, isCityDropdownOpen]);
 
   const handleRevisitStep = (stepIndex: number) => {
     setCurrentStepIndex(stepIndex);
@@ -472,8 +493,8 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     }
   };
 
-  // Handle Option Select
-  const handleSelectOption = async (step: IntakeStep, optionValue: string) => {
+  // Handle Option Select - Instant natural flow without typing delays or scroll hiccups
+  const handleSelectOption = (step: IntakeStep, optionValue: string) => {
     const updatedLead = {
       ...leadState,
       [step.field]: optionValue
@@ -491,45 +512,34 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       time: "Just now"
     };
 
-    setMessages(prev => [...prev, userMsg]);
-
     const nextIndex = currentStepIndex + 1;
     setCurrentStepIndex(nextIndex);
 
     if (nextIndex < INTAKE_STEPS.length) {
       const nextStep = INTAKE_STEPS[nextIndex];
-      // Simulate quick natural pause
-      setIsAiTyping(true);
-      setTimeout(() => {
-        setIsAiTyping(false);
-        const botMsg = {
-          id: `bot-${Date.now()}`,
-          sender: "advisor" as const,
-          text: `Got it! ${nextStep.question}`,
-          time: "Just now"
-        };
-        setMessages(prev => [...prev, botMsg]);
-      }, 500);
+      const botMsg = {
+        id: `bot-${Date.now() + 1}`,
+        sender: "advisor" as const,
+        text: `Got it! ${nextStep.question}`,
+        time: "Just now"
+      };
+      setMessages(prev => [...prev, userMsg, botMsg]);
     } else {
       // Step 6: Request Contact Info for Blueprint Delivery
-      setIsAiTyping(true);
-      setTimeout(() => {
-        setIsAiTyping(false);
-        const botMsg = {
-          id: `bot-${Date.now()}`,
-          sender: "advisor" as const,
-          text: `🎉 Excellent! Based on your answers, you have strong pre-approval potential for FHA & Conventional 97 financing with local grant assistance. Who should ${loanOfficer.name} send your custom Pre-Approval Blueprint to?`,
-          time: "Just now"
-        };
-        setMessages(prev => [...prev, botMsg]);
-      }, 600);
+      const botMsg = {
+        id: `bot-${Date.now() + 1}`,
+        sender: "advisor" as const,
+        text: `🎉 Excellent! Based on your answers, you have strong pre-approval potential for FHA & Conventional 97 financing with local grant assistance. Who should ${loanOfficer.name} send your custom Pre-Approval Blueprint to?`,
+        time: "Just now"
+      };
+      setMessages(prev => [...prev, userMsg, botMsg]);
     }
   };
 
   // Free-form chat / question handler
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || inputText;
-    if (!query.trim() || isAiTyping) return;
+    if (!query.trim() || isSubmittingQuery) return;
 
     const userMsg = {
       id: `usr-${Date.now()}`,
@@ -540,7 +550,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 
     setMessages(prev => [...prev, userMsg]);
     setInputText("");
-    setIsAiTyping(true);
+    setIsSubmittingQuery(true);
 
     try {
       const res = await fetch("/api/gemini/lead-intake", {
@@ -574,7 +584,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       };
       setMessages(prev => [...prev, botMsg]);
     } finally {
-      setIsAiTyping(false);
+      setIsSubmittingQuery(false);
     }
   };
 
@@ -659,7 +669,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       {
         id: `intro-${Date.now()}`,
         sender: "advisor",
-        text: `👋 Let's build your new Pre-Approval Blueprint! ${INTAKE_STEPS[0].question}`,
+        text: `👋 Let's build your new Pre-Approval Blueprint!\n\n${INTAKE_STEPS[0].question}`,
         time: "Just now"
       }
     ]);
@@ -882,7 +892,13 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
             {messages.map((msg, index) => {
               const isUser = msg.sender === "user";
               return (
-                <div key={msg.id} className={`flex items-start gap-2.5 transition-all duration-300 ease-out animate-fade-in ${isUser ? "flex-row-reverse" : ""}`}>
+                <div 
+                  key={msg.id} 
+                  ref={(el) => {
+                    if (el) messageElementsRef.current[msg.id] = el;
+                  }}
+                  className={`flex items-start gap-2.5 transition-all duration-300 ease-out animate-fade-in ${isUser ? "flex-row-reverse" : ""}`}
+                >
                   {isUser ? (
                     <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 bg-[#4A5D4E] text-white">
                       <User className="w-3.5 h-3.5" />
@@ -901,12 +917,12 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                     </div>
                   )}
 
-                  <div className={`max-w-[85%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed shadow-xs ${
+                  <div className={`max-w-[85%] rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm leading-relaxed shadow-xs break-words overflow-hidden ${
                     isUser 
                       ? "bg-[#4A5D4E] text-white font-medium flex items-center justify-between gap-3" 
                       : "bg-white text-[#2D362E] border border-[#EAE7E0]"
                   }`}>
-                    <div className="whitespace-pre-line">{msg.text}</div>
+                    <div className="whitespace-pre-line break-words text-left">{msg.text}</div>
                     {isUser && (
                       <button
                         onClick={() => {
@@ -926,21 +942,6 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                 </div>
               );
             })}
-
-            {isAiTyping && (
-              <div className="flex items-center gap-2 text-xs text-[#606C5D] italic py-1">
-                <img 
-                  src={loanOfficer.headshotUrl || "/mike-ford-headshot.jpg"} 
-                  alt={loanOfficer.name} 
-                  referrerPolicy="no-referrer"
-                  className="w-6 h-6 rounded-lg object-cover border border-[#EAE7E0] bg-[#EAE7E0]"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
-                  }}
-                />
-                <span className="animate-pulse">{loanOfficer.name.split(" ")[0]}'s AI is typing...</span>
-              </div>
-            )}
 
             {/* Current Step Option Controls (if intake not yet completed) */}
             {!isCompleted && currentStepIndex < INTAKE_STEPS.length && (
@@ -1305,21 +1306,25 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           {/* Chat Input Bar */}
           <div className="p-3 bg-white border-t border-[#EAE7E0] flex items-center gap-2 shrink-0">
             <input 
-              type="text"
+              type="text" 
               placeholder={isCompleted ? "Ask a question about rates, grants, or closing..." : "Type your question or reply..."}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-              disabled={isAiTyping}
+              disabled={isSubmittingQuery}
               className="flex-1 bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:border-[#4A5D4E]"
             />
             <button
               onClick={() => handleSendMessage()}
-              disabled={isAiTyping || !inputText.trim()}
-              className="p-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white disabled:opacity-40 transition-all shadow-sm shrink-0"
+              disabled={isSubmittingQuery || !inputText.trim()}
+              className="p-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white disabled:opacity-40 transition-all shadow-sm shrink-0 flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
               title="Send message"
             >
-              <Send className="w-4 h-4" />
+              {isSubmittingQuery ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>

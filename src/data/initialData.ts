@@ -844,7 +844,7 @@ export const DEFAULT_LOAN_OFFICER: LoanOfficerProfile = {
   id: "lo-mike-ford",
   name: "Mike Ford",
   title: "Senior Loan Officer & Branch Admin",
-  nmlsId: "NMLS #184209",
+  nmlsId: "288455",
   company: "Cornerstone First Mortgage",
   branch: "Team Lonn Kilstrom Branch (Manager / Admin)",
   email: "mford@cfmtg.com",

@@ -59,15 +59,21 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
   const canonicalId = matchedDefault?.id || lo.id || `lo-${lo.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
   const canonicalSlug = matchedDefault?.customSlug || lo.customSlug || canonicalId.replace(/^lo-/, "");
 
-  // Determine headshotUrl: preserve custom uploaded photos (data:image/ or valid real URLs), otherwise blank it out to use the elegant Initials Avatar
   let finalHeadshot = lo.headshotUrl;
-  const isCustomUpload = finalHeadshot && (finalHeadshot.startsWith("data:image/") || finalHeadshot.startsWith("blob:") || (finalHeadshot.length > 10 && !isCartoonOrPlaceholder(finalHeadshot)));
+  
+  // A headshot is only "invalid" if it explicitly contains our known placeholder domains
+  const isInvalidPlaceholder = finalHeadshot && typeof finalHeadshot === 'string' && (
+    finalHeadshot.includes("unsplash.com") || 
+    finalHeadshot.includes("dicebear.com") || 
+    finalHeadshot.includes("avataaars") || 
+    finalHeadshot.includes("multavatar")
+  );
 
-  if (!isCustomUpload) {
+  if (!finalHeadshot || isInvalidPlaceholder) {
     if (canonicalId === "lo-mike-ford" || rawName.includes("mike ford")) {
       finalHeadshot = "/mike-ford-headshot.jpg";
     } else {
-      finalHeadshot = ""; // Empty string triggers the HeadshotAvatar to display a professional initials badge (e.g. "LK" for Lonn Kilstrom)
+      finalHeadshot = ""; 
     }
   }
 
@@ -94,6 +100,31 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
     websiteUrl: lo.websiteUrl && !lo.websiteUrl.includes("/lo/") ? lo.websiteUrl : (matchedDefault?.websiteUrl || `https://cfmtg.com/${canonicalSlug}/`),
     customSlug: canonicalSlug,
     isAdmin: matchedDefault?.isAdmin ?? lo.isAdmin ?? false
+  };
+}
+
+/**
+ * Sanitizes and guarantees data integrity for Real Estate Agents across the entire platform.
+ */
+export function sanitizeAgent(agent: RealEstateAgentProfile): RealEstateAgentProfile {
+  if (!agent) return INITIAL_AGENT_ROSTER[0];
+
+  let finalHeadshot = agent.headshotUrl;
+  
+  const isInvalidPlaceholder = finalHeadshot && typeof finalHeadshot === 'string' && (
+    finalHeadshot.includes("unsplash.com") || 
+    finalHeadshot.includes("dicebear.com") || 
+    finalHeadshot.includes("avataaars") || 
+    finalHeadshot.includes("multavatar")
+  );
+
+  if (!finalHeadshot || isInvalidPlaceholder) {
+    finalHeadshot = ""; 
+  }
+
+  return {
+    ...agent,
+    headshotUrl: finalHeadshot
   };
 }
 

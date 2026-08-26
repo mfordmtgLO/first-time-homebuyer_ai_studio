@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "LoanOfficerProfile": {
+      "title": "LoanOfficerProfile",
+      "description": "Loan Officer Profile containing headshot and other details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "nmlsId": { "type": "string" },
+        "company": { "type": "string" },
+        "branch": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "headshotUrl": { "type": "string" },
+        "bio": { "type": "string" },
+        "websiteUrl": { "type": "string" },
+        "customSlug": { "type": "string" },
+        "isAdmin": { "type": "boolean" },
+        "password": { "type": "string" },
+        "passwordResetAuthorized": { "type": "boolean" },
+        "passwordResetRequestedAt": { "type": "string" },
+        "passwordResetAuthorizedAt": { "type": "string" },
+        "passwordResetPin": { "type": "string" },
+        "lastLogin": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "RealEstateAgentProfile": {
+      "title": "RealEstateAgentProfile",
+      "description": "Real Estate Agent Profile containing headshot and other details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "brokerage": { "type": "string" },
+        "licenseNumber": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "headshotUrl": { "type": "string" },
+        "bio": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "GuidesState": {
+      "title": "GuidesState",
+      "description": "Global state for the application",
+      "type": "object",
+      "properties": {
+        "stateJson": { "type": "string" }
+      },
+      "required": ["stateJson"]
+    }
+  },
+  "firestore": {
+    "guides_state/{docId}": {
+      "schema": "GuidesState",
+      "description": "Global state singleton"
+    },
+    "loan_officers/{loId}": {
+      "schema": "LoanOfficerProfile",
+      "description": "Loan officers collection"
+    },
+    "agents/{agentId}": {
+      "schema": "RealEstateAgentProfile",
+      "description": "Agents collection"
+    }
+  }
+}

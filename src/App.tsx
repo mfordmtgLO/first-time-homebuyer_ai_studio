@@ -39,11 +39,14 @@ import {
 } from "./types";
 import { 
   sanitizeLoanOfficer, 
+  sanitizeAgent,
   findMatchingLoanOfficer, 
   findMatchingAgent, 
   findMatchingPairing,
   resolveFromUrlPath 
 } from "./utils/guideMatching";
+import { db } from "./firebase";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 
 export default function App() {
   const [currentMode, setCurrentMode] = useState<"website" | "dashboard">("website");
@@ -63,7 +66,7 @@ export default function App() {
       adminLoanOfficerId: DEFAULT_LOAN_OFFICER.id,
       loanOfficers: INITIAL_TEAM_LOAN_OFFICERS.map(sanitizeLoanOfficer),
       loanOfficer: sanitizeLoanOfficer(DEFAULT_LOAN_OFFICER),
-      agentRoster: INITIAL_AGENT_ROSTER,
+      agentRoster: INITIAL_AGENT_ROSTER.map(sanitizeAgent),
       activeAgentId: INITIAL_AGENT_ROSTER[0].id,
       pairings: INITIAL_PAIRINGS,
       socialCampaigns: INITIAL_SOCIAL_CAMPAIGNS,
@@ -79,8 +82,11 @@ export default function App() {
           if (!parsed.leads) {
             parsed.leads = INITIAL_LEADS;
           }
-          // Sanitize all loan officers and guarantee Mike Ford's real headshot and data
+          // Sanitize all loan officers and agents to guarantee data integrity
           parsed.loanOfficers = (parsed.loanOfficers as any[]).map(lo => sanitizeLoanOfficer(lo));
+          if (parsed.agentRoster) {
+            parsed.agentRoster = (parsed.agentRoster as any[]).map(agent => sanitizeAgent(agent));
+          }
 
           // Merge any Team Lonn Kilstrom LOs that aren't yet in the saved state
           INITIAL_TEAM_LOAN_OFFICERS.forEach(defaultLo => {
@@ -184,6 +190,41 @@ export default function App() {
       console.warn("Error saving guides state to localStorage:", e);
     }
   }, [guidesState]);
+
+  // Subscribe to Firebase for live updates to headshots and profiles
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "guides_state", "singleton"), (snapshot) => {
+      if (snapshot.exists()) {
+        const remoteState = snapshot.data() as ProfessionalGuidesState;
+        
+        setGuidesState((prev) => {
+          const updatedLo = remoteState.loanOfficers.find(lo => lo.id === prev.loanOfficer.id) || prev.loanOfficer;
+          
+          return {
+            ...prev,
+            loanOfficers: remoteState.loanOfficers.map(lo => sanitizeLoanOfficer(lo)),
+            agentRoster: remoteState.agentRoster.map(agent => sanitizeAgent(agent)),
+            pairings: remoteState.pairings || prev.pairings,
+            socialCampaigns: remoteState.socialCampaigns || prev.socialCampaigns,
+            adCampaignDrafts: remoteState.adCampaignDrafts || prev.adCampaignDrafts,
+            leads: remoteState.leads || prev.leads,
+            loanOfficer: sanitizeLoanOfficer(updatedLo)
+          };
+        });
+      } else {
+        // First time initialization: Push local state (which might contain the LO's uploaded headshot) up to Firebase
+        setDoc(doc(db, "guides_state", "singleton"), guidesState).catch(console.warn);
+      }
+    });
+    
+    return unsub;
+  }, []);
+
+  const handleUpdateGuidesState = (newState: ProfessionalGuidesState) => {
+    setGuidesState(newState);
+    // Push updates to Firebase cloud so all visitors see the updated headshot and details instantly!
+    setDoc(doc(db, "guides_state", "singleton"), newState).catch(console.error);
+  };
 
   // LO Hub & Modals State
   const [showLoPortal, setShowLoPortal] = useState<boolean>(false);
@@ -388,7 +429,7 @@ export default function App() {
         {showLoPortal ? (
           <LoanOfficerPortal
             guidesState={guidesState}
-            onUpdateGuidesState={setGuidesState}
+            onUpdateGuidesState={handleUpdateGuidesState}
             onClose={() => setShowLoPortal(false)}
             onViewPublicSite={() => {
               setShowLoPortal(false);

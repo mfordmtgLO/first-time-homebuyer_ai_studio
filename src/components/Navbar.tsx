@@ -111,6 +111,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "escrow", label: "Closing & Escrow Tracker", shortLabel: "Closing Tracker", icon: ShieldCheck, mode: "dashboard" },
   ];
 
+  // Secondary Tools Nav Items (Steps 1-4 removed because they are presented in the dedicated Guided 4-Step block)
+  const nonStepNavItems = allNavItems.filter(
+    (item) => !["hero", "calculator", "roadmap", "dashboard", "step4_ai_plan"].includes(item.id)
+  );
+
   // Check scroll positions and update arrow button states
   const checkScroll = useCallback(() => {
     const el = scrollContainerRef.current;
@@ -571,7 +576,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-2 overflow-x-auto dashboard-horizontal-scrollbar scroll-smooth py-1 px-1 flex-1 min-w-0"
               style={{ WebkitOverflowScrolling: "touch" }}
             >
-              {allNavItems.filter((item) => item.id !== "hero").map((item) => {
+              {nonStepNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentTab === item.id;
 

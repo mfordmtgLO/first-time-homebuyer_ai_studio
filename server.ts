@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 
@@ -281,10 +282,29 @@ Provide:
       appType: "spa",
     });
     app.use(vite.middlewares);
+
+    // Fallback for HTML SPA navigation routes (e.g. /mike-ford, /mford, /mike-and-sarah)
+    app.get("*", async (req, res, next) => {
+      if (req.originalUrl.startsWith("/api")) {
+        return next();
+      }
+      try {
+        const indexPath = path.resolve(process.cwd(), "index.html");
+        let template = fs.readFileSync(indexPath, "utf-8");
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (_req, res) => {
+    app.get("*", (req, res, next) => {
+      if (req.originalUrl.startsWith("/api")) {
+        return next();
+      }
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

@@ -62,6 +62,8 @@ import { SocialPushHub } from "./SocialPushHub";
 import { AdsCampaignHub } from "./AdsCampaignHub";
 import { LoanOfficerLoginView } from "./LoanOfficerLoginView";
 import { StateLicensingSelector } from "./StateLicensingSelector";
+import { processLocalImageFile } from "../utils/imageUtils";
+import { HeadshotAvatar } from "./HeadshotAvatar";
 
 interface LoanOfficerPortalProps {
   guidesState: ProfessionalGuidesState;
@@ -191,7 +193,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     branch: "Pacific Northwest Branch",
     email: "",
     phone: "",
-    headshotUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80",
+    headshotUrl: "",
     bio: "Dedicated mortgage specialist helping first-time homebuyers secure the best rates and state DPA programs.",
     specialties: ["First-Time Homebuyers", "FHA & Conventional", "State DPA Programs"],
     bookingUrl: "https://calendly.com",
@@ -207,7 +209,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     licenseNumber: "OR Lic #",
     email: "",
     phone: "",
-    headshotUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80",
+    headshotUrl: "",
     bio: "Passionate about guiding first-time buyers through neighborhood selection and structuring winning offers.",
     specialties: ["First-Time Homebuyers", "Offer Negotiation", "Neighborhood Tours"],
     marketAreas: ["Portland Metro", "Beaverton", "Gresham"],
@@ -425,7 +427,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         branch: newLoForm.branch || "Team Lonn Kilstrom Branch",
         email: newLoForm.email || "",
         phone: newLoForm.phone || "",
-        headshotUrl: newLoForm.headshotUrl || "/mike-ford-headshot.jpg",
+        headshotUrl: newLoForm.headshotUrl || "",
         websiteUrl: newLoForm.websiteUrl || "",
         bio: newLoForm.bio || "",
         specialties: newLoForm.specialties || ["First-Time Homebuyers"],
@@ -467,7 +469,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         branch: "Team Lonn Kilstrom Branch",
         email: "",
         phone: "",
-        headshotUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80",
+        headshotUrl: "",
         websiteUrl: "",
         bio: "Dedicated mortgage specialist helping first-time homebuyers secure the best rates and state DPA programs.",
         specialties: ["First-Time Homebuyers", "FHA & Conventional", "State DPA Programs"],
@@ -521,7 +523,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         licenseNumber: newAgentForm.licenseNumber || "OR Lic #000000",
         email: newAgentForm.email || "",
         phone: newAgentForm.phone || "",
-        headshotUrl: newAgentForm.headshotUrl || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80",
+        headshotUrl: newAgentForm.headshotUrl || "",
         bio: newAgentForm.bio || "",
         specialties: newAgentForm.specialties || ["First-Time Homebuyers"],
         marketAreas: newAgentForm.marketAreas || ["Portland Metro"],
@@ -559,7 +561,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         licenseNumber: "OR Lic #",
         email: "",
         phone: "",
-        headshotUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80",
+        headshotUrl: "",
         bio: "Passionate about guiding first-time buyers through neighborhood selection and structuring winning offers.",
         specialties: ["First-Time Homebuyers", "Offer Negotiation", "Neighborhood Tours"],
         marketAreas: ["Portland Metro", "Beaverton", "Gresham"],
@@ -1463,11 +1465,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
                     <div className="space-y-4">
                       <div className="flex items-start gap-3.5">
-                        <img
+                        <HeadshotAvatar
                           src={lo.headshotUrl}
-                          alt={lo.name}
-                          referrerPolicy="no-referrer"
-                          className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md shrink-0"
+                          name={lo.name}
+                          title={lo.title}
+                          className="w-16 h-16 rounded-2xl border-2 border-white shadow-md shrink-0"
                         />
                         <div className="space-y-0.5">
                           <h4 className="font-serif font-bold text-base text-[#2D362E] flex items-center gap-1.5">
@@ -1826,11 +1828,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                       {/* Dual Headshots */}
                       <div className="grid grid-cols-2 gap-3 bg-[#F9F8F4] p-3.5 rounded-2xl border border-[#EAE7E0]">
                         <div className="flex items-center gap-2.5">
-                          <img
+                          <HeadshotAvatar
                             src={lo.headshotUrl}
-                            alt={lo.name}
-                            referrerPolicy="no-referrer"
-                            className="w-12 h-12 rounded-xl object-cover border border-white shadow-xs shrink-0"
+                            name={lo.name}
+                            title={lo.title}
+                            className="w-12 h-12 rounded-xl border border-white shadow-xs shrink-0"
                           />
                           <div>
                             <span className="text-[9px] font-bold text-[#4A5D4E] uppercase">Loan Officer</span>
@@ -1840,11 +1842,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                         </div>
 
                         <div className="flex items-center gap-2.5">
-                          <img
+                          <HeadshotAvatar
                             src={agent?.headshotUrl}
-                            alt={agent?.name}
-                            referrerPolicy="no-referrer"
-                            className="w-12 h-12 rounded-xl object-cover border border-white shadow-xs shrink-0"
+                            name={agent?.name || "Agent"}
+                            title={agent?.title}
+                            className="w-12 h-12 rounded-xl border border-white shadow-xs shrink-0"
                           />
                           <div>
                             <span className="text-[9px] font-bold text-[#C18C5D] uppercase">Real Estate Agent</span>
@@ -2032,11 +2034,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   >
                     <div className="space-y-4">
                       <div className="flex items-start gap-3.5">
-                        <img
+                        <HeadshotAvatar
                           src={agent.headshotUrl}
-                          alt={agent.name}
-                          referrerPolicy="no-referrer"
-                          className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md shrink-0"
+                          name={agent.name}
+                          title={agent.title}
+                          className="w-16 h-16 rounded-2xl border-2 border-white shadow-md shrink-0"
                         />
                         <div className="space-y-0.5">
                           <h4 className="font-serif font-bold text-base text-[#2D362E]">
@@ -2213,14 +2215,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3.5 pt-1">
                   <div className="relative shrink-0">
-                    <img
-                      src={currentLo.headshotUrl || "/mike-ford-headshot.jpg"}
-                      alt={currentLo.name}
-                      referrerPolicy="no-referrer"
-                      className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md bg-[#EAE7E0]"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
-                      }}
+                    <HeadshotAvatar
+                      src={currentLo.headshotUrl}
+                      name={currentLo.name}
+                      title={currentLo.title}
+                      className="w-16 h-16 rounded-2xl border-2 border-white shadow-md bg-[#EAE7E0]"
                     />
                   </div>
 
@@ -2233,18 +2232,16 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              const reader = new FileReader();
-                              reader.onload = (uploadEvent) => {
-                                const result = uploadEvent.target?.result as string;
-                                if (result) {
-                                  updateCurrentLoField("headshotUrl", result);
-                                  triggerToast("✅ Admin headshot profile photo updated successfully!");
-                                }
-                              };
-                              reader.readAsDataURL(file);
+                              try {
+                                const result = await processLocalImageFile(file);
+                                updateCurrentLoField("headshotUrl", result);
+                                triggerToast("✅ Headshot profile photo updated and saved successfully!");
+                              } catch (err: any) {
+                                triggerToast(`⚠️ Photo processing error: ${err?.message || "Failed to read file"}`);
+                              }
                             }
                           }}
                         />
@@ -2533,14 +2530,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
                 <div className="flex items-center gap-3">
                   <div className="relative shrink-0">
-                    <img
+                    <HeadshotAvatar
                       src={editingLo ? editingLo.headshotUrl : newLoForm.headshotUrl}
-                      alt="Preview"
-                      referrerPolicy="no-referrer"
-                      className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md bg-[#EAE7E0]"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
-                      }}
+                      name={editingLo ? editingLo.name : (newLoForm.name || "Loan Officer")}
+                      title={editingLo ? editingLo.title : newLoForm.title}
+                      className="w-14 h-14 rounded-2xl border-2 border-white shadow-md bg-[#EAE7E0]"
                     />
                   </div>
 
@@ -2553,21 +2547,20 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              const reader = new FileReader();
-                              reader.onload = (uploadEvent) => {
-                                const result = uploadEvent.target?.result as string;
-                                if (result) {
-                                  if (editingLo) {
-                                    setEditingLo({ ...editingLo, headshotUrl: result });
-                                  } else {
-                                    setNewLoForm(p => ({ ...p, headshotUrl: result }));
-                                  }
+                              try {
+                                const result = await processLocalImageFile(file);
+                                if (editingLo) {
+                                  setEditingLo({ ...editingLo, headshotUrl: result });
+                                } else {
+                                  setNewLoForm(p => ({ ...p, headshotUrl: result }));
                                 }
-                              };
-                              reader.readAsDataURL(file);
+                                triggerToast("✅ Photo file processed!");
+                              } catch (err: any) {
+                                triggerToast(`⚠️ Photo processing error: ${err?.message || "Failed to read file"}`);
+                              }
                             }
                           }}
                         />
@@ -2818,14 +2811,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
                 <div className="flex items-center gap-3">
                   <div className="relative shrink-0">
-                    <img
+                    <HeadshotAvatar
                       src={editingAgent ? editingAgent.headshotUrl : newAgentForm.headshotUrl}
-                      alt="Preview"
-                      referrerPolicy="no-referrer"
-                      className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md bg-[#EAE7E0]"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80";
-                      }}
+                      name={editingAgent ? editingAgent.name : (newAgentForm.name || "Agent")}
+                      title={editingAgent ? editingAgent.title : newAgentForm.title}
+                      className="w-14 h-14 rounded-2xl border-2 border-white shadow-md bg-[#EAE7E0]"
                     />
                   </div>
 
@@ -2838,21 +2828,20 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              const reader = new FileReader();
-                              reader.onload = (uploadEvent) => {
-                                const result = uploadEvent.target?.result as string;
-                                if (result) {
-                                  if (editingAgent) {
-                                    setEditingAgent({ ...editingAgent, headshotUrl: result });
-                                  } else {
-                                    setNewAgentForm(p => ({ ...p, headshotUrl: result }));
-                                  }
+                              try {
+                                const result = await processLocalImageFile(file);
+                                if (editingAgent) {
+                                  setEditingAgent({ ...editingAgent, headshotUrl: result });
+                                } else {
+                                  setNewAgentForm(p => ({ ...p, headshotUrl: result }));
                                 }
-                              };
-                              reader.readAsDataURL(file);
+                                triggerToast("✅ Agent photo file processed!");
+                              } catch (err: any) {
+                                triggerToast(`⚠️ Photo processing error: ${err?.message || "Failed to read file"}`);
+                              }
                             }
                           }}
                         />

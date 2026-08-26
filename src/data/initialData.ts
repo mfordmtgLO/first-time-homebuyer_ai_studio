@@ -889,7 +889,7 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     branch: "Team Lonn Kilstrom Branch",
     email: "LKilstrom@cfmtg.com",
     phone: "(503) 849-3478",
-    headshotUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80",
+    headshotUrl: "",
     websiteUrl: "https://cfmtg.com/lkilstrom/",
     bio: "Decades of premier mortgage leadership heading the Team Lonn Kilstrom branch at Cornerstone First Mortgage, providing seasoned homebuyer advisory, custom loan structuring, and 5-star closing experiences.",
     specialties: [
@@ -923,7 +923,7 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     branch: "Team Lonn Kilstrom Branch",
     email: "aburkhart@cfmtg.com",
     phone: "(503) 555-0155",
-    headshotUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80",
+    headshotUrl: "",
     websiteUrl: "https://cfmtg.com/aburkhart/",
     bio: "Experienced Home Mortgage Consultant with Team Lonn Kilstrom at Cornerstone First Mortgage, providing personalized service, expert first-time buyer pre-approvals, and comprehensive loan program options across Oregon and Washington.",
     specialties: [
@@ -956,7 +956,7 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     branch: "Team Lonn Kilstrom Branch",
     email: "MSaftich@cfmtg.com",
     phone: "(503) 555-0177",
-    headshotUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&auto=format&fit=crop&q=80",
+    headshotUrl: "",
     websiteUrl: "https://cfmtg.com/msaftich/",
     bio: "With over 28 years of experience in mortgage and real estate finance, Mark delivers structured lending solutions, Down Payment Assistance (DPA) programs, and expert advisory for first-time buyers and growing families.",
     specialties: [
@@ -989,7 +989,7 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     branch: "Team Lonn Kilstrom Branch",
     email: "dsymonds@cfmtg.com",
     phone: "(503) 555-0168",
-    headshotUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=600&auto=format&fit=crop&q=80",
+    headshotUrl: "",
     websiteUrl: "https://cfmtg.com/dsymonds/",
     bio: "Mortgage and financial services veteran since 1989. Known for high-touch customer care, transparent lending roadmaps, and extensive homebuyer education to empower confident homeownership.",
     specialties: [
@@ -1022,7 +1022,7 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     branch: "Team Lonn Kilstrom Branch",
     email: "cvargas@cfmtg.com",
     phone: "(503) 555-0149",
-    headshotUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&auto=format&fit=crop&q=80",
+    headshotUrl: "",
     websiteUrl: "https://cfmtg.com/cvargas/",
     bio: "Dedicated Loan Officer with Team Lonn Kilstrom specializing in modern digital pre-approvals, down payment assistance programs, and strategic first-time buyer financing.",
     specialties: [
@@ -1055,7 +1055,7 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     branch: "Team Lonn Kilstrom Branch",
     email: "drichards@cfmtg.com",
     phone: "(503) 555-0188",
-    headshotUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&auto=format&fit=crop&q=80",
+    headshotUrl: "",
     websiteUrl: "https://cfmtg.com/drichards/",
     bio: "Experienced Loan Officer committed to delivering tailored loan options, competitive rates, and seamless communication from application to close with Team Lonn Kilstrom at Cornerstone First Mortgage.",
     specialties: [
@@ -1088,7 +1088,7 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     branch: "Team Lonn Kilstrom Branch",
     email: "eetuks@cfmtg.com",
     phone: "(503) 555-0192",
-    headshotUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=600&auto=format&fit=crop&q=80",
+    headshotUrl: "",
     websiteUrl: "https://cfmtg.com/eetuks/",
     bio: "Experienced Loan Consultant licensed in Florida, Oregon, Texas, and Washington, empowering homebuyers with transparent mortgage roadmaps, low down payment options, and proactive communication.",
     specialties: [

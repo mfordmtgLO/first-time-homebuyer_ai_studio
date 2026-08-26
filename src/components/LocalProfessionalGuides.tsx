@@ -15,6 +15,7 @@ import {
   Globe
 } from "lucide-react";
 import { LoanOfficerProfile, RealEstateAgentProfile } from "../types";
+import { HeadshotAvatar } from "./HeadshotAvatar";
 
 interface LocalProfessionalGuidesProps {
   loanOfficer: LoanOfficerProfile;
@@ -116,14 +117,11 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
 
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-              <img
-                src={loanOfficer.headshotUrl || "/mike-ford-headshot.jpg"}
-                alt={loanOfficer.name}
-                referrerPolicy="no-referrer"
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-white shadow-md shrink-0 bg-[#EAE7E0]"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
-                }}
+              <HeadshotAvatar
+                src={loanOfficer.headshotUrl}
+                name={loanOfficer.name}
+                title={loanOfficer.title}
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-white shadow-md shrink-0 bg-[#EAE7E0]"
               />
               <div className="space-y-1 flex-1">
                 <div className="flex items-center gap-2">
@@ -216,11 +214,11 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
 
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                <img
+                <HeadshotAvatar
                   src={activeAgent.headshotUrl}
-                  alt={activeAgent.name}
-                  referrerPolicy="no-referrer"
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-white shadow-md shrink-0 bg-[#EAE7E0]"
+                  name={activeAgent.name}
+                  title={activeAgent.title}
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-white shadow-md shrink-0 bg-[#EAE7E0]"
                 />
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center gap-2">

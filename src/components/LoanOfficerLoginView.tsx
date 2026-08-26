@@ -20,6 +20,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { LoanOfficerProfile, ProfessionalGuidesState } from "../types";
+import { HeadshotAvatar } from "./HeadshotAvatar";
 
 interface LoanOfficerLoginViewProps {
   guidesState: ProfessionalGuidesState;
@@ -575,13 +576,11 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <img
+                          <HeadshotAvatar
                             src={lo.headshotUrl}
-                            alt={lo.name}
-                            className="w-11 h-11 rounded-xl object-cover border border-white shadow-xs shrink-0"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "/mike-ford-headshot.jpg";
-                            }}
+                            name={lo.name}
+                            title={lo.title}
+                            className="w-11 h-11 rounded-xl border border-white shadow-xs shrink-0"
                           />
                           <div>
                             <div className="flex items-center gap-2">

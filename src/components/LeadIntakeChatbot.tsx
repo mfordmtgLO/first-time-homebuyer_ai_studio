@@ -8,6 +8,8 @@ import {
   Phone, 
   Calendar, 
   ChevronRight, 
+  ChevronDown,
+  ChevronUp,
   User, 
   Bot, 
   DollarSign, 
@@ -21,7 +23,11 @@ import {
   ArrowRight,
   Download,
   Flame,
-  Award
+  Award,
+  MapPin,
+  Search,
+  CheckSquare,
+  Square
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { 
@@ -31,6 +37,244 @@ import {
   FinancialProfile 
 } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
+
+// Comprehensive alphabetical listing of cities and towns across the state of Oregon
+export const OREGON_CITIES: string[] = [
+  "Albany",
+  "Aloha",
+  "Amity",
+  "Ashland",
+  "Astoria",
+  "Athena",
+  "Aumsville",
+  "Aurora",
+  "Baker City",
+  "Bandon",
+  "Banks",
+  "Bay City",
+  "Beavercreek",
+  "Beaverton",
+  "Bend",
+  "Boardman",
+  "Bonanza",
+  "Brookings",
+  "Brownsville",
+  "Burns",
+  "Canby",
+  "Cannon Beach",
+  "Canyonville",
+  "Carlton",
+  "Cascade Locks",
+  "Cave Junction",
+  "Central Point",
+  "Clackamas",
+  "Clatskanie",
+  "Coburg",
+  "Columbia City",
+  "Condon",
+  "Coos Bay",
+  "Coquille",
+  "Corbett",
+  "Cornelius",
+  "Corvallis",
+  "Cottage Grove",
+  "Cove",
+  "Creswell",
+  "Culver",
+  "Dallas",
+  "Damascus",
+  "Dayton",
+  "Dayville",
+  "Depoe Bay",
+  "Drain",
+  "Dundee",
+  "Dufur",
+  "Eagle Crest",
+  "Eagle Point",
+  "Echo",
+  "Elgin",
+  "Elkton",
+  "Enterprise",
+  "Estacada",
+  "Eugene",
+  "Fairview",
+  "Florence",
+  "Forest Grove",
+  "Fossil",
+  "Garibaldi",
+  "Gearhart",
+  "Gladstone",
+  "Glendale",
+  "Gold Beach",
+  "Gold Hill",
+  "Grand Ronde",
+  "Grants Pass",
+  "Gresham",
+  "Haines",
+  "Halfway",
+  "Halsey",
+  "Happy Valley",
+  "Harrisburg",
+  "Helix",
+  "Heppner",
+  "Hermiston",
+  "Hillsboro",
+  "Hines",
+  "Hood River",
+  "Hubbard",
+  "Huntington",
+  "Idanha",
+  "Imbler",
+  "Independence",
+  "Ione",
+  "Irrigon",
+  "Island City",
+  "Jacksonville",
+  "Jefferson",
+  "John Day",
+  "Joseph",
+  "Junction City",
+  "Keizer",
+  "King City",
+  "Klamath Falls",
+  "La Grande",
+  "La Pine",
+  "Lafayette",
+  "Lake Oswego",
+  "Lakeside",
+  "Lakeview",
+  "Lebanon",
+  "Lincoln City",
+  "Lonerock",
+  "Long Creek",
+  "Lostine",
+  "Lowell",
+  "Lyons",
+  "Madras",
+  "Malin",
+  "Manzanita",
+  "Maupin",
+  "Mayville",
+  "McMinnville",
+  "Medford",
+  "Merrill",
+  "Metolius",
+  "Mill City",
+  "Millersburg",
+  "Milton-Freewater",
+  "Milwaukie",
+  "Mitchell",
+  "Molalla",
+  "Monmouth",
+  "Monroe",
+  "Monument",
+  "Moro",
+  "Mosier",
+  "Mount Angel",
+  "Mount Hood Village",
+  "Mount Vernon",
+  "Myrtle Creek",
+  "Myrtle Point",
+  "Nehalem",
+  "Newberg",
+  "Newport",
+  "North Bend",
+  "North Plains",
+  "North Powder",
+  "Nyssa",
+  "Oak Grove",
+  "Oakland",
+  "Oakridge",
+  "Ontario",
+  "Oregon City",
+  "Pacific City",
+  "Paisley",
+  "Parkdale",
+  "Pendleton",
+  "Philomath",
+  "Phoenix",
+  "Pilot Rock",
+  "Port Orford",
+  "Portland",
+  "Powers",
+  "Prairie City",
+  "Prineville",
+  "Rainier",
+  "Redmond",
+  "Reedsport",
+  "Rhododendron",
+  "Richland",
+  "Riddle",
+  "Rivergrove",
+  "Rockaway Beach",
+  "Rogue River",
+  "Roseburg",
+  "Rufus",
+  "Saint Helens",
+  "Saint Paul",
+  "Salem",
+  "Sandy",
+  "Scappoose",
+  "Scio",
+  "Scotts Mills",
+  "Seaside",
+  "Seneca",
+  "Shady Cove",
+  "Shaniko",
+  "Sheridan",
+  "Sherwood",
+  "Siletz",
+  "Silverton",
+  "Sisters",
+  "Sodaville",
+  "Spray",
+  "Springfield",
+  "Stanfield",
+  "Stayton",
+  "Sublimity",
+  "Summerville",
+  "Sumpter",
+  "Sunriver",
+  "Sutherlin",
+  "Sweet Home",
+  "Talent",
+  "Tanget",
+  "Terrebonne",
+  "The Dalles",
+  "Tigard",
+  "Tillamook",
+  "Toledo",
+  "Troutdale",
+  "Tualatin",
+  "Turner",
+  "Ukiah",
+  "Umatilla",
+  "Union",
+  "Vale",
+  "Veneta",
+  "Vernonia",
+  "Waldport",
+  "Wallowa",
+  "Warm Springs",
+  "Warrenton",
+  "Wasco",
+  "Waterloo",
+  "Welches",
+  "West Linn",
+  "Westfir",
+  "Weston",
+  "Wheeler",
+  "White City",
+  "Willamina",
+  "Wilsonville",
+  "Winchester Bay",
+  "Winston",
+  "Wood Village",
+  "Woodburn",
+  "Yachats",
+  "Yamhill",
+  "Yoncalla"
+];
 
 interface LeadIntakeChatbotProps {
   loanOfficer: LoanOfficerProfile;
@@ -96,14 +340,9 @@ const INTAKE_STEPS: IntakeStep[] = [
   },
   {
     id: "location",
-    question: "Which cities or neighborhoods are you most excited to explore?",
+    question: "Which cities are you most excited to explore?",
     field: "preferredLocations",
-    options: [
-      { label: "Portland Metro (East / West)", value: "Portland Metro (East/West)", sub: "Close to city center" },
-      { label: "Beaverton / Hillsboro", value: "Beaverton / Hillsboro", sub: "Westside tech & parks" },
-      { label: "Clackamas / Oregon City", value: "Clackamas / Oregon City / SE", sub: "Spacious lots" },
-      { label: "Vancouver / SW Washington", value: "Vancouver / SW Washington", sub: "No state income tax" },
-    ]
+    options: [] // Replaced by the comprehensive Oregon cities dropdown selector
   }
 ];
 
@@ -162,6 +401,11 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     propertyType: "Single Family Home"
   });
 
+  // Oregon Cities selection state
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [citySearchQuery, setCitySearchQuery] = useState<string>("");
+  const [isCityDropdownOpen, setIsCityDropdownOpen] = useState<boolean>(true);
+
   // Collected Lead State
   const [leadState, setLeadState] = useState<Partial<CapturedLead>>({
     timeline: "",
@@ -195,7 +439,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     if (isOpen && chatBottomRef.current && !userIsScrollingUp) {
       chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isAiTyping, isOpen, currentStepIndex]);
+  }, [messages, isAiTyping, isOpen, currentStepIndex, selectedCities.length, isCityDropdownOpen]);
 
   const handleRevisitStep = (stepIndex: number) => {
     setCurrentStepIndex(stepIndex);
@@ -203,6 +447,29 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     const targetCount = 1 + (stepIndex * 2);
     setMessages(prev => prev.slice(0, Math.min(prev.length, targetCount)));
     setUserIsScrollingUp(false);
+
+    if (INTAKE_STEPS[stepIndex]?.id === "location") {
+      setIsCityDropdownOpen(true);
+      if (leadState.preferredLocations) {
+        const parsed = leadState.preferredLocations.split(",").map(c => c.trim()).filter(Boolean);
+        setSelectedCities(parsed);
+      }
+    }
+  };
+
+  const handleToggleCity = (city: string) => {
+    setSelectedCities(prev => 
+      prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]
+    );
+  };
+
+  const handleConfirmCitiesSelection = () => {
+    if (selectedCities.length === 0) return;
+    const citiesString = selectedCities.join(", ");
+    const step = INTAKE_STEPS[currentStepIndex];
+    if (step) {
+      handleSelectOption(step, citiesString);
+    }
   };
 
   // Handle Option Select
@@ -370,6 +637,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   const handleResetChat = () => {
     setCurrentStepIndex(0);
     setIsCompleted(false);
+    setSelectedCities([]);
+    setCitySearchQuery("");
+    setIsCityDropdownOpen(true);
     setLeadState({
       timeline: "",
       targetPriceRange: "",
@@ -672,29 +942,223 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
               </div>
             )}
 
-            {/* Current Step Option Chips (if intake not yet completed) */}
+            {/* Current Step Option Controls (if intake not yet completed) */}
             {!isCompleted && currentStepIndex < INTAKE_STEPS.length && (
-              <div className="pt-2 pl-9 space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488]">
-                  Select an option or type below:
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {INTAKE_STEPS[currentStepIndex].options.map((opt, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSelectOption(INTAKE_STEPS[currentStepIndex], opt.value)}
-                      className="text-left p-2.5 rounded-xl border border-[#EAE7E0] bg-white hover:bg-[#F1EFE9] hover:border-[#4A5D4E] transition-all group shadow-2xs"
-                    >
-                      <div className="text-xs font-bold text-[#2D362E] group-hover:text-[#4A5D4E] flex items-center justify-between">
-                        <span>{opt.label}</span>
-                        <ChevronRight className="w-3.5 h-3.5 text-[#9A9488] group-hover:text-[#4A5D4E]" />
-                      </div>
-                      {opt.sub && (
-                        <div className="text-[10px] text-[#606C5D] mt-0.5">{opt.sub}</div>
+              <div className="pt-2 pl-0 sm:pl-9 space-y-2">
+                {INTAKE_STEPS[currentStepIndex].id === "location" ? (
+                  /* Oregon Cities Multi-Select Dropdown with Checkboxes */
+                  <div className="space-y-2.5 animate-fade-in">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488] flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-[#C18C5D]" />
+                        Select Oregon Cities (One or Multiple):
+                      </span>
+                      {selectedCities.length > 0 && (
+                        <span className="text-[10px] font-bold text-[#4A5D4E] bg-[#EAE7E0] px-2 py-0.5 rounded-full">
+                          {selectedCities.length} selected
+                        </span>
                       )}
-                    </button>
-                  ))}
-                </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-[#EAE7E0] shadow-sm overflow-hidden">
+                      {/* Dropdown Toggle Header */}
+                      <button
+                        type="button"
+                        onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
+                        className="w-full p-3 bg-[#FAF9F5] border-b border-[#EAE7E0] flex items-center justify-between cursor-pointer hover:bg-[#F1EFE9] transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-2 text-xs font-semibold text-[#2D362E] min-w-0 pr-2">
+                          <MapPin className="w-4 h-4 text-[#4A5D4E] shrink-0" />
+                          {selectedCities.length === 0 ? (
+                            <span className="text-[#9A9488]">Select Oregon cities from alphabetical list...</span>
+                          ) : (
+                            <span className="truncate">
+                              <strong className="text-[#4A5D4E]">{selectedCities.length} {selectedCities.length === 1 ? 'City' : 'Cities'}:</strong> {selectedCities.slice(0, 3).join(", ")}{selectedCities.length > 3 ? ` +${selectedCities.length - 3} more` : ''}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 text-[#606C5D] shrink-0">
+                          <span className="text-[11px] font-medium hidden sm:inline">{isCityDropdownOpen ? "Collapse List" : "Browse Cities"}</span>
+                          {isCityDropdownOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </div>
+                      </button>
+
+                      {/* Dropdown Content */}
+                      {isCityDropdownOpen && (
+                        <div className="p-3 space-y-2.5">
+                          {/* Search Bar */}
+                          <div className="relative">
+                            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#9A9488]" />
+                            <input
+                              type="text"
+                              placeholder="Search Oregon cities (e.g. Bend, Eugene, Beaverton)..."
+                              value={citySearchQuery}
+                              onChange={(e) => setCitySearchQuery(e.target.value)}
+                              className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl pl-8 pr-8 py-2 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E] placeholder-[#9A9488]"
+                            />
+                            {citySearchQuery && (
+                              <button
+                                type="button"
+                                onClick={() => setCitySearchQuery("")}
+                                className="absolute right-2.5 top-2 text-[#9A9488] hover:text-[#2D362E] text-xs p-0.5"
+                                title="Clear search"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Selected Tags Display */}
+                          {selectedCities.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto py-1">
+                              {selectedCities.map((city) => (
+                                <span
+                                  key={city}
+                                  className="inline-flex items-center gap-1 text-[11px] font-medium bg-[#4A5D4E] text-white px-2 py-0.5 rounded-lg shadow-2xs"
+                                >
+                                  {city}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleCity(city)}
+                                    className="hover:text-[#E7C19D] ml-0.5 text-xs"
+                                    title={`Remove ${city}`}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Quick Select Presets */}
+                          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-[#EAE7E0] text-[10px]">
+                            <div className="flex items-center gap-1 text-[#606C5D] flex-wrap">
+                              <span className="font-semibold">Quick Add:</span>
+                              {["Portland", "Beaverton", "Bend", "Eugene", "Salem", "Oregon City", "Hillsboro"].map((pop) => (
+                                <button
+                                  key={pop}
+                                  type="button"
+                                  onClick={() => handleToggleCity(pop)}
+                                  className={`px-1.5 py-0.5 rounded-md border transition-all ${
+                                    selectedCities.includes(pop)
+                                      ? "bg-[#4A5D4E] text-white border-[#4A5D4E] font-bold"
+                                      : "bg-[#FAF9F5] text-[#2D362E] border-[#EAE7E0] hover:border-[#4A5D4E]"
+                                  }`}
+                                >
+                                  {selectedCities.includes(pop) ? `✓ ${pop}` : `+ ${pop}`}
+                                </button>
+                              ))}
+                            </div>
+
+                            {selectedCities.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedCities([])}
+                                className="text-[#9A9488] hover:text-rose-600 underline font-medium text-[10px]"
+                              >
+                                Clear All
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Alphabetical Scrollable List with Checkboxes */}
+                          <div className="max-h-48 overflow-y-auto border border-[#EAE7E0] rounded-xl divide-y divide-[#EAE7E0] bg-[#FAF9F5]/40 pr-1">
+                            {OREGON_CITIES.filter((c) =>
+                              c.toLowerCase().includes(citySearchQuery.toLowerCase().trim())
+                            ).map((city) => {
+                              const isChecked = selectedCities.includes(city);
+                              return (
+                                <div
+                                  key={city}
+                                  onClick={() => handleToggleCity(city)}
+                                  className={`flex items-center justify-between px-3 py-2 text-xs cursor-pointer select-none transition-colors ${
+                                    isChecked
+                                      ? "bg-[#4A5D4E]/10 font-bold text-[#2D362E]"
+                                      : "hover:bg-white text-[#2D362E]"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <div
+                                      className={`w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0 ${
+                                        isChecked
+                                          ? "bg-[#4A5D4E] border-[#4A5D4E] text-white"
+                                          : "border-[#9A9488] bg-white"
+                                      }`}
+                                    >
+                                      {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                                    </div>
+                                    <span>{city}</span>
+                                  </div>
+                                  <span className="text-[10px] font-medium text-[#9A9488]">Oregon</span>
+                                </div>
+                              );
+                            })}
+
+                            {OREGON_CITIES.filter((c) =>
+                              c.toLowerCase().includes(citySearchQuery.toLowerCase().trim())
+                            ).length === 0 && (
+                              <div className="p-4 text-center text-xs text-[#9A9488] space-y-2">
+                                <p>No Oregon cities found matching "{citySearchQuery}".</p>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (citySearchQuery.trim()) {
+                                      handleToggleCity(citySearchQuery.trim());
+                                      setCitySearchQuery("");
+                                    }
+                                  }}
+                                  className="text-[11px] font-bold text-[#4A5D4E] underline hover:text-[#38463B]"
+                                >
+                                  + Add "{citySearchQuery.trim()}" as custom location
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Submit / Confirm Button */}
+                          <button
+                            type="button"
+                            onClick={handleConfirmCitiesSelection}
+                            disabled={selectedCities.length === 0}
+                            className="w-full py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] disabled:opacity-40 disabled:hover:bg-[#4A5D4E] text-white font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            <CheckCircle2 className="w-4 h-4 text-[#E7C19D]" />
+                            <span>
+                              {selectedCities.length === 0
+                                ? "Check One or Multiple Cities Above to Continue"
+                                : `Confirm ${selectedCities.length} Selected ${selectedCities.length === 1 ? "City" : "Cities"}`}
+                            </span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Standard Option Buttons for other intake steps */
+                  <>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488]">
+                      Select an option or type below:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {INTAKE_STEPS[currentStepIndex].options.map((opt, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleSelectOption(INTAKE_STEPS[currentStepIndex], opt.value)}
+                          className="text-left p-2.5 rounded-xl border border-[#EAE7E0] bg-white hover:bg-[#F1EFE9] hover:border-[#4A5D4E] transition-all group shadow-2xs"
+                        >
+                          <div className="text-xs font-bold text-[#2D362E] group-hover:text-[#4A5D4E] flex items-center justify-between">
+                            <span>{opt.label}</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-[#9A9488] group-hover:text-[#4A5D4E]" />
+                          </div>
+                          {opt.sub && (
+                            <div className="text-[10px] text-[#606C5D] mt-0.5">{opt.sub}</div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

@@ -27,6 +27,7 @@ interface HeroWebsiteProps {
   onOpenLeadBot?: () => void;
   loanOfficer?: LoanOfficerProfile;
   activeAgent?: RealEstateAgentProfile;
+  isCoBranded?: boolean;
   onOpenLoPortal?: () => void;
 }
 
@@ -41,6 +42,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
   onOpenLeadBot,
   loanOfficer,
   activeAgent,
+  isCoBranded = false,
   onOpenLoPortal,
 }) => {
   const breakdown = calculateMortgageBreakdown(profile);
@@ -477,10 +479,11 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
       </section>
 
       {/* Local Professional Guides Section */}
-      {loanOfficer && activeAgent && (
+      {loanOfficer && (
         <LocalProfessionalGuides
           loanOfficer={loanOfficer}
           activeAgent={activeAgent}
+          isCoBranded={isCoBranded}
           onOpenLoPortal={onOpenLoPortal}
         />
       )}

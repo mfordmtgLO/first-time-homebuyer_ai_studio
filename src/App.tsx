@@ -122,6 +122,7 @@ export default function App() {
 
       let updatedLo = initialState.loanOfficer;
       let updatedAgentId = initialState.activeAgentId;
+      let isCoBranded = false;
 
       // 1. Resolve from clean path / hash (e.g. /mike-ford, /mike-and-sarah, /lonn-kilstrom, /mford)
       const fromPath = resolveFromUrlPath(
@@ -132,7 +133,8 @@ export default function App() {
         initialState.pairings
       );
 
-      if (fromPath.matchedPairing) {
+      if (fromPath.isPairing || fromPath.matchedPairing) {
+        isCoBranded = true;
         if (fromPath.matchedLo) updatedLo = fromPath.matchedLo;
         if (fromPath.matchedAgent) updatedAgentId = fromPath.matchedAgent.id;
       } else {
@@ -142,6 +144,7 @@ export default function App() {
 
       // 2. Query params take precedence if present
       if (pairParam) {
+        isCoBranded = true;
         const matchedPair = findMatchingPairing(pairParam, initialState.pairings);
         if (matchedPair) {
           const pairLo = findMatchingLoanOfficer(matchedPair.loId, initialState.loanOfficers);
@@ -154,15 +157,20 @@ export default function App() {
       if (loParam) {
         const matchedLo = findMatchingLoanOfficer(loParam, initialState.loanOfficers);
         if (matchedLo) updatedLo = matchedLo;
+        if (!pairParam && !fromPath.isPairing) {
+          isCoBranded = false;
+        }
       }
 
-      if (agentParam) {
+      if (agentParam && !loParam && !pairParam && !fromPath.isPairing) {
         const matchedAgent = findMatchingAgent(agentParam, initialState.agentRoster);
         if (matchedAgent) updatedAgentId = matchedAgent.id;
+        isCoBranded = false;
       }
 
       initialState.loanOfficer = sanitizeLoanOfficer(updatedLo);
       initialState.activeAgentId = updatedAgentId;
+      initialState.isCoBranded = isCoBranded;
     }
 
     return initialState;
@@ -207,6 +215,7 @@ export default function App() {
     setGuidesState(prev => {
       let updatedLo = prev.loanOfficer;
       let updatedAgentId = prev.activeAgentId;
+      let isCoBranded = false;
 
       // 1. Resolve from clean path / hash (e.g. /mike-ford, /mike-and-sarah, /lonn-kilstrom, /mford)
       const fromPath = resolveFromUrlPath(
@@ -217,7 +226,8 @@ export default function App() {
         prev.pairings
       );
 
-      if (fromPath.matchedPairing) {
+      if (fromPath.isPairing || fromPath.matchedPairing) {
+        isCoBranded = true;
         if (fromPath.matchedLo) updatedLo = fromPath.matchedLo;
         if (fromPath.matchedAgent) updatedAgentId = fromPath.matchedAgent.id;
       } else {
@@ -227,6 +237,7 @@ export default function App() {
 
       // 2. Query params take precedence if present
       if (pairParam) {
+        isCoBranded = true;
         const matchedPair = findMatchingPairing(pairParam, prev.pairings);
         if (matchedPair) {
           const pairLo = findMatchingLoanOfficer(matchedPair.loId, prev.loanOfficers);
@@ -239,17 +250,22 @@ export default function App() {
       if (loParam) {
         const matchedLo = findMatchingLoanOfficer(loParam, prev.loanOfficers);
         if (matchedLo) updatedLo = matchedLo;
+        if (!pairParam && !fromPath.isPairing) {
+          isCoBranded = false;
+        }
       }
 
-      if (agentParam) {
+      if (agentParam && !loParam && !pairParam && !fromPath.isPairing) {
         const matchedAgent = findMatchingAgent(agentParam, prev.agentRoster);
         if (matchedAgent) updatedAgentId = matchedAgent.id;
+        isCoBranded = false;
       }
 
       return {
         ...prev,
         loanOfficer: sanitizeLoanOfficer(updatedLo),
-        activeAgentId: updatedAgentId
+        activeAgentId: updatedAgentId,
+        isCoBranded: isCoBranded
       };
     });
 
@@ -396,6 +412,7 @@ export default function App() {
                     onOpenLeadBot={() => setIsLeadBotOpen(true)}
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
+                    isCoBranded={guidesState.isCoBranded}
                     onOpenLoPortal={() => setShowLoPortal(true)}
                   />
                 )}
@@ -450,6 +467,7 @@ export default function App() {
                     properties={properties}
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
+                    isCoBranded={guidesState.isCoBranded}
                     onNavigate={handleNavigate}
                     onOpenLoPortal={() => setShowLoPortal(true)}
                   />

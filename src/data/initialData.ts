@@ -846,7 +846,7 @@ export const DEFAULT_LOAN_OFFICER: LoanOfficerProfile = {
   title: "Senior Loan Officer & Branch Admin",
   nmlsId: "288455",
   company: "Cornerstone First Mortgage",
-  branch: "Team Lonn Kilstrom Branch (Manager / Admin)",
+  branch: "Lake Oswego, OR (serving Oregonians state-wide since 2000)",
   email: "mford@cfmtg.com",
   phone: "(541) 729-0819",
   headshotUrl: "/mike-ford-headshot.jpg",

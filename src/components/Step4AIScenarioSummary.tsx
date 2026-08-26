@@ -24,6 +24,7 @@ interface Step4AIScenarioSummaryProps {
   properties: PropertyListing[];
   loanOfficer: LoanOfficerProfile;
   activeAgent: RealEstateAgentProfile;
+  isCoBranded?: boolean;
   onNavigate: (tab: string, mode: "website" | "dashboard") => void;
   onOpenLoPortal?: () => void;
 }
@@ -33,6 +34,7 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
   properties,
   loanOfficer,
   activeAgent,
+  isCoBranded = false,
   onNavigate,
   onOpenLoPortal,
 }) => {
@@ -307,9 +309,8 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
       <LocalProfessionalGuides
         loanOfficer={loanOfficer}
         activeAgent={activeAgent}
+        isCoBranded={isCoBranded}
         onOpenLoPortal={onOpenLoPortal}
-        title="Your Local Professional Guides"
-        subtitle="Your assigned financing and real estate duo, ready to convert this digital plan into your first home purchase."
       />
 
       {/* Final Step 4 Completion Navigation Bar */}

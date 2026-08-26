@@ -6,6 +6,8 @@ import { DEFAULT_LOAN_OFFICER, INITIAL_TEAM_LOAN_OFFICERS } from "../data/initia
  * specifically ensuring Mike Ford always uses the authentic headshot and correct company details.
  */
 export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile {
+  if (!lo) return DEFAULT_LOAN_OFFICER;
+
   const isMike = 
     lo.id === "lo-mike-ford" || 
     lo.id === "mike-ford" ||
@@ -15,19 +17,26 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
 
   if (isMike) {
     const isUnsplashPhoto = !lo.headshotUrl || lo.headshotUrl.includes("unsplash");
+    const headshot = isUnsplashPhoto ? "/mike-ford-headshot.jpg" : lo.headshotUrl;
+
+    // Fix branch location if empty or if containing the old placeholder "Team Lonn Kilstrom Branch (Manager / Admin)"
+    const branch = (!lo.branch || lo.branch.includes("Team Lonn Kilstrom Branch (Manager / Admin)"))
+      ? "Lake Oswego, OR (serving Oregonians state-wide since 2000)"
+      : lo.branch;
+
     return {
       ...lo,
       id: "lo-mike-ford",
-      name: "Mike Ford",
+      name: lo.name || "Mike Ford",
       title: lo.title || "Senior Loan Officer & Branch Admin",
-      nmlsId: "288455",
-      company: "Cornerstone First Mortgage",
-      branch: "Team Lonn Kilstrom Branch (Manager / Admin)",
-      email: "mford@cfmtg.com",
+      nmlsId: lo.nmlsId || "288455",
+      company: lo.company || "Cornerstone First Mortgage",
+      branch: branch,
+      email: lo.email || "mford@cfmtg.com",
       phone: lo.phone || "(541) 729-0819",
-      headshotUrl: isUnsplashPhoto ? "/mike-ford-headshot.jpg" : lo.headshotUrl,
-      websiteUrl: "https://cfmtg.com/mford/",
-      customSlug: "mike-ford",
+      headshotUrl: headshot,
+      websiteUrl: lo.websiteUrl || "https://cfmtg.com/mford/",
+      customSlug: lo.customSlug || "mike-ford",
       isAdmin: true
     };
   }
@@ -36,7 +45,7 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
   const matchedDefault = INITIAL_TEAM_LOAN_OFFICERS.find(d => d.id === lo.id || d.customSlug === lo.customSlug);
   return {
     ...lo,
-    company: "Cornerstone First Mortgage",
+    company: lo.company || "Cornerstone First Mortgage",
     customSlug: lo.customSlug || lo.id.replace(/^lo-/, ""),
     websiteUrl: lo.websiteUrl && !lo.websiteUrl.includes("/lo/") ? lo.websiteUrl : (matchedDefault?.websiteUrl || `https://cfmtg.com/${lo.customSlug || lo.id.replace(/^lo-/, "")}/`)
   };
@@ -201,7 +210,7 @@ export function findMatchingPairing(
 }
 
 /**
- * Resolves Loan Officer, Agent, and Pairing from any path (e.g. /mike-ford, /mford, /mike-and-sarah, /lonn-and-marcus, /sarah-jenkins, /lo/mike-ford)
+ * Resolves Loan Officer, Agent, and Pairing from any path (e.g. /mike-ford, /mford, /mike, /mike-and-sarah, /lonn-and-marcus, /sarah-jenkins, /lo/mike-ford)
  */
 export function resolveFromUrlPath(
   pathname: string,
@@ -213,6 +222,7 @@ export function resolveFromUrlPath(
   matchedLo?: LoanOfficerProfile;
   matchedAgent?: RealEstateAgentProfile;
   matchedPairing?: LOPairing;
+  isPairing: boolean;
 } {
   // Extract all segment candidates from pathname and hash
   const rawSegments = [
@@ -226,7 +236,7 @@ export function resolveFromUrlPath(
     if (pair) {
       const pairLo = findMatchingLoanOfficer(pair.loId, loanOfficers);
       const pairAgent = findMatchingAgent(pair.agentId, agents);
-      return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pair };
+      return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pair, isPairing: true };
     }
   }
 
@@ -236,7 +246,19 @@ export function resolveFromUrlPath(
   if (pairByPath) {
     const pairLo = findMatchingLoanOfficer(pairByPath.loId, loanOfficers);
     const pairAgent = findMatchingAgent(pairByPath.agentId, agents);
-    return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pairByPath };
+    return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pairByPath, isPairing: true };
+  }
+
+  // Check if segment has "and" or "-" joining LO and Agent (e.g. mike-and-sarah or mike-sarah)
+  for (const seg of rawSegments) {
+    if (seg.includes("-and-") || (seg.includes("mike") && seg.includes("sarah")) || (seg.includes("lonn") && seg.includes("marcus"))) {
+      const pair = findMatchingPairing(seg, pairings);
+      if (pair) {
+        const pairLo = findMatchingLoanOfficer(pair.loId, loanOfficers);
+        const pairAgent = findMatchingAgent(pair.agentId, agents);
+        return { matchedLo: pairLo, matchedAgent: pairAgent, matchedPairing: pair, isPairing: true };
+      }
+    }
   }
 
   // 2. Check for Loan Officer in segments
@@ -261,5 +283,17 @@ export function resolveFromUrlPath(
     }
   }
 
-  return { matchedLo, matchedAgent };
+  if (matchedLo && matchedAgent) {
+    return { matchedLo, matchedAgent, isPairing: true };
+  }
+
+  if (matchedLo && !matchedAgent) {
+    return { matchedLo, matchedAgent: undefined, isPairing: false };
+  }
+
+  if (!matchedLo && matchedAgent) {
+    return { matchedLo: undefined, matchedAgent, isPairing: false };
+  }
+
+  return { matchedLo, matchedAgent, isPairing: false };
 }

@@ -272,6 +272,7 @@ export interface ProfessionalGuidesState {
   loanOfficer: LoanOfficerProfile;
   agentRoster: RealEstateAgentProfile[];
   activeAgentId: string;
+  isCoBranded?: boolean; // false for individual LO links (/mike-ford, /mford), true for pairings (/mike-and-sarah)
   pairings: LOPairing[];
   socialCampaigns: SocialPushCampaign[];
   adCampaignDrafts: AdCampaignDraft[];

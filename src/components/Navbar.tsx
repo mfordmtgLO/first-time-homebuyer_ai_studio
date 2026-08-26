@@ -177,7 +177,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#EAE7E0] text-[#2D362E] shadow-md">
+    <header className="w-full bg-white/95 backdrop-blur-md border-b border-[#EAE7E0] text-[#2D362E]">
       {/* Top micro-banner for market rates benchmark trends & savings glance */}
       <div className="bg-[#F1EFE9] px-3 sm:px-6 py-1.5 text-xs text-[#606C5D] border-b border-[#EAE7E0] relative z-50">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">

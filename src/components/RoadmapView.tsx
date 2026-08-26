@@ -11,7 +11,10 @@ import {
   ChevronUp, 
   Trophy, 
   Award,
-  ArrowRight
+  ArrowRight,
+  LayoutDashboard,
+  Calculator,
+  RotateCcw
 } from "lucide-react";
 import { RoadmapMilestone } from "../types";
 
@@ -19,12 +22,16 @@ interface RoadmapViewProps {
   milestones: RoadmapMilestone[];
   setMilestones: React.Dispatch<React.SetStateAction<RoadmapMilestone[]>>;
   onGoToDashboard?: () => void;
+  onNavigate?: (tab: string, mode?: "website" | "dashboard") => void;
+  onBackToStep1?: () => void;
 }
 
 export const RoadmapView: React.FC<RoadmapViewProps> = ({
   milestones,
   setMilestones,
   onGoToDashboard,
+  onNavigate,
+  onBackToStep1,
 }) => {
   const [selectedStage, setSelectedStage] = useState<string>("All");
   const [expandedStepId, setExpandedStepId] = useState<string>("step-1");
@@ -261,6 +268,66 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
             </div>
           );
         })}
+      </div>
+
+      {/* Guided 4-Step Flow: Proceed to Step 3 Navigation Card */}
+      <div className="bg-gradient-to-br from-[#2D362E] to-[#1E251F] text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-[#4A5D4E]/40 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-[#4A5D4E]/20 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-400/30">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Step 2 Explored: Master Roadmap & Strategy
+              </span>
+              <span className="text-xs text-[#DEDAD2]">Next Up in Your Homebuyer Journey</span>
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-white leading-tight">
+              Ready for Step 3: Your Live Buyer Dashboard & Command Center?
+            </h3>
+
+            <p className="text-xs sm:text-sm text-[#DEDAD2] leading-relaxed">
+              Bring together all your monthly budget calculations, saved touring properties, document prep vault, and closing milestones in your dedicated buyer workspace.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row md:flex-col lg:flex-row items-stretch sm:items-center gap-3 shrink-0">
+            <button
+              type="button"
+              id="step2-back-to-step1-btn"
+              onClick={() => {
+                if (onBackToStep1) {
+                  onBackToStep1();
+                } else if (onNavigate) {
+                  onNavigate("calculator", "website");
+                }
+              }}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#DEDAD2] hover:text-white text-xs font-semibold border border-white/15 transition-all cursor-pointer"
+            >
+              <Calculator className="w-4 h-4 text-[#D4A373]" />
+              <span>← Back to Step 1</span>
+            </button>
+
+            <button
+              type="button"
+              id="step2-proceed-to-step3-btn"
+              onClick={() => {
+                if (onGoToDashboard) {
+                  onGoToDashboard();
+                } else if (onNavigate) {
+                  onNavigate("dashboard", "dashboard");
+                }
+              }}
+              className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#C18C5D] hover:bg-[#A87448] active:scale-[0.99] text-white font-bold text-sm shadow-lg transition-all cursor-pointer group"
+            >
+              <LayoutDashboard className="w-4 h-4 text-white" />
+              <span>Continue to Step 3: Buyer Dashboard</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

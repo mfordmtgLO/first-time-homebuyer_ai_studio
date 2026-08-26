@@ -12,7 +12,10 @@ import {
   ArrowRight, 
   RefreshCw,
   Target,
-  ShieldCheck
+  ShieldCheck,
+  Compass,
+  RotateCcw,
+  LayoutDashboard
 } from "lucide-react";
 import { FinancialProfile } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
@@ -21,12 +24,16 @@ interface InstantAffordabilityCalculatorProps {
   profile: FinancialProfile;
   setProfile: React.Dispatch<React.SetStateAction<FinancialProfile>>;
   onOpenAdvisor?: () => void;
+  onNextStep?: () => void;
+  onNavigate?: (tab: string, mode?: "website" | "dashboard") => void;
 }
 
 export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalculatorProps> = ({
   profile,
   setProfile,
   onOpenAdvisor,
+  onNextStep,
+  onNavigate,
 }) => {
   const [loanTypePreset, setLoanTypePreset] = useState<"30yr" | "fha" | "usda" | "va">("30yr");
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
@@ -729,6 +736,61 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                 Click above to generate an instant, personalized audit of your DTI ratios, safe price ceiling, and recommended loan programs via Gemini 3.7 Flash.
               </p>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Guided 4-Step Flow: Proceed to Step 2 Navigation Card */}
+      <div className="bg-gradient-to-br from-[#2D362E] to-[#1E251F] text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-[#4A5D4E]/40 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-[#4A5D4E]/20 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-400/30">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Step 1 Complete: Buying Power Modeled
+              </span>
+              <span className="text-xs text-[#DEDAD2]">Next Up in Your Homebuyer Journey</span>
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-white leading-tight">
+              Ready for Step 2: Explore & Learn (Master Roadmap & DPA Grants)?
+            </h3>
+
+            <p className="text-xs sm:text-sm text-[#DEDAD2] leading-relaxed">
+              Now that your monthly budget ({formatUSD(breakdown.totalMonthly)}/mo) and safe purchase target ({formatUSD(profile.targetPrice)}) are modeled, advance to the 10-step milestone roadmap and discover Oregon down payment assistance programs.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row md:flex-col lg:flex-row items-stretch sm:items-center gap-3 shrink-0">
+            {onNavigate && (
+              <button
+                type="button"
+                onClick={() => onNavigate("hero", "website")}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-[#DEDAD2] hover:text-white text-xs font-semibold border border-white/15 transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-[#D4A373]" />
+                <span>Return to Start / Home</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              id="step1-proceed-to-step2-btn"
+              onClick={() => {
+                if (onNextStep) {
+                  onNextStep();
+                } else if (onNavigate) {
+                  onNavigate("roadmap", "website");
+                }
+              }}
+              className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#C18C5D] hover:bg-[#A87448] active:scale-[0.99] text-white font-bold text-sm shadow-lg transition-all cursor-pointer group"
+            >
+              <Compass className="w-4 h-4 text-white" />
+              <span>Continue to Step 2: Explore & Learn</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
         </div>
       </div>

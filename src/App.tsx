@@ -342,35 +342,35 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F9F8F4] text-[#2D362E] flex flex-col selection:bg-[#C18C5D]/25 selection:text-[#2D362E] font-sans antialiased">
-      {/* Top Fixed Navigation */}
+      {/* Top Sticky Navigation + Sticky Guided 4-Step Homebuyer Journey */}
       {!showLoPortal && (
-        <Navbar
-          currentTab={activeTab}
-          setCurrentTab={setActiveTab}
-          activeMode={currentMode}
-          setActiveMode={setCurrentMode}
-          profile={profile}
-          setProfile={setProfile}
-          savedCount={properties.length}
-          onOpenLoPortal={() => setShowLoPortal(true)}
-          onOpenLeadBot={() => setIsLeadBotOpen(true)}
-          loName={guidesState.loanOfficer.name}
-        />
+        <div className="sticky top-0 z-40 bg-[#F9F8F4]/98 backdrop-blur-md border-b border-[#EAE7E0]/80 shadow-md">
+          <Navbar
+            currentTab={activeTab}
+            setCurrentTab={setActiveTab}
+            activeMode={currentMode}
+            setActiveMode={setCurrentMode}
+            profile={profile}
+            setProfile={setProfile}
+            savedCount={properties.length}
+            onOpenLoPortal={() => setShowLoPortal(true)}
+            onOpenLeadBot={() => setIsLeadBotOpen(true)}
+            loName={guidesState.loanOfficer.name}
+          />
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
+            <StepNavigationBanner
+              currentTab={activeTab}
+              currentMode={currentMode}
+              onNavigate={handleNavigate}
+              loanOfficerName={guidesState.loanOfficer.name}
+              activeAgentName={activeAgent.name}
+            />
+          </div>
+        </div>
       )}
 
       {/* Main Content Area */}
       <main className={showLoPortal ? "flex-1 w-full min-h-screen p-0 m-0" : "flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6"}>
-        {/* Step Navigation Banner */}
-        {!showLoPortal && (
-          <StepNavigationBanner
-            currentTab={activeTab}
-            currentMode={currentMode}
-            onNavigate={handleNavigate}
-            loanOfficerName={guidesState.loanOfficer.name}
-            activeAgentName={activeAgent.name}
-          />
-        )}
-
         {/* LOAN OFFICER PORTAL VIEW */}
         {showLoPortal ? (
           <LoanOfficerPortal
@@ -408,6 +408,8 @@ export default function App() {
                     profile={profile}
                     setProfile={setProfile}
                     onOpenAdvisor={() => handleNavigate("step4_ai_plan", "dashboard")}
+                    onNextStep={() => handleNavigate("roadmap", "website")}
+                    onNavigate={handleNavigate}
                   />
                 )}
 
@@ -416,6 +418,8 @@ export default function App() {
                     milestones={milestones}
                     setMilestones={setMilestones}
                     onGoToDashboard={() => handleNavigate("dashboard", "dashboard")}
+                    onBackToStep1={() => handleNavigate("calculator", "website")}
+                    onNavigate={handleNavigate}
                   />
                 )}
 

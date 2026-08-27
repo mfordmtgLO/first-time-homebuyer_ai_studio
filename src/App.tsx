@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Compass, ShieldCheck } from "lucide-react";
 import { Navbar } from "./components/Navbar";
 import { StepNavigationBanner } from "./components/StepNavigationBanner";
@@ -231,6 +231,22 @@ export default function App() {
   const [scorecardProperty, setScorecardProperty] = useState<PropertyListing | null>(null);
   const [showNewPropertyModal, setShowNewPropertyModal] = useState<boolean>(false);
 
+  // Dynamic Header Height for sticky sidebar
+  const [headerHeight, setHeaderHeight] = useState(72);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const height = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : entry.contentRect.height;
+        setHeaderHeight(height);
+      }
+    });
+    resizeObserver.observe(headerRef.current);
+    return () => resizeObserver.disconnect();
+  }, [showLoPortal]);
+
   // Check URL params for partner link or LO access
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -361,7 +377,8 @@ export default function App() {
     setTimeout(() => {
       const el = document.getElementById("local-professional-guides-section");
       if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        const y = el.getBoundingClientRect().top + window.scrollY - 140;
+        window.scrollTo({ top: y, behavior: "smooth" });
       }
     }, 150);
   };
@@ -396,7 +413,7 @@ export default function App() {
     <div className="min-h-screen bg-[#F9F8F4] text-[#2D362E] flex flex-col selection:bg-[#C18C5D]/25 selection:text-[#2D362E] font-sans antialiased">
       {/* Top Sticky Navigation + Sticky Guided 4-Step Homebuyer Journey */}
       {!showLoPortal && (
-        <div className="sticky top-0 z-40 bg-[#F9F8F4]/98 backdrop-blur-md border-b border-[#EAE7E0]/80 shadow-md">
+        <div ref={headerRef} className="sticky top-0 z-40 bg-[#F9F8F4]/98 backdrop-blur-md border-b border-[#EAE7E0]/80 shadow-md">
           <Navbar
             currentTab={activeTab}
             setCurrentTab={setActiveTab}
@@ -428,7 +445,14 @@ export default function App() {
       <div className={showLoPortal ? "flex-1 w-full" : "flex-1 w-full max-w-[1500px] mx-auto flex"}>
         {/* Desktop Only: Left Sidebar for Step Navigation */}
         {!showLoPortal && (
-          <aside className="hidden lg:flex w-72 flex-col shrink-0 border-r border-[#EAE7E0] bg-[#F9F8F4] h-[calc(100vh-4.5rem)] sticky top-[4.5rem] overflow-hidden p-4 z-30">
+          <aside 
+            className="hidden lg:flex w-72 flex-col shrink-0 border-r border-[#EAE7E0] bg-[#F9F8F4] overflow-hidden p-4 z-30"
+            style={{ 
+              position: 'sticky', 
+              top: `${headerHeight}px`, 
+              height: `calc(100vh - ${headerHeight}px)` 
+            }}
+          >
             <StepNavigationBanner
               currentTab={activeTab}
               currentMode={currentMode}
@@ -442,7 +466,7 @@ export default function App() {
         )}
 
         {/* Main Content Area */}
-        <main className={showLoPortal ? "flex-1 w-full min-h-screen p-0 m-0" : "flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 overflow-y-auto"}>
+        <main className={showLoPortal ? "flex-1 w-full min-h-screen p-0 m-0" : "flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6"}>
           {/* LOAN OFFICER PORTAL VIEW */}
           {showLoPortal ? (
           <LoanOfficerPortal

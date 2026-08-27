@@ -293,7 +293,8 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
               onClick={() => {
                 const element = document.getElementById("local-professional-guides-section");
                 if (element) {
-                  element.scrollIntoView({ behavior: "smooth" });
+                  const y = element.getBoundingClientRect().top + window.scrollY - 140;
+                  window.scrollTo({ top: y, behavior: "smooth" });
                 }
               }}
               className="flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition-colors"

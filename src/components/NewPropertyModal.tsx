@@ -48,6 +48,7 @@ export const NewPropertyModal: React.FC<NewPropertyModalProps> = ({
       yearBuilt,
       hoaMonthly,
       propertyTaxAnnual,
+      isPubliclyPublished: false,
       propertyType,
       imageUrl: imageUrl.trim() || undefined,
       status: "touring",

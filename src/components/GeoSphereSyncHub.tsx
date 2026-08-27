@@ -151,7 +151,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
     const published = newListings.filter(l => l.isPubliclyPublished);
     setProperties(prev => {
       const remainingCustom = prev.filter(p => !p.id.startsWith("geo-") && !p.id.includes("-OR-"));
-      return [...remainingCustom, ...published];
+      return [...published, ...remainingCustom];
     });
 
     if (toastMessage) {

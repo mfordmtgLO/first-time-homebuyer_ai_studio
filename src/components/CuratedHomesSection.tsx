@@ -62,7 +62,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [selectedCounty, setSelectedCounty] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [displayCount, setDisplayCount] = useState<number>(6);
+  const [displayCount, setDisplayCount] = useState<number>(12);
 
   // Extract all unique Oregon counties present in published listings
   const availableCounties = useMemo(() => {
@@ -135,7 +135,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                setDisplayCount(6);
+                setDisplayCount(12);
               }}
               className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl pl-9 pr-8 py-2.5 text-xs text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:border-[#4A5D4E]"
             />
@@ -154,7 +154,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
               value={selectedCounty}
               onChange={(e) => {
                 setSelectedCounty(e.target.value);
-                setDisplayCount(6);
+                setDisplayCount(12);
               }}
               className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3.5 py-2.5 text-xs font-semibold text-[#2D362E] focus:outline-none focus:border-[#4A5D4E] cursor-pointer"
             >
@@ -188,7 +188,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
               key={filter.id}
               onClick={() => {
                 setActiveFilter(filter.id);
-                setDisplayCount(6);
+                setDisplayCount(12);
               }}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeFilter === filter.id
@@ -433,7 +433,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
       {filtered.length > displayCount && (
         <div className="text-center pt-2">
           <button
-            onClick={() => setDisplayCount(prev => prev + 6)}
+            onClick={() => setDisplayCount(prev => prev + 12)}
             className="px-6 py-3 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs shadow-2xs transition-colors cursor-pointer"
           >
             Show More Homes ({filtered.length - displayCount} remaining)

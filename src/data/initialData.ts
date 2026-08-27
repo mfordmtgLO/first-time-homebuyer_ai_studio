@@ -32,6 +32,7 @@ export const INITIAL_PROFILE = DEFAULT_FINANCIAL_PROFILE;
 export const INITIAL_PROPERTIES: PropertyListing[] = [
   {
     id: "prop-1",
+    isPubliclyPublished: false,
     title: "Sunlit Craftsman with Modern Kitchen",
     address: "2845 SE Division Street",
     city: "Portland",
@@ -75,6 +76,7 @@ export const INITIAL_PROPERTIES: PropertyListing[] = [
   },
   {
     id: "prop-2",
+    isPubliclyPublished: false,
     title: "Contemporary Cedar Townhome near MAX Light Rail",
     address: "1482 SW Beaverton-Hillsdale Hwy",
     city: "Beaverton",
@@ -116,6 +118,7 @@ export const INITIAL_PROPERTIES: PropertyListing[] = [
   },
   {
     id: "prop-3",
+    isPubliclyPublished: false,
     title: "Mid-Century Ranch on South Hills Mature Lot",
     address: "1840 University Street",
     city: "Eugene",
@@ -153,6 +156,7 @@ export const INITIAL_PROPERTIES: PropertyListing[] = [
   },
   {
     id: "prop-4",
+    isPubliclyPublished: false,
     title: "Modern Deschutes Pines Craftsman",
     address: "61420 Brosterhous Road",
     city: "Bend",

@@ -7,7 +7,11 @@ import {
   ArrowRight,
   RotateCcw,
   Check,
-  Users
+  Users,
+  Award,
+  Building,
+  TrendingUp,
+  ShieldCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -19,6 +23,7 @@ interface StepNavigationBannerProps {
   onNavigateToGuides?: () => void;
   loanOfficerName?: string;
   activeAgentName?: string;
+  isVertical?: boolean;
 }
 
 export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
@@ -27,6 +32,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   onNavigateToGuides,
   loanOfficerName,
   activeAgentName,
+  isVertical = false,
 }) => {
   // Determine current active step index (0 = Home, 1 = Step 1, 2 = Step 2, 3 = Step 3, 4 = Step 4)
   let activeStep = 0;
@@ -71,6 +77,14 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
     }
   ];
 
+  const secondaryItems = [
+    { id: "grants", label: "DPA Finder", icon: Award, mode: "website" as const },
+    { id: "properties", label: "Saved Homes", icon: Building, mode: "dashboard" as const },
+    { id: "mortgagelab", label: "Mortgage Lab", icon: TrendingUp, mode: "dashboard" as const },
+    { id: "ai_copilot", label: "AI Copilot", icon: Sparkles, mode: "dashboard" as const },
+    { id: "escrow", label: "Closing Tracker", icon: ShieldCheck, mode: "dashboard" as const },
+  ];
+
   const progressPercentage = Math.min(100, Math.max(0, (activeStep / 4) * 100));
 
   const handleStepClick = (s: typeof steps[0]) => {
@@ -80,12 +94,15 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   return (
     <div 
       id="guided-4-step-journey-banner"
-      className="w-full bg-white/95 backdrop-blur-md rounded-2xl border border-[#EAE7E0] p-2.5 sm:p-3.5 shadow-sm transition-all"
+      className={isVertical 
+        ? "w-full transition-all" 
+        : "w-full bg-white/95 backdrop-blur-md rounded-2xl border border-[#EAE7E0] p-2.5 sm:p-3.5 shadow-sm transition-all"
+      }
     >
       {/* Top Header: Return to Beginning link + Guided Workflow label + Sticky Local Guides button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 mb-2 border-b border-[#EAE7E0]/80">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold tracking-wider uppercase bg-[#F1EFE9] text-[#4A5D4E] px-2.5 py-0.5 rounded-full border border-[#EAE7E0]">
+      <div className={`flex ${isVertical ? "flex-col items-start gap-3" : "flex-col sm:flex-row sm:items-center justify-between"} pb-2 mb-2 border-b border-[#EAE7E0]/80`}>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[10px] font-bold tracking-wider uppercase bg-[#F1EFE9] text-[#4A5D4E] px-2.5 py-0.5 rounded-full border border-[#EAE7E0] self-start">
             Guided 4-Step Homebuyer Journey
           </span>
           <span className="text-xs text-[#606C5D] hidden md:inline">
@@ -93,7 +110,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+        <div className={`flex items-center gap-2 ${isVertical ? "w-full flex-wrap" : "self-start sm:self-auto flex-wrap"}`}>
           {/* Sticky Local Guides Quick Button */}
           <button
             id="step-banner-local-guides-btn"
@@ -141,8 +158,8 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
         />
       </div>
 
-      {/* 4 Interactive Step Cards — Fixed Grid (No Horizontal Scrolling, Permanently Pinned) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5 w-full">
+      {/* Interactive Step Cards */}
+      <div className={isVertical ? "flex flex-col gap-2.5 w-full" : "grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5 w-full"}>
         {steps.map((s) => {
           const Icon = s.icon;
           const isActive = activeStep === s.stepNum;
@@ -251,6 +268,36 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
           );
         })}
       </div>
+
+      {isVertical && (
+        <div className="mt-8 pt-6 border-t border-[#EAE7E0]/80">
+          <span className="text-[10px] font-bold tracking-wider uppercase text-[#9A9488] px-2 block mb-3">
+            Advanced Tools
+          </span>
+          <div className="flex flex-col gap-1.5 w-full">
+            {secondaryItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onNavigate(item.id, item.mode)}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all w-full text-left ${
+                    isActive
+                      ? "bg-[#4A5D4E] text-white shadow-xs ring-1 ring-[#38463B]"
+                      : "text-[#4A5D4E] hover:bg-[#F1EFE9] hover:text-[#2D362E] bg-white border border-[#EAE7E0] hover:border-[#DCD7CD]"
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 transition-transform ${
+                    isActive ? "text-white" : "text-[#606C5D]"
+                  }`} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -3,7 +3,7 @@
  * Resizes the image via HTML Canvas to a max dimension of 600px and compresses to a lightweight JPEG data URL (~30-50KB).
  * This ensures uploaded photos save instantly into profile state and localStorage without exceeding quota limits.
  */
-export function processLocalImageFile(file: File, maxDimension = 600, quality = 0.85): Promise<string> {
+export function processLocalImageFile(file: File, maxDimension = 600, quality = 0.85, forceSquare = true): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!file || !file.type.startsWith("image/")) {
       reject(new Error("Selected file is not a valid image."));
@@ -22,22 +22,39 @@ export function processLocalImageFile(file: File, maxDimension = 600, quality = 
       const img = new Image();
       img.onerror = () => reject(new Error("Failed to decode image data."));
       img.onload = () => {
-        let width = img.width;
-        let height = img.height;
+        let srcWidth = img.width;
+        let srcHeight = img.height;
+        let destWidth = srcWidth;
+        let destHeight = srcHeight;
+        
+        let sx = 0;
+        let sy = 0;
+        let sWidth = srcWidth;
+        let sHeight = srcHeight;
 
-        if (width > maxDimension || height > maxDimension) {
-          if (width > height) {
-            height = Math.round((height * maxDimension) / width);
-            width = maxDimension;
-          } else {
-            width = Math.round((width * maxDimension) / height);
-            height = maxDimension;
+        if (forceSquare) {
+          const minDim = Math.min(srcWidth, srcHeight);
+          sWidth = minDim;
+          sHeight = minDim;
+          sx = (srcWidth - minDim) / 2;
+          sy = (srcHeight - minDim) / 2;
+          destWidth = Math.min(minDim, maxDimension);
+          destHeight = destWidth;
+        } else {
+          if (srcWidth > maxDimension || srcHeight > maxDimension) {
+            if (srcWidth > srcHeight) {
+              destHeight = Math.round((srcHeight * maxDimension) / srcWidth);
+              destWidth = maxDimension;
+            } else {
+              destWidth = Math.round((srcWidth * maxDimension) / srcHeight);
+              destHeight = maxDimension;
+            }
           }
         }
 
         const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = destWidth;
+        canvas.height = destHeight;
         const ctx = canvas.getContext("2d");
 
         if (!ctx) {
@@ -46,7 +63,7 @@ export function processLocalImageFile(file: File, maxDimension = 600, quality = 
           return;
         }
 
-        ctx.drawImage(img, 0, 0, width, height);
+        ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, destWidth, destHeight);
         const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
         resolve(compressedDataUrl);
       };

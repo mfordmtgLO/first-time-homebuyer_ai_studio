@@ -184,6 +184,22 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const [showAddPairingModal, setShowAddPairingModal] = useState<boolean>(false);
   const [editingPairing, setEditingPairing] = useState<LOPairing | null>(null);
 
+  // Local state for headshot URL to allow instant visual preview before Firestore sync
+  const [localHeadshotUrl, setLocalHeadshotUrl] = useState(currentLo.headshotUrl || "");
+  const headshotSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setLocalHeadshotUrl(currentLo.headshotUrl || "");
+  }, [currentLo.headshotUrl]);
+
+  const handleHeadshotUrlChange = (val: string) => {
+    setLocalHeadshotUrl(val);
+    if (headshotSyncTimeoutRef.current) clearTimeout(headshotSyncTimeoutRef.current);
+    headshotSyncTimeoutRef.current = setTimeout(() => {
+      updateCurrentLoField("headshotUrl", val);
+    }, 800);
+  };
+
   // New LO Form State
   const [newLoForm, setNewLoForm] = useState<Partial<LoanOfficerProfile> & { initialPassword?: string }>({
     name: "",
@@ -2275,13 +2291,13 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     <ImageIcon className="w-3.5 h-3.5 text-[#4A5D4E]" />
                     <span>Loan Officer Headshot Profile Photo</span>
                   </label>
-                  <span className="text-[11px] text-[#9A9488]">Upload local file or paste image link</span>
+                  <span className="text-[11px] text-[#9A9488]">Live Local Preview</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3.5 pt-1">
                   <div className="relative shrink-0">
                     <HeadshotAvatar
-                      src={currentLo.headshotUrl}
+                      src={localHeadshotUrl}
                       name={currentLo.name}
                       title={currentLo.title}
                       className="w-16 h-16 rounded-2xl border-2 border-white shadow-md bg-[#EAE7E0]"
@@ -2302,7 +2318,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                             if (file) {
                               try {
                                 const result = await processLocalImageFile(file);
-                                updateCurrentLoField("headshotUrl", result);
+                                handleHeadshotUrlChange(result);
                                 triggerToast("✅ Headshot profile photo updated and saved successfully!");
                               } catch (err: any) {
                                 triggerToast(`⚠️ Photo processing error: ${err?.message || "Failed to read file"}`);
@@ -2317,8 +2333,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     <input
                       type="text"
                       placeholder="https://... (or leave blank to use default professional avatar)"
-                      value={currentLo.headshotUrl}
-                      onChange={(e) => updateCurrentLoField("headshotUrl", e.target.value)}
+                      value={localHeadshotUrl}
+                      onChange={(e) => handleHeadshotUrlChange(e.target.value)}
                       className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
                     />
                   </div>

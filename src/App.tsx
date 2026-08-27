@@ -410,7 +410,8 @@ export default function App() {
             onNavigateToGuides={handleNavigateToGuides}
             loName={guidesState.loanOfficer.name}
           />
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
+          {/* Mobile Only: Horizontal Step Banner */}
+          <div className="lg:hidden max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
             <StepNavigationBanner
               currentTab={activeTab}
               currentMode={currentMode}
@@ -423,10 +424,27 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Content Area */}
-      <main className={showLoPortal ? "flex-1 w-full min-h-screen p-0 m-0" : "flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6"}>
-        {/* LOAN OFFICER PORTAL VIEW */}
-        {showLoPortal ? (
+      {/* Main Layout Wrapper */}
+      <div className={showLoPortal ? "flex-1 w-full" : "flex-1 w-full max-w-[1500px] mx-auto flex"}>
+        {/* Desktop Only: Left Sidebar for Step Navigation */}
+        {!showLoPortal && (
+          <aside className="hidden lg:flex w-72 flex-col shrink-0 border-r border-[#EAE7E0] bg-[#F9F8F4] h-[calc(100vh-4.5rem)] sticky top-[4.5rem] overflow-y-auto p-4 z-30">
+            <StepNavigationBanner
+              currentTab={activeTab}
+              currentMode={currentMode}
+              onNavigate={handleNavigate}
+              onNavigateToGuides={handleNavigateToGuides}
+              loanOfficerName={guidesState.loanOfficer.name}
+              activeAgentName={activeAgent.name}
+              isVertical={true}
+            />
+          </aside>
+        )}
+
+        {/* Main Content Area */}
+        <main className={showLoPortal ? "flex-1 w-full min-h-screen p-0 m-0" : "flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 overflow-y-auto"}>
+          {/* LOAN OFFICER PORTAL VIEW */}
+          {showLoPortal ? (
           <LoanOfficerPortal
             guidesState={guidesState}
             onUpdateGuidesState={handleUpdateGuidesState}
@@ -544,6 +562,7 @@ export default function App() {
           </>
         )}
       </main>
+      </div>
 
       {/* Footer */}
       {!showLoPortal && (

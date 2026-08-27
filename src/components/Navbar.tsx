@@ -516,7 +516,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* ======================================================== */}
       {/* FULL-WIDTH HORIZONTAL SCROLLING MENU WITH LEFT/RIGHT CONTROLS */}
       {/* ======================================================== */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 bg-white">
+      <div className="lg:hidden border-t border-[#EAE7E0] max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 bg-white">
         <div className="flex items-center justify-between gap-2">
           
           {/* Scroll Navigation Left Button */}

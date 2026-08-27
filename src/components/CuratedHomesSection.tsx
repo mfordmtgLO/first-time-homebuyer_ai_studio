@@ -34,6 +34,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
   // Only display listings that the Loan Officer has approved/published
   const publishedHomes = properties.filter(p => p.isPubliclyPublished !== false);
   const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [displayCount, setDisplayCount] = useState<number>(6);
 
   const filtered = publishedHomes.filter(p => {
     if (activeFilter === "all") return true;
@@ -42,6 +43,8 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
     if (activeFilter === "targeted") return Boolean(p.overlayEligibility?.targetedArea);
     return true;
   });
+
+  const visibleProperties = filtered.slice(0, displayCount);
 
   if (publishedHomes.length === 0) {
     return null; // Don't display empty section if LO has not published any listings
@@ -89,7 +92,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
 
       {/* Property Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.map(property => {
+        {visibleProperties.map(property => {
           // Estimated monthly payment with 3.5% down & 6.5% interest rate
           const loanAmount = property.price * 0.965;
           const monthlyPI = calculateMonthlyPI(loanAmount, 6.5, 30);
@@ -199,6 +202,19 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
           );
         })}
       </div>
+
+      {/* Show More Properties Button */}
+      {filtered.length > displayCount && (
+        <div className="text-center pt-2">
+          <button
+            onClick={() => setDisplayCount(prev => prev + 9)}
+            className="px-6 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-2"
+          >
+            <span>Show More Homes ({filtered.length - displayCount} remaining)</span>
+            <ChevronRight className="w-4 h-4 text-[#4A5D4E]" />
+          </button>
+        </div>
+      )}
 
       {/* Footer Banner */}
       <div className="bg-[#FAF9F5] p-5 rounded-2xl border border-[#EAE7E0] flex flex-col sm:flex-row sm:items-center justify-between gap-4">

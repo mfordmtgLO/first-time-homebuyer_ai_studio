@@ -275,6 +275,113 @@ Provide:
     }
   });
 
+  // API Route: GeoSphere Oregon GIS Proxy & Synchronization
+  app.post("/api/geosphere/sync", async (req, res) => {
+    try {
+      const { endpointUrl, syncToken } = req.body || {};
+      const targetUrl = endpointUrl || "https://geosphere-map-oregon.vercel.app/api/map-saved-listings";
+
+      const headers: Record<string, string> = {
+        "User-Agent": "Manus-Homebuyer-Sync-Agent/1.0",
+        "Accept": "application/json",
+      };
+      if (syncToken) {
+        headers["x-geosphere-sync-token"] = syncToken;
+      }
+
+      const response = await fetch(targetUrl, {
+        method: "GET",
+        headers,
+      });
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: `GeoSphere endpoint responded with HTTP ${response.status}`,
+          status: response.status,
+        });
+      }
+
+      const data: any = await response.json();
+
+      // Extract listings from all possible structures (pulls, overlaySets, raw array)
+      let rawListings: any[] = [];
+      if (data && Array.isArray(data.pulls)) {
+        data.pulls.forEach((pull: any) => {
+          const items = pull.overlaySets?.all || pull.listings || [];
+          rawListings.push(...items);
+        });
+      } else if (data && Array.isArray(data.listings)) {
+        rawListings = data.listings;
+      } else if (Array.isArray(data)) {
+        rawListings = data;
+      }
+
+      // Deduplicate and transform into standardized PropertyListing format
+      const seenIds = new Set<string>();
+      const standardized = rawListings
+        .filter((item: any) => {
+          const id = item.id || item.formattedAddress || `${item.latitude}-${item.longitude}`;
+          if (!id || seenIds.has(id)) return false;
+          seenIds.add(id);
+          return true;
+        })
+        .map((item: any, idx: number) => {
+          const price = Number(item.price) || 350000;
+          const address = item.addressLine1 || (item.formattedAddress ? item.formattedAddress.split(",")[0] : "Oregon Property");
+          const city = item.city || "Coos Bay";
+          const state = item.state || "OR";
+          const zip = item.zipCode || item.zip || "97420";
+
+          return {
+            id: item.id || `geo-${Date.now()}-${idx}`,
+            title: item.formattedAddress ? `${item.formattedAddress.split(",")[0]} Home` : `${address} - ${city}`,
+            address,
+            city,
+            state,
+            zip,
+            price,
+            beds: Number(item.bedrooms ?? item.beds) || 3,
+            baths: Number(item.bathrooms ?? item.baths) || 2,
+            sqft: Number(item.squareFootage ?? item.sqft) || 1500,
+            yearBuilt: Number(item.yearBuilt) || 2018,
+            propertyType: item.propertyType || "Single Family",
+            imageUrl: item.imageUrl || (item.photos && item.photos[0]) || "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80",
+            status: "saved",
+            notes: `MLS #${item.mlsNumber || "N/A"}. ${item.overlayEligibility?.usda ? "USDA 100% Financing Eligible. " : ""}${item.overlayEligibility?.lmi ? "OHCS LMI Tract Approved. " : ""}${item.overlayEligibility?.firstHome?.targetedAreaDetails || ""}`.trim(),
+            daysOnMarket: Number(item.daysOnMarket) || 14,
+            hoaMonthly: Number(item.hoaMonthly || item.hoa?.fee || 0),
+            propertyTaxAnnual: Number(item.propertyTaxAnnual || Math.round(price * 0.009)),
+            isFavorite: false,
+            isPubliclyPublished: true,
+            syncedAt: new Date().toISOString(),
+            overlayEligibility: {
+              usdaEligible: Boolean(item.overlayEligibility?.usda ?? item.overlayEligibility?.usdaEligible),
+              usdaZoneName: item.overlayEligibility?.usdaInterpretation || "USDA Rural Eligible Area",
+              lmiEligible: Boolean(item.overlayEligibility?.lmi ?? item.overlayEligibility?.lmiEligible),
+              lmiPercentage: item.overlayEligibility?.lmiPercentage || (item.overlayEligibility?.lmi ? 72 : undefined),
+              lmiCensusTract: item.overlayEligibility?.tract?.geoid || item.overlayEligibility?.lmiCensusTract || item.overlayEligibility?.firstHome?.targetedAreaDetails,
+              firstHomeEligible: Boolean(item.overlayEligibility?.firstHome?.available ?? true),
+              firstHomePriceCap: item.overlayEligibility?.firstHome?.priceLimit || 692211,
+              targetedArea: item.overlayEligibility?.firstHome?.areaType === "targeted" || Boolean(item.overlayEligibility?.targetedArea),
+              countyName: item.county || item.overlayEligibility?.firstHome?.county || "Coos",
+              sourceDataset: "GeoSphere Oregon GIS",
+            },
+          };
+        });
+
+      res.json({
+        success: true,
+        count: standardized.length,
+        pullsCount: data.pulls?.length || 1,
+        generatedAt: data.generatedAt || new Date().toISOString(),
+        listings: standardized,
+      });
+    } catch (error: any) {
+      console.error("GeoSphere sync error:", error);
+      res.status(500).json({ error: error.message || "Failed to sync with GeoSphere" });
+    }
+  });
+
   // Vite middleware in dev, static serving in prod
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

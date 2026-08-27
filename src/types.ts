@@ -73,7 +73,7 @@ export interface PropertyListing {
   baths: number;
   sqft: number;
   yearBuilt: number;
-  propertyType: 'Single Family' | 'Townhouse' | 'Condo' | 'Multi-Family';
+  propertyType: 'Single Family' | 'Townhouse' | 'Condo' | 'Multi-Family' | 'Manufactured' | 'Mobile' | 'Land' | 'Other';
   imageUrl: string;
   galleryUrls?: string[];
   status: 'saved' | 'touring' | 'offered' | 'under_contract' | 'passed';

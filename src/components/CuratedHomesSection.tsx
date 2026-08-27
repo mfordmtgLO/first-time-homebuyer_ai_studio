@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { 
   Building, 
   MapPin, 
@@ -15,6 +15,15 @@ import {
 } from "lucide-react";
 import { PropertyListing, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { formatUSD, calculateMonthlyPI } from "../utils/mortgageMath";
+import { 
+  isUsdaEligible, 
+  isLmiEligible, 
+  isLmiUsdaDual, 
+  isTargetedArea, 
+  isFirstHomePriceEligible, 
+  calculateOverlayCounts, 
+  getListingOverlayBadges 
+} from "../utils/overlayClassification";
 
 interface CuratedHomesSectionProps {
   properties: PropertyListing[];
@@ -32,17 +41,29 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
   activeAgent,
 }) => {
   // Only display listings that the Loan Officer has approved/published
-  const publishedHomes = properties.filter(p => p.isPubliclyPublished !== false);
+  const publishedHomes = useMemo(() => {
+    return properties.filter(p => p.isPubliclyPublished !== false);
+  }, [properties]);
+
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [displayCount, setDisplayCount] = useState<number>(6);
 
-  const filtered = publishedHomes.filter(p => {
-    if (activeFilter === "all") return true;
-    if (activeFilter === "usda") return Boolean(p.overlayEligibility?.usdaEligible);
-    if (activeFilter === "lmi") return Boolean(p.overlayEligibility?.lmiEligible);
-    if (activeFilter === "targeted") return Boolean(p.overlayEligibility?.targetedArea);
-    return true;
-  });
+  // Accurate overlay counts for published homes
+  const counts = useMemo(() => {
+    return calculateOverlayCounts(publishedHomes);
+  }, [publishedHomes]);
+
+  const filtered = useMemo(() => {
+    return publishedHomes.filter(p => {
+      if (activeFilter === "all") return true;
+      if (activeFilter === "usda") return isUsdaEligible(p);
+      if (activeFilter === "lmi") return isLmiEligible(p);
+      if (activeFilter === "lmi_usda") return isLmiUsdaDual(p);
+      if (activeFilter === "targeted") return isTargetedArea(p);
+      if (activeFilter === "price_eligible") return isFirstHomePriceEligible(p);
+      return true;
+    });
+  }, [publishedHomes, activeFilter]);
 
   const visibleProperties = filtered.slice(0, displayCount);
 
@@ -71,13 +92,17 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
         <div className="flex items-center gap-1.5 flex-wrap">
           {[
             { id: "all", label: `All Homes (${publishedHomes.length})` },
-            { id: "usda", label: `USDA 0% Down (${publishedHomes.filter(p => p.overlayEligibility?.usdaEligible).length})` },
-            { id: "lmi", label: `OHCS LMI Tracts (${publishedHomes.filter(p => p.overlayEligibility?.lmiEligible).length})` },
-            { id: "targeted", label: `Targeted Area Cap (${publishedHomes.filter(p => p.overlayEligibility?.targetedArea).length})` },
+            { id: "usda", label: `USDA 0% Down (${counts.usda})` },
+            { id: "lmi", label: `OHCS LMI Tracts (${counts.lmi})` },
+            { id: "lmi_usda", label: `Dual USDA + LMI (${counts.lmiUsda})` },
+            { id: "targeted", label: `Targeted Area Cap (${counts.targeted})` },
           ].map(filter => (
             <button
               key={filter.id}
-              onClick={() => setActiveFilter(filter.id)}
+              onClick={() => {
+                setActiveFilter(filter.id);
+                setDisplayCount(6);
+              }}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeFilter === filter.id
                   ? "bg-[#4A5D4E] text-white shadow-2xs font-bold"
@@ -97,6 +122,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
           const loanAmount = property.price * 0.965;
           const monthlyPI = calculateMonthlyPI(loanAmount, 6.5, 30);
           const totalEstimatedMonthly = monthlyPI + (property.propertyTaxAnnual / 12) + (property.hoaMonthly || 0) + 120; // +$120 ins/PMI
+          const badges = getListingOverlayBadges(property);
 
           return (
             <div
@@ -117,22 +143,14 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
                 {/* Overlay Eligibility Chips */}
                 <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1.5 flex-wrap">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {property.overlayEligibility?.usdaEligible && (
-                      <span className="bg-emerald-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs flex items-center gap-1">
-                        <Check className="w-2.5 h-2.5" />
-                        <span>USDA 0% Down</span>
+                    {badges.map(badge => (
+                      <span 
+                        key={badge.id}
+                        className={`${badge.bgClass} ${badge.textClass} text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs flex items-center gap-1`}
+                      >
+                        <span>{badge.shortLabel}</span>
                       </span>
-                    )}
-                    {property.overlayEligibility?.lmiEligible && (
-                      <span className="bg-[#C18C5D] text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs">
-                        OHCS LMI Qualified
-                      </span>
-                    )}
-                    {property.overlayEligibility?.targetedArea && (
-                      <span className="bg-amber-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs">
-                        Targeted Area
-                      </span>
-                    )}
+                    ))}
                   </div>
 
                   {property.scorecard && (
@@ -148,53 +166,46 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
                     {formatUSD(property.price)}
                   </span>
                   <span className="text-xs font-semibold drop-shadow-sm text-stone-200">
-                    {property.beds} bed • {property.baths} bath • {property.sqft.toLocaleString()} sqft
+                    {property.beds}b • {property.baths}ba • {property.sqft} sqft
                   </span>
                 </div>
               </div>
 
-              {/* Card Body */}
-              <div className="p-5 space-y-3.5 flex-1 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <h4 className="font-serif font-bold text-base text-[#2D362E] group-hover:text-[#4A5D4E] transition-colors leading-snug">
+              {/* Card Details */}
+              <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                <div className="space-y-1.5">
+                  <h4 className="font-serif font-bold text-base text-[#2D362E] line-clamp-1 group-hover:text-[#4A5D4E] transition-colors">
                     {property.title}
                   </h4>
-                  <p className="text-xs text-[#606C5D] flex items-center gap-1.5">
+                  <p className="text-xs text-[#606C5D] flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-[#4A5D4E] shrink-0" />
-                    <span>{property.address}, {property.city}, {property.state} {property.zip}</span>
+                    <span className="line-clamp-1">{property.address}, {property.city}, {property.state} {property.zip}</span>
                   </p>
-                  {property.notes && (
-                    <p className="text-xs text-[#606C5D] line-clamp-2 leading-relaxed bg-[#FAF9F5] p-2.5 rounded-xl border border-[#EAE7E0]/70">
-                      {property.notes}
-                    </p>
-                  )}
+                  <p className="text-[11px] text-[#606C5D] line-clamp-2 pt-1 border-t border-[#EAE7E0]/60">
+                    {property.notes || "Turnkey residence pre-vetted for Oregon state grant assistance and low-rate financing."}
+                  </p>
                 </div>
 
-                {/* Monthly Cost & CTA */}
+                {/* Financial Overview & Action CTA */}
                 <div className="pt-3 border-t border-[#EAE7E0] space-y-3">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#606C5D]">Est. Total Monthly:</span>
-                    <span className="font-bold text-[#4A5D4E] text-sm">
-                      {formatUSD(totalEstimatedMonthly)}/mo
-                    </span>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Est. Payment</span>
+                      <strong className="text-[#2D362E] font-serif font-bold text-sm">
+                        {formatUSD(Math.round(totalEstimatedMonthly))}<span className="text-[10px] font-normal text-[#606C5D]">/mo</span>
+                      </strong>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Annual Tax</span>
+                      <span className="text-[#606C5D] font-medium">{formatUSD(property.propertyTaxAnnual)}/yr</span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onOpenLeadBot) {
-                          onOpenLeadBot();
-                        } else {
-                          onOpenDashboard();
-                        }
-                      }}
-                      className="flex-1 py-2 px-3 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs"
-                    >
-                      <span>Inquire About This Home</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className="text-[11px] font-bold text-[#4A5D4E] group-hover:underline flex items-center gap-1">
+                      <span>Calculate Down Payment Aid</span>
+                      <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                    </span>
                   </div>
                 </div>
               </div>
@@ -203,41 +214,17 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
         })}
       </div>
 
-      {/* Show More Properties Button */}
+      {/* Show More Button */}
       {filtered.length > displayCount && (
         <div className="text-center pt-2">
           <button
-            onClick={() => setDisplayCount(prev => prev + 9)}
-            className="px-6 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-2"
+            onClick={() => setDisplayCount(prev => prev + 6)}
+            className="px-6 py-3 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs shadow-2xs transition-colors cursor-pointer"
           >
-            <span>Show More Homes ({filtered.length - displayCount} remaining)</span>
-            <ChevronRight className="w-4 h-4 text-[#4A5D4E]" />
+            Show More Homes ({filtered.length - displayCount} remaining)
           </button>
         </div>
       )}
-
-      {/* Footer Banner */}
-      <div className="bg-[#FAF9F5] p-5 rounded-2xl border border-[#EAE7E0] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#4A5D4E]/10 text-[#4A5D4E] flex items-center justify-center font-bold shrink-0">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <h5 className="font-bold text-sm text-[#2D362E]">Looking for homes in another Oregon county?</h5>
-            <p className="text-xs text-[#606C5D]">
-              Our GIS engine tracks all 36 Oregon counties with automated down payment assistance qualification.
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={onOpenDashboard}
-          className="px-4 py-2 bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs rounded-xl shadow-2xs transition-colors shrink-0 flex items-center gap-1.5"
-        >
-          <span>Open Full Homebuyer Dashboard</span>
-          <ArrowRight className="w-3.5 h-3.5 text-[#4A5D4E]" />
-        </button>
-      </div>
     </section>
   );
 };

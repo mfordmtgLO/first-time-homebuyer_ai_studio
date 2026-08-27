@@ -47,10 +47,24 @@ export interface TourScorecard {
   grade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D';
 }
 
+export interface FirstHomeDetails {
+  available?: boolean;
+  priceEligible?: boolean | null;
+  lmiEligible?: boolean;
+  areaType?: 'targeted' | 'non_targeted' | 'non-targeted' | string;
+  priceLimit?: number;
+  county?: string;
+  targetedAreaDetails?: string;
+}
+
 export interface OverlayEligibility {
   usdaEligible?: boolean;
+  usda?: boolean;
   usdaZoneName?: string;
+  usdaInterpretation?: string;
   lmiEligible?: boolean;
+  lmi?: boolean;
+  lmiLevel?: 'Low' | 'Moderate' | string;
   lmiPercentage?: number; // e.g. 78% of AMI
   lmiCensusTract?: string;
   firstHomeEligible?: boolean;
@@ -59,6 +73,7 @@ export interface OverlayEligibility {
   geoid?: string;
   countyName?: string;
   sourceDataset?: string;
+  firstHome?: FirstHomeDetails;
 }
 
 export interface PropertyListing {
@@ -88,6 +103,17 @@ export interface PropertyListing {
   overlayEligibility?: OverlayEligibility;
   sourceGeoSphereId?: string;
   syncedAt?: string;
+  mlsNumber?: string;
+  mlsName?: string;
+  listingAgent?: {
+    name?: string;
+    phone?: string;
+    email?: string;
+  };
+  listingOffice?: {
+    name?: string;
+    phone?: string;
+  };
 }
 
 export interface GrantProgram {

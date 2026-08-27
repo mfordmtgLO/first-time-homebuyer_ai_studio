@@ -332,6 +332,19 @@ Provide:
           const state = item.state || "OR";
           const zip = item.zipCode || item.zip || "97420";
 
+          const rawPtype = String(item.propertyType || "").toLowerCase();
+          let propertyType = "Single Family";
+          if (rawPtype.includes("manufactured")) propertyType = "Manufactured";
+          else if (rawPtype.includes("mobile")) propertyType = "Mobile";
+          else if (rawPtype.includes("condo")) propertyType = "Condo";
+          else if (rawPtype.includes("townhouse") || rawPtype.includes("townhome")) propertyType = "Townhouse";
+          else if (rawPtype.includes("multi")) propertyType = "Multi-Family";
+          else if (rawPtype.includes("land")) propertyType = "Land";
+
+          const usda = Boolean(item.overlayEligibility?.usda ?? item.overlayEligibility?.usdaEligible);
+          const lmi = Boolean(item.overlayEligibility?.lmi ?? item.overlayEligibility?.lmiEligible);
+          const firstHome = item.overlayEligibility?.firstHome;
+
           return {
             id: item.id || `geo-${Date.now()}-${idx}`,
             title: item.formattedAddress ? `${item.formattedAddress.split(",")[0]} Home` : `${address} - ${city}`,
@@ -344,27 +357,44 @@ Provide:
             baths: Number(item.bathrooms ?? item.baths) || 2,
             sqft: Number(item.squareFootage ?? item.sqft) || 1500,
             yearBuilt: Number(item.yearBuilt) || 2018,
-            propertyType: item.propertyType || "Single Family",
+            propertyType,
             imageUrl: item.imageUrl || (item.photos && item.photos[0]) || "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80",
             status: "saved",
-            notes: `MLS #${item.mlsNumber || "N/A"}. ${item.overlayEligibility?.usda ? "USDA 100% Financing Eligible. " : ""}${item.overlayEligibility?.lmi ? "OHCS LMI Tract Approved. " : ""}${item.overlayEligibility?.firstHome?.targetedAreaDetails || ""}`.trim(),
+            notes: `MLS #${item.mlsNumber || "N/A"}. ${usda ? "USDA 100% Financing Eligible. " : ""}${lmi ? "OHCS LMI Tract Approved. " : ""}${firstHome?.targetedAreaDetails || ""}`.trim(),
             daysOnMarket: Number(item.daysOnMarket) || 14,
             hoaMonthly: Number(item.hoaMonthly || item.hoa?.fee || 0),
             propertyTaxAnnual: Number(item.propertyTaxAnnual || Math.round(price * 0.009)),
             isFavorite: false,
             isPubliclyPublished: true,
             syncedAt: new Date().toISOString(),
+            mlsNumber: item.mlsNumber,
+            mlsName: item.mlsName,
+            listingAgent: item.listingAgent,
+            listingOffice: item.listingOffice,
             overlayEligibility: {
-              usdaEligible: Boolean(item.overlayEligibility?.usda ?? item.overlayEligibility?.usdaEligible),
+              usda,
+              usdaEligible: usda,
               usdaZoneName: item.overlayEligibility?.usdaInterpretation || "USDA Rural Eligible Area",
-              lmiEligible: Boolean(item.overlayEligibility?.lmi ?? item.overlayEligibility?.lmiEligible),
-              lmiPercentage: item.overlayEligibility?.lmiPercentage || (item.overlayEligibility?.lmi ? 72 : undefined),
-              lmiCensusTract: item.overlayEligibility?.tract?.geoid || item.overlayEligibility?.lmiCensusTract || item.overlayEligibility?.firstHome?.targetedAreaDetails,
-              firstHomeEligible: Boolean(item.overlayEligibility?.firstHome?.available ?? true),
-              firstHomePriceCap: item.overlayEligibility?.firstHome?.priceLimit || 692211,
-              targetedArea: item.overlayEligibility?.firstHome?.areaType === "targeted" || Boolean(item.overlayEligibility?.targetedArea),
-              countyName: item.county || item.overlayEligibility?.firstHome?.county || "Coos",
+              usdaInterpretation: item.overlayEligibility?.usdaInterpretation || "outside-ineligible-v1",
+              lmi,
+              lmiEligible: lmi,
+              lmiLevel: item.overlayEligibility?.lmiLevel || (lmi ? "Moderate" : undefined),
+              lmiPercentage: item.overlayEligibility?.lmiPercentage || (lmi ? 72 : undefined),
+              lmiCensusTract: item.overlayEligibility?.tract?.geoid || item.overlayEligibility?.lmiCensusTract || firstHome?.targetedAreaDetails,
+              firstHomeEligible: Boolean(firstHome?.available ?? true),
+              firstHomePriceCap: firstHome?.priceLimit || item.overlayEligibility?.firstHomePriceCap || 692211,
+              targetedArea: firstHome?.areaType === "targeted" || Boolean(item.overlayEligibility?.targetedArea),
+              countyName: item.county || firstHome?.county || item.overlayEligibility?.countyName || "Coos",
               sourceDataset: "GeoSphere Oregon GIS",
+              firstHome: firstHome ? {
+                available: Boolean(firstHome.available),
+                priceEligible: firstHome.priceEligible !== undefined ? firstHome.priceEligible : (price <= (firstHome.priceLimit || 692211)),
+                lmiEligible: Boolean(firstHome.lmiEligible ?? lmi),
+                areaType: firstHome.areaType || "targeted",
+                priceLimit: firstHome.priceLimit || 692211,
+                county: firstHome.county || item.county || "Coos",
+                targetedAreaDetails: firstHome.targetedAreaDetails || "Entire county is targeted."
+              } : undefined
             },
           };
         });

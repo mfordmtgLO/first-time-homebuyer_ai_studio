@@ -12678,8 +12678,8 @@ export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
  */
 export function parseGeoSpherePayload(data: any): PropertyListing[] {
   if (!data) return [];
-
   let rawListings: any[] = [];
+  
   if (Array.isArray(data.pulls)) {
     data.pulls.forEach((pull: any) => {
       const items = pull.overlaySets?.all || pull.listings || [];
@@ -12710,6 +12710,19 @@ export function parseGeoSpherePayload(data: any): PropertyListing[] {
       const state = item.state || 'OR';
       const zip = item.zipCode || item.zip || '97420';
 
+      const rawPtype = String(item.propertyType || '').toLowerCase();
+      let propertyType: PropertyListing['propertyType'] = 'Single Family';
+      if (rawPtype.includes('manufactured')) propertyType = 'Manufactured';
+      else if (rawPtype.includes('mobile')) propertyType = 'Mobile';
+      else if (rawPtype.includes('condo')) propertyType = 'Condo';
+      else if (rawPtype.includes('townhouse') || rawPtype.includes('townhome')) propertyType = 'Townhouse';
+      else if (rawPtype.includes('multi')) propertyType = 'Multi-Family';
+      else if (rawPtype.includes('land')) propertyType = 'Land';
+
+      const usda = item.overlayEligibility?.usda ?? item.overlayEligibility?.usdaEligible ?? true;
+      const lmi = item.overlayEligibility?.lmi ?? item.overlayEligibility?.lmiEligible ?? false;
+      const firstHome = item.overlayEligibility?.firstHome;
+
       return {
         id: item.id || `geo-imported-${Date.now()}-${idx}`,
         title: item.title || (item.formattedAddress ? `${item.formattedAddress.split(',')[0]} Home` : `${address} - ${city}`),
@@ -12722,27 +12735,44 @@ export function parseGeoSpherePayload(data: any): PropertyListing[] {
         baths: Number(item.bathrooms ?? item.baths) || 2,
         sqft: Number(item.squareFootage ?? item.sqft) || 1500,
         yearBuilt: Number(item.yearBuilt) || 2016,
-        propertyType: (item.propertyType as any) || 'Single Family',
+        propertyType,
         imageUrl: item.imageUrl || (item.photos && item.photos[0]) || `https://images.unsplash.com/photo-${1564013799919 + (idx % 10) * 100000}?auto=format&fit=crop&w=1200&q=80`,
         status: 'saved',
-        notes: item.notes || `MLS #${item.mlsNumber || 'OR-GIS'}. ${item.overlayEligibility?.usda ? 'USDA 100% Financing (0% Down). ' : ''}${item.overlayEligibility?.lmi ? 'OHCS LMI Tract Qualified. ' : ''}${item.overlayEligibility?.firstHome?.targetedAreaDetails || ''}`.trim(),
+        notes: item.notes || `MLS #${item.mlsNumber || 'OR-GIS'}. ${usda ? 'USDA 100% Financing (0% Down). ' : ''}${lmi ? 'OHCS LMI Tract Qualified. ' : ''}${firstHome?.targetedAreaDetails || ''}`.trim(),
         daysOnMarket: Number(item.daysOnMarket) || 12,
         hoaMonthly: Number(item.hoaMonthly || item.hoa?.fee || 0),
         propertyTaxAnnual: Number(item.propertyTaxAnnual || Math.round(price * 0.009)),
         isFavorite: Boolean(item.isFavorite),
-        isPubliclyPublished: true,
+        isPubliclyPublished: item.isPubliclyPublished !== undefined ? Boolean(item.isPubliclyPublished) : true,
         syncedAt: new Date().toISOString(),
+        mlsNumber: item.mlsNumber,
+        mlsName: item.mlsName,
+        listingAgent: item.listingAgent,
+        listingOffice: item.listingOffice,
         overlayEligibility: {
-          usdaEligible: Boolean(item.overlayEligibility?.usda ?? item.overlayEligibility?.usdaEligible ?? true),
+          usda: Boolean(usda),
+          usdaEligible: Boolean(usda),
           usdaZoneName: item.overlayEligibility?.usdaInterpretation || 'USDA Rural Development Zone',
-          lmiEligible: Boolean(item.overlayEligibility?.lmi ?? item.overlayEligibility?.lmiEligible),
-          lmiPercentage: item.overlayEligibility?.lmiPercentage || (item.overlayEligibility?.lmi ? 72 : undefined),
-          lmiCensusTract: item.overlayEligibility?.tract?.geoid || item.overlayEligibility?.lmiCensusTract || item.overlayEligibility?.firstHome?.targetedAreaDetails,
-          firstHomeEligible: Boolean(item.overlayEligibility?.firstHome?.available ?? true),
-          firstHomePriceCap: item.overlayEligibility?.firstHome?.priceLimit || 692211,
-          targetedArea: item.overlayEligibility?.firstHome?.areaType === 'targeted' || Boolean(item.overlayEligibility?.targetedArea),
-          countyName: item.county || item.overlayEligibility?.firstHome?.county || 'Oregon',
-          sourceDataset: 'GeoSphere Oregon GIS'
+          usdaInterpretation: item.overlayEligibility?.usdaInterpretation || 'outside-ineligible-v1',
+          lmi: Boolean(lmi),
+          lmiEligible: Boolean(lmi),
+          lmiLevel: item.overlayEligibility?.lmiLevel || (lmi ? 'Moderate' : undefined),
+          lmiPercentage: item.overlayEligibility?.lmiPercentage || (lmi ? 72 : undefined),
+          lmiCensusTract: item.overlayEligibility?.tract?.geoid || item.overlayEligibility?.lmiCensusTract || firstHome?.targetedAreaDetails,
+          firstHomeEligible: Boolean(firstHome?.available ?? true),
+          firstHomePriceCap: firstHome?.priceLimit || item.overlayEligibility?.firstHomePriceCap || 692211,
+          targetedArea: firstHome?.areaType === 'targeted' || Boolean(item.overlayEligibility?.targetedArea),
+          countyName: item.county || firstHome?.county || item.overlayEligibility?.countyName || 'Oregon',
+          sourceDataset: 'GeoSphere Oregon GIS',
+          firstHome: firstHome ? {
+            available: Boolean(firstHome.available),
+            priceEligible: firstHome.priceEligible !== undefined ? firstHome.priceEligible : (price <= (firstHome.priceLimit || 692211)),
+            lmiEligible: Boolean(firstHome.lmiEligible ?? lmi),
+            areaType: firstHome.areaType || 'targeted',
+            priceLimit: firstHome.priceLimit || 692211,
+            county: firstHome.county || item.county || 'Oregon',
+            targetedAreaDetails: firstHome.targetedAreaDetails || 'Oregon Housing and Community Services'
+          } : undefined
         }
       };
     });

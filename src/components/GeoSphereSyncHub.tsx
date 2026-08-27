@@ -24,11 +24,27 @@ import {
   CheckSquare,
   Square,
   AlertCircle,
-  X
+  X,
+  Phone,
+  Mail,
+  Home,
+  Tag,
+  ArrowUpDown
 } from "lucide-react";
 import { PropertyListing, ProfessionalGuidesState } from "../types";
 import { GEOSPHERE_DATASETS, GEOSPHERE_MOCK_LISTINGS, GeoSphereDatasetOption, parseGeoSpherePayload } from "../data/geoSphereData";
-import { formatUSD } from "../utils/mortgageMath";
+import { formatUSD, calculateMonthlyPI } from "../utils/mortgageMath";
+import { 
+  isUsdaEligible, 
+  isLmiEligible, 
+  isLmiUsdaDual, 
+  isTargetedArea, 
+  isNonTargetedArea, 
+  isFirstHomePriceEligible, 
+  calculateOverlayCounts, 
+  filterListings, 
+  getListingOverlayBadges 
+} from "../utils/overlayClassification";
 
 interface GeoSphereSyncHubProps {
   guidesState: ProfessionalGuidesState;
@@ -54,8 +70,12 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
     }
     return GEOSPHERE_MOCK_LISTINGS;
   });
+
   const [selectedListingIds, setSelectedListingIds] = useState<string[]>([]);
   const [activeOverlayFilter, setActiveOverlayFilter] = useState<string>("all");
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>("all");
+  const [countyFilter, setCountyFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "dom" | "sqft">("default");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [lastSyncedTime, setLastSyncedTime] = useState<string>(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   
@@ -70,35 +90,40 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Property Detail Modal State
+  const [inspectingListing, setInspectingListing] = useState<PropertyListing | null>(null);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = 12;
 
+  // Calculate live statistical counts across all synced listings
+  const overlayCounts = useMemo(() => {
+    return calculateOverlayCounts(syncedListings);
+  }, [syncedListings]);
+
   // Filter synced listings by current active overlay and search query
   const filteredListings = useMemo(() => {
-    return syncedListings.filter(listing => {
-      // Overlay filter
-      if (activeOverlayFilter === "usda" && !listing.overlayEligibility?.usdaEligible) return false;
-      if (activeOverlayFilter === "lmi" && !listing.overlayEligibility?.lmiEligible) return false;
-      if (activeOverlayFilter === "targeted" && !listing.overlayEligibility?.targetedArea) return false;
-      if (activeOverlayFilter === "published" && !listing.isPubliclyPublished) return false;
-
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = listing.title?.toLowerCase().includes(q);
-        const matchAddress = listing.address?.toLowerCase().includes(q);
-        const matchCity = listing.city?.toLowerCase().includes(q);
-        const matchZip = listing.zip?.toLowerCase().includes(q);
-        const matchCounty = listing.overlayEligibility?.countyName?.toLowerCase().includes(q);
-        if (!matchTitle && !matchAddress && !matchCity && !matchZip && !matchCounty) {
-          return false;
-        }
-      }
-
-      return true;
+    const list = filterListings(syncedListings, {
+      overlayFilter: activeOverlayFilter,
+      searchQuery,
+      propertyType: propertyTypeFilter,
+      county: countyFilter,
     });
-  }, [syncedListings, activeOverlayFilter, searchQuery]);
+
+    // Apply sorting
+    if (sortBy === "price_asc") {
+      return [...list].sort((a, b) => a.price - b.price);
+    } else if (sortBy === "price_desc") {
+      return [...list].sort((a, b) => b.price - a.price);
+    } else if (sortBy === "dom") {
+      return [...list].sort((a, b) => a.daysOnMarket - b.daysOnMarket);
+    } else if (sortBy === "sqft") {
+      return [...list].sort((a, b) => b.sqft - a.sqft);
+    }
+
+    return list;
+  }, [syncedListings, activeOverlayFilter, searchQuery, propertyTypeFilter, countyFilter, sortBy]);
 
   // Paginated listings
   const totalPages = Math.ceil(filteredListings.length / pageSize) || 1;
@@ -121,7 +146,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
     // Merge publicly published properties into main properties state
     const published = newListings.filter(l => l.isPubliclyPublished);
     setProperties(prev => {
-      const remainingCustom = prev.filter(p => !p.id.startsWith("geo-"));
+      const remainingCustom = prev.filter(p => !p.id.startsWith("geo-") && !p.id.includes("-OR-"));
       return [...remainingCustom, ...published];
     });
 
@@ -168,12 +193,11 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
       } else if (datasetId === "metro") {
         finalDataset = GEOSPHERE_MOCK_LISTINGS.filter(l => ["Clackamas", "Marion", "Multnomah", "Yamhill", "Washington"].includes(l.overlayEligibility?.countyName || ""));
       } else if (datasetId === "usda") {
-        finalDataset = GEOSPHERE_MOCK_LISTINGS.filter(l => l.overlayEligibility?.usdaEligible);
+        finalDataset = GEOSPHERE_MOCK_LISTINGS.filter(l => isUsdaEligible(l));
       } else if (datasetId === "lmi") {
-        finalDataset = GEOSPHERE_MOCK_LISTINGS.filter(l => l.overlayEligibility?.lmiEligible);
+        finalDataset = GEOSPHERE_MOCK_LISTINGS.filter(l => isLmiEligible(l));
       } else {
         // Master all 229 dataset
-        // If live listings were fetched, deduplicate against master 229
         const liveMap = new Map<string, PropertyListing>();
         liveListings.forEach(l => liveMap.set(l.id, l));
         
@@ -196,7 +220,6 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
       setCurrentPage(1);
     } catch (error) {
       console.error("GeoSphere sync error:", error);
-      // Seamlessly fall back to complete master database
       persistListings(GEOSPHERE_MOCK_LISTINGS, `Loaded all ${GEOSPHERE_MOCK_LISTINGS.length} pre-screened Oregon properties from GeoSphere GIS database.`);
     } finally {
       setIsFetching(false);
@@ -324,13 +347,13 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           <div className="space-y-2 max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
               <Globe className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-              <span>Live Oregon GIS Integration • 229 Pre-Screened Listings</span>
+              <span>GeoSphere Oregon GIS Integration • {syncedListings.length} Saved Properties</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#2D362E] tracking-tight">
               GeoSphere Oregon Map Sync & Listing Curation Hub
             </h2>
             <p className="text-xs sm:text-sm text-[#606C5D] leading-relaxed">
-              Synchronize saved property listings from the GeoSphere Oregon GIS system directly into your loan officer portal. Filter by USDA 0% Down boundaries, OHCS LMI tracts, and FirstHome price limits, then publish curated selections to your public-facing site.
+              Synchronize saved property listings from the GeoSphere Oregon GIS system directly into your loan officer portal. Filter by USDA 0% Down boundaries, OHCS LMI tracts, Dual Qualification, and FirstHome price limits, then publish curated selections to your public-facing site.
             </p>
           </div>
 
@@ -349,20 +372,26 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
               className="px-5 py-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
-              <span>{isFetching ? "Syncing All 229 Listings..." : "Sync All Listings Now"}</span>
+              <span>{isFetching ? "Syncing All Listings..." : "Sync All Listings Now"}</span>
             </button>
           </div>
         </div>
 
-        {/* Sync Status Banner */}
+        {/* Sync Status Banner & Statistical Summary */}
         <div className="pt-4 border-t border-[#EAE7E0] flex flex-wrap items-center justify-between gap-4 text-xs">
-          <div className="flex items-center gap-3 text-[#606C5D]">
+          <div className="flex items-center gap-3 text-[#606C5D] flex-wrap">
             <span className="flex items-center gap-1.5 font-semibold text-[#2D362E]">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Database Total: <strong className="text-emerald-800">{syncedListings.length} Properties</strong></span>
+              <span>Database Total: <strong className="text-emerald-800">{overlayCounts.total} Properties</strong></span>
             </span>
             <span>•</span>
-            <span>Published on Site: <strong className="text-[#4A5D4E]">{syncedListings.filter(l => l.isPubliclyPublished).length}</strong></span>
+            <span>USDA Eligible: <strong className="text-emerald-700">{overlayCounts.usda}</strong></span>
+            <span>•</span>
+            <span>OHCS LMI: <strong className="text-amber-700">{overlayCounts.lmi}</strong></span>
+            <span>•</span>
+            <span>Dual USDA+LMI: <strong className="text-teal-700">{overlayCounts.lmiUsda}</strong></span>
+            <span>•</span>
+            <span>Published on Site: <strong className="text-[#4A5D4E]">{overlayCounts.published}</strong></span>
             <span>•</span>
             <span>Last Synced: <strong>{lastSyncedTime}</strong></span>
           </div>
@@ -459,36 +488,55 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
       {/* Filter Tabs, Search Bar, and Batch Operations */}
       <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 space-y-6 shadow-xs">
-        {/* Top Controls: Search and Filter Pills */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Overlay Filter Pills */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {[
-              { id: "all", label: `All Database (${syncedListings.length})` },
-              { id: "usda", label: `USDA 0% Down (${syncedListings.filter(l => l.overlayEligibility?.usdaEligible).length})` },
-              { id: "lmi", label: `OHCS LMI Tracts (${syncedListings.filter(l => l.overlayEligibility?.lmiEligible).length})` },
-              { id: "targeted", label: `Targeted Area Cap (${syncedListings.filter(l => l.overlayEligibility?.targetedArea).length})` },
-              { id: "published", label: `Published Live (${syncedListings.filter(l => l.isPubliclyPublished).length})` },
-            ].map(filter => (
-              <button
-                key={filter.id}
-                onClick={() => {
-                  setActiveOverlayFilter(filter.id);
-                  setCurrentPage(1);
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  activeOverlayFilter === filter.id
-                    ? "bg-[#4A5D4E] text-white shadow-2xs font-bold"
-                    : "bg-[#FAF9F5] text-[#606C5D] hover:bg-[#F1EFE9] border border-[#EAE7E0]"
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
+        {/* Top Controls: Overlay Filter Pills */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#606C5D] flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-[#4A5D4E]" />
+              <span>Oregon GIS Overlay & Category Filters</span>
+            </span>
+            <span className="text-xs text-[#606C5D]">
+              Matching: <strong className="text-[#2D362E]">{filteredListings.length}</strong> of {syncedListings.length}
+            </span>
           </div>
 
+          <div className="flex items-center gap-2 flex-wrap">
+            {[
+              { id: "all", label: `All Database (${overlayCounts.total})` },
+              { id: "usda", label: `USDA 0% Down (${overlayCounts.usda})`, highlight: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+              { id: "lmi", label: `OHCS LMI Tracts (${overlayCounts.lmi})`, highlight: "bg-amber-50 text-amber-900 border-amber-200" },
+              { id: "lmi_usda", label: `Dual USDA + LMI (${overlayCounts.lmiUsda})`, highlight: "bg-teal-50 text-teal-900 border-teal-200" },
+              { id: "targeted", label: `Targeted Area Cap (${overlayCounts.targeted})` },
+              { id: "non_targeted", label: `Non-Targeted (${overlayCounts.nonTargeted})` },
+              { id: "price_eligible", label: `Under Price Cap (${overlayCounts.firstHomePriceEligible})` },
+              { id: "published", label: `Published Live (${overlayCounts.published})` },
+              { id: "draft", label: `Draft / Hidden (${overlayCounts.draft})` },
+            ].map(filter => {
+              const isActive = activeOverlayFilter === filter.id;
+              return (
+                <button
+                  key={filter.id}
+                  onClick={() => {
+                    setActiveOverlayFilter(filter.id);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-[#4A5D4E] text-white shadow-2xs font-bold ring-2 ring-[#4A5D4E]/20"
+                      : "bg-[#FAF9F5] text-[#606C5D] hover:bg-[#F1EFE9] border border-[#EAE7E0]"
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Secondary Filter Bar: Property Type, County, Sorting, and Search */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-[#EAE7E0]">
           {/* Search Box */}
-          <div className="relative min-w-[240px]">
+          <div className="relative">
             <Search className="w-4 h-4 text-[#606C5D] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -497,17 +545,72 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Search address, city, county, ZIP..."
-              className="w-full text-xs pl-9 pr-3 py-2 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] focus:bg-white focus:ring-1 focus:ring-[#4A5D4E] outline-none"
+              placeholder="Search address, city, county, ZIP, MLS..."
+              className="w-full text-xs pl-9 pr-8 py-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] focus:bg-white focus:ring-1 focus:ring-[#4A5D4E] outline-none"
             />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
+          </div>
+
+          {/* Property Type Dropdown */}
+          <div>
+            <select
+              value={propertyTypeFilter}
+              onChange={(e) => {
+                setPropertyTypeFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full text-xs px-3 py-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] focus:bg-white focus:ring-1 focus:ring-[#4A5D4E] outline-none text-[#2D362E] cursor-pointer"
+            >
+              <option value="all">All Property Types ({overlayCounts.total})</option>
+              <option value="Single Family">Single Family ({overlayCounts.singleFamily})</option>
+              <option value="Manufactured">Manufactured / Mobile ({overlayCounts.manufactured})</option>
+              <option value="Condo">Condominium ({overlayCounts.condo})</option>
+              <option value="Townhouse">Townhouse ({overlayCounts.townhouse})</option>
+            </select>
+          </div>
+
+          {/* County / Region Filter */}
+          <div>
+            <select
+              value={countyFilter}
+              onChange={(e) => {
+                setCountyFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full text-xs px-3 py-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] focus:bg-white focus:ring-1 focus:ring-[#4A5D4E] outline-none text-[#2D362E] cursor-pointer"
+            >
+              <option value="all">All Oregon Counties</option>
+              <option value="Coos">Coos County (Coast)</option>
+              <option value="Lane">Lane County (Eugene)</option>
+              <option value="Deschutes">Deschutes County (Bend)</option>
+              <option value="Clackamas">Clackamas County</option>
+              <option value="Multnomah">Multnomah County</option>
+              <option value="Washington">Washington County</option>
+              <option value="Marion">Marion County (Salem)</option>
+              <option value="Jackson">Jackson County (Medford)</option>
+            </select>
+          </div>
+
+          {/* Sorting */}
+          <div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full text-xs px-3 py-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] focus:bg-white focus:ring-1 focus:ring-[#4A5D4E] outline-none text-[#2D362E] cursor-pointer"
+            >
+              <option value="default">Default Sort (Featured)</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="dom">Newest Listings (Days on Market)</option>
+              <option value="sqft">Largest Home Size (Sq Ft)</option>
+            </select>
           </div>
         </div>
 
@@ -571,7 +674,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
         {filteredListings.length === 0 ? (
           <div className="text-center py-12 space-y-3 bg-[#FAF9F5] rounded-2xl border border-dashed border-[#EAE7E0]">
             <Info className="w-8 h-8 text-[#C18C5D] mx-auto" />
-            <h4 className="font-bold text-sm text-[#2D362E]">No properties match current filter or search</h4>
+            <h4 className="font-bold text-sm text-[#2D362E]">No properties match current overlay filter or search</h4>
             <p className="text-xs text-[#606C5D]">Try clearing search keywords or selecting "All Database".</p>
           </div>
         ) : (
@@ -579,6 +682,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
             {paginatedListings.map(listing => {
               const isSelected = selectedListingIds.includes(listing.id);
               const isPublished = Boolean(listing.isPubliclyPublished);
+              const badges = getListingOverlayBadges(listing);
 
               return (
                 <div
@@ -588,14 +692,15 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                   }`}
                 >
                   {/* Photo Header & Badges */}
-                  <div className="relative h-44 bg-stone-100 overflow-hidden">
+                  <div className="relative h-44 bg-stone-100 overflow-hidden group">
                     <img
                       src={listing.imageUrl}
                       alt={listing.title}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                      onClick={() => setInspectingListing(listing)}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/30 pointer-events-none" />
 
                     {/* Checkbox Selector */}
                     <button
@@ -631,45 +736,49 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
                   {/* Body Content */}
                   <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                    <div className="space-y-1.5">
-                      <h4 className="font-serif font-bold text-sm text-[#2D362E] line-clamp-1">
-                        {listing.title}
-                      </h4>
-                      <p className="text-xs text-[#606C5D] flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-[#4A5D4E] shrink-0" />
-                        <span className="line-clamp-1">{listing.address}, {listing.city}, {listing.state} {listing.zip}</span>
-                      </p>
+                    <div className="space-y-2">
+                      <div className="cursor-pointer" onClick={() => setInspectingListing(listing)}>
+                        <h4 className="font-serif font-bold text-sm text-[#2D362E] line-clamp-1 hover:text-[#4A5D4E]">
+                          {listing.title}
+                        </h4>
+                        <p className="text-xs text-[#606C5D] flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 text-[#4A5D4E] shrink-0" />
+                          <span className="line-clamp-1">{listing.address}, {listing.city}, {listing.state} {listing.zip}</span>
+                        </p>
+                      </div>
 
                       {/* GIS Overlay Eligibility Pills */}
-                      <div className="flex items-center gap-1 flex-wrap pt-1">
-                        {listing.overlayEligibility?.usdaEligible && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            USDA 0% Down
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        {badges.map(badge => (
+                          <span
+                            key={badge.id}
+                            title={badge.description}
+                            className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${badge.bgClass} ${badge.textClass} ${badge.borderClass}`}
+                          >
+                            {badge.shortLabel}
                           </span>
-                        )}
-                        {listing.overlayEligibility?.lmiEligible && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200">
-                            OHCS LMI ({listing.overlayEligibility.lmiPercentage || 75}%)
-                          </span>
-                        )}
-                        {listing.overlayEligibility?.targetedArea && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-stone-100 text-stone-800 border border-stone-300">
-                            Targeted Area
-                          </span>
-                        )}
+                        ))}
                         {listing.overlayEligibility?.countyName && (
                           <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-[#FAF9F5] text-[#606C5D] border border-[#EAE7E0]">
-                            {listing.overlayEligibility.countyName} County
+                            {listing.overlayEligibility.countyName} Co.
                           </span>
                         )}
+                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-[#FAF9F5] text-[#606C5D] border border-[#EAE7E0]">
+                          {listing.propertyType}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Publish Toggle Button */}
+                    {/* Card Footer: View Details & Publish Toggle */}
                     <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
-                      <span className="text-[11px] text-[#606C5D]">
-                        Tax: {formatUSD(listing.propertyTaxAnnual || Math.round(listing.price * 0.009))}/yr
-                      </span>
+                      <button
+                        onClick={() => setInspectingListing(listing)}
+                        className="text-[11px] font-semibold text-[#4A5D4E] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>Inspect GIS</span>
+                      </button>
+
                       <button
                         onClick={() => handleToggleSinglePublish(listing.id)}
                         className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -717,6 +826,191 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
         )}
       </div>
 
+      {/* Full Property GIS & Financing Audit Modal */}
+      {inspectingListing && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-[#EAE7E0] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>GeoSphere Oregon GIS Audit & Screening</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-serif font-bold text-[#2D362E]">
+                  {inspectingListing.title}
+                </h3>
+                <p className="text-xs text-[#606C5D] flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                  <span>{inspectingListing.address}, {inspectingListing.city}, {inspectingListing.state} {inspectingListing.zip}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setInspectingListing(null)}
+                className="text-stone-400 hover:text-stone-600 p-1.5 rounded-xl hover:bg-stone-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Photo & Key Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="relative h-48 rounded-2xl overflow-hidden bg-stone-100">
+                <img
+                  src={inspectingListing.imageUrl}
+                  alt={inspectingListing.title}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg bg-black/80 text-white font-serif font-bold text-sm">
+                  {formatUSD(inspectingListing.price)}
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-[#606C5D]">Property Type:</span>
+                    <strong className="text-[#2D362E]">{inspectingListing.propertyType}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#606C5D]">Beds / Baths:</span>
+                    <strong className="text-[#2D362E]">{inspectingListing.beds} beds • {inspectingListing.baths} baths</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#606C5D]">Square Footage:</span>
+                    <strong className="text-[#2D362E]">{inspectingListing.sqft.toLocaleString()} sq ft</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#606C5D]">Year Built:</span>
+                    <strong className="text-[#2D362E]">{inspectingListing.yearBuilt}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#606C5D]">Days on Market:</span>
+                    <strong className="text-[#2D362E]">{inspectingListing.daysOnMarket} days</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#606C5D]">Estimated Property Tax:</span>
+                    <strong className="text-[#2D362E]">{formatUSD(inspectingListing.propertyTaxAnnual)}/yr</strong>
+                  </div>
+                </div>
+
+                {inspectingListing.mlsNumber && (
+                  <div className="p-2.5 rounded-xl bg-stone-50 border border-stone-200 text-[11px] space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-stone-500">MLS ID:</span>
+                      <strong className="text-stone-800">{inspectingListing.mlsNumber} ({inspectingListing.mlsName || "RMLS"})</strong>
+                    </div>
+                    {inspectingListing.listingAgent?.name && (
+                      <div className="flex justify-between">
+                        <span className="text-stone-500">Listing Agent:</span>
+                        <span className="text-stone-800 font-medium">{inspectingListing.listingAgent.name}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Complete GIS Overlay Audit Report */}
+            <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#2D362E] flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#4A5D4E]" />
+                <span>GIS Overlay Screening & Grant Classification</span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* USDA Rural Status */}
+                <div className="p-3 rounded-xl bg-white border border-[#EAE7E0] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#2D362E]">USDA Rural Housing (0% Down)</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isUsdaEligible(inspectingListing) ? "bg-emerald-100 text-emerald-800" : "bg-stone-100 text-stone-600"
+                    }`}>
+                      {isUsdaEligible(inspectingListing) ? "✓ 100% Eligible" : "Ineligible Area"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#606C5D]">
+                    {isUsdaEligible(inspectingListing) 
+                      ? "Located outside USDA ineligible metro polygons. Qualifies for 100% 0% down financing." 
+                      : "Located within USDA urban exclusion polygon."}
+                  </p>
+                </div>
+
+                {/* OHCS LMI Census Tract */}
+                <div className="p-3 rounded-xl bg-white border border-[#EAE7E0] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#2D362E]">OHCS LMI Census Tract</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isLmiEligible(inspectingListing) ? "bg-amber-100 text-amber-900" : "bg-stone-100 text-stone-600"
+                    }`}>
+                      {isLmiEligible(inspectingListing) ? "✓ LMI Approved" : "Standard Tract"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#606C5D]">
+                    {isLmiEligible(inspectingListing)
+                      ? `Census tract eligible for enhanced OHCS Flex Lending cash assistance grants (≤80% AMI).`
+                      : "Standard census tract without special income-based overlay waivers."}
+                  </p>
+                </div>
+
+                {/* FirstHome Targeted / Non-Targeted Area */}
+                <div className="p-3 rounded-xl bg-white border border-[#EAE7E0] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#2D362E]">FirstHome Area Status</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-900">
+                      {isTargetedArea(inspectingListing) ? "Targeted Area" : "Non-Targeted"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#606C5D]">
+                    {inspectingListing.overlayEligibility?.firstHome?.targetedAreaDetails || 
+                      (isTargetedArea(inspectingListing) ? "Targeted area with elevated purchase limits." : "Standard non-targeted county limits apply.")}
+                  </p>
+                </div>
+
+                {/* Purchase Price Cap Eligibility */}
+                <div className="p-3 rounded-xl bg-white border border-[#EAE7E0] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#2D362E]">FirstHome Price Cap</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isFirstHomePriceEligible(inspectingListing) ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                    }`}>
+                      {isFirstHomePriceEligible(inspectingListing) ? "✓ Under Limit" : "Exceeds Limit"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#606C5D]">
+                    County Cap: {formatUSD(inspectingListing.overlayEligibility?.firstHomePriceCap || inspectingListing.overlayEligibility?.firstHome?.priceLimit || 692211)} • Listing: {formatUSD(inspectingListing.price)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <button
+                onClick={() => setInspectingListing(null)}
+                className="px-4 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs cursor-pointer"
+              >
+                Close
+              </button>
+
+              <button
+                onClick={() => {
+                  handleToggleSinglePublish(inspectingListing.id);
+                  setInspectingListing(prev => prev ? { ...prev, isPubliclyPublished: !prev.isPubliclyPublished } : null);
+                }}
+                className={`px-5 py-2.5 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
+                  inspectingListing.isPubliclyPublished
+                    ? "bg-stone-200 text-stone-800 hover:bg-stone-300"
+                    : "bg-[#4A5D4E] hover:bg-[#38463B] text-white"
+                }`}
+              >
+                {inspectingListing.isPubliclyPublished ? "Unpublish from Public Site" : "Publish to Public Site"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* JSON / Snapshot Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -736,7 +1030,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                   setShowImportModal(false);
                   setImportError(null);
                 }}
-                className="text-stone-400 hover:text-stone-600 p-1"
+                className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -749,49 +1043,52 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
               </div>
             )}
 
-            {/* File Upload Button */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-[#2D362E] block">Option 1: Upload JSON File</label>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept=".json,.geojson"
-                onChange={handleFileUpload}
-                className="w-full text-xs text-[#606C5D] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#FAF9F5] file:text-[#2D362E] hover:file:bg-[#F1EFE9] file:cursor-pointer"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-[#2D362E] block mb-1.5">
+                  1. Upload .json File
+                </label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept=".json"
+                  className="w-full text-xs p-2 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#4A5D4E] file:text-white cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#2D362E] block mb-1.5">
+                  2. Or Paste Raw JSON Payload Below
+                </label>
+                <textarea
+                  rows={8}
+                  value={jsonPasteContent}
+                  onChange={(e) => {
+                    setJsonPasteContent(e.target.value);
+                    setImportError(null);
+                  }}
+                  placeholder='Paste JSON here (e.g. {"pulls": [...]}, {"overlaySets": {"all": [...], "lmi": [...], "usda": [...]}} or array of listings)...'
+                  className="w-full text-xs font-mono p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] focus:bg-white focus:ring-1 focus:ring-[#4A5D4E] outline-none"
+                />
+              </div>
             </div>
 
-            {/* Paste Box */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-[#2D362E] block">Option 2: Paste JSON Content</label>
-              <textarea
-                value={jsonPasteContent}
-                onChange={(e) => {
-                  setJsonPasteContent(e.target.value);
-                  setImportError(null);
-                }}
-                rows={8}
-                placeholder='Paste raw JSON here (e.g. { "pulls": [...] } or [ { "formattedAddress": "...", "price": ... } ])'
-                className="w-full text-xs p-3 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] font-mono outline-none focus:bg-white focus:ring-1 focus:ring-[#4A5D4E]"
-              />
-            </div>
-
-            {/* Modal Actions */}
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => {
                   setShowImportModal(false);
                   setImportError(null);
                 }}
-                className="px-4 py-2 rounded-xl bg-[#FAF9F5] text-[#606C5D] font-bold text-xs hover:bg-[#F1EFE9]"
+                className="px-4 py-2 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleImportJson}
-                className="px-5 py-2 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs shadow-xs"
+                className="px-5 py-2 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
               >
-                Import & Sync Listings
+                Parse & Import Listings
               </button>
             </div>
           </div>

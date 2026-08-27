@@ -14,7 +14,10 @@ import {
   Check,
   Search,
   SlidersHorizontal,
-  X
+  X,
+  ExternalLink,
+  AlertCircle,
+  Info
 } from "lucide-react";
 import { PropertyListing, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { formatUSD, calculateMonthlyPI } from "../utils/mortgageMath";
@@ -30,9 +33,11 @@ import {
   calculateOverlayCounts, 
   getListingOverlayBadges,
   hasAuthenticPropertyPhoto,
-  filterListings
+  filterListings,
+  getZillowUrl
 } from "../utils/overlayClassification";
 import { OREGON_COUNTY_PRICE_LIMITS, normalizeOregonCounty, getPropertyOhcsPriceLimit } from "../utils/ohcsPurchaseLimits";
+import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 
 interface CuratedHomesSectionProps {
   properties: PropertyListing[];
@@ -165,6 +170,9 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
             </select>
           </div>
         </div>
+
+        {/* Screening Aid & Point-in-Time Snapshot Disclaimer Banner */}
+        <ScreeningDisclaimerBanner variant="compact" />
 
         {/* Overlay Filter Pills */}
         <div className="flex items-center gap-1.5 flex-wrap pt-1">
@@ -389,11 +397,29 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
                       </div>
                     </div>
 
+                    {/* 1-Click Zillow & Down Payment Aid Action Row */}
                     <div className="flex items-center justify-between gap-2 pt-1">
                       <span className="text-xs font-bold text-[#4A5D4E] group-hover:underline flex items-center gap-1.5">
-                        <span>Calculate Down Payment Aid</span>
+                        <span>Calculate DPA Aid</span>
                         <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                       </span>
+
+                      <a
+                        href={getZillowUrl(property)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 border border-blue-200 text-xs font-bold transition-all shadow-2xs cursor-pointer shrink-0"
+                        title={`Open ${property.address} live listing on Zillow.com`}
+                      >
+                        <span>View on Zillow</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+
+                    <div className="text-[10px] text-[#9A9488] flex items-center gap-1 justify-between pt-0.5 border-t border-[#EAE7E0]/40">
+                      <span className="truncate">Screening snapshot • Not a loan approval</span>
+                      <span className="text-blue-600 font-semibold shrink-0">Verify on Zillow ↗</span>
                     </div>
                   </div>
                 </div>

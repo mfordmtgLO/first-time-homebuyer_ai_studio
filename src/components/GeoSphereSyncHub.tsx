@@ -44,9 +44,11 @@ import {
   calculateOverlayCounts, 
   filterListings, 
   getListingOverlayBadges,
-  hasAuthenticPropertyPhoto 
+  hasAuthenticPropertyPhoto,
+  getZillowUrl
 } from "../utils/overlayClassification";
 import { getPropertyOhcsPriceLimit, OREGON_COUNTY_PRICE_LIMITS, normalizeOregonCounty } from "../utils/ohcsPurchaseLimits";
+import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 
 interface GeoSphereSyncHubProps {
   guidesState: ProfessionalGuidesState;
@@ -490,6 +492,9 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
       {/* Filter Tabs, Search Bar, and Batch Operations */}
       <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 space-y-6 shadow-xs">
+        {/* Screening Aid Disclaimer Banner */}
+        <ScreeningDisclaimerBanner variant="compact" />
+
         {/* Top Controls: Overlay Filter Pills */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -812,13 +817,25 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
                     {/* Card Footer: View Details & Publish Toggle */}
                     <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
-                      <button
-                        onClick={() => setInspectingListing(listing)}
-                        className="text-[11px] font-semibold text-[#4A5D4E] hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <Eye className="w-3 h-3" />
-                        <span>Inspect GIS</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setInspectingListing(listing)}
+                          className="text-[11px] font-semibold text-[#4A5D4E] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>Inspect GIS</span>
+                        </button>
+
+                        <a
+                          href={getZillowUrl(listing)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-0.5 cursor-pointer"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>Zillow</span>
+                        </a>
+                      </div>
 
                       <button
                         onClick={() => handleToggleSinglePublish(listing.id)}
@@ -1058,27 +1075,39 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
               <button
                 onClick={() => setInspectingListing(null)}
-                className="px-4 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs cursor-pointer"
               >
                 Close
               </button>
 
-              <button
-                onClick={() => {
-                  handleToggleSinglePublish(inspectingListing.id);
-                  setInspectingListing(prev => prev ? { ...prev, isPubliclyPublished: !prev.isPubliclyPublished } : null);
-                }}
-                className={`px-5 py-2.5 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
-                  inspectingListing.isPubliclyPublished
-                    ? "bg-stone-200 text-stone-800 hover:bg-stone-300"
-                    : "bg-[#4A5D4E] hover:bg-[#38463B] text-white"
-                }`}
-              >
-                {inspectingListing.isPubliclyPublished ? "Unpublish from Public Site" : "Publish to Public Site"}
-              </button>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <a
+                  href={getZillowUrl(inspectingListing)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto inline-flex justify-center items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 border border-blue-200 text-xs font-bold transition-colors cursor-pointer shrink-0"
+                >
+                  <span>Open on Zillow</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+
+                <button
+                  onClick={() => {
+                    handleToggleSinglePublish(inspectingListing.id);
+                    setInspectingListing(prev => prev ? { ...prev, isPubliclyPublished: !prev.isPubliclyPublished } : null);
+                  }}
+                  className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
+                    inspectingListing.isPubliclyPublished
+                      ? "bg-stone-200 text-stone-800 hover:bg-stone-300"
+                      : "bg-[#4A5D4E] hover:bg-[#38463B] text-white"
+                  }`}
+                >
+                  {inspectingListing.isPubliclyPublished ? "Unpublish from Public Site" : "Publish to Public Site"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

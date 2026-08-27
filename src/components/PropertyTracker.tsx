@@ -13,7 +13,8 @@ import {
   ArrowRight,
   Sparkles,
   Layers,
-  X
+  X,
+  ExternalLink
 } from "lucide-react";
 import { PropertyListing, FinancialProfile } from "../types";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
@@ -26,9 +27,11 @@ import {
   isLmiUsdaDual,
   isTargetedArea,
   isNonTargetedArea,
-  isFirstHomePriceEligible
+  isFirstHomePriceEligible,
+  getZillowUrl
 } from "../utils/overlayClassification";
 import { getPropertyOhcsPriceLimit, OREGON_COUNTY_PRICE_LIMITS } from "../utils/ohcsPurchaseLimits";
+import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 
 interface PropertyTrackerProps {
   properties: PropertyListing[];
@@ -188,6 +191,9 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             </button>
           ))}
         </div>
+
+        {/* Screening Aid Disclaimer Banner */}
+        <ScreeningDisclaimerBanner variant="compact" />
       </div>
 
       {/* Property Cards Grid */}
@@ -423,35 +429,61 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               </div>
 
               {/* Action Buttons Footer */}
-              <div className="p-4 bg-[#F1EFE9]/60 border-t border-[#EAE7E0] flex items-center gap-2">
-                <button
-                  onClick={() => onOpenScorecard(property)}
-                  className="flex-1 py-2 px-3 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#2D362E] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-[#EAE7E0]"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#4A5D4E]" />
-                  <span>{property.scorecard ? "Edit Scorecard" : "Tour Scorecard"}</span>
-                </button>
+              <div className="p-3 bg-[#F1EFE9]/60 border-t border-[#EAE7E0] space-y-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onOpenScorecard(property)}
+                    className="flex-1 py-2 px-3 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#2D362E] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-[#EAE7E0]"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                    <span>{property.scorecard ? "Scorecard" : "Tour Scorecard"}</span>
+                  </button>
 
-                <button
-                  onClick={() => onAskAiAboutProperty(property)}
-                  className="py-2 px-3 rounded-xl bg-[#4A5D4E]/10 hover:bg-[#4A5D4E]/20 text-[#4A5D4E] text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-[#4A5D4E]/20"
-                  title="Generate offer strategy with Gemini"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
-                  <span className="hidden sm:inline">Offer AI</span>
-                </button>
+                  <button
+                    onClick={() => onAskAiAboutProperty(property)}
+                    className="py-2 px-2.5 rounded-xl bg-[#4A5D4E]/10 hover:bg-[#4A5D4E]/20 text-[#4A5D4E] text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-[#4A5D4E]/20"
+                    title="Generate offer strategy with Gemini"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
+                    <span className="hidden sm:inline">Offer AI</span>
+                  </button>
 
-                <button
-                  onClick={(e) => toggleCompare(property.id, e)}
-                  className={`p-2 rounded-xl border text-xs font-semibold transition-colors ${
-                    isSelectedForCompare
-                      ? "bg-[#C18C5D] text-white border-[#C18C5D]"
-                      : "bg-white text-[#606C5D] border-[#EAE7E0] hover:text-[#2D362E]"
-                  }`}
-                  title={isSelectedForCompare ? "Remove from comparison" : "Add to comparison"}
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                </button>
+                  <a
+                    href={getZillowUrl(property)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="py-2 px-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-blue-200"
+                    title={`Open ${property.address} on Zillow.com in a new tab`}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Zillow</span>
+                  </a>
+
+                  <button
+                    onClick={(e) => toggleCompare(property.id, e)}
+                    className={`p-2 rounded-xl border text-xs font-semibold transition-colors ${
+                      isSelectedForCompare
+                        ? "bg-[#C18C5D] text-white border-[#C18C5D]"
+                        : "bg-white text-[#606C5D] border-[#EAE7E0] hover:text-[#2D362E]"
+                    }`}
+                    title={isSelectedForCompare ? "Remove from comparison" : "Add to comparison"}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="text-[10px] text-[#9A9488] flex items-center justify-between px-1">
+                  <span>Snapshot in time</span>
+                  <a 
+                    href={getZillowUrl(property)} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline font-semibold"
+                  >
+                    Live on Zillow ↗
+                  </a>
+                </div>
               </div>
             </div>
           );
@@ -571,6 +603,22 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                     {comparedProperties.map(p => (
                       <td key={p.id} className="p-3 text-[#2D362E]">
                         {p.scorecard ? formatUSD(p.scorecard.estimatedRenovationCost) : "Unknown"}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-[#606C5D]">Live MLS / Zillow</td>
+                    {comparedProperties.map(p => (
+                      <td key={p.id} className="p-3">
+                        <a
+                          href={getZillowUrl(p)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200 transition-colors"
+                        >
+                          <span>Open on Zillow</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
                       </td>
                     ))}
                   </tr>

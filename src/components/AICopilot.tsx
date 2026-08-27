@@ -11,10 +11,12 @@ import {
   ArrowRight,
   CheckCircle2,
   DollarSign,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink
 } from "lucide-react";
 import { FinancialProfile, PropertyListing, ChatMessage } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
+import { getZillowUrl } from "../utils/overlayClassification";
 
 interface AICopilotProps {
   profile: FinancialProfile;
@@ -326,6 +328,21 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => 
                   ))}
                   <option value="custom">Custom Property...</option>
                 </select>
+
+                {selectedPropertyId !== "custom" && properties.find(p => p.id === selectedPropertyId) && (
+                  <div className="pt-1.5 flex justify-end">
+                    <a
+                      href={getZillowUrl(properties.find(p => p.id === selectedPropertyId)!)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold border border-blue-200 transition-colors"
+                      title="Open selected property live on Zillow.com"
+                    >
+                      <span>View on Zillow</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
               </div>
 
               {selectedPropertyId === "custom" && (

@@ -15,12 +15,14 @@ import {
   Users,
   Calendar,
   Compass,
-  RotateCcw
+  RotateCcw,
+  ExternalLink
 } from "lucide-react";
 import { FinancialProfile, PropertyListing, RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
-import { hasAuthenticPropertyPhoto } from "../utils/overlayClassification";
+import { hasAuthenticPropertyPhoto, getZillowUrl } from "../utils/overlayClassification";
 import { SavingsGoalTracker } from "./SavingsGoalTracker";
+import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 
 interface DashboardOverviewProps {
   profile: FinancialProfile;
@@ -110,6 +112,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Official Screening Aid & Snapshot Disclaimer Banner */}
+      <ScreeningDisclaimerBanner variant="full" />
 
       {/* 4-Stat Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -285,13 +290,24 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   </p>
                 </div>
 
-                <div className="text-right shrink-0 sm:self-center">
+                <div className="text-right shrink-0 sm:self-center flex flex-col sm:items-end gap-1.5">
                   <div className="text-sm font-bold text-[#2D362E]">
                     {formatUSD(property.price)}
                   </div>
                   <span className="text-[11px] text-[#9A9488]">
                     {property.beds}b • {property.baths}ba • {property.sqft} sqft
                   </span>
+                  <a
+                    href={getZillowUrl(property)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold border border-blue-200 transition-colors"
+                    title={`Open ${property.address} live on Zillow.com`}
+                  >
+                    <span>Zillow</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
                 </div>
               </div>
             ))}

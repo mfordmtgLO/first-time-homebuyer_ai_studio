@@ -417,3 +417,43 @@ export function filterListings(
     return true;
   });
 }
+
+/**
+ * Builds a direct, live Zillow URL for any property listing based on its address or custom zillowUrl.
+ */
+export function getZillowUrl(property?: { 
+  address?: string; 
+  city?: string; 
+  state?: string; 
+  zip?: string; 
+  zillowUrl?: string;
+  mlsNumber?: string;
+} | null): string {
+  if (!property) return "https://www.zillow.com";
+  if (property.zillowUrl && property.zillowUrl.startsWith("http")) {
+    return property.zillowUrl;
+  }
+  const parts = [property.address, property.city, property.state, property.zip].filter(Boolean);
+  if (parts.length === 0) {
+    if (property.mlsNumber) {
+      return `https://www.zillow.com/homes/${encodeURIComponent(property.mlsNumber)}_rb/`;
+    }
+    return "https://www.zillow.com";
+  }
+  const query = encodeURIComponent(parts.join(", "));
+  return `https://www.zillow.com/homes/${query}_rb/`;
+}
+
+/**
+ * Authoritative point-in-time screening aid disclaimer copy.
+ */
+export const SCREENING_DISCLAIMER_COPY = {
+  shortWarning: "Screening Aid Only • Point-in-Time Database Snapshot",
+  compactNotice: "This platform is an educational pre-screening aid, not a formal loan approval or commitment to lend. Property records and GIS overlay eligibility are snapshots in time—not an indication of verified current active, pending, or sold live MLS status. Always verify live market availability on Zillow.com and consult your licensed Loan Officer.",
+  bulletPoints: [
+    "Pre-screening aid only — does not constitute a loan pre-approval, rate lock, or lender commitment.",
+    "Property records and prices are historical snapshots in time, not real-time verified MLS market status.",
+    "Homes may be under contract, contingent, price-adjusted, or sold; check live status directly on Zillow.com."
+  ]
+};
+

@@ -106,6 +106,7 @@ export interface PropertyListing {
   syncedAt?: string;
   mlsNumber?: string;
   mlsName?: string;
+  zillowUrl?: string;
   listingAgent?: {
     name?: string;
     phone?: string;

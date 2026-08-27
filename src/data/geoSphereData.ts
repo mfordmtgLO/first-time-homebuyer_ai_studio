@@ -12736,7 +12736,7 @@ export function parseGeoSpherePayload(data: any): PropertyListing[] {
         sqft: Number(item.squareFootage ?? item.sqft) || 1500,
         yearBuilt: Number(item.yearBuilt) || 2016,
         propertyType,
-        imageUrl: item.imageUrl || (item.photos && item.photos[0]) || `https://images.unsplash.com/photo-${1564013799919 + (idx % 10) * 100000}?auto=format&fit=crop&w=1200&q=80`,
+        imageUrl: (item.photos && item.photos[0] && !item.photos[0].includes('unsplash.com')) ? item.photos[0] : (item.imageUrl && !item.imageUrl.includes('unsplash.com') ? item.imageUrl : undefined),
         status: 'saved',
         notes: item.notes || `MLS #${item.mlsNumber || 'OR-GIS'}. ${usda ? 'USDA 100% Financing (0% Down). ' : ''}${lmi ? 'OHCS LMI Tract Qualified. ' : ''}${firstHome?.targetedAreaDetails || ''}`.trim(),
         daysOnMarket: Number(item.daysOnMarket) || 12,

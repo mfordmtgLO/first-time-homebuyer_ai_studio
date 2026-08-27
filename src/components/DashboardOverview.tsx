@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { FinancialProfile, PropertyListing, RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
+import { hasAuthenticPropertyPhoto } from "../utils/overlayClassification";
 import { SavingsGoalTracker } from "./SavingsGoalTracker";
 
 interface DashboardOverviewProps {
@@ -245,11 +246,18 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 onClick={() => onNavigate("properties", "dashboard")}
                 className="group cursor-pointer bg-white hover:bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] hover:border-[#DEDAD2] p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all shadow-sm"
               >
-                <img
-                  src={property.imageUrl}
-                  alt={property.title}
-                  className="w-full sm:w-24 h-20 object-cover rounded-xl shrink-0"
-                />
+                {hasAuthenticPropertyPhoto(property) ? (
+                  <img
+                    src={property.imageUrl}
+                    alt={property.title}
+                    className="w-full sm:w-24 h-20 object-cover rounded-xl shrink-0"
+                  />
+                ) : (
+                  <div className="w-full sm:w-20 h-16 bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl flex flex-col items-center justify-center text-[#4A5D4E] shrink-0 p-2 text-center group-hover:border-[#4A5D4E]/40 transition-colors">
+                    <Building className="w-5 h-5 mb-1 text-[#4A5D4E]" />
+                    <span className="text-[9px] font-bold text-[#606C5D] truncate max-w-full">{property.propertyType}</span>
+                  </div>
+                )}
 
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2">

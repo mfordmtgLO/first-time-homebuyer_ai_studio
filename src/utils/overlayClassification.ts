@@ -1,6 +1,20 @@
 import { PropertyListing, OverlayEligibility } from "../types";
 
 /**
+ * Checks whether a property has an authentic photo from an active MLS/RentCast feed or real upload,
+ * rather than a generic stock photo placeholder.
+ */
+export function hasAuthenticPropertyPhoto(listing?: PropertyListing | null): boolean {
+  if (!listing || !listing.imageUrl) return false;
+  const url = String(listing.imageUrl).trim().toLowerCase();
+  if (!url) return false;
+  if (url.includes("unsplash.com") || url.includes("placeholder") || url.includes("images.unsplash")) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Checks whether a property is eligible for USDA Rural Development 100% (0% down) financing.
  * In GeoSphere Oregon GIS, USDA source polygons represent ineligible urban areas,
  * so listings situated outside those boundaries are classified as USDA RD eligible.

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PropertyListing, FinancialProfile } from "../types";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
+import { hasAuthenticPropertyPhoto } from "../utils/overlayClassification";
 
 interface PropertyTrackerProps {
   properties: PropertyListing[];
@@ -142,6 +143,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           const estPI = calculateMonthlyPI(loanAmt, profile.interestRate, profile.loanTermYears);
           const estMonthly = estPI + Math.round(property.propertyTaxAnnual / 12) + Math.round(profile.annualHomeInsurance / 12) + property.hoaMonthly;
           const isSelectedForCompare = compareIds.includes(property.id);
+          const hasPhoto = hasAuthenticPropertyPhoto(property);
 
           return (
             <div
@@ -149,63 +151,118 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               className="bg-white rounded-2xl border border-[#EAE7E0] overflow-hidden flex flex-col justify-between hover:border-[#4A5D4E] transition-all shadow-sm group"
             >
               <div>
-                {/* Photo Header */}
-                <div className="relative h-48 w-full overflow-hidden bg-[#F1EFE9]">
-                  <img
-                    src={property.imageUrl}
-                    alt={property.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
+                {hasPhoto ? (
+                  /* Real Photo Header (Only rendered when authentic photo exists) */
+                  <div className="relative h-48 w-full overflow-hidden bg-[#F1EFE9]">
+                    <img
+                      src={property.imageUrl}
+                      alt={property.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
 
-                  {/* Status badge */}
-                  <div className="absolute top-3 left-3 flex items-center gap-2">
-                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shadow-sm ${
-                      property.status === "offered"
-                        ? "bg-[#C18C5D] text-white"
-                        : property.status === "touring"
-                        ? "bg-[#4A5D4E] text-white"
-                        : "bg-white/90 text-[#2D362E] backdrop-blur-md"
-                    }`}>
-                      {property.status}
-                    </span>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 text-[#606C5D] backdrop-blur-md">
-                      {property.propertyType}
-                    </span>
-                  </div>
-
-                  {/* Top Right Action Buttons */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                    <button
-                      onClick={(e) => toggleFavorite(property.id, e)}
-                      className={`p-2 rounded-xl backdrop-blur-md border transition-colors ${
-                        property.isFavorite
-                          ? "bg-white text-[#C18C5D] border-[#C18C5D]"
-                          : "bg-white/80 text-[#606C5D] border-white/60 hover:text-[#2D362E]"
-                      }`}
-                    >
-                      <Star className={`w-4 h-4 ${property.isFavorite ? "fill-[#C18C5D]" : ""}`} />
-                    </button>
-                    <button
-                      onClick={(e) => deleteProperty(property.id, e)}
-                      className="p-2 rounded-xl bg-white/80 text-[#606C5D] hover:text-rose-600 border border-white/60 backdrop-blur-md transition-colors"
-                      title="Remove property"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Price overlay at bottom of photo */}
-                  <div className="absolute bottom-3 left-3 right-3 flex items-baseline justify-between text-white">
-                    <div>
-                      <span className="text-xl font-bold">{formatUSD(property.price)}</span>
-                      <span className="text-[11px] text-white/80 ml-1.5">(${Math.round(property.price / property.sqft)}/sqft)</span>
+                    {/* Status badge */}
+                    <div className="absolute top-3 left-3 flex items-center gap-2">
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shadow-sm ${
+                        property.status === "offered"
+                          ? "bg-[#C18C5D] text-white"
+                          : property.status === "touring"
+                          ? "bg-[#4A5D4E] text-white"
+                          : "bg-white/90 text-[#2D362E] backdrop-blur-md"
+                      }`}>
+                        {property.status}
+                      </span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 text-[#606C5D] backdrop-blur-md">
+                        {property.propertyType}
+                      </span>
                     </div>
-                    <span className="text-xs font-semibold text-white bg-[#4A5D4E]/90 px-2 py-0.5 rounded-md shadow-2xs backdrop-blur-xs">
-                      Est. {formatUSD(estMonthly)}/mo
-                    </span>
+
+                    {/* Top Right Action Buttons */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                      <button
+                        onClick={(e) => toggleFavorite(property.id, e)}
+                        className={`p-2 rounded-xl backdrop-blur-md border transition-colors ${
+                          property.isFavorite
+                            ? "bg-white text-[#C18C5D] border-[#C18C5D]"
+                            : "bg-white/80 text-[#606C5D] border-white/60 hover:text-[#2D362E]"
+                        }`}
+                      >
+                        <Star className={`w-4 h-4 ${property.isFavorite ? "fill-[#C18C5D]" : ""}`} />
+                      </button>
+                      <button
+                        onClick={(e) => deleteProperty(property.id, e)}
+                        className="p-2 rounded-xl bg-white/80 text-[#606C5D] hover:text-rose-600 border border-white/60 backdrop-blur-md transition-colors"
+                        title="Remove property"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Price overlay at bottom of photo */}
+                    <div className="absolute bottom-3 left-3 right-3 flex items-baseline justify-between text-white">
+                      <div>
+                        <span className="text-xl font-bold">{formatUSD(property.price)}</span>
+                        <span className="text-[11px] text-white/80 ml-1.5">(${Math.round(property.price / property.sqft)}/sqft)</span>
+                      </div>
+                      <span className="text-xs font-semibold text-white bg-[#4A5D4E]/90 px-2 py-0.5 rounded-md shadow-2xs backdrop-blur-xs">
+                        Est. {formatUSD(estMonthly)}/mo
+                      </span>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* Architectural Header (No Stock Photos - High-Craft Data Card) */
+                  <div className="bg-[#FAF9F5] border-b border-[#EAE7E0] p-5 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shadow-xs ${
+                          property.status === "offered"
+                            ? "bg-[#C18C5D] text-white"
+                            : property.status === "touring"
+                            ? "bg-[#4A5D4E] text-white"
+                            : "bg-white text-[#4A5D4E] border border-[#EAE7E0]"
+                        }`}>
+                          {property.status}
+                        </span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white text-[#606C5D] border border-[#EAE7E0]">
+                          {property.propertyType}
+                        </span>
+                      </div>
+
+                      {/* Top Right Action Buttons */}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={(e) => toggleFavorite(property.id, e)}
+                          className={`p-1.5 rounded-xl border transition-colors ${
+                            property.isFavorite
+                              ? "bg-white text-[#C18C5D] border-[#C18C5D]"
+                              : "bg-white text-[#606C5D] border-[#EAE7E0] hover:text-[#2D362E]"
+                          }`}
+                          title="Save favorite"
+                        >
+                          <Star className={`w-3.5 h-3.5 ${property.isFavorite ? "fill-[#C18C5D]" : ""}`} />
+                        </button>
+                        <button
+                          onClick={(e) => deleteProperty(property.id, e)}
+                          className="p-1.5 rounded-xl bg-white text-[#606C5D] hover:text-rose-600 border border-[#EAE7E0] transition-colors"
+                          title="Remove property"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Price and Est Monthly Badge */}
+                    <div className="flex items-baseline justify-between pt-1">
+                      <div>
+                        <span className="text-2xl font-bold font-serif text-[#2D362E]">{formatUSD(property.price)}</span>
+                        <span className="text-xs text-[#9A9488] ml-1.5">(${Math.round(property.price / property.sqft)}/sqft)</span>
+                      </div>
+                      <span className="text-xs font-bold text-[#4A5D4E] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg shadow-2xs">
+                        Est. {formatUSD(estMonthly)}/mo
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Body Content */}
                 <div className="p-5 space-y-4">

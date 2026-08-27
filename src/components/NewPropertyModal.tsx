@@ -14,17 +14,17 @@ export const NewPropertyModal: React.FC<NewPropertyModalProps> = ({
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState(450000);
   const [address, setAddress] = useState("");
-  const [city, setCity] = useState("Austin");
-  const [state, setState] = useState("TX");
-  const [zip, setZip] = useState("78704");
+  const [city, setCity] = useState("Coos Bay");
+  const [state, setState] = useState("OR");
+  const [zip, setZip] = useState("97420");
   const [beds, setBeds] = useState(3);
   const [baths, setBaths] = useState(2);
-  const [sqft, setSqft] = useState(1750);
-  const [yearBuilt, setYearBuilt] = useState(2012);
-  const [hoaMonthly, setHoaMonthly] = useState(65);
-  const [propertyTaxAnnual, setPropertyTaxAnnual] = useState(5200);
+  const [sqft, setSqft] = useState(1650);
+  const [yearBuilt, setYearBuilt] = useState(2016);
+  const [hoaMonthly, setHoaMonthly] = useState(0);
+  const [propertyTaxAnnual, setPropertyTaxAnnual] = useState(3400);
   const [propertyType, setPropertyType] = useState<PropertyListing["propertyType"]>("Single Family");
-  const [imageUrl, setImageUrl] = useState("https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800&auto=format&fit=crop&q=80");
+  const [imageUrl, setImageUrl] = useState("");
   const [notes, setNotes] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,7 +49,7 @@ export const NewPropertyModal: React.FC<NewPropertyModalProps> = ({
       hoaMonthly,
       propertyTaxAnnual,
       propertyType,
-      imageUrl: imageUrl || "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800&auto=format&fit=crop&q=80",
+      imageUrl: imageUrl.trim() || undefined,
       status: "touring",
       daysOnMarket: 4,
       notes,
@@ -211,9 +211,12 @@ export const NewPropertyModal: React.FC<NewPropertyModalProps> = ({
           </div>
 
           <div>
-            <label className="block font-semibold text-[#606C5D] mb-1">Listing Photo URL</label>
+            <label className="block font-semibold text-[#606C5D] mb-1">
+              Authentic MLS / Listing Photo URL <span className="font-normal text-[#9A9488]">(Optional)</span>
+            </label>
             <input
               type="text"
+              placeholder="Leave blank for clean architectural data card, or paste authentic MLS image URL"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3.5 py-2 text-xs text-[#2D362E] placeholder-[#9A9488]"

@@ -43,7 +43,8 @@ import {
   isFirstHomePriceEligible, 
   calculateOverlayCounts, 
   filterListings, 
-  getListingOverlayBadges 
+  getListingOverlayBadges,
+  hasAuthenticPropertyPhoto 
 } from "../utils/overlayClassification";
 
 interface GeoSphereSyncHubProps {
@@ -683,6 +684,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
               const isSelected = selectedListingIds.includes(listing.id);
               const isPublished = Boolean(listing.isPubliclyPublished);
               const badges = getListingOverlayBadges(listing);
+              const hasPhoto = hasAuthenticPropertyPhoto(listing);
 
               return (
                 <div
@@ -691,48 +693,89 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                     isSelected ? "border-[#4A5D4E] ring-2 ring-[#4A5D4E]/20" : "border-[#EAE7E0] hover:border-stone-400"
                   }`}
                 >
-                  {/* Photo Header & Badges */}
-                  <div className="relative h-44 bg-stone-100 overflow-hidden group">
-                    <img
-                      src={listing.imageUrl}
-                      alt={listing.title}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                      onClick={() => setInspectingListing(listing)}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/30 pointer-events-none" />
+                  {hasPhoto ? (
+                    /* Photo Header & Badges (Authentic photo only) */
+                    <div className="relative h-44 bg-stone-100 overflow-hidden group">
+                      <img
+                        src={listing.imageUrl}
+                        alt={listing.title}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={() => setInspectingListing(listing)}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/30 pointer-events-none" />
 
-                    {/* Checkbox Selector */}
-                    <button
-                      onClick={() => handleToggleSelectListing(listing.id)}
-                      className="absolute top-2.5 left-2.5 z-10 w-6 h-6 rounded-lg bg-white/90 shadow-md flex items-center justify-center cursor-pointer"
-                    >
-                      {isSelected ? (
-                        <CheckSquare className="w-4 h-4 text-[#4A5D4E]" />
-                      ) : (
-                        <Square className="w-4 h-4 text-stone-400" />
-                      )}
-                    </button>
+                      {/* Checkbox Selector */}
+                      <button
+                        onClick={() => handleToggleSelectListing(listing.id)}
+                        className="absolute top-2.5 left-2.5 z-10 w-6 h-6 rounded-lg bg-white/90 shadow-md flex items-center justify-center cursor-pointer"
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="w-4 h-4 text-[#4A5D4E]" />
+                        ) : (
+                          <Square className="w-4 h-4 text-stone-400" />
+                        )}
+                      </button>
 
-                    {/* Publish Status Pill */}
-                    <div className="absolute top-2.5 right-2.5">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs ${
-                        isPublished ? "bg-emerald-700 text-white" : "bg-stone-800 text-stone-200"
-                      }`}>
-                        {isPublished ? "Published on Site" : "Draft (Hidden)"}
-                      </span>
+                      {/* Publish Status Pill */}
+                      <div className="absolute top-2.5 right-2.5">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs ${
+                          isPublished ? "bg-emerald-700 text-white" : "bg-stone-800 text-stone-200"
+                        }`}>
+                          {isPublished ? "Published on Site" : "Draft (Hidden)"}
+                        </span>
+                      </div>
+
+                      {/* Price and Specs */}
+                      <div className="absolute bottom-2.5 left-3 right-3 flex items-baseline justify-between text-white">
+                        <span className="text-xl font-bold font-serif drop-shadow-sm">
+                          {formatUSD(listing.price)}
+                        </span>
+                        <span className="text-xs font-medium text-stone-200 drop-shadow-sm">
+                          {listing.beds}b • {listing.baths}ba • {listing.sqft} sqft
+                        </span>
+                      </div>
                     </div>
+                  ) : (
+                    /* Clean Architectural Header (No Stock Photos) */
+                    <div className="bg-[#FAF9F5] border-b border-[#EAE7E0] p-4 space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        {/* Checkbox Selector & Type */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleToggleSelectListing(listing.id)}
+                            className="w-5 h-5 rounded-md bg-white border border-[#EAE7E0] shadow-2xs flex items-center justify-center cursor-pointer hover:border-[#4A5D4E]"
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-[#4A5D4E]" />
+                            ) : (
+                              <Square className="w-3.5 h-3.5 text-stone-400" />
+                            )}
+                          </button>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#4A5D4E]/10 text-[#4A5D4E] border border-[#4A5D4E]/20">
+                            {listing.propertyType}
+                          </span>
+                        </div>
 
-                    {/* Price and Specs */}
-                    <div className="absolute bottom-2.5 left-3 right-3 flex items-baseline justify-between text-white">
-                      <span className="text-xl font-bold font-serif drop-shadow-sm">
-                        {formatUSD(listing.price)}
-                      </span>
-                      <span className="text-xs font-medium text-stone-200 drop-shadow-sm">
-                        {listing.beds}b • {listing.baths}ba • {listing.sqft} sqft
-                      </span>
+                        {/* Publish Status Pill */}
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-2xs ${
+                          isPublished ? "bg-emerald-700 text-white" : "bg-stone-200 text-stone-700"
+                        }`}>
+                          {isPublished ? "Published" : "Draft"}
+                        </span>
+                      </div>
+
+                      {/* Price & Specs */}
+                      <div className="flex items-baseline justify-between pt-0.5">
+                        <span className="text-xl font-bold font-serif text-[#2D362E]">
+                          {formatUSD(listing.price)}
+                        </span>
+                        <span className="text-xs text-[#606C5D] font-medium">
+                          {listing.beds}b • {listing.baths}ba • {listing.sqft?.toLocaleString()} sqft
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Body Content */}
                   <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
@@ -852,19 +895,37 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
               </button>
             </div>
 
-            {/* Photo & Key Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="relative h-48 rounded-2xl overflow-hidden bg-stone-100">
-                <img
-                  src={inspectingListing.imageUrl}
-                  alt={inspectingListing.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg bg-black/80 text-white font-serif font-bold text-sm">
-                  {formatUSD(inspectingListing.price)}
+            {/* Stats & Overview (Render photo only if authentic) */}
+            <div className={`grid gap-4 ${hasAuthenticPropertyPhoto(inspectingListing) ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+              {hasAuthenticPropertyPhoto(inspectingListing) ? (
+                <div className="relative h-48 rounded-2xl overflow-hidden bg-stone-100">
+                  <img
+                    src={inspectingListing.imageUrl}
+                    alt={inspectingListing.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg bg-black/80 text-white font-serif font-bold text-sm">
+                    {formatUSD(inspectingListing.price)}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Listing Purchase Price</span>
+                    <span className="text-2xl sm:text-3xl font-bold font-serif text-[#2D362E]">{formatUSD(inspectingListing.price)}</span>
+                    <span className="text-xs text-[#9A9488] ml-2">(${Math.round(inspectingListing.price / (inspectingListing.sqft || 1))}/sqft)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#4A5D4E]/10 text-[#4A5D4E] border border-[#4A5D4E]/20">
+                      {inspectingListing.propertyType}
+                    </span>
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white text-[#606C5D] border border-[#EAE7E0]">
+                      {inspectingListing.county || inspectingListing.overlayEligibility?.countyName || "Oregon"}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2 text-xs">
                 <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1.5">

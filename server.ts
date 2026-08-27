@@ -358,7 +358,7 @@ Provide:
             sqft: Number(item.squareFootage ?? item.sqft) || 1500,
             yearBuilt: Number(item.yearBuilt) || 2018,
             propertyType,
-            imageUrl: item.imageUrl || (item.photos && item.photos[0]) || "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1200&q=80",
+            imageUrl: (item.photos && item.photos[0] && !item.photos[0].includes("unsplash.com")) ? item.photos[0] : (item.imageUrl && !item.imageUrl.includes("unsplash.com") ? item.imageUrl : undefined),
             status: "saved",
             notes: `MLS #${item.mlsNumber || "N/A"}. ${usda ? "USDA 100% Financing Eligible. " : ""}${lmi ? "OHCS LMI Tract Approved. " : ""}${firstHome?.targetedAreaDetails || ""}`.trim(),
             daysOnMarket: Number(item.daysOnMarket) || 14,

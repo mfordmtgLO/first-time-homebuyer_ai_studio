@@ -46,6 +46,7 @@ import {
   getListingOverlayBadges,
   hasAuthenticPropertyPhoto 
 } from "../utils/overlayClassification";
+import { getPropertyOhcsPriceLimit, OREGON_COUNTY_PRICE_LIMITS, normalizeOregonCounty } from "../utils/ohcsPurchaseLimits";
 
 interface GeoSphereSyncHubProps {
   guidesState: ProfessionalGuidesState;
@@ -504,11 +505,11 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             {[
               { id: "all", label: `All Database (${overlayCounts.total})` },
-              { id: "usda", label: `USDA 0% Down (${overlayCounts.usda})`, highlight: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-              { id: "lmi", label: `OHCS LMI Tracts (${overlayCounts.lmi})`, highlight: "bg-amber-50 text-amber-900 border-amber-200" },
-              { id: "lmi_usda", label: `Dual USDA + LMI (${overlayCounts.lmiUsda})`, highlight: "bg-teal-50 text-teal-900 border-teal-200" },
+              { id: "usda", label: `USDA RD (${overlayCounts.usda})` },
+              { id: "lmi", label: `Flex Lending/LMI (${overlayCounts.lmi})` },
+              { id: "lmi_usda", label: `USDA RD+Flex (${overlayCounts.lmiUsda})` },
               { id: "targeted", label: `Targeted Area Cap (${overlayCounts.targeted})` },
-              { id: "non_targeted", label: `Non-Targeted (${overlayCounts.nonTargeted})` },
+              { id: "non_targeted", label: `Non-Targeted Cap (${overlayCounts.nonTargeted})` },
               { id: "price_eligible", label: `Under Price Cap (${overlayCounts.firstHomePriceEligible})` },
               { id: "published", label: `Published Live (${overlayCounts.published})` },
               { id: "draft", label: `Draft / Hidden (${overlayCounts.draft})` },
@@ -587,15 +588,12 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
               }}
               className="w-full text-xs px-3 py-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] focus:bg-white focus:ring-1 focus:ring-[#4A5D4E] outline-none text-[#2D362E] cursor-pointer"
             >
-              <option value="all">All Oregon Counties</option>
-              <option value="Coos">Coos County (Coast)</option>
-              <option value="Lane">Lane County (Eugene)</option>
-              <option value="Deschutes">Deschutes County (Bend)</option>
-              <option value="Clackamas">Clackamas County</option>
-              <option value="Multnomah">Multnomah County</option>
-              <option value="Washington">Washington County</option>
-              <option value="Marion">Marion County (Salem)</option>
-              <option value="Jackson">Jackson County (Medford)</option>
+              <option value="all">All Oregon Counties ({Object.keys(OREGON_COUNTY_PRICE_LIMITS).length})</option>
+              {Object.entries(OREGON_COUNTY_PRICE_LIMITS).map(([cName, info]) => (
+                <option key={cName} value={cName}>
+                  {cName} County {info.isEntireCountyTargeted ? `(Targeted: $${(info.targetedLimit / 1000).toFixed(0)}k)` : `($${(info.nonTargetedLimit / 1000).toFixed(0)}k)`}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -1014,34 +1012,48 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                   </p>
                 </div>
 
-                {/* FirstHome Targeted / Non-Targeted Area */}
-                <div className="p-3 rounded-xl bg-white border border-[#EAE7E0] space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-[#2D362E]">FirstHome Area Status</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-900">
-                      {isTargetedArea(inspectingListing) ? "Targeted Area" : "Non-Targeted"}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-[#606C5D]">
-                    {inspectingListing.overlayEligibility?.firstHome?.targetedAreaDetails || 
-                      (isTargetedArea(inspectingListing) ? "Targeted area with elevated purchase limits." : "Standard non-targeted county limits apply.")}
-                  </p>
-                </div>
+                {/* FirstHome Targeted / Non-Targeted Area & Price Cap */}
+                {(() => {
+                  const priceInfo = getPropertyOhcsPriceLimit(
+                    inspectingListing.price,
+                    inspectingListing.overlayEligibility?.countyName || inspectingListing.county,
+                    inspectingListing.city,
+                    inspectingListing.overlayEligibility?.lmiCensusTract || inspectingListing.overlayEligibility?.geoid,
+                    inspectingListing.overlayEligibility?.targetedArea
+                  );
 
-                {/* Purchase Price Cap Eligibility */}
-                <div className="p-3 rounded-xl bg-white border border-[#EAE7E0] space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-[#2D362E]">FirstHome Price Cap</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      isFirstHomePriceEligible(inspectingListing) ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
-                    }`}>
-                      {isFirstHomePriceEligible(inspectingListing) ? "✓ Under Limit" : "Exceeds Limit"}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-[#606C5D]">
-                    County Cap: {formatUSD(inspectingListing.overlayEligibility?.firstHomePriceCap || inspectingListing.overlayEligibility?.firstHome?.priceLimit || 692211)} • Listing: {formatUSD(inspectingListing.price)}
-                  </p>
-                </div>
+                  return (
+                    <>
+                      <div className="p-3 rounded-xl bg-white border border-[#EAE7E0] space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-[#2D362E]">OHCS FirstHome Status</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            priceInfo.isTargeted ? "bg-teal-100 text-teal-900" : "bg-stone-100 text-stone-700"
+                          }`}>
+                            {priceInfo.isTargeted ? "Targeted Area" : "Non-Targeted"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#606C5D]">
+                          {priceInfo.qualificationReason}
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-white border border-[#EAE7E0] space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-[#2D362E]">Price Limit vs List Price</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            priceInfo.isPriceEligible ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                          }`}>
+                            {priceInfo.isPriceEligible ? `✓ Under Cap (+$${Math.round(priceInfo.headroom / 1000)}k room)` : "Exceeds Limit"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#606C5D]">
+                          {priceInfo.county} County {priceInfo.isTargeted ? "Targeted" : "Standard"} Cap: {formatUSD(priceInfo.applicablePriceLimit)} • Listing: {formatUSD(inspectingListing.price)}
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 

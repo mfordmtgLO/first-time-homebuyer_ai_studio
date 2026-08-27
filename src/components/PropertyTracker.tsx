@@ -17,7 +17,18 @@ import {
 } from "lucide-react";
 import { PropertyListing, FinancialProfile } from "../types";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
-import { hasAuthenticPropertyPhoto } from "../utils/overlayClassification";
+import { 
+  hasAuthenticPropertyPhoto, 
+  getListingOverlayBadges,
+  calculateOverlayCounts,
+  isUsdaEligible,
+  isLmiEligible,
+  isLmiUsdaDual,
+  isTargetedArea,
+  isNonTargetedArea,
+  isFirstHomePriceEligible
+} from "../utils/overlayClassification";
+import { getPropertyOhcsPriceLimit, OREGON_COUNTY_PRICE_LIMITS } from "../utils/ohcsPurchaseLimits";
 
 interface PropertyTrackerProps {
   properties: PropertyListing[];
@@ -37,6 +48,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   onAskAiAboutProperty,
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [overlayFilter, setOverlayFilter] = useState<string>("all");
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
 
@@ -68,9 +80,25 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     }
   };
 
-  const filtered = filterStatus === "all"
-    ? properties
-    : properties.filter(p => p.status === filterStatus);
+  const overlayCounts = calculateOverlayCounts(properties);
+
+  const filtered = properties.filter(p => {
+    // 1. Status Filter
+    if (filterStatus !== "all" && p.status !== filterStatus) {
+      if (filterStatus === "offered" && p.status !== "under_contract") return false;
+      if (filterStatus !== "offered") return false;
+    }
+
+    // 2. Overlay Filter
+    if (overlayFilter === "usda" && !isUsdaEligible(p)) return false;
+    if (overlayFilter === "lmi" && !isLmiEligible(p)) return false;
+    if (overlayFilter === "lmi_usda" && !isLmiUsdaDual(p)) return false;
+    if (overlayFilter === "targeted" && !isTargetedArea(p)) return false;
+    if (overlayFilter === "non_targeted" && !isNonTargetedArea(p)) return false;
+    if (overlayFilter === "price_eligible" && !isFirstHomePriceEligible(p)) return false;
+
+    return true;
+  });
 
   const comparedProperties = properties.filter(p => compareIds.includes(p.id));
 
@@ -116,7 +144,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
         {/* Status Filter Tabs */}
         <div className="flex flex-wrap gap-2 pt-2 border-t border-[#EAE7E0]">
           {[
-            { id: "all", label: `All Homes (${properties.length})` },
+            { id: "all", label: `All Pipeline (${properties.length})` },
             { id: "touring", label: `Touring / Open House (${properties.filter(p => p.status === "touring").length})` },
             { id: "saved", label: `Saved (${properties.filter(p => p.status === "saved").length})` },
             { id: "offered", label: `Offered / Under Contract (${properties.filter(p => p.status === "offered" || p.status === "under_contract").length})` },
@@ -124,10 +152,36 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             <button
               key={tab.id}
               onClick={() => setFilterStatus(tab.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 filterStatus === tab.id
                   ? "bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] font-bold"
                   : "bg-white text-[#606C5D] hover:text-[#2D362E] border border-[#EAE7E0]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* OHCS GIS Overlay Filter Row */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#EAE7E0]/60">
+          <span className="text-[11px] font-bold text-[#606C5D] uppercase tracking-wider mr-1">Overlay Filter:</span>
+          {[
+            { id: "all", label: `All (${properties.length})` },
+            { id: "usda", label: `USDA RD (${overlayCounts.usda})` },
+            { id: "lmi", label: `Flex Lending/LMI (${overlayCounts.lmi})` },
+            { id: "lmi_usda", label: `USDA RD+Flex (${overlayCounts.lmiUsda})` },
+            { id: "targeted", label: `Targeted Area Cap (${overlayCounts.targeted})` },
+            { id: "non_targeted", label: `Non-Targeted Cap (${overlayCounts.nonTargeted})` },
+            { id: "price_eligible", label: `Under Price Cap (${overlayCounts.firstHomePriceEligible})` },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setOverlayFilter(tab.id)}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                overlayFilter === tab.id
+                  ? "bg-[#4A5D4E] text-white shadow-2xs font-bold ring-2 ring-[#4A5D4E]/20"
+                  : "bg-[#FAF9F5] text-[#606C5D] hover:bg-[#F1EFE9] border border-[#EAE7E0]"
               }`}
             >
               {tab.label}
@@ -293,26 +347,44 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                   </div>
 
                   {/* GeoSphere GIS Overlay Eligibility Badges */}
-                  {property.overlayEligibility && (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {property.overlayEligibility.usdaEligible && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                          <CheckCircle2 className="w-2.5 h-2.5" />
-                          <span>USDA 0% Down</span>
-                        </span>
-                      )}
-                      {property.overlayEligibility.lmiEligible && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300">
-                          OHCS LMI ({property.overlayEligibility.lmiPercentage || 80}% AMI)
-                        </span>
-                      )}
-                      {property.overlayEligibility.targetedArea && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-stone-100 text-stone-800 border border-stone-300">
-                          Targeted Area Cap
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  {(() => {
+                    const badges = getListingOverlayBadges(property);
+                    const priceInfo = getPropertyOhcsPriceLimit(
+                      property.price,
+                      property.overlayEligibility?.countyName || property.county,
+                      property.city,
+                      property.overlayEligibility?.lmiCensusTract || property.overlayEligibility?.geoid,
+                      property.overlayEligibility?.targetedArea
+                    );
+
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {badges.map(b => (
+                            <span 
+                              key={b.id}
+                              className={`${b.bgClass} text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 shadow-2xs`}
+                              title={b.description}
+                            >
+                              <CheckCircle2 className="w-2.5 h-2.5 shrink-0 opacity-80" />
+                              <span>{b.shortLabel}</span>
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* OHCS Purchase Price Cap Status */}
+                        <div className="p-2 rounded-lg bg-[#FAF9F5] border border-[#EAE7E0] text-[11px] text-[#606C5D] space-y-0.5">
+                          <div className="flex items-center justify-between font-semibold text-[#2D362E]">
+                            <span>{priceInfo.isTargeted ? "Targeted Area Cap" : "Non-Targeted Cap"}:</span>
+                            <span className="font-mono text-[#4A5D4E]">${priceInfo.applicablePriceLimit.toLocaleString()}</span>
+                          </div>
+                          <div className="text-[10px] text-[#9A9488]">
+                            {priceInfo.qualificationReason}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Tour Scorecard Grade Banner */}
                   {property.scorecard ? (

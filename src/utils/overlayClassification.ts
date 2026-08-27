@@ -1,4 +1,10 @@
 import { PropertyListing, OverlayEligibility } from "../types";
+import { 
+  getPropertyOhcsPriceLimit, 
+  normalizeOregonCounty, 
+  OREGON_COUNTY_PRICE_LIMITS,
+  CountyPriceLimitInfo 
+} from "./ohcsPurchaseLimits";
 
 /**
  * Checks whether a property has an authentic photo from an active MLS/RentCast feed or real upload,
@@ -46,37 +52,16 @@ export function isLmiEligible(listing: PropertyListing): boolean {
 
 /**
  * Checks whether a property achieves Dual Overlay Qualification:
- * Qualifying for BOTH USDA 100% 0% Down financing AND OHCS LMI Assistance grants.
+ * Qualifying for BOTH USDA 100% 0% Down financing AND OHCS Flex Lending LMI Assistance grants.
  */
 export function isLmiUsdaDual(listing: PropertyListing): boolean {
   return isUsdaEligible(listing) && isLmiEligible(listing);
 }
 
 /**
- * Checks whether the listing price falls within the official OHCS FirstHome purchase price cap
- * for the respective county and targeted / non-targeted status.
- */
-export function isFirstHomePriceEligible(listing: PropertyListing): boolean {
-  if (!listing) return false;
-  const el = listing.overlayEligibility;
-  if (!el) return true;
-
-  if (el.firstHome?.priceEligible !== undefined && el.firstHome?.priceEligible !== null) {
-    return Boolean(el.firstHome.priceEligible);
-  }
-
-  const priceLimit = el.firstHomePriceCap || el.firstHome?.priceLimit;
-  if (typeof priceLimit === "number" && priceLimit > 0) {
-    return Number(listing.price) <= priceLimit;
-  }
-
-  return true;
-}
-
-/**
  * Checks whether a property is situated in an OHCS Designated Targeted Area
  * (e.g. Entire Coos County, Clatsop County, Baker County, or specific census tracts/cities).
- * Targeted areas offer higher purchase price caps and higher household income limits.
+ * Targeted areas offer higher purchase price caps ($692k-$789k) and higher household income limits.
  */
 export function isTargetedArea(listing: PropertyListing): boolean {
   if (!listing || !listing.overlayEligibility) return false;
@@ -91,22 +76,74 @@ export function isTargetedArea(listing: PropertyListing): boolean {
     return true;
   }
 
-  return false;
+  // Cross-reference authoritative Oregon county price limits
+  const limitInfo = getPropertyOhcsPriceLimit(
+    listing.price, 
+    el.countyName || listing.city, 
+    listing.city, 
+    el.lmiCensusTract || el.geoid
+  );
+  return limitInfo.isTargeted;
 }
 
 /**
  * Checks whether a property is in an OHCS Non-Targeted Area.
  */
 export function isNonTargetedArea(listing: PropertyListing): boolean {
-  if (!listing || !listing.overlayEligibility) return false;
+  return !isTargetedArea(listing);
+}
+
+/**
+ * Checks whether the listing price falls within the official OHCS FirstHome / Flex Lending purchase price cap
+ * for the respective county, targeted / non-targeted status, and census tract.
+ */
+export function isFirstHomePriceEligible(listing: PropertyListing): boolean {
+  if (!listing) return false;
   const el = listing.overlayEligibility;
 
-  if (el.firstHome?.areaType === "non_targeted" || el.firstHome?.areaType === "non-targeted") {
-    return true;
-  }
-  if (el.targetedArea === false) return true;
+  // Direct calculation from authoritative Oregon County limits
+  const limitInfo = getPropertyOhcsPriceLimit(
+    listing.price,
+    el?.countyName || listing.city,
+    listing.city,
+    el?.lmiCensusTract || el?.geoid,
+    el?.targetedArea
+  );
 
-  return !isTargetedArea(listing);
+  return limitInfo.isPriceEligible;
+}
+
+/**
+ * Checks whether listing price specifically meets the NON-TARGETED maximum purchase price limit
+ * for its county and census tract.
+ */
+export function isNonTargetedPriceEligible(listing: PropertyListing): boolean {
+  if (!listing) return false;
+  const el = listing.overlayEligibility;
+  const limitInfo = getPropertyOhcsPriceLimit(
+    listing.price,
+    el?.countyName || listing.city,
+    listing.city,
+    el?.lmiCensusTract || el?.geoid
+  );
+  return listing.price <= limitInfo.nonTargetedLimit;
+}
+
+/**
+ * Checks whether listing price specifically meets the TARGETED AREA maximum purchase price limit
+ * for its county and census tract.
+ */
+export function isTargetedPriceEligible(listing: PropertyListing): boolean {
+  if (!listing) return false;
+  const el = listing.overlayEligibility;
+  const limitInfo = getPropertyOhcsPriceLimit(
+    listing.price,
+    el?.countyName || listing.city,
+    listing.city,
+    el?.lmiCensusTract || el?.geoid,
+    true // evaluate against targeted limit
+  );
+  return listing.price <= limitInfo.targetedLimit;
 }
 
 export interface OverlayBadgeInfo {
@@ -120,7 +157,8 @@ export interface OverlayBadgeInfo {
 }
 
 /**
- * Returns complete badge configurations for any property listing.
+ * Returns complete badge configurations for any property listing matching user specifications:
+ * "USDA RD", "Flex Lending/LMI", "USDA RD+Flex", "Targeted Area Cap", "Non-Targeted Cap", etc.
  */
 export function getListingOverlayBadges(listing: PropertyListing): OverlayBadgeInfo[] {
   const badges: OverlayBadgeInfo[] = [];
@@ -130,26 +168,34 @@ export function getListingOverlayBadges(listing: PropertyListing): OverlayBadgeI
   const dual = usda && lmi;
   const targeted = isTargetedArea(listing);
   const priceEligible = isFirstHomePriceEligible(listing);
+  const limitInfo = getPropertyOhcsPriceLimit(
+    listing.price,
+    listing.overlayEligibility?.countyName || listing.city,
+    listing.city,
+    listing.overlayEligibility?.lmiCensusTract || listing.overlayEligibility?.geoid,
+    listing.overlayEligibility?.targetedArea
+  );
 
+  // 1. Primary Financing & DPA Badges
   if (dual) {
     badges.push({
       id: "dual_usda_lmi",
-      label: "Dual USDA + LMI Qualified",
-      shortLabel: "USDA + LMI",
-      bgClass: "bg-emerald-900/90",
+      label: "USDA RD + Flex Lending (0% Down + Grant)",
+      shortLabel: "USDA RD+Flex",
+      bgClass: "bg-emerald-900 text-emerald-100 border-emerald-500/40",
       textClass: "text-emerald-100",
-      borderClass: "border-emerald-500/30",
-      description: "Qualifies for both USDA 100% (0% down) financing and OHCS LMI DPA grants",
+      borderClass: "border-emerald-500/40",
+      description: "Dual Qualified: USDA 100% (0% down) financing + OHCS Flex Lending cash assistance grant",
     });
   } else {
     if (usda) {
       badges.push({
         id: "usda",
-        label: "USDA 0% Down Eligible",
-        shortLabel: "USDA 0% Down",
-        bgClass: "bg-emerald-800/90",
+        label: "USDA Rural Development (0% Down)",
+        shortLabel: "USDA RD",
+        bgClass: "bg-emerald-800 text-emerald-100 border-emerald-400/40",
         textClass: "text-emerald-100",
-        borderClass: "border-emerald-400/30",
+        borderClass: "border-emerald-400/40",
         description: "Outside USDA ineligible urban boundary — 100% financing with zero down payment",
       });
     }
@@ -157,37 +203,49 @@ export function getListingOverlayBadges(listing: PropertyListing): OverlayBadgeI
     if (lmi) {
       badges.push({
         id: "lmi",
-        label: "OHCS LMI Tract Approved",
-        shortLabel: "LMI Tract",
-        bgClass: "bg-[#C18C5D]/90",
+        label: "OHCS Flex Lending / LMI Tract Approved",
+        shortLabel: "Flex Lending/LMI",
+        bgClass: "bg-[#C18C5D] text-white border-amber-400/40",
         textClass: "text-white",
-        borderClass: "border-amber-400/30",
-        description: "Low-to-Moderate income census tract eligible for enhanced Flex Lending assistance",
+        borderClass: "border-amber-400/40",
+        description: "Low-to-Moderate income census tract eligible for enhanced Flex Lending 3%-5% grant assistance",
       });
     }
   }
 
+  // 2. Targeted vs Non-Targeted Area Cap Badges
   if (targeted) {
     badges.push({
       id: "targeted",
-      label: "Targeted Area Cap",
-      shortLabel: "Targeted Area",
-      bgClass: "bg-teal-800/90",
+      label: `Targeted Area ($${(limitInfo.targetedLimit).toLocaleString()} Cap)`,
+      shortLabel: "Targeted Area Cap",
+      bgClass: "bg-teal-800 text-teal-100 border-teal-400/40",
       textClass: "text-teal-100",
-      borderClass: "border-teal-400/30",
-      description: `Targeted area benefit with elevated purchase price limit ($${(listing.overlayEligibility?.firstHomePriceCap || listing.overlayEligibility?.firstHome?.priceLimit || 692211).toLocaleString()})`,
+      borderClass: "border-teal-400/40",
+      description: `${limitInfo.county} County Targeted Area with elevated purchase price limit ($${limitInfo.targetedLimit.toLocaleString()})`,
+    });
+  } else if (priceEligible) {
+    badges.push({
+      id: "non_targeted_cap",
+      label: `Non-Targeted Cap ($${(limitInfo.nonTargetedLimit).toLocaleString()})`,
+      shortLabel: "Non-Targeted Cap",
+      bgClass: "bg-blue-900 text-blue-100 border-blue-400/40",
+      textClass: "text-blue-100",
+      borderClass: "border-blue-400/40",
+      description: `Within standard non-targeted price limit of $${limitInfo.nonTargetedLimit.toLocaleString()}`,
     });
   }
 
-  if (priceEligible) {
+  // 3. Price Cap Compliance Badge (if price is under applicable cap)
+  if (priceEligible && !badges.some(b => b.id === "targeted" || b.id === "non_targeted_cap")) {
     badges.push({
       id: "firsthome_price",
       label: "FirstHome Cap Eligible",
       shortLabel: "Under Price Cap",
-      bgClass: "bg-[#4A5D4E]/90",
+      bgClass: "bg-[#4A5D4E] text-stone-100 border-[#4A5D4E]/40",
       textClass: "text-stone-100",
       borderClass: "border-[#4A5D4E]/40",
-      description: "Listing price is within official OHCS FirstHome purchase price limits",
+      description: limitInfo.qualificationReason,
     });
   }
 
@@ -202,6 +260,8 @@ export interface OverlaySummaryCounts {
   firstHomePriceEligible: number;
   targeted: number;
   nonTargeted: number;
+  targetedPriceEligible: number;
+  nonTargetedPriceEligible: number;
   published: number;
   draft: number;
   singleFamily: number;
@@ -222,6 +282,8 @@ export function calculateOverlayCounts(listings: PropertyListing[]): OverlaySumm
     firstHomePriceEligible: 0,
     targeted: 0,
     nonTargeted: 0,
+    targetedPriceEligible: 0,
+    nonTargetedPriceEligible: 0,
     published: 0,
     draft: 0,
     singleFamily: 0,
@@ -236,6 +298,8 @@ export function calculateOverlayCounts(listings: PropertyListing[]): OverlaySumm
     const dual = usda && lmi;
     const targeted = isTargetedArea(l);
     const priceEligible = isFirstHomePriceEligible(l);
+    const nonTargetedPriceEligible = isNonTargetedPriceEligible(l);
+    const targetedPriceEligible = isTargetedPriceEligible(l);
 
     if (usda) counts.usda++;
     if (lmi) counts.lmi++;
@@ -243,6 +307,8 @@ export function calculateOverlayCounts(listings: PropertyListing[]): OverlaySumm
     if (targeted) counts.targeted++;
     else counts.nonTargeted++;
     if (priceEligible) counts.firstHomePriceEligible++;
+    if (targetedPriceEligible) counts.targetedPriceEligible++;
+    if (nonTargetedPriceEligible) counts.nonTargetedPriceEligible++;
 
     if (l.isPubliclyPublished) counts.published++;
     else counts.draft++;
@@ -259,15 +325,16 @@ export function calculateOverlayCounts(listings: PropertyListing[]): OverlaySumm
 
 /**
  * Accurately filters an array of PropertyListings based on the active overlay filter,
- * search term, property type, price range, and published status.
+ * search term, property type, price range, targeted/non-targeted price limits, and published status.
  */
 export function filterListings(
   listings: PropertyListing[],
   options: {
-    overlayFilter?: string; // 'all' | 'usda' | 'lmi' | 'lmi_usda' | 'targeted' | 'non_targeted' | 'price_eligible' | 'published' | 'draft'
+    overlayFilter?: string; // 'all' | 'usda' | 'lmi' | 'lmi_usda' | 'targeted' | 'non_targeted' | 'price_eligible' | 'targeted_price' | 'non_targeted_price' | 'published' | 'draft'
     searchQuery?: string;
     propertyType?: string; // 'all' | 'Single Family' | 'Manufactured' | 'Condo' | 'Townhouse' | 'Multi-Family'
     county?: string;
+    city?: string;
     minPrice?: number;
     maxPrice?: number;
     minBeds?: number;
@@ -278,19 +345,22 @@ export function filterListings(
     searchQuery = "",
     propertyType = "all",
     county = "all",
+    city = "all",
     minPrice,
     maxPrice,
     minBeds,
   } = options;
 
   return listings.filter((listing) => {
-    // 1. Overlay Filter Logic
+    // 1. Overlay & Price Cap Filter Logic
     if (overlayFilter === "usda" && !isUsdaEligible(listing)) return false;
     if (overlayFilter === "lmi" && !isLmiEligible(listing)) return false;
     if (overlayFilter === "lmi_usda" && !isLmiUsdaDual(listing)) return false;
     if (overlayFilter === "targeted" && !isTargetedArea(listing)) return false;
     if (overlayFilter === "non_targeted" && !isNonTargetedArea(listing)) return false;
     if (overlayFilter === "price_eligible" && !isFirstHomePriceEligible(listing)) return false;
+    if (overlayFilter === "targeted_price" && !isTargetedPriceEligible(listing)) return false;
+    if (overlayFilter === "non_targeted_price" && !isNonTargetedPriceEligible(listing)) return false;
     if (overlayFilter === "published" && !listing.isPubliclyPublished) return false;
     if (overlayFilter === "draft" && listing.isPubliclyPublished) return false;
 
@@ -303,30 +373,43 @@ export function filterListings(
 
     // 3. County Filter
     if (county !== "all" && county) {
-      const listingCounty = String(listing.overlayEligibility?.countyName || listing.city || "").toLowerCase();
-      if (!listingCounty.includes(county.toLowerCase())) return false;
+      const normListingCounty = normalizeOregonCounty(
+        listing.overlayEligibility?.countyName || listing.county,
+        listing.city
+      ).toLowerCase();
+      const normTargetCounty = county.toLowerCase().replace(/\s*county\s*/i, "").trim();
+      if (!normListingCounty.includes(normTargetCounty) && !String(listing.city || "").toLowerCase().includes(normTargetCounty)) {
+        return false;
+      }
     }
 
-    // 4. Price Boundaries
+    // 4. City Filter
+    if (city !== "all" && city) {
+      const listingCity = String(listing.city || "").toLowerCase();
+      if (!listingCity.includes(city.toLowerCase().trim())) return false;
+    }
+
+    // 5. Price Boundaries
     if (typeof minPrice === "number" && listing.price < minPrice) return false;
     if (typeof maxPrice === "number" && listing.price > maxPrice) return false;
 
-    // 5. Min Bedrooms
+    // 6. Min Bedrooms
     if (typeof minBeds === "number" && (listing.beds || 0) < minBeds) return false;
 
-    // 6. Text Search Query
+    // 7. Text Search Query (City, County, Address, Zip, MLS, Census Tract)
     if (searchQuery && searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       const matchTitle = listing.title?.toLowerCase().includes(q);
       const matchAddress = listing.address?.toLowerCase().includes(q);
       const matchCity = listing.city?.toLowerCase().includes(q);
       const matchZip = listing.zip?.toLowerCase().includes(q);
-      const matchCounty = listing.overlayEligibility?.countyName?.toLowerCase().includes(q);
+      const matchCounty = listing.overlayEligibility?.countyName?.toLowerCase().includes(q) || listing.county?.toLowerCase().includes(q);
+      const matchTract = listing.overlayEligibility?.lmiCensusTract?.toLowerCase().includes(q) || listing.overlayEligibility?.geoid?.toLowerCase().includes(q);
       const matchMls = listing.mlsNumber?.toLowerCase().includes(q);
       const matchNotes = listing.notes?.toLowerCase().includes(q);
       const matchAgent = listing.listingAgent?.name?.toLowerCase().includes(q);
 
-      if (!matchTitle && !matchAddress && !matchCity && !matchZip && !matchCounty && !matchMls && !matchNotes && !matchAgent) {
+      if (!matchTitle && !matchAddress && !matchCity && !matchZip && !matchCounty && !matchTract && !matchMls && !matchNotes && !matchAgent) {
         return false;
       }
     }

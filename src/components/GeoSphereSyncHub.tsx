@@ -49,6 +49,8 @@ import {
 } from "../utils/overlayClassification";
 import { getPropertyOhcsPriceLimit, OREGON_COUNTY_PRICE_LIMITS, normalizeOregonCounty } from "../utils/ohcsPurchaseLimits";
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 interface GeoSphereSyncHubProps {
   guidesState: ProfessionalGuidesState;
@@ -82,6 +84,56 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "dom" | "sqft">("default");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [lastSyncedTime, setLastSyncedTime] = useState<string>(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
+  const [firestoreSyncCount, setFirestoreSyncCount] = useState<number | null>(null);
+  const [isForceSyncing, setIsForceSyncing] = useState<boolean>(false);
+  const [syncError, setSyncError] = useState<boolean>(false);
+
+  const fetchFirestoreCount = async () => {
+    try {
+      setSyncError(false);
+      const snap = await getDoc(doc(db, "guides_state", "singleton"));
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.syncedProperties) {
+          setFirestoreSyncCount(data.syncedProperties.length);
+        } else {
+          setFirestoreSyncCount(0);
+        }
+      } else {
+        setFirestoreSyncCount(0);
+      }
+    } catch (e) {
+      console.warn("Could not fetch firestore count", e);
+      setSyncError(true);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchFirestoreCount();
+  }, []);
+
+  const handleForceReSync = async () => {
+    setIsForceSyncing(true);
+    setSyncError(false);
+    try {
+      const updatedGuidesState = {
+        ...guidesState,
+        syncedProperties: syncedListings
+      };
+      await setDoc(doc(db, "guides_state", "singleton"), updatedGuidesState);
+      onUpdateGuidesState(updatedGuidesState);
+      await fetchFirestoreCount();
+      onTriggerToast("Live website successfully re-synced!");
+    } catch (e) {
+      console.error(e);
+      setSyncError(true);
+      onTriggerToast("Error syncing to live website.");
+    } finally {
+      setIsForceSyncing(false);
+    }
+  };
+
   
   // Custom API endpoint & token drawer state
   const [showAdvancedEndpoint, setShowAdvancedEndpoint] = useState<boolean>(false);
@@ -487,6 +539,54 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
               </button>
             );
           })}
+        </div>
+      </div>
+
+
+      {/* Live Website Sync Status Card */}
+      <div className="bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-[#4A5D4E]/10 flex items-center justify-center">
+            <Globe className="w-6 h-6 text-[#4A5D4E]" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-[#2D362E]">Live Website Sync Status</h3>
+            <p className="text-xs text-[#606C5D] mt-1">
+              Local properties: <strong className="text-[#2D362E]">{syncedListings.length}</strong> | 
+              Live on website: <strong className="text-[#2D362E]">{firestoreSyncCount !== null ? firestoreSyncCount : "..."}</strong>
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {syncError ? (
+            <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              Failed
+            </span>
+          ) : firestoreSyncCount !== null && firestoreSyncCount !== syncedListings.length ? (
+            <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" />
+              Pending Mismatch
+            </span>
+          ) : firestoreSyncCount !== null && firestoreSyncCount === syncedListings.length ? (
+            <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              Synced
+            </span>
+          ) : (
+            <span className="text-[11px] font-semibold text-stone-600 bg-stone-50 px-2.5 py-1 rounded-full border border-stone-200 flex items-center gap-1">
+              <RefreshCw className="w-3 h-3 animate-spin" />
+              Checking...
+            </span>
+          )}
+          <button
+            onClick={handleForceReSync}
+            disabled={isForceSyncing}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#2D362E] hover:bg-[#4A5D4E] disabled:bg-stone-300 disabled:text-stone-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${isForceSyncing ? "animate-spin" : ""}`} />
+            {isForceSyncing ? "Syncing..." : "Re-Sync All"}
+          </button>
         </div>
       </div>
 

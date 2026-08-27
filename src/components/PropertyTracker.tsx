@@ -235,6 +235,28 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                     </div>
                   </div>
 
+                  {/* GeoSphere GIS Overlay Eligibility Badges */}
+                  {property.overlayEligibility && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {property.overlayEligibility.usdaEligible && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                          <CheckCircle2 className="w-2.5 h-2.5" />
+                          <span>USDA 0% Down</span>
+                        </span>
+                      )}
+                      {property.overlayEligibility.lmiEligible && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300">
+                          OHCS LMI ({property.overlayEligibility.lmiPercentage || 80}% AMI)
+                        </span>
+                      )}
+                      {property.overlayEligibility.targetedArea && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-stone-100 text-stone-800 border border-stone-300">
+                          Targeted Area Cap
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   {/* Tour Scorecard Grade Banner */}
                   {property.scorecard ? (
                     <div className="bg-[#F1EFE9] p-3 rounded-xl border border-[#EAE7E0] space-y-1.5">

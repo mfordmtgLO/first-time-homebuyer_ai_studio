@@ -12,9 +12,10 @@ import {
   Home,
   HeartHandshake
 } from "lucide-react";
-import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
+import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 import { LocalProfessionalGuides } from "./LocalProfessionalGuides";
+import { CuratedHomesSection } from "./CuratedHomesSection";
 
 interface HeroWebsiteProps {
   profile: FinancialProfile;
@@ -29,6 +30,7 @@ interface HeroWebsiteProps {
   activeAgent?: RealEstateAgentProfile;
   isCoBranded?: boolean;
   onOpenLoPortal?: () => void;
+  properties?: PropertyListing[];
 }
 
 export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
@@ -44,6 +46,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
   activeAgent,
   isCoBranded = false,
   onOpenLoPortal,
+  properties = [],
 }) => {
   const breakdown = calculateMortgageBreakdown(profile);
   const dtiStatus = getDTIStatus(breakdown.backEndDTI);
@@ -426,6 +429,15 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Curated Eligible Homes Section (Published from GeoSphere GIS by Loan Officer) */}
+      <CuratedHomesSection
+        properties={properties}
+        onOpenDashboard={onOpenDashboard}
+        onOpenLeadBot={onOpenLeadBot}
+        loanOfficer={loanOfficer}
+        activeAgent={activeAgent}
+      />
 
       {/* First-Time Buyer Myth Busters & Essential Truths */}
       <section className="bg-[#F1EFE9] rounded-3xl border border-[#EAE7E0] p-6 sm:p-10 space-y-8">

@@ -47,6 +47,20 @@ export interface TourScorecard {
   grade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D';
 }
 
+export interface OverlayEligibility {
+  usdaEligible?: boolean;
+  usdaZoneName?: string;
+  lmiEligible?: boolean;
+  lmiPercentage?: number; // e.g. 78% of AMI
+  lmiCensusTract?: string;
+  firstHomeEligible?: boolean;
+  firstHomePriceCap?: number;
+  targetedArea?: boolean;
+  geoid?: string;
+  countyName?: string;
+  sourceDataset?: string;
+}
+
 export interface PropertyListing {
   id: string;
   title: string;
@@ -70,6 +84,10 @@ export interface PropertyListing {
   propertyTaxAnnual: number;
   scorecard?: TourScorecard;
   isFavorite: boolean;
+  isPubliclyPublished?: boolean;
+  overlayEligibility?: OverlayEligibility;
+  sourceGeoSphereId?: string;
+  syncedAt?: string;
 }
 
 export interface GrantProgram {
@@ -277,6 +295,7 @@ export interface ProfessionalGuidesState {
   socialCampaigns: SocialPushCampaign[];
   adCampaignDrafts: AdCampaignDraft[];
   leads?: CapturedLead[];
+  syncedProperties?: PropertyListing[];
 }
 
 export interface ChatMessage {

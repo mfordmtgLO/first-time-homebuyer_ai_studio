@@ -479,6 +479,8 @@ export default function App() {
               setShowLoPortal(false);
               handleNavigate("hero", "website");
             }}
+            properties={properties}
+            setProperties={setProperties}
           />
         ) : (
           <>
@@ -499,6 +501,7 @@ export default function App() {
                     activeAgent={activeAgent}
                     isCoBranded={guidesState.isCoBranded}
                     onOpenLoPortal={() => setShowLoPortal(true)}
+                    properties={properties}
                   />
                 )}
 

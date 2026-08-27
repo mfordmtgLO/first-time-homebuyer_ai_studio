@@ -56,7 +56,8 @@ import {
   SocialPushCampaign,
   AdCampaignDraft,
   LoanOfficerAdSettings,
-  CapturedLead
+  CapturedLead,
+  PropertyListing
 } from "../types";
 import { SocialPushHub } from "./SocialPushHub";
 import { AdsCampaignHub } from "./AdsCampaignHub";
@@ -64,12 +65,15 @@ import { LoanOfficerLoginView } from "./LoanOfficerLoginView";
 import { StateLicensingSelector } from "./StateLicensingSelector";
 import { processLocalImageFile } from "../utils/imageUtils";
 import { HeadshotAvatar } from "./HeadshotAvatar";
+import { GeoSphereSyncHub } from "./GeoSphereSyncHub";
 
 interface LoanOfficerPortalProps {
   guidesState: ProfessionalGuidesState;
   onUpdateGuidesState: (newState: ProfessionalGuidesState) => void;
   onClose: () => void;
   onViewPublicSite: () => void;
+  properties?: PropertyListing[];
+  setProperties?: React.Dispatch<React.SetStateAction<PropertyListing[]>>;
 }
 
 export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
@@ -77,6 +81,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   onUpdateGuidesState,
   onClose,
   onViewPublicSite,
+  properties = [],
+  setProperties = () => {},
 }) => {
   // Authentication & Session State (loaded from localStorage)
   const [authenticatedLoId, setAuthenticatedLoId] = useState<string | null>(() => {
@@ -87,7 +93,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   });
 
   // Current user / viewing context
-  const [activeTab, setActiveTab] = useState<"leads" | "team_distribution" | "pairings" | "realtor_roster" | "my_profile" | "social_push" | "ad_campaigns">("leads");
+  const [activeTab, setActiveTab] = useState<"leads" | "team_distribution" | "pairings" | "realtor_roster" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns">("leads");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
@@ -1003,6 +1009,26 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             >
               <UserCheck className="w-4 h-4" />
               <span>Realtor Partner Roster ({guidesState.agentRoster.length})</span>
+            </button>
+
+            <button
+              data-tab-id="geosphere_sync"
+              onClick={() => setActiveTab("geosphere_sync")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "geosphere_sync"
+                  ? "bg-[#2F5738] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Globe className="w-4 h-4 text-[#D4A373]" />
+              <span>GeoSphere Map Sync Hub</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "geosphere_sync"
+                  ? "bg-white/20 text-white"
+                  : "bg-emerald-100 text-emerald-800"
+              }`}>
+                {guidesState.syncedProperties?.length || 6}
+              </span>
             </button>
 
             <button
@@ -2444,6 +2470,17 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               </button>
             </div>
           </div>
+        )}
+
+        {/* Tab: GeoSphere Oregon Map Sync & Listing Curation Hub */}
+        {activeTab === "geosphere_sync" && (
+          <GeoSphereSyncHub
+            guidesState={guidesState}
+            onUpdateGuidesState={onUpdateGuidesState}
+            properties={properties}
+            setProperties={setProperties}
+            onTriggerToast={triggerToast}
+          />
         )}
 
         {/* Tab 5: Multi-Channel Social Push */}

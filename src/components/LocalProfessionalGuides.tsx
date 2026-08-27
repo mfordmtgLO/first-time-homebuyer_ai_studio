@@ -62,7 +62,7 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
   };
 
   return (
-    <div id="local-professional-guides-section" className="bg-white rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 lg:p-10 space-y-8 shadow-sm text-[#2D362E]">
+    <div id="local-professional-guides-section" className="bg-white rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 lg:p-10 space-y-8 shadow-sm text-[#2D362E] scroll-mt-60 lg:scroll-mt-28">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#EAE7E0] pb-6">
         <div className="space-y-1.5 max-w-2xl">

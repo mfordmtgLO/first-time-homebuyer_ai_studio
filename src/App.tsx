@@ -428,7 +428,7 @@ export default function App() {
       <div className={showLoPortal ? "flex-1 w-full" : "flex-1 w-full max-w-[1500px] mx-auto flex"}>
         {/* Desktop Only: Left Sidebar for Step Navigation */}
         {!showLoPortal && (
-          <aside className="hidden lg:flex w-72 flex-col shrink-0 border-r border-[#EAE7E0] bg-[#F9F8F4] h-[calc(100vh-4.5rem)] sticky top-[4.5rem] overflow-y-auto p-4 z-30">
+          <aside className="hidden lg:flex w-72 flex-col shrink-0 border-r border-[#EAE7E0] bg-[#F9F8F4] h-[calc(100vh-4.5rem)] sticky top-[4.5rem] overflow-hidden p-4 z-30">
             <StepNavigationBanner
               currentTab={activeTab}
               currentMode={currentMode}

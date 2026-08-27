@@ -79,3 +79,26 @@
 .animate-gyrate {
   animation: gyrate 2s infinite ease-in-out;
 }
+
+/* Dedicated visible vertical scrollbar for sidebar navigation */
+.dashboard-vertical-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #9A9488 transparent;
+}
+
+.dashboard-vertical-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-vertical-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-vertical-scrollbar::-webkit-scrollbar-thumb {
+  background: #9A9488;
+  border-radius: 9999px;
+}
+
+.dashboard-vertical-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #606C5D;
+}

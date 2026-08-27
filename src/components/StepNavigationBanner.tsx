@@ -95,12 +95,12 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
     <div 
       id="guided-4-step-journey-banner"
       className={isVertical 
-        ? "w-full transition-all" 
+        ? "w-full h-full flex flex-col transition-all" 
         : "w-full bg-white/95 backdrop-blur-md rounded-2xl border border-[#EAE7E0] p-2.5 sm:p-3.5 shadow-sm transition-all"
       }
     >
       {/* Top Header: Return to Beginning link + Guided Workflow label + Sticky Local Guides button */}
-      <div className={`flex ${isVertical ? "flex-col items-start gap-3" : "flex-col sm:flex-row sm:items-center justify-between"} pb-2 mb-2 border-b border-[#EAE7E0]/80`}>
+      <div className={`shrink-0 flex ${isVertical ? "flex-col items-start gap-3" : "flex-col sm:flex-row sm:items-center justify-between"} pb-2 mb-2 border-b border-[#EAE7E0]/80`}>
         <div className="flex flex-col gap-1.5">
           <span className="text-[10px] font-bold tracking-wider uppercase bg-[#F1EFE9] text-[#4A5D4E] px-2.5 py-0.5 rounded-full border border-[#EAE7E0] self-start">
             Guided 4-Step Homebuyer Journey
@@ -148,8 +148,9 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
         </div>
       </div>
 
-      {/* Horizontal Progress Bar */}
-      <div className="w-full bg-[#F1EFE9] h-1.5 rounded-full overflow-hidden mb-2 sm:mb-2.5">
+      <div className={isVertical ? "flex-1 overflow-y-auto pr-2 -mr-2 dashboard-vertical-scrollbar" : "w-full"}>
+        {/* Horizontal Progress Bar */}
+        <div className="w-full bg-[#F1EFE9] h-1.5 rounded-full overflow-hidden mb-2 sm:mb-2.5">
         <motion.div 
           className="h-full bg-[#4A5D4E] rounded-full"
           initial={{ width: 0 }}
@@ -270,7 +271,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
       </div>
 
       {isVertical && (
-        <div className="mt-8 pt-6 border-t border-[#EAE7E0]/80">
+        <div className="mt-8 pt-6 pb-6 border-t border-[#EAE7E0]/80">
           <span className="text-[10px] font-bold tracking-wider uppercase text-[#9A9488] px-2 block mb-3">
             Advanced Tools
           </span>
@@ -298,6 +299,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

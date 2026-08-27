@@ -48,6 +48,8 @@ import {
 import { db } from "./firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 
+import { GEOSPHERE_MOCK_LISTINGS } from "./data/geoSphereData";
+
 export default function App() {
   const [currentMode, setCurrentMode] = useState<"website" | "dashboard">("website");
   const [activeTab, setActiveTab] = useState<string>("hero");
@@ -55,7 +57,22 @@ export default function App() {
 
   // Global State
   const [profile, setProfile] = useState<FinancialProfile>(INITIAL_PROFILE);
-  const [properties, setProperties] = useState<PropertyListing[]>(INITIAL_PROPERTIES);
+  const [properties, setProperties] = useState<PropertyListing[]>(() => {
+    try {
+      const saved = localStorage.getItem("homebuyer_roadmap_state_v2") || localStorage.getItem("manus_guides_state_v2");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.syncedProperties && parsed.syncedProperties.length > 0) {
+          const published = parsed.syncedProperties.filter((p: PropertyListing) => p.isPubliclyPublished !== false);
+          return [...published, ...INITIAL_PROPERTIES];
+        }
+      }
+    } catch (e) {
+      console.warn("Error parsing guides state for properties:", e);
+    }
+    const defaultPublished = GEOSPHERE_MOCK_LISTINGS.filter(p => p.isPubliclyPublished !== false);
+    return [...defaultPublished, ...INITIAL_PROPERTIES];
+  });
   const [milestones, setMilestones] = useState<RoadmapMilestone[]>(ROADMAP_MILESTONES);
   const [documents, setDocuments] = useState<DocumentItem[]>(DOCUMENT_VAULT_ITEMS);
 
@@ -71,7 +88,8 @@ export default function App() {
       pairings: INITIAL_PAIRINGS,
       socialCampaigns: INITIAL_SOCIAL_CAMPAIGNS,
       adCampaignDrafts: INITIAL_AD_DRAFTS,
-      leads: INITIAL_LEADS
+      leads: INITIAL_LEADS,
+      syncedProperties: GEOSPHERE_MOCK_LISTINGS
     };
 
     try {
@@ -108,6 +126,9 @@ export default function App() {
             parsed.loanOfficer = sanitizeLoanOfficer(parsed.loanOfficer);
           } else {
             parsed.loanOfficer = sanitizeLoanOfficer(DEFAULT_LOAN_OFFICER);
+          }
+          if (!parsed.syncedProperties || parsed.syncedProperties.length === 0) {
+            parsed.syncedProperties = GEOSPHERE_MOCK_LISTINGS;
           }
 
           initialState = parsed;
@@ -208,9 +229,19 @@ export default function App() {
             socialCampaigns: remoteState.socialCampaigns || prev.socialCampaigns,
             adCampaignDrafts: remoteState.adCampaignDrafts || prev.adCampaignDrafts,
             leads: remoteState.leads || prev.leads,
+            syncedProperties: remoteState.syncedProperties || prev.syncedProperties,
             loanOfficer: sanitizeLoanOfficer(updatedLo)
           };
         });
+
+        // Also update the live properties list if the Loan Officer published new listings
+        if (remoteState.syncedProperties && remoteState.syncedProperties.length > 0) {
+          const published = remoteState.syncedProperties.filter(p => p.isPubliclyPublished !== false);
+          setProperties(prev => {
+            const remainingCustom = prev.filter(p => !p.id.startsWith("geo-") && !p.id.includes("-OR-"));
+            return [...published, ...remainingCustom];
+          });
+        }
       } else {
         // First time initialization: Push local state (which might contain the LO's uploaded headshot) up to Firebase
         setDoc(doc(db, "guides_state", "singleton"), guidesState).catch(console.warn);

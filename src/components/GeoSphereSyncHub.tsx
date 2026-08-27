@@ -792,8 +792,9 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
               return (
                 <div
                   key={listing.id}
-                  className={`rounded-2xl border transition-all duration-200 overflow-hidden flex flex-col justify-between bg-white ${
-                    isSelected ? "border-[#4A5D4E] ring-2 ring-[#4A5D4E]/20" : "border-[#EAE7E0] hover:border-stone-400"
+                  onClick={() => setInspectingListing(listing)}
+                  className={`rounded-2xl border transition-all duration-200 overflow-hidden flex flex-col justify-between bg-white cursor-pointer hover:shadow-md ${
+                    isSelected ? "border-[#4A5D4E] ring-2 ring-[#4A5D4E]/20" : "border-[#EAE7E0] hover:border-[#4A5D4E]/50"
                   }`}
                 >
                   {hasPhoto ? (
@@ -803,14 +804,16 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                         src={listing.imageUrl}
                         alt={listing.title}
                         referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                        onClick={() => setInspectingListing(listing)}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/30 pointer-events-none" />
 
                       {/* Checkbox Selector */}
                       <button
-                        onClick={() => handleToggleSelectListing(listing.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleSelectListing(listing.id);
+                        }}
                         className="absolute top-2.5 left-2.5 z-10 w-6 h-6 rounded-lg bg-white/90 shadow-md flex items-center justify-center cursor-pointer"
                       >
                         {isSelected ? (
@@ -846,7 +849,10 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                         {/* Checkbox Selector & Type */}
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleToggleSelectListing(listing.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleSelectListing(listing.id);
+                            }}
                             className="w-5 h-5 rounded-md bg-white border border-[#EAE7E0] shadow-2xs flex items-center justify-center cursor-pointer hover:border-[#4A5D4E]"
                           >
                             {isSelected ? (
@@ -883,7 +889,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                   {/* Body Content */}
                   <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
                     <div className="space-y-2">
-                      <div className="cursor-pointer" onClick={() => setInspectingListing(listing)}>
+                      <div>
                         <h4 className="font-serif font-bold text-sm text-[#2D362E] line-clamp-1 hover:text-[#4A5D4E]">
                           {listing.title}
                         </h4>
@@ -915,18 +921,64 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                       </div>
                     </div>
 
+                    {/* Agent Info Box (Dashboard Only) */}
+                    {(listing.listingAgent || listing.listingOffice) && (
+                      <div className="mt-2 p-2 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3" /> Agent Info
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const textToCopy = [
+                                listing.listingAgent?.name && `Name: ${listing.listingAgent.name}`,
+                                listing.listingAgent?.phone && `Phone: ${listing.listingAgent.phone}`,
+                                listing.listingAgent?.email && `Email: ${listing.listingAgent.email}`,
+                                listing.listingOffice?.name && `Brokerage: ${listing.listingOffice.name}`,
+                                listing.listingAgent?.website && `Website: ${listing.listingAgent.website}`
+                              ].filter(Boolean).join('\n');
+                              if (textToCopy) {
+                                navigator.clipboard.writeText(textToCopy);
+                                onTriggerToast("Agent details copied to clipboard!");
+                              }
+                            }}
+                            className="text-[9px] font-bold text-[#4A5D4E] hover:bg-[#4A5D4E]/10 px-1.5 py-0.5 rounded transition-colors"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        {listing.listingAgent?.name && (
+                          <div className="text-[11px] font-medium text-[#2D362E] truncate">
+                            {listing.listingAgent.name}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-x-2 gap-y-1 text-[10px]">
+                          {listing.listingAgent?.phone && (
+                            <a href={`tel:${listing.listingAgent.phone}`} className="text-blue-600 hover:underline">{listing.listingAgent.phone}</a>
+                          )}
+                          {listing.listingAgent?.email && (
+                            <a href={`mailto:${listing.listingAgent.email}`} className="text-blue-600 hover:underline max-w-[120px] truncate">{listing.listingAgent.email}</a>
+                          )}
+                        </div>
+                        {listing.listingOffice?.name && (
+                          <div className="text-[9px] text-[#606C5D] truncate">
+                            {listing.listingOffice.name}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Card Footer: View Details & Publish Toggle */}
                     <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setInspectingListing(listing)}
-                          className="text-[11px] font-semibold text-[#4A5D4E] hover:underline flex items-center gap-1 cursor-pointer"
-                        >
+                        <span className="text-[11px] font-semibold text-[#4A5D4E] hover:underline flex items-center gap-1 cursor-pointer">
                           <Eye className="w-3 h-3" />
                           <span>Inspect GIS</span>
-                        </button>
+                        </span>
 
                         <a
+                          onClick={(e) => e.stopPropagation()}
                           href={getZillowUrl(listing)}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -938,7 +990,10 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                       </div>
 
                       <button
-                        onClick={() => handleToggleSinglePublish(listing.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleSinglePublish(listing.id);
+                        }}
                         className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                           isPublished
                             ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
@@ -1076,12 +1131,6 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                       <span className="text-stone-500">MLS ID:</span>
                       <strong className="text-stone-800">{inspectingListing.mlsNumber} ({inspectingListing.mlsName || "RMLS"})</strong>
                     </div>
-                    {inspectingListing.listingAgent?.name && (
-                      <div className="flex justify-between">
-                        <span className="text-stone-500">Listing Agent:</span>
-                        <span className="text-stone-800 font-medium">{inspectingListing.listingAgent.name}</span>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

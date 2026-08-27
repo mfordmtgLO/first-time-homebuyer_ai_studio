@@ -111,10 +111,13 @@ export interface PropertyListing {
     name?: string;
     phone?: string;
     email?: string;
+    website?: string;
   };
   listingOffice?: {
     name?: string;
     phone?: string;
+    email?: string;
+    website?: string;
   };
 }
 

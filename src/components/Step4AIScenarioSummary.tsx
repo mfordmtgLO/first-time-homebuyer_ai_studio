@@ -292,8 +292,10 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
             <button
               onClick={() => {
                 const element = document.getElementById("local-professional-guides-section");
+                const header = document.querySelector('.sticky.top-0');
                 if (element) {
-                  const y = element.getBoundingClientRect().top + window.scrollY - 140;
+                  const offset = (header ? header.getBoundingClientRect().height : 140) + 32;
+                  const y = element.getBoundingClientRect().top + window.scrollY - offset;
                   window.scrollTo({ top: y, behavior: "smooth" });
                 }
               }}

@@ -377,7 +377,9 @@ export default function App() {
     setTimeout(() => {
       const el = document.getElementById("local-professional-guides-section");
       if (el) {
-        const y = el.getBoundingClientRect().top + window.scrollY - 140;
+        // Use dynamically tracked headerHeight plus 32px of extra visual breathing room
+        const offset = headerHeight + 32;
+        const y = el.getBoundingClientRect().top + window.scrollY - offset;
         window.scrollTo({ top: y, behavior: "smooth" });
       }
     }, 150);

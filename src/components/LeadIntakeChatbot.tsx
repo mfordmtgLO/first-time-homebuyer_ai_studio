@@ -286,6 +286,12 @@ interface LeadIntakeChatbotProps {
   agent?: RealEstateAgentProfile;
   isCoBranded?: boolean;
   financialProfile?: FinancialProfile;
+  sourceCampaignId?: string;
+  sourceCampaignName?: string;
+  sourcePropertyId?: string;
+  sourcePropertyAddress?: string;
+  initialSourceType?: 'campaign' | 'property_listing' | 'chatbot' | 'flyer' | 'calculator';
+  initialLeadSource?: string;
   onSaveLead: (lead: CapturedLead) => void;
   isOpen: boolean;
   onClose: () => void;
@@ -380,6 +386,12 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   agent,
   isCoBranded = false,
   financialProfile,
+  sourceCampaignId,
+  sourceCampaignName,
+  sourcePropertyId,
+  sourcePropertyAddress,
+  initialSourceType,
+  initialLeadSource,
   onSaveLead,
   isOpen,
   onClose,
@@ -437,7 +449,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     email: "",
     phone: "",
     preferredContactTime: "Weekday Evenings",
-    propertyType: "Single Family Home"
+    propertyType: "Single Family Home",
+    notes: "",
+    smsConsentAuthorized: true
   });
 
   // Oregon Cities selection state
@@ -757,6 +771,15 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       return;
     }
 
+    const finalSourceType = initialSourceType || (sourcePropertyAddress ? 'property_listing' : sourceCampaignName ? 'campaign' : 'chatbot');
+    const computedLeadSource = initialLeadSource || (
+      sourcePropertyAddress 
+        ? `Listing: ${sourcePropertyAddress}` 
+        : sourceCampaignName 
+          ? `Campaign: ${sourceCampaignName}` 
+          : `Website AI Intake Chatbot`
+    );
+
     const newLead: CapturedLead = {
       id: `lead-${Date.now()}`,
       fullName: sanitizeSSN(contactForm.fullName),
@@ -775,13 +798,38 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       sendSampleHomes: leadState.sendSampleHomes ?? (leadState.sendSampleHomesOption?.startsWith("YES") ?? true),
       sendSampleHomesOption: leadState.sendSampleHomesOption || "YES - Please send available homes with low/no down payment options",
       assignedLoId: loanOfficer.id,
-      assignedAgentId: agent.id,
-      leadSource: "Website AI Intake Chatbot",
+      assignedAgentId: agent?.id,
+      leadSource: computedLeadSource,
+      sourceCampaignId: sourceCampaignId,
+      sourceCampaignName: sourceCampaignName,
+      sourcePropertyId: sourcePropertyId,
+      sourcePropertyAddress: sourcePropertyAddress,
+      interactedSourceType: finalSourceType,
       intentScore: (leadState.timeline?.includes("30-60") || leadState.timeline?.includes("Found")) ? "hot" : "warm",
       status: "new",
-      notes: `Captured via 24/7 AI Lead Intake Assistant. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}, Low/No Down Homes: ${leadState.sendSampleHomes ? 'YES' : 'NO'}.`,
+      notes: contactForm.notes?.trim() 
+        ? `${sanitizeSSN(contactForm.notes.trim())}\n\n[System Record]: Captured via 24/7 AI Lead Intake Assistant. Source: ${computedLeadSource}. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}.`
+        : `Captured via 24/7 AI Lead Intake Assistant. Source: ${computedLeadSource}. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}.`,
       chatTranscript: messages.map(m => ({ sender: m.sender, text: sanitizeSSN(m.text), time: m.time })),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      // TCPA SMS Consent & Automated Text Nurture
+      smsConsentAuthorized: contactForm.smsConsentAuthorized,
+      smsConsentTimestamp: contactForm.smsConsentAuthorized ? new Date().toISOString() : undefined,
+      textNurtureEnabled: contactForm.smsConsentAuthorized,
+      textNurtureCurrentStep: 1,
+      textNurtureTotalSteps: 4,
+      textNurtureStageText: contactForm.smsConsentAuthorized ? "1 of 4 automated text nurture active" : "Text Nurture Opted Out",
+      lastTextSentAt: new Date().toISOString(),
+      lastTextTemplateName: "Welcome & OHCS $10k Grant Calculator Link",
+      smsMessages: [
+        {
+          id: `sms-init-${Date.now()}`,
+          direction: "outbound",
+          text: `Hi ${contactForm.fullName.split(" ")[0]}! This is ${loanOfficer.name} with ${loanOfficer.company || "Guild Mortgage"}. Thank you for completing your Oregon Homebuyer Blueprint! We sent your custom DPA grant calculation details to ${contactForm.email}.`,
+          timestamp: new Date().toISOString(),
+          status: "delivered"
+        }
+      ]
     };
 
     onSaveLead(newLead);
@@ -1036,6 +1084,28 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
               />
             </div>
           </div>
+
+          {/* Active Tracked Campaign / Listing Ribbon */}
+          {(sourcePropertyAddress || sourceCampaignName) && (
+            <div className="bg-[#C18C5D]/10 px-4 py-2 border-b border-[#C18C5D]/30 flex items-center justify-between text-xs text-[#2D362E] font-medium shrink-0">
+              <div className="flex items-center gap-1.5 truncate">
+                {sourcePropertyAddress ? (
+                  <>
+                    <Home className="w-3.5 h-3.5 text-[#C18C5D] shrink-0" />
+                    <span className="truncate">Inquiring on Listing: <strong className="font-semibold text-[#4A5D4E]">{sourcePropertyAddress}</strong></span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-[#C18C5D] shrink-0" />
+                    <span className="truncate">Attributed Campaign: <strong className="font-semibold text-[#4A5D4E]">{sourceCampaignName}</strong></span>
+                  </>
+                )}
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-[#C18C5D] text-white px-2 py-0.5 rounded-full shrink-0 ml-2">
+                Source Tracked
+              </span>
+            </div>
+          )}
 
           {/* Chat Messages Body with Free Scroll & Smooth Transitions */}
           <div 
@@ -1530,6 +1600,24 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                     </div>
                   </div>
 
+                  {/* TCPA SMS Authorization Consent Question */}
+                  <div className="bg-[#FAF9F5] p-3 rounded-xl border border-[#EAE7E0] space-y-1.5">
+                    <label className="flex items-start gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={contactForm.smsConsentAuthorized}
+                        onChange={(e) => setContactForm({ ...contactForm, smsConsentAuthorized: e.target.checked })}
+                        className="mt-0.5 rounded border-[#9A9488] text-[#4A5D4E] focus:ring-[#4A5D4E]"
+                      />
+                      <span className="text-[11px] text-[#2D362E] font-semibold leading-tight">
+                        I authorize {loanOfficer.name} & partner team to send text messages (SMS) regarding rate alerts, DPA grants, and low/no down home listings.
+                      </span>
+                    </label>
+                    <p className="text-[10px] text-[#9A9488] pl-5">
+                      Message and data rates may apply. Reply STOP anytime to opt out.
+                    </p>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">Preferred Time to Chat</label>
@@ -1557,6 +1645,27 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                         <option value="Multi-Family (House Hacking)">Multi-Family (House Hacking)</option>
                       </select>
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">
+                      Additional Notes or Special Requests <span className="text-[#9A9488] font-normal">(Optional)</span>
+                    </label>
+                    <textarea 
+                      rows={2}
+                      placeholder="e.g., Looking for homes near top-rated school districts, interested in VA loan options, etc."
+                      value={contactForm.notes}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (containsSSN(val)) {
+                          setInputError("⚠️ SSNs are blocked for your privacy. Please do not enter sensitive identifiers.");
+                        } else if (inputError) {
+                          setInputError("");
+                        }
+                        setContactForm({ ...contactForm, notes: val });
+                      }}
+                      className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E] resize-none"
+                    />
                   </div>
 
                   <button
@@ -1610,6 +1719,14 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                       {leadState.sendSampleHomes ? '✓ Curated Listings Requested' : 'Blueprint Only'}
                     </span>
                   </div>
+                  {contactForm.notes && (
+                    <div className="pt-2 border-t border-[#EAE7E0]">
+                      <span className="text-[#606C5D] block mb-0.5 font-semibold text-[11px]">Your Notes / Special Requests:</span>
+                      <p className="text-[#2D362E] font-medium italic text-[11px] bg-[#FAF9F5] p-2 rounded-lg border border-[#EAE7E0]">
+                        "{contactForm.notes}"
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">

@@ -14,7 +14,12 @@ import {
   Sparkles,
   Layers,
   X,
-  ExternalLink
+  ExternalLink,
+  FileDown,
+  FileSpreadsheet,
+  TrendingUp,
+  Clock,
+  Mail
 } from "lucide-react";
 import { PropertyListing, FinancialProfile } from "../types";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
@@ -32,6 +37,11 @@ import {
 } from "../utils/overlayClassification";
 import { getPropertyOhcsPriceLimit, OREGON_COUNTY_PRICE_LIMITS } from "../utils/ohcsPurchaseLimits";
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
+import { EmailOutreachModal } from "./EmailOutreachModal";
+import { PropertyReportModal } from "./PropertyReportModal";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 interface PropertyTrackerProps {
   properties: PropertyListing[];
@@ -54,6 +64,176 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   const [overlayFilter, setOverlayFilter] = useState<string>("all");
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showPdfReportModal, setShowPdfReportModal] = useState(false);
+  const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [sortBy, setSortBy] = useState("added");
+  const [sortOrder, setSortOrder] = useState("desc");
+
+  const handleExportCSV = () => {
+    const listToExport = selectedPropertyIds.length > 0 
+      ? filtered.filter(p => selectedPropertyIds.includes(p.id)) 
+      : filtered;
+
+    if (listToExport.length === 0) {
+      alert("No properties found to export.");
+      return;
+    }
+
+    const headers = [
+      "Property Title",
+      "Address",
+      "City",
+      "County",
+      "State",
+      "Zip Code",
+      "Status",
+      "Property Type",
+      "Price ($)",
+      "Est. Monthly Payment ($)",
+      "Bedrooms",
+      "Bathrooms",
+      "Square Feet",
+      "Price per SqFt ($)",
+      "Year Built",
+      "Days on Market",
+      "HOA Monthly ($)",
+      "Property Tax Annual ($)",
+      "Favorite",
+      "Tour Date",
+      "Overall Tour Grade",
+      "Overall Scorecard Rating (1-10)",
+      "Roof & Exterior (1-10)",
+      "Foundation & Structure (1-10)",
+      "HVAC & Electrical (1-10)",
+      "Plumbing & Water Pressure (1-10)",
+      "Kitchen & Bathrooms (1-10)",
+      "Layout & Natural Light (1-10)",
+      "Neighborhood & Safety (1-10)",
+      "Parking & Access (1-10)",
+      "Noise & Surroundings (1-10)",
+      "Est. Renovation Cost ($)",
+      "Structural Red Flags",
+      "Positive Highlights",
+      "Notes",
+      "Listing Agent Name",
+      "Listing Agent Email",
+      "Listing Agent Phone",
+      "MLS Number",
+      "USDA Eligible",
+      "Flex Lending / LMI Eligible",
+      "OHCS Targeted Area"
+    ].join(",");
+
+    const escapeCsv = (val: any) => {
+      if (val === undefined || val === null) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = listToExport.map(p => {
+      const loanAmt = Math.max(0, p.price - profile.downPaymentSavings);
+      const estPI = calculateMonthlyPI(loanAmt, profile.interestRate, profile.loanTermYears);
+      const estMonthly = estPI + Math.round(p.propertyTaxAnnual / 12) + Math.round(profile.annualHomeInsurance / 12) + p.hoaMonthly;
+      const pricePerSqft = p.sqft ? Math.round(p.price / p.sqft) : "";
+
+      const sc = p.scorecard;
+      const overallGrade = sc?.grade || "N/A";
+      const overallRating = sc?.overallRating !== undefined ? sc.overallRating : "N/A";
+      const roofExterior = sc?.roofAndExterior !== undefined ? sc.roofAndExterior : "N/A";
+      const foundationStructure = sc?.foundationAndStructure !== undefined ? sc.foundationAndStructure : "N/A";
+      const hvacElectrical = sc?.hvacAndElectrical !== undefined ? sc.hvacAndElectrical : "N/A";
+      const plumbingWater = sc?.plumbingAndWaterPressure !== undefined ? sc.plumbingAndWaterPressure : "N/A";
+      const kitchenBaths = sc?.kitchenAndBathrooms !== undefined ? sc.kitchenAndBathrooms : "N/A";
+      const layoutLight = sc?.layoutAndNaturalLight !== undefined ? sc.layoutAndNaturalLight : "N/A";
+      const neighborhoodSafety = sc?.neighborhoodAndSafety !== undefined ? sc.neighborhoodAndSafety : "N/A";
+      const parkingAccess = sc?.parkingAndAccess !== undefined ? sc.parkingAndAccess : "N/A";
+      const noiseSurroundings = sc?.noiseAndSurroundings !== undefined ? sc.noiseAndSurroundings : "N/A";
+      const renoCost = sc?.estimatedRenovationCost !== undefined ? sc.estimatedRenovationCost : "N/A";
+      const redFlagsStr = sc?.redFlags && sc.redFlags.length > 0 ? sc.redFlags.join("; ") : "None";
+      const positivesStr = sc?.positives && sc.positives.length > 0 ? sc.positives.join("; ") : "None";
+
+      return [
+        escapeCsv(p.title),
+        escapeCsv(p.address),
+        escapeCsv(p.city),
+        escapeCsv(p.county || ""),
+        escapeCsv(p.state),
+        escapeCsv(p.zip),
+        escapeCsv(p.status),
+        escapeCsv(p.propertyType),
+        p.price,
+        estMonthly,
+        p.beds,
+        p.baths,
+        p.sqft,
+        pricePerSqft,
+        p.yearBuilt || "",
+        p.daysOnMarket !== undefined ? p.daysOnMarket : "",
+        p.hoaMonthly || 0,
+        p.propertyTaxAnnual || 0,
+        p.isFavorite ? "Yes" : "No",
+        escapeCsv(p.tourDate || ""),
+        escapeCsv(overallGrade),
+        overallRating,
+        roofExterior,
+        foundationStructure,
+        hvacElectrical,
+        plumbingWater,
+        kitchenBaths,
+        layoutLight,
+        neighborhoodSafety,
+        parkingAccess,
+        noiseSurroundings,
+        renoCost,
+        escapeCsv(redFlagsStr),
+        escapeCsv(positivesStr),
+        escapeCsv(p.notes || ""),
+        escapeCsv(p.listingAgent?.name || ""),
+        escapeCsv(p.listingAgent?.email || ""),
+        escapeCsv(p.listingAgent?.phone || ""),
+        escapeCsv(p.mlsNumber || ""),
+        isUsdaEligible(p) ? 'Yes' : 'No',
+        isLmiEligible(p) ? 'Yes' : 'No',
+        isTargetedArea(p) ? 'Yes' : 'No'
+      ].join(",");
+    });
+
+    const csvContent = [headers, ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Property-Tour-Scorecards-${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      const element = document.getElementById("property-report-content");
+      if (!element) return;
+      
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+      const imgData = canvas.toDataURL("image/png");
+      
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save("Property-Pipeline-Report.pdf");
+    } catch (error) {
+      console.error("Failed to export PDF", error);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -87,10 +267,10 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
 
   const filtered = properties.filter(p => {
     // 1. Status Filter
-    if (filterStatus !== "all" && p.status !== filterStatus) {
-      if (filterStatus === "offered" && p.status !== "under_contract") return false;
-      if (filterStatus !== "offered") return false;
-    }
+    if (filterStatus === "favorites" && !p.isFavorite) return false;
+    if (filterStatus === "consideration" && p.status !== "saved" && p.status !== "touring") return false;
+    if (filterStatus === "offered" && p.status !== "offered" && p.status !== "under_contract") return false;
+    if (filterStatus === "archived" && p.status !== "passed") return false;
 
     // 2. Overlay Filter
     if (overlayFilter === "usda" && !isUsdaEligible(p)) return false;
@@ -101,9 +281,47 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     if (overlayFilter === "price_eligible" && !isFirstHomePriceEligible(p)) return false;
 
     return true;
+  }).sort((a, b) => {
+    let comparison = 0;
+    if (sortBy === "price") {
+      comparison = a.price - b.price;
+    } else if (sortBy === "dom") {
+      comparison = (a.daysOnMarket || 0) - (b.daysOnMarket || 0);
+    } else {
+      // Default to added date (assuming higher ID or syncedAt means newer, for mock data we can sort by id if syncedAt missing)
+      const dateA = a.syncedAt ? new Date(a.syncedAt).getTime() : a.id.localeCompare(b.id);
+      const dateB = b.syncedAt ? new Date(b.syncedAt).getTime() : 0;
+      comparison = (dateA > dateB) ? 1 : -1;
+    }
+    return sortOrder === "asc" ? comparison : -comparison;
   });
 
   const comparedProperties = properties.filter(p => compareIds.includes(p.id));
+
+  // KPI Calculations
+  const kpiStats = React.useMemo(() => {
+    if (filtered.length === 0) return { totalVolume: 0, avgDom: 0, activeListings: 0 };
+    const totalVolume = filtered.reduce((sum, p) => sum + p.price, 0);
+    const totalDom = filtered.reduce((sum, p) => sum + (p.daysOnMarket || 0), 0);
+    const activeListings = filtered.length;
+    return {
+      totalVolume,
+      activeListings,
+      avgDom: Math.round(totalDom / activeListings)
+    };
+  }, [filtered]);
+
+  const agentDistribution = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    filtered.forEach(p => {
+      if (p.listingAgent?.name) {
+        counts[p.listingAgent.name] = (counts[p.listingAgent.name] || 0) + 1;
+      }
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [filtered]);
 
   return (
     <div className="space-y-8">
@@ -123,7 +341,30 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowEmailModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#FAF9F5] border border-[#C18C5D] text-[#C18C5D] hover:bg-[#C18C5D] hover:text-white font-semibold text-xs shadow-sm transition-all"
+            >
+              <Mail className="w-4 h-4" />
+              <span>Email Agents {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
+            </button>
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-stone-50 text-[#606C5D] hover:text-[#2D362E] font-semibold text-xs shadow-sm transition-all cursor-pointer"
+              title="Download complete property tour & scorecard CSV report"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-[#4A5D4E]" />
+              <span>Download CSV</span>
+            </button>
+            <button
+              onClick={() => setShowPdfReportModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#4A5D4E] text-white hover:bg-[#38463B] font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105"
+              title="Generate printable PDF property audit & tour scorecard report"
+            >
+              <FileDown className="w-4 h-4 text-emerald-300" />
+              <span>Generate PDF Report {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
+            </button>
             {compareIds.length > 1 && (
               <button
                 onClick={() => setShowCompareModal(true)}
@@ -148,9 +389,10 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
         <div className="flex flex-wrap gap-2 pt-2 border-t border-[#EAE7E0]">
           {[
             { id: "all", label: `All Pipeline (${properties.length})` },
-            { id: "touring", label: `Touring / Open House (${properties.filter(p => p.status === "touring").length})` },
-            { id: "saved", label: `Saved (${properties.filter(p => p.status === "saved").length})` },
-            { id: "offered", label: `Offered / Under Contract (${properties.filter(p => p.status === "offered" || p.status === "under_contract").length})` },
+            { id: "favorites", label: `Favorites (${properties.filter(p => p.isFavorite).length})` },
+            { id: "consideration", label: `Under Consideration (${properties.filter(p => p.status === "saved" || p.status === "touring").length})` },
+            { id: "offered", label: `Offered / Contract (${properties.filter(p => p.status === "offered" || p.status === "under_contract").length})` },
+            { id: "archived", label: `Archived (${properties.filter(p => p.status === "passed").length})` },
           ].map(tab => (
             <button
               key={tab.id}
@@ -192,9 +434,153 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           ))}
         </div>
 
+        {/* Sort Controls */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#EAE7E0]/60">
+          <span className="text-[11px] font-bold text-[#606C5D] uppercase tracking-wider mr-1">Sort By:</span>
+          {[
+            { id: "added", label: "Added Date" },
+            { id: "price", label: "Market Value" },
+            { id: "dom", label: "Days on Market" },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                if (sortBy === tab.id) {
+                  setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+                } else {
+                  setSortBy(tab.id);
+                  setSortOrder("desc");
+                }
+              }}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                sortBy === tab.id
+                  ? "bg-[#4A5D4E] text-white shadow-2xs font-bold ring-2 ring-[#4A5D4E]/20"
+                  : "bg-[#FAF9F5] text-[#606C5D] hover:bg-[#F1EFE9] border border-[#EAE7E0]"
+              }`}
+            >
+              {tab.label}
+              {sortBy === tab.id && (
+                <ArrowRight className={`w-3 h-3 transition-transform ${sortOrder === "desc" ? "rotate-90" : "-rotate-90"}`} />
+              )}
+            </button>
+          ))}
+        </div>
+
         {/* Screening Aid Disclaimer Banner */}
         <ScreeningDisclaimerBanner variant="compact" />
       </div>
+
+      {/* KPI Summary Card */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-[#F1EFE9] rounded-xl text-[#4A5D4E]">
+            <Building className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-[#9A9488] uppercase tracking-wider">Active Listings</p>
+            <p className="text-2xl font-serif font-bold text-[#2D362E]">{kpiStats.activeListings}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-[#F1EFE9] rounded-xl text-[#4A5D4E]">
+            <TrendingUp className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-[#9A9488] uppercase tracking-wider">Total Volume</p>
+            <p className="text-2xl font-serif font-bold text-[#2D362E]">{formatUSD(kpiStats.totalVolume)}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-[#F1EFE9] rounded-xl text-[#4A5D4E]">
+            <Clock className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-[#9A9488] uppercase tracking-wider">Avg Days on Market</p>
+            <p className="text-2xl font-serif font-bold text-[#2D362E]">{kpiStats.avgDom} Days</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="property-report-content" className="p-4 bg-white/50 rounded-xl">
+      {/* Listing Agent Distribution Chart */}
+      {agentDistribution.length > 0 && (
+        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-6 shadow-sm mb-6 mt-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Building className="w-5 h-5 text-[#4A5D4E]" />
+            <h3 className="font-serif text-lg font-bold text-[#2D362E]">Listing Agent Distribution</h3>
+          </div>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={agentDistribution} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fontSize: 11, fill: '#606C5D' }} 
+                  axisLine={{ stroke: '#EAE7E0' }}
+                  tickLine={false}
+                  angle={-45}
+                  textAnchor="end"
+                  interval={0}
+                />
+                <YAxis 
+                  tick={{ fontSize: 11, fill: '#606C5D' }} 
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip 
+                  cursor={{ fill: '#FAF9F5' }}
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #EAE7E0', fontSize: '12px', padding: '8px 12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                />
+                <Bar dataKey="count" fill="#4A5D4E" radius={[4, 4, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Selection Controls */}
+      {filtered.length > 0 && (
+        <div className="flex items-center justify-between py-2 border-b border-[#EAE7E0]/60 mb-4">
+          <label className="flex items-center gap-2 text-sm font-semibold text-[#2D362E] cursor-pointer">
+            <input 
+              type="checkbox"
+              className="w-4 h-4 rounded text-[#4A5D4E] focus:ring-[#4A5D4E]/20"
+              checked={selectedPropertyIds.length === filtered.length && filtered.length > 0}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedPropertyIds(filtered.map(p => p.id));
+                } else {
+                  setSelectedPropertyIds([]);
+                }
+              }}
+            />
+            Select All ({filtered.length})
+          </label>
+          {selectedPropertyIds.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#4A5D4E] bg-[#4A5D4E]/10 px-2.5 py-1 rounded-md">
+                {selectedPropertyIds.length} Selected
+              </span>
+              <button
+                onClick={() => setShowPdfReportModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1 bg-[#4A5D4E] text-white hover:bg-[#38463B] font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer"
+                title="Generate PDF report for selected properties"
+              >
+                <FileDown className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Generate PDF Report ({selectedPropertyIds.length})</span>
+              </button>
+              <button
+                onClick={handleExportCSV}
+                className="flex items-center gap-1.5 px-3 py-1 bg-white border border-[#4A5D4E]/30 text-[#4A5D4E] hover:bg-[#4A5D4E] hover:text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer"
+                title="Download CSV report for selected properties"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Download Selected CSV ({selectedPropertyIds.length})</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Property Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -239,6 +625,19 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
 
                     {/* Top Right Action Buttons */}
                     <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        className="w-5 h-5 rounded text-[#4A5D4E] focus:ring-[#4A5D4E]/20 bg-white/80 border-white/60 cursor-pointer backdrop-blur-md shadow-sm"
+                        checked={selectedPropertyIds.includes(property.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          if (e.target.checked) {
+                            setSelectedPropertyIds(prev => [...prev, property.id]);
+                          } else {
+                            setSelectedPropertyIds(prev => prev.filter(id => id !== property.id));
+                          }
+                        }}
+                      />
                       <button
                         onClick={(e) => toggleFavorite(property.id, e)}
                         className={`p-2 rounded-xl backdrop-blur-md border transition-colors ${
@@ -290,6 +689,19 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
 
                       {/* Top Right Action Buttons */}
                       <div className="flex items-center gap-1.5">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded text-[#4A5D4E] focus:ring-[#4A5D4E]/20 bg-white border-[#EAE7E0] cursor-pointer shadow-sm"
+                          checked={selectedPropertyIds.includes(property.id)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            if (e.target.checked) {
+                              setSelectedPropertyIds(prev => [...prev, property.id]);
+                            } else {
+                              setSelectedPropertyIds(prev => prev.filter(id => id !== property.id));
+                            }
+                          }}
+                        />
                         <button
                           onClick={(e) => toggleFavorite(property.id, e)}
                           className={`p-1.5 rounded-xl border transition-colors ${
@@ -337,18 +749,22 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                   </div>
 
                   {/* Specs Pill Grid */}
-                  <div className="grid grid-cols-3 gap-2 py-2 border-y border-[#EAE7E0] text-xs text-center">
+                  <div className="grid grid-cols-4 gap-2 py-2 border-y border-[#EAE7E0] text-xs text-center">
                     <div>
                       <span className="text-[#9A9488] block text-[10px]">Bedrooms</span>
-                      <span className="font-bold text-[#2D362E]">{property.beds} Beds</span>
+                      <span className="font-bold text-[#2D362E]">{property.beds}</span>
                     </div>
                     <div>
                       <span className="text-[#9A9488] block text-[10px]">Bathrooms</span>
-                      <span className="font-bold text-[#2D362E]">{property.baths} Baths</span>
+                      <span className="font-bold text-[#2D362E]">{property.baths}</span>
                     </div>
                     <div>
                       <span className="text-[#9A9488] block text-[10px]">Living Area</span>
                       <span className="font-bold text-[#2D362E]">{property.sqft} sqft</span>
+                    </div>
+                    <div className="relative group cursor-help">
+                      <span className="text-[#9A9488] block text-[10px] flex items-center justify-center gap-0.5">DOM <AlertCircle className="w-2.5 h-2.5" title="Days on Market (snapshot at time of import, may not reflect live listing data)" /></span>
+                      <span className="font-bold text-[#2D362E]">{property.daysOnMarket !== undefined ? property.daysOnMarket : "N/A"}</span>
                     </div>
                   </div>
 
@@ -490,7 +906,21 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
         })}
       </div>
 
+      <EmailOutreachModal 
+        isOpen={showEmailModal} 
+        onClose={() => setShowEmailModal(false)} 
+        properties={selectedPropertyIds.length > 0 ? filtered.filter(p => selectedPropertyIds.includes(p.id)) : filtered} 
+      />
+
+      <PropertyReportModal
+        isOpen={showPdfReportModal}
+        onClose={() => setShowPdfReportModal(false)}
+        properties={selectedPropertyIds.length > 0 ? filtered.filter(p => selectedPropertyIds.includes(p.id)) : filtered}
+        profile={profile}
+      />
+
       {/* Side-by-Side Property Comparison Modal */}
+      </div>
       {showCompareModal && comparedProperties.length > 0 && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-[#EAE7E0] rounded-3xl max-w-5xl w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">

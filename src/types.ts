@@ -231,9 +231,20 @@ export interface RealEstateAgentProfile {
   bio: string;
   specialties: string[];
   marketAreas: string[];
+  agentType?: 'buyer_agent' | 'listing_agent' | 'dual_agent';
+  experienceYears?: number;
+  activeListingsCount?: number;
+  rating?: number;
   websiteUrl?: string;
+  socialLinks?: {
+    zillow?: string;
+    linkedin?: string;
+    instagram?: string;
+    facebook?: string;
+  };
   assignedLoIds?: string[];
   customSlug?: string;
+  aiGenerated?: boolean;
 }
 
 export interface LOPairing {
@@ -305,13 +316,39 @@ export interface CapturedLead {
   sendSampleHomesOption?: string;
   assignedLoId: string;
   assignedAgentId?: string;
+  assignedLO?: string;
+  assignedAgent?: string;
   pairingId?: string;
   leadSource: string;
+  sourceCampaignId?: string;
+  sourceCampaignName?: string;
+  sourcePropertyId?: string;
+  sourcePropertyAddress?: string;
+  interactedSourceType?: 'campaign' | 'property_listing' | 'chatbot' | 'flyer' | 'calculator';
   intentScore: 'hot' | 'warm' | 'exploring';
   status: 'new' | 'contacted' | 'pre_approved' | 'in_escrow' | 'closed' | 'archived';
   notes?: string;
   chatTranscript?: { sender: string; text: string; time: string }[];
   createdAt: string;
+  nurtureSequenceEnabled?: boolean;
+  nurtureSequenceStage?: 'new_welcome' | 'contacted_followup' | 'pre_approved_homehunt' | 'escrow_closing_prep' | 'closed_post_close' | 'paused';
+  nurtureCurrentStep?: number;
+  nurtureTotalSteps?: number;
+  nurtureStageText?: string;
+  lastEmailSentAt?: string;
+  lastEmailTemplateName?: string;
+  nurtureSequenceLogs?: { id: string; stageName: string; templateName?: string; emailSubject: string; sentAt: string; status: 'sent' | 'scheduled' | 'opened' }[];
+  // SMS Text Messaging & TCPA Consent Fields
+  smsConsentAuthorized?: boolean;
+  smsConsentTimestamp?: string;
+  textNurtureEnabled?: boolean;
+  textNurtureCurrentStep?: number;
+  textNurtureTotalSteps?: number;
+  textNurtureStageText?: string;
+  lastTextSentAt?: string;
+  lastTextTemplateName?: string;
+  smsMessages?: { id: string; direction: 'inbound' | 'outbound'; text: string; timestamp: string; attachmentUrl?: string; attachmentType?: 'flyer' | 'property_list' | 'link'; attachmentTitle?: string; status?: 'delivered' | 'sent' | 'read' }[];
+  textNurtureLogs?: { id: string; stepNumber: number; templateName: string; messageText: string; sentAt: string; status: 'delivered' | 'scheduled' | 'sent' }[];
 }
 
 export interface ProfessionalGuidesState {
@@ -345,4 +382,17 @@ export interface AmortizationPoint {
   cumulativeInterestAccelerated: number;
   principalPaidStandard: number;
   principalPaidAccelerated: number;
+}
+
+
+export interface EmailTemplate {
+  id: string;
+  title: string;
+  subject: string;
+  body: string; // HTML string
+  tags?: string[]; // e.g. ['Welcome', 'Follow-up', 'Promotion', 'USDA']
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+  ownerId: string;
 }

@@ -5,53 +5,164 @@
       "description": "Loan Officer Profile containing headshot and other details",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "title": { "type": "string" },
-        "nmlsId": { "type": "string" },
-        "company": { "type": "string" },
-        "branch": { "type": "string" },
-        "email": { "type": "string" },
-        "phone": { "type": "string" },
-        "headshotUrl": { "type": "string" },
-        "bio": { "type": "string" },
-        "websiteUrl": { "type": "string" },
-        "customSlug": { "type": "string" },
-        "isAdmin": { "type": "boolean" },
-        "password": { "type": "string" },
-        "passwordResetAuthorized": { "type": "boolean" },
-        "passwordResetRequestedAt": { "type": "string" },
-        "passwordResetAuthorizedAt": { "type": "string" },
-        "passwordResetPin": { "type": "string" },
-        "lastLogin": { "type": "string" }
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "nmlsId": {
+          "type": "string"
+        },
+        "company": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "headshotUrl": {
+          "type": "string"
+        },
+        "bio": {
+          "type": "string"
+        },
+        "websiteUrl": {
+          "type": "string"
+        },
+        "customSlug": {
+          "type": "string"
+        },
+        "isAdmin": {
+          "type": "boolean"
+        },
+        "password": {
+          "type": "string"
+        },
+        "passwordResetAuthorized": {
+          "type": "boolean"
+        },
+        "passwordResetRequestedAt": {
+          "type": "string"
+        },
+        "passwordResetAuthorizedAt": {
+          "type": "string"
+        },
+        "passwordResetPin": {
+          "type": "string"
+        },
+        "lastLogin": {
+          "type": "string"
+        }
       },
-      "required": ["id", "name"]
+      "required": [
+        "id",
+        "name"
+      ]
     },
     "RealEstateAgentProfile": {
       "title": "RealEstateAgentProfile",
       "description": "Real Estate Agent Profile containing headshot and other details",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "title": { "type": "string" },
-        "brokerage": { "type": "string" },
-        "licenseNumber": { "type": "string" },
-        "email": { "type": "string" },
-        "phone": { "type": "string" },
-        "headshotUrl": { "type": "string" },
-        "bio": { "type": "string" }
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "brokerage": {
+          "type": "string"
+        },
+        "licenseNumber": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "headshotUrl": {
+          "type": "string"
+        },
+        "bio": {
+          "type": "string"
+        }
       },
-      "required": ["id", "name"]
+      "required": [
+        "id",
+        "name"
+      ]
     },
     "GuidesState": {
       "title": "GuidesState",
       "description": "Global state for the application",
       "type": "object",
       "properties": {
-        "stateJson": { "type": "string" }
+        "stateJson": {
+          "type": "string"
+        }
       },
-      "required": ["stateJson"]
+      "required": [
+        "stateJson"
+      ]
+    },
+    "EmailTemplate": {
+      "title": "EmailTemplate",
+      "description": "Draft email templates for agent outreach",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isArchived": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "ownerId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "subject",
+        "body",
+        "isArchived",
+        "ownerId"
+      ]
     }
   },
   "firestore": {
@@ -66,6 +177,10 @@
     "agents/{agentId}": {
       "schema": "RealEstateAgentProfile",
       "description": "Agents collection"
+    },
+    "email_templates/{templateId}": {
+      "schema": "EmailTemplate",
+      "description": "Email templates created by loan officers"
     }
   }
 }

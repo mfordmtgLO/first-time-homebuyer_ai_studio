@@ -275,6 +275,233 @@ Provide:
     }
   });
 
+  // API Route: AI Agent Profile Lookup & Generation
+  app.post("/api/gemini/agent-lookup", async (req, res) => {
+    try {
+      const { query } = req.body;
+      if (!query || typeof query !== "string" || !query.trim()) {
+        return res.status(400).json({ error: "Agent search query required" });
+      }
+
+      const ai = getGeminiClient();
+      const systemInstruction = `You are a specialized AI Real Estate Intelligence Assistant.
+Given an agent's name, website URL, brokerage office, or city location, generate a comprehensive, realistic, and complete professional real estate agent profile object.
+
+You MUST respond strictly with valid JSON (no markdown fences, no formatting backticks) conforming to this exact structure:
+{
+  "name": "Full Agent Name",
+  "title": "Professional Title (e.g., Senior Buyer Specialist, REALTOR®)",
+  "brokerage": "Brokerage / Firm Name",
+  "licenseNumber": "License number (e.g. OR Lic #202409811)",
+  "email": "professional.email@domain.com",
+  "phone": "(503) 555-0192",
+  "websiteUrl": "https://brokerage.com/agent-name",
+  "headshotUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
+  "agentType": "buyer_agent",
+  "experienceYears": 9,
+  "activeListingsCount": 11,
+  "rating": 4.9,
+  "bio": "Comprehensive, compelling professional biography detailing local market experience, advocacy for first-time homebuyers, offer negotiation skills, and collaboration with zero-down mortgage programs.",
+  "specialties": ["First-Time Homebuyers", "USDA 0% Down Loans", "Down Payment Assistance Grants", "Inspection Negotiations"],
+  "marketAreas": ["Portland Metro", "Beaverton", "Clackamas", "Hillsboro"],
+  "socialLinks": {
+    "zillow": "https://zillow.com/profile/agent",
+    "linkedin": "https://linkedin.com/in/agent",
+    "instagram": "https://instagram.com/agent_realtor"
+  }
+}
+Note on agentType: If the query emphasizes buyers or purchasing, use "buyer_agent". If listings or selling, use "listing_agent". Otherwise use "dual_agent". Choose realistic Unsplash portrait images for headshotUrl.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: `Search Query: "${query.trim()}"`,
+        config: {
+          systemInstruction,
+          temperature: 0.4,
+          responseMimeType: "application/json"
+        },
+      });
+
+      const jsonText = response.text || "{}";
+      const profileData = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
+      res.json({ success: true, profile: profileData });
+    } catch (error: any) {
+      console.error("Agent lookup error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate AI agent profile" });
+    }
+  });
+
+  // API Route: AI Buyer Lead Outreach & Co-Branded Template Generator
+  app.post("/api/gemini/website-lead-email", async (req, res) => {
+    const { lead, lo, agent, matchingListings } = req.body || {};
+    try {
+      const ai = getGeminiClient();
+
+      const loName = lo?.name || "Mike Ford";
+      const loTitle = lo?.title || "Senior Loan Officer";
+      const loNmls = lo?.nmlsId || "184209";
+
+      const agentName = agent?.name;
+      const agentBrokerage = agent?.brokerage;
+      const agentTitle = agent?.title || "Senior Real Estate Agent";
+      const agentPhone = agent?.phone;
+      const agentEmail = agent?.email;
+
+      const leadName = lead?.fullName || "Valued Homebuyer";
+      const leadCity = lead?.preferredLocations || "your target area";
+      const targetBudget = lead?.targetPriceRange || "$400,000";
+      const requestedHomeList = Boolean(lead?.sendSampleHomes);
+
+      const listingsSummary = (matchingListings || []).map((p: any) =>
+        `- ${p.address}, ${p.city} (${p.beds}bd/${p.baths}ba, $${(p.price || 0).toLocaleString()}): ${p.overlayEligibility?.usda ? "🌾 100% USDA Zero Down Eligible" : "💳 Flex DPA 3.5% Grant Eligible"} (Est. PITI: ~$${Math.round((p.price || 0) * 0.0065).toLocaleString()}/mo)`
+      ).join("\n");
+
+      const systemInstruction = `You are a top-producing Mortgage & Real Estate Conversion Strategist.
+Generate a personalized, warm, highly conversion-focused outreach email for a prospective first-time homebuyer who submitted an intake request on the website chatbot.
+
+CRITICAL MANDATES:
+1. If an assigned Real Estate Agent is provided (${agentName || "None"}), you MUST include a clear co-branded team introduction plug explaining that ${loName} (${loTitle}) and ${agentName} (${agentTitle} at ${agentBrokerage}) work together as a co-branded local guide team to help them find zero-down and low-down homes, request property tours, and navigate state DPA grants in ${leadCity} and surrounding areas.
+2. If the lead requested sample homes (${requestedHomeList ? "YES - Requested home list" : "NO"}), prominently feature the pre-screened low and zero-down homes list in or around ${leadCity}.
+3. Break down why buying with 0% down (USDA Rural Development) or 3.5% Flex DPA grants makes sense compared to local rent.
+4. Keep the tone encouraging, clear, transparent, and easy to respond to with zero pressure.
+
+Respond with strict JSON:
+{
+  "subject": "Compelling personalized subject line referencing city and low/no down homes",
+  "body": "Full structured email text with co-branded guide plug, home list section, and clear call-to-action",
+  "smsFollowup": "Short 2-sentence SMS follow-up text message"
+}`;
+
+      const prompt = `Lead Information:
+Name: ${leadName}
+Email: ${lead?.email}
+Target City/Location: ${leadCity}
+Target Price/Budget: ${targetBudget}
+Down Payment Savings: ${lead?.downPaymentSavings || "Low"}
+Timeline: ${lead?.timeline || "30-60 Days"}
+Requested Sample Home List: ${requestedHomeList ? "YES - Wants recent $0/Low Down listings" : "No"}
+DPA Interest: ${lead?.grantInterest ? "YES" : "No"}
+
+Loan Officer: ${loName} (${loTitle}, NMLS #${loNmls})
+${agentName ? `Co-Branded Realtor Partner: ${agentName} (${agentTitle} @ ${agentBrokerage}, Phone: ${agentPhone}, Email: ${agentEmail})` : "Individual LO Outreach"}
+
+Qualifying Listings in/around ${leadCity}:
+${listingsSummary || `- Qualifying 100% USDA Zero-Down & Flex DPA homes available across ${leadCity} and surrounding towns.`}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: prompt,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+          responseMimeType: "application/json"
+        },
+      });
+
+      const jsonText = response.text || "{}";
+      const result = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
+      res.json({ success: true, email: result });
+    } catch (error: any) {
+      console.error("Website lead email error:", error);
+
+      const agentPlug = agent?.name ? `\n\n🤝 YOUR LOCAL CO-BRANDED GUIDE TEAM:\nAs part of your dedicated homebuyer support team, I work in close partnership with ${agent.name} (${agent.title || "Real Estate Specialist"} at ${agent.brokerage || "Premier Realty"}). Together, we handle both your 100% pre-approval financing and private home tours across ${lead?.preferredLocations || "your target area"} and surrounding cities to ensure you get the best deal with zero stress.` : "";
+
+      const sampleHomesBlock = (matchingListings && matchingListings.length > 0)
+        ? `\n\n🏡 RECENT LOW & ZERO-DOWN HOMES FOR SALE IN/AROUND ${ (lead?.preferredLocations || "YOUR AREA").toUpperCase() }:\n` + matchingListings.slice(0, 3).map((p: any) => `• ${p.address}, ${p.city} - $${(p.price || 0).toLocaleString()} (${p.beds}bd/${p.baths}ba) | ${p.overlayEligibility?.usda ? "100% USDA Zero Down Eligible ($0 Down)" : "Flex DPA 3.5% Grant Eligible"}`).join("\n")
+        : `\n\n🏡 LOW & ZERO-DOWN HOMES IN ${ (lead?.preferredLocations || "YOUR AREA").toUpperCase() }:\nWe have compiled a curated list of homes in ${lead?.preferredLocations || "your area"} that qualify for 100% USDA Zero Down ($0 down required) or 3.5% Flex DPA Grants!`;
+
+      res.status(500).json({
+        error: error.message || "Failed to generate website lead email",
+        email: {
+          subject: `Your Low & Zero-Down Home List for ${lead?.preferredLocations || "Oregon"} + First-Time Buyer Blueprint`,
+          body: `Hi ${lead?.fullName ? lead.fullName.split(" ")[0] : "there"},\n\nThank you for reaching out through our interactive First-Time Homebuyer Portal! Based on your target budget of ${lead?.targetPriceRange || "$400,000"} and timeline (${lead?.timeline || "30-60 days"}), we have prepared your customized pre-approval blueprint.${agentPlug}${sampleHomesBlock}\n\nDid you know that many buyers in ${lead?.preferredLocations || "our market"} assume they need $40,000+ in cash for a down payment—when in reality, you can purchase with 0% down or combine 3.5% DPA grants with seller concessions?\n\nLet's schedule a quick 10-minute call this week at your preferred time (${lead?.preferredContactTime || "whenever convenient"}) to review your exact monthly numbers and set up property alerts for new qualifying listings.\n\nBest regards,\n${lo?.name || "Mike Ford"}\n${lo?.title || "Senior Loan Officer"} | NMLS #${lo?.nmlsId || "184209"}\nPhone: ${lo?.phone || "(503) 555-0199"}`,
+          smsFollowup: `Hi ${lead?.fullName ? lead.fullName.split(" ")[0] : "there"}! Sent over your requested zero-down home list for ${lead?.preferredLocations || "your target area"} + your co-branded buyer blueprint. Check your inbox when you get a chance!`
+        }
+      });
+    }
+  });
+
+  // API Route: AI Buyer Agent Outreach Email & Campaign Generator
+  app.post("/api/gemini/buyer-agent-email", async (req, res) => {
+    const { agentNames, properties, loName, campaignType, tone, customNotes } = req.body || {};
+    try {
+      const ai = getGeminiClient();
+
+      const propertySummary = (properties || []).map((p: any) => 
+        `- ${p.address}, ${p.city} ($${(p.price || 0).toLocaleString()}): ${p.overlayEligibility?.usda ? "USDA 100% Zero Down Eligible" : "Flex DPA 3.5% Grant Eligible"}, Est. Payment: ~$${Math.round((p.price || 0) * 0.0065).toLocaleString()}/mo vs Avg Local Rent ~$2,150/mo`
+      ).join("\n");
+
+      const systemInstruction = `You are an expert Mortgage Co-Marketing Strategist building high-converting B2B outreach email drafts for Loan Officers targeting Buyer's Agents.
+Your goal is to convince local Buyer's Agents to partner up with Senior Loan Officer ${loName || "Mike Ford"} to co-market zero-down and low-down property listings to renters who want to stop paying rent and buy their first home.
+
+Key themes to emphasize:
+1. Renters who assume they need 20% down or $50k cash can actually buy with 0% down (USDA Rural Development) or 3.5% Flex DPA grants.
+2. Partnering up on co-branded landing pages, flyer attachments, and open house marketing.
+3. Highlighting specific pre-screened zero/low-down listings in the area.
+4. Engaging, professional, non-salesy tone that respects the Realtor's time.
+
+Respond with strict JSON:
+{
+  "subject": "Compelling, high open-rate subject line",
+  "body": "Full professional email body text using placeholders like [AgentName] where appropriate",
+  "smsScript": "Short 2-sentence SMS text message script to follow up with the agent",
+  "openHouseTalkingPoints": [
+    "Talking point 1 for buyer agent open house visitors",
+    "Talking point 2 for buyer agent open house visitors",
+    "Talking point 3 for buyer agent open house visitors"
+  ],
+  "rentVsBuyComparison": {
+    "avgLocalRent": "$2,200/mo",
+    "estMortgagePayment": "$2,140/mo",
+    "downPaymentRequired": "$0 (USDA 100% RD / Flex DPA)",
+    "monthlySavings": "$60/mo + equity building"
+  }
+}`;
+
+      const prompt = `Campaign Focus: ${campaignType || "Attract Buyer Agents - Stop Renting Zero-Down Push"}
+Tone Strategy: ${tone || "High-Converting & Professional"}
+Target Agents: ${Array.isArray(agentNames) && agentNames.length > 0 ? agentNames.join(", ") : "Local Buyer Specialists"}
+Featured Qualifying Listings:
+${propertySummary || "Pre-screened USDA Zero Down and OHCS Flex DPA homes across Oregon."}
+Additional Custom Instructions: ${customNotes || "None"}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: prompt,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+          responseMimeType: "application/json"
+        },
+      });
+
+      const jsonText = response.text || "{}";
+      const result = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
+      res.json({ success: true, email: result });
+    } catch (error: any) {
+      console.error("Buyer agent email error:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to generate buyer agent email",
+        email: {
+          subject: "Turn Your Open House Renters into Buyers with 0% Down USDA & Flex DPA",
+          body: `Hi [AgentName],\n\nI hope you're having a great week! I was reviewing recent listings in our market and noticed your focus on buyer clients looking for affordable homes.\n\nDid you know that many buyers browsing your listings assume they need $40,000+ in cash for a down payment—when in reality, properties like [Property Address] qualify for 100% USDA Zero-Down Financing or 3.5% Flex DPA Grants?\n\nI'd love to partner with you to create co-branded open house flyers and an interactive pre-approval calculator link for your buyers. With average rents sitting at $2,200/mo, owning this home costs less than renting.\n\nLet's connect for 5 minutes this week to discuss how we can convert your buyer leads into closed transactions.\n\nBest regards,\n${loName || "Mike Ford"}\nSenior Loan Officer`,
+          smsScript: "Hi [AgentName], sent over a quick idea on how to help your renters buy with $0 down via USDA RD. Check your email when you get a chance!",
+          openHouseTalkingPoints: [
+            "Show buyers how 100% USDA RD financing allows $0 down payment on eligible homes.",
+            "Explain that $2,200/mo rent can be converted into $2,140/mo mortgage payment with rate buydowns.",
+            "Hand out co-branded flyers with instant QR code pre-qualification link."
+          ],
+          rentVsBuyComparison: {
+            avgLocalRent: "$2,200/mo",
+            estMortgagePayment: "$2,140/mo",
+            downPaymentRequired: "$0 (USDA 100% RD)",
+            monthlySavings: "$60/mo + equity building"
+          }
+        }
+      });
+    }
+  });
+
   // API Route: GeoSphere Oregon GIS Proxy & Synchronization
   app.post("/api/geosphere/sync", async (req, res) => {
     try {
@@ -410,6 +637,93 @@ Provide:
       console.error("GeoSphere sync error:", error);
       res.status(500).json({ error: error.message || "Failed to sync with GeoSphere" });
     }
+  });
+
+  // API Route: Twilio SMS Carrier Integration Proxy
+  app.post("/api/twilio/send-sms", async (req, res) => {
+    try {
+      const { to, message, accountSid, authToken, fromNumber, attachmentUrl } = req.body;
+
+      // Use credentials passed in request body or environment variables
+      const sid = accountSid || process.env.TWILIO_ACCOUNT_SID;
+      const token = authToken || process.env.TWILIO_AUTH_TOKEN;
+      const from = fromNumber || process.env.TWILIO_PHONE_NUMBER;
+
+      if (!sid || !token || !from) {
+        return res.status(400).json({
+          success: false,
+          error: "Twilio credentials missing. Please enter your Twilio Account SID, Auth Token, and Sender Phone Number in dashboard settings.",
+          isConfigured: false
+        });
+      }
+
+      if (!to || !message) {
+        return res.status(400).json({ success: false, error: "Target phone number and message text are required" });
+      }
+
+      // Format recipient phone number to E.164 format (+1...)
+      const cleanTo = to.replace(/[^0-9+]/g, "");
+      const formattedTo = cleanTo.startsWith("+") ? cleanTo : (cleanTo.length === 10 ? `+1${cleanTo}` : `+${cleanTo}`);
+
+      // Call Twilio REST API
+      const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
+      const authHeader = "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
+
+      const params = new URLSearchParams();
+      params.append("To", formattedTo);
+      params.append("From", from);
+      params.append("Body", message);
+      if (attachmentUrl && (attachmentUrl.startsWith("http://") || attachmentUrl.startsWith("https://"))) {
+        params.append("MediaUrl", attachmentUrl);
+      }
+
+      const twilioRes = await fetch(twilioEndpoint, {
+        method: "POST",
+        headers: {
+          "Authorization": authHeader,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: params.toString()
+      });
+
+      const twilioData: any = await twilioRes.json();
+
+      if (!twilioRes.ok) {
+        return res.status(twilioRes.status).json({
+          success: false,
+          error: twilioData.message || twilioData.detail || `Twilio API error HTTP ${twilioRes.status}`,
+          code: twilioData.code,
+          moreInfo: twilioData.more_info
+        });
+      }
+
+      res.json({
+        success: true,
+        messageSid: twilioData.sid,
+        status: twilioData.status,
+        to: twilioData.to,
+        from: twilioData.from,
+        dateCreated: twilioData.date_created
+      });
+    } catch (error: any) {
+      console.error("Twilio SMS send error:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to dispatch SMS via Twilio" });
+    }
+  });
+
+  // API Route: Check Twilio Config Status
+  app.get("/api/twilio/config-status", (_req, res) => {
+    const hasSid = Boolean(process.env.TWILIO_ACCOUNT_SID);
+    const hasToken = Boolean(process.env.TWILIO_AUTH_TOKEN);
+    const hasPhone = Boolean(process.env.TWILIO_PHONE_NUMBER);
+
+    res.json({
+      isConfigured: hasSid && hasToken && hasPhone,
+      hasSid,
+      hasToken,
+      hasPhone,
+      phoneMasked: hasPhone ? `${process.env.TWILIO_PHONE_NUMBER?.slice(0, 4)}***${process.env.TWILIO_PHONE_NUMBER?.slice(-4)}` : null
+    });
   });
 
   // Vite middleware in dev, static serving in prod

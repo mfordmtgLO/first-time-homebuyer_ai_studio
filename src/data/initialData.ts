@@ -1128,6 +1128,10 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     email: "sarah.jenkins@cascadevalleyre.com",
     phone: "(503) 555-0144",
     headshotUrl: "",
+    agentType: "buyer_agent",
+    experienceYears: 12,
+    activeListingsCount: 8,
+    rating: 4.9,
     bio: "Sarah is passionate about guiding first-time buyers through neighborhood selection, realistic tour inspections, and aggressive offer structuring to capture maximum seller closing credits.",
     specialties: [
       "First-Time Homebuyers",
@@ -1149,6 +1153,10 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     email: "marcus@willametteheritage.com",
     phone: "(503) 555-0177",
     headshotUrl: "",
+    agentType: "buyer_agent",
+    experienceYears: 16,
+    activeListingsCount: 14,
+    rating: 5.0,
     bio: "Marcus has closed over 350+ transactions for first-time buyers in Clackamas, Oregon City, and Gresham, combining deep neighborhood knowledge with razor-sharp contract terms.",
     specialties: [
       "Competitive Offer Structuring",
@@ -1170,6 +1178,10 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     email: "elena@urbannestpdx.com",
     phone: "(503) 555-0122",
     headshotUrl: "",
+    agentType: "dual_agent",
+    experienceYears: 9,
+    activeListingsCount: 11,
+    rating: 4.8,
     bio: "Elena specializes in vintage character homes, cosmetic fixers with instant sweat equity potential, and townhomes for young professionals and growing families.",
     specialties: [
       "Vintage Craftsmans & Bungalows",
@@ -1191,6 +1203,10 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     email: "tyler@pacificcrestre.com",
     phone: "(503) 555-0199",
     headshotUrl: "",
+    agentType: "listing_agent",
+    experienceYears: 5,
+    activeListingsCount: 19,
+    rating: 4.9,
     bio: "Tyler focuses on newly constructed townhomes, smart homes, and suburban relocations across Washington and Clackamas counties.",
     specialties: [
       "New Construction & Builder Warranties",
@@ -1466,20 +1482,102 @@ export const INITIAL_LEADS: import("../types").CapturedLead[] = [
     creditScoreTier: "740+ Excellent",
     preferredLocations: "Portland (SE / Sellwood) or Beaverton",
     propertyType: "Single Family Craftsman or Modern Townhome",
+    sendSampleHomes: true,
+    sendSampleHomesOption: "Flex DPA 3.5% Grants & Rate Buydowns",
     assignedLoId: "lo-mike-ford",
     assignedAgentId: "agent-sarah-jenkins",
     pairingId: "pair-mike-sarah",
-    leadSource: "Website AI Intake Chatbot",
+    leadSource: "Listing: 1420 SE Walnut St (Albany)",
+    sourceCampaignId: "ad-meta-1",
+    sourceCampaignName: "Meta Feed - 2026 Oregon First-Time Homebuyer Portal & DPA",
+    sourcePropertyId: "geo-1",
+    sourcePropertyAddress: "1420 SE Walnut St, Albany, OR",
+    interactedSourceType: "property_listing",
     intentScore: "hot",
     status: "new",
-    notes: "Both employed in tech & healthcare. Want to verify 2/1 rate buydown vs paying permanent discount points.",
+    notes: "Requested a list of recent homes for sale in Portland/Beaverton. Interested in 2/1 rate buydown & Flex DPA.",
     chatTranscript: [
-      { sender: "advisor", text: "Welcome! I can help check your true monthly payment and Down Payment Assistance (DPA) eligibility. What is your target timeline?", time: "10:14 AM" },
+      { sender: "advisor", text: "Welcome to the Mike Ford & Sarah Jenkins Co-Branded Homebuyer Portal! How soon are you looking to buy in Portland/Beaverton?", time: "10:14 AM" },
       { sender: "user", text: "We are renting until October and want to buy in 30-60 days.", time: "10:15 AM" },
       { sender: "advisor", text: "Great timeline! What target price range or monthly payment feel comfortable for you?", time: "10:15 AM" },
-      { sender: "user", text: "Around $420k-$460k, keeping monthly under $3,100.", time: "10:16 AM" }
+      { sender: "user", text: "Around $420k-$460k, keeping monthly under $3,100. Would love a list of low/no down homes in SE Portland or Beaverton!", time: "10:16 AM" }
     ],
-    createdAt: "2026-08-24T06:45:00Z"
+    createdAt: "2026-08-24T06:45:00Z",
+    nurtureSequenceEnabled: true,
+    nurtureCurrentStep: 2,
+    nurtureTotalSteps: 4,
+    nurtureStageText: "2 of 4 weekly nurture sent",
+    lastEmailSentAt: "2026-08-27T16:15:00Z",
+    lastEmailTemplateName: "Flex DPA 3.5% & Rate Buydown Strategy Sheet",
+    nurtureSequenceLogs: [
+      {
+        id: "log-101-1",
+        stageName: "1 of 4 weekly nurture sent",
+        templateName: "Welcome & OHCS Down Payment Grant Guide",
+        emailSubject: "Welcome Tyler & Emily - Your First-Time Homebuyer Roadmap!",
+        sentAt: "2026-08-24T07:00:00Z",
+        status: "opened"
+      },
+      {
+        id: "log-101-2",
+        stageName: "2 of 4 weekly nurture sent",
+        templateName: "Flex DPA 3.5% & Rate Buydown Strategy Sheet",
+        emailSubject: "Tyler & Emily: How 2-1 Rate Buydowns Save $340/mo",
+        sentAt: "2026-08-27T16:15:00Z",
+        status: "sent"
+      }
+    ]
+  },
+  {
+    id: "lead-104",
+    fullName: "Brandon & Chloe Vance",
+    email: "bvance.oregon@gmail.com",
+    phone: "(541) 555-0219",
+    preferredContactTime: "Afternoons (1-4 PM)",
+    timeline: "Ready in 30-60 Days",
+    targetPriceRange: "$380,000 - $425,000",
+    targetMonthlyBudget: "$2,400 - $2,700/mo",
+    downPaymentSavings: "$4,500 (Wants $0 Down USDA)",
+    grantInterest: true,
+    creditScoreTier: "710 Good",
+    preferredLocations: "Albany & Corvallis",
+    propertyType: "Single Family 3bd/2ba Craftsman",
+    sendSampleHomes: true,
+    sendSampleHomesOption: "🌾 100% USDA Zero Down Rural Development",
+    assignedLoId: "lo-mike-ford",
+    assignedAgentId: "agent-sarah-jenkins",
+    pairingId: "pair-mike-sarah",
+    leadSource: "Campaign: Meta Feed - USDA 100% Zero-Down Oregon Push",
+    sourceCampaignId: "soc-1",
+    sourceCampaignName: "Oregon First-Time Buyer DPA & Payment Reality Check",
+    sourcePropertyId: "geo-2",
+    sourcePropertyAddress: "2840 NW Camellia Dr, Corvallis, OR",
+    interactedSourceType: "campaign",
+    intentScore: "hot",
+    status: "new",
+    notes: "Currently renting in Corvallis for $2,350/mo. Requested recent 100% USDA Zero Down listings in Albany/Linn County.",
+    chatTranscript: [
+      { sender: "advisor", text: "Hi Brandon! Did you know Albany and surrounding Linn County qualify for 100% USDA Zero Down Financing?", time: "02:10 PM" },
+      { sender: "user", text: "Really? We have $4,500 saved and pay $2,350 in rent. Can you send us a list of USDA $0 down homes near Albany?", time: "02:11 PM" },
+      { sender: "advisor", text: "Absolutely! Mike Ford (LO) & Sarah Jenkins (Agent) will email you the active zero-down list right away.", time: "02:12 PM" }
+    ],
+    createdAt: "2026-08-25T14:20:00Z",
+    nurtureSequenceEnabled: true,
+    nurtureCurrentStep: 1,
+    nurtureTotalSteps: 4,
+    nurtureStageText: "1 of 4 weekly nurture sent",
+    lastEmailSentAt: "2026-08-25T14:30:00Z",
+    lastEmailTemplateName: "USDA 100% Zero-Down Rural Eligibility Guide",
+    nurtureSequenceLogs: [
+      {
+        id: "log-104-1",
+        stageName: "1 of 4 weekly nurture sent",
+        templateName: "USDA 100% Zero-Down Rural Eligibility Guide",
+        emailSubject: "Brandon & Chloe: 100% Zero Down USDA Homes in Albany & Linn County",
+        sentAt: "2026-08-25T14:30:00Z",
+        status: "opened"
+      }
+    ]
   },
   {
     id: "lead-102",
@@ -1495,14 +1593,103 @@ export const INITIAL_LEADS: import("../types").CapturedLead[] = [
     creditScoreTier: "680-719 Good",
     preferredLocations: "Gresham, Oregon City, or Clackamas",
     propertyType: "Single Family or Starter Ranch",
+    sendSampleHomes: true,
+    sendSampleHomesOption: "Flex DPA 3.5% Grants",
     assignedLoId: "lo-jessica-taylor",
     assignedAgentId: "agent-marcus-vance",
     pairingId: "pair-jessica-marcus",
-    leadSource: "Meta Feed Ad Campaign",
+    leadSource: "Campaign: Google Search - First Time Home Buyer Oregon Hub",
+    sourceCampaignId: "ad-google-1",
+    sourceCampaignName: "Google Search - First Time Home Buyer Oregon Calculator & Pre-Approval",
+    sourcePropertyId: "geo-3",
+    sourcePropertyAddress: "3120 SW Beaverton Hillsdale Hwy, Beaverton, OR",
+    interactedSourceType: "campaign",
     intentScore: "warm",
     status: "contacted",
-    notes: "Interested in Oregon Bond Residential Loan Program (Cash Advantaged DPA).",
-    createdAt: "2026-08-23T18:20:00Z"
+    notes: "Interested in Oregon Bond Residential Loan Program (Cash Advantaged DPA) and list of starter homes in Gresham.",
+    createdAt: "2026-08-23T18:20:00Z",
+    nurtureSequenceEnabled: true,
+    nurtureCurrentStep: 3,
+    nurtureTotalSteps: 4,
+    nurtureStageText: "3 of 4 weekly nurture sent",
+    lastEmailSentAt: "2026-08-27T09:45:00Z",
+    lastEmailTemplateName: "Credit Score & Debt-to-Income Optimization Guide",
+    nurtureSequenceLogs: [
+      {
+        id: "log-102-1",
+        stageName: "1 of 4 weekly nurture sent",
+        templateName: "Oregon Bond Residential Loan & DPA Overview",
+        emailSubject: "Marcus - Your Oregon Down Payment Assistance Plan",
+        sentAt: "2026-08-23T18:30:00Z",
+        status: "opened"
+      },
+      {
+        id: "log-102-2",
+        stageName: "2 of 4 weekly nurture sent",
+        templateName: "Gresham & Clackamas Starter Home Tour Scorecard",
+        emailSubject: "Marcus: 3 Starter Homes under $400k with Low Down Options",
+        sentAt: "2026-08-25T10:00:00Z",
+        status: "opened"
+      },
+      {
+        id: "log-102-3",
+        stageName: "3 of 4 weekly nurture sent",
+        templateName: "Credit Score & Debt-to-Income Optimization Guide",
+        emailSubject: "Marcus: Simple Credit Hacks for Lower Mortgage Rates",
+        sentAt: "2026-08-27T09:45:00Z",
+        status: "sent"
+      }
+    ]
+  },
+  {
+    id: "lead-105",
+    fullName: "Jessica & David Miller",
+    email: "dmiller.pdx@yahoo.com",
+    phone: "(541) 555-0892",
+    preferredContactTime: "Weekday Mornings",
+    timeline: "30-60 Days",
+    targetPriceRange: "$450,000 - $510,000",
+    targetMonthlyBudget: "$3,200/mo",
+    downPaymentSavings: "$12,000",
+    grantInterest: true,
+    creditScoreTier: "730 Excellent",
+    preferredLocations: "Bend & Redmond",
+    propertyType: "Single Family or Townhome",
+    sendSampleHomes: true,
+    sendSampleHomesOption: "USDA 0% Down & Deschutes County Grants",
+    assignedLoId: "lo-mike-ford",
+    assignedAgentId: "agent-elena-rodriguez",
+    pairingId: "pair-mike-elena",
+    leadSource: "Listing: 560 NW Rimrock Rd (Redmond)",
+    sourceCampaignId: "soc-2",
+    sourceCampaignName: "Realtor Tour Scorecard & Seller Concession Secret",
+    sourcePropertyId: "geo-4",
+    sourcePropertyAddress: "560 NW Rimrock Rd, Redmond, OR",
+    interactedSourceType: "property_listing",
+    intentScore: "hot",
+    status: "new",
+    notes: "Relocating to Central Oregon. Requested zero-down USDA listings in Redmond & Deschutes Pines.",
+    chatTranscript: [
+      { sender: "advisor", text: "Welcome! Are you exploring homes in Bend or Redmond?", time: "09:05 AM" },
+      { sender: "user", text: "We want a house in Redmond or Bend area under $500k. Can we get a list of low or zero down homes?", time: "09:06 AM" }
+    ],
+    createdAt: "2026-08-26T10:15:00Z",
+    nurtureSequenceEnabled: true,
+    nurtureCurrentStep: 1,
+    nurtureTotalSteps: 4,
+    nurtureStageText: "1 of 4 weekly nurture sent",
+    lastEmailSentAt: "2026-08-26T10:30:00Z",
+    lastEmailTemplateName: "Central Oregon Homebuyer Welcome & DPA Map",
+    nurtureSequenceLogs: [
+      {
+        id: "log-105-1",
+        stageName: "1 of 4 weekly nurture sent",
+        templateName: "Central Oregon Homebuyer Welcome & DPA Map",
+        emailSubject: "Jessica & David: Redmond & Bend Zero-Down Home Search",
+        sentAt: "2026-08-26T10:30:00Z",
+        status: "opened"
+      }
+    ]
   },
   {
     id: "lead-103",
@@ -1518,14 +1705,58 @@ export const INITIAL_LEADS: import("../types").CapturedLead[] = [
     creditScoreTier: "760+ Exceptional",
     preferredLocations: "Lake Oswego / West Linn",
     propertyType: "Townhouse",
+    sendSampleHomes: false,
     assignedLoId: "lo-mike-ford",
     assignedAgentId: "agent-elena-rodriguez",
     pairingId: "pair-mike-elena",
-    leadSource: "Website AI Intake Chatbot",
+    leadSource: "Flyer QR Code: Lake Oswego Co-Branded Open House",
+    sourceCampaignName: "Lake Oswego Open House Co-Marketing Flyer",
+    sourcePropertyAddress: "1280 SW Crestline Dr, Lake Oswego, OR",
+    interactedSourceType: "flyer",
     intentScore: "hot",
     status: "pre_approved",
     notes: "Pre-approval letter issued for $510k. Toured property on Division St.",
-    createdAt: "2026-08-22T14:10:00Z"
+    createdAt: "2026-08-22T14:10:00Z",
+    nurtureSequenceEnabled: true,
+    nurtureCurrentStep: 4,
+    nurtureTotalSteps: 4,
+    nurtureStageText: "4 of 4 weekly nurture sent",
+    lastEmailSentAt: "2026-08-26T15:20:00Z",
+    lastEmailTemplateName: "Escrow Milestone & Closing Preparation Checklist",
+    nurtureSequenceLogs: [
+      {
+        id: "log-103-1",
+        stageName: "1 of 4 weekly nurture sent",
+        templateName: "Welcome & Pre-Approval FastTrack",
+        emailSubject: "Samantha: Lake Oswego Homebuyer Pre-Approval Confirmation",
+        sentAt: "2026-08-22T14:15:00Z",
+        status: "opened"
+      },
+      {
+        id: "log-103-2",
+        stageName: "2 of 4 weekly nurture sent",
+        templateName: "Touring & Home Inspection Red Flag Matrix",
+        emailSubject: "Samantha: Key Inspection Points for Townhomes",
+        sentAt: "2026-08-24T09:00:00Z",
+        status: "opened"
+      },
+      {
+        id: "log-103-3",
+        stageName: "3 of 4 weekly nurture sent",
+        templateName: "Underwriting Document Audit & Appraisal Guide",
+        emailSubject: "Samantha: Underwriting Verification Next Steps",
+        sentAt: "2026-08-25T11:30:00Z",
+        status: "opened"
+      },
+      {
+        id: "log-103-4",
+        stageName: "4 of 4 weekly nurture sent",
+        templateName: "Escrow Milestone & Closing Preparation Checklist",
+        emailSubject: "Samantha: Clear to Close & Escrow Final Steps",
+        sentAt: "2026-08-26T15:20:00Z",
+        status: "opened"
+      }
+    ]
   }
 ];
 

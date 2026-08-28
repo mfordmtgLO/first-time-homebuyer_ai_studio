@@ -7,7 +7,8 @@ import {
   DollarSign, 
   Save, 
   Sparkles, 
-  ShieldCheck 
+  ShieldCheck,
+  FileSpreadsheet
 } from "lucide-react";
 import { PropertyListing, TourScorecard } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
@@ -105,6 +106,63 @@ export const TourScorecardModal: React.FC<TourScorecardModalProps> = ({
       ...prev,
       positives: prev.positives.filter((_, i) => i !== index)
     }));
+  };
+
+  const handleExportSingleCSV = () => {
+    const headers = [
+      "Property Title", "Address", "City", "State", "Zip Code", "Price ($)",
+      "Property Type", "Bedrooms", "Bathrooms", "Square Feet",
+      "Overall Tour Grade", "Overall Scorecard Rating (1-10)",
+      "Roof & Exterior (1-10)", "Foundation & Structure (1-10)", "HVAC & Electrical (1-10)",
+      "Plumbing & Water Pressure (1-10)", "Kitchen & Bathrooms (1-10)", "Layout & Natural Light (1-10)",
+      "Neighborhood & Safety (1-10)", "Parking & Access (1-10)", "Noise & Surroundings (1-10)",
+      "Est. Renovation Cost ($)", "Red Flags", "Positive Highlights", "Notes"
+    ].join(",");
+
+    const escapeCsv = (val: any) => {
+      if (val === undefined || val === null) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const row = [
+      escapeCsv(property.title),
+      escapeCsv(property.address),
+      escapeCsv(property.city),
+      escapeCsv(property.state),
+      escapeCsv(property.zip),
+      property.price,
+      escapeCsv(property.propertyType),
+      property.beds,
+      property.baths,
+      property.sqft,
+      escapeCsv(scorecard.grade),
+      scorecard.overallRating,
+      scorecard.roofAndExterior,
+      scorecard.foundationAndStructure,
+      scorecard.hvacAndElectrical,
+      scorecard.plumbingAndWaterPressure,
+      scorecard.kitchenAndBathrooms,
+      scorecard.layoutAndNaturalLight,
+      scorecard.neighborhoodAndSafety,
+      scorecard.parkingAndAccess,
+      scorecard.noiseAndSurroundings,
+      scorecard.estimatedRenovationCost,
+      escapeCsv(scorecard.redFlags.length > 0 ? scorecard.redFlags.join("; ") : "None"),
+      escapeCsv(scorecard.positives.length > 0 ? scorecard.positives.join("; ") : "None"),
+      escapeCsv(property.notes || "")
+    ].join(",");
+
+    const csvContent = [headers, row].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Tour-Scorecard-${property.address.replace(/[^a-zA-Z0-9]/g, "-")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleSave = () => {
@@ -292,22 +350,34 @@ export const TourScorecardModal: React.FC<TourScorecardModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#EAE7E0]">
+        <div className="flex items-center justify-between pt-4 border-t border-[#EAE7E0]">
           <button
             type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-[#F1EFE9] hover:bg-[#EAE7E0] text-[#606C5D] text-xs font-semibold border border-[#EAE7E0]"
+            onClick={handleExportSingleCSV}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#EAE7E0] hover:bg-[#FAF9F5] text-[#4A5D4E] font-semibold text-xs transition-colors shadow-2xs"
+            title="Download CSV for this property scorecard"
           >
-            Cancel
+            <FileSpreadsheet className="w-4 h-4 text-[#4A5D4E]" />
+            <span>Download Scorecard CSV</span>
           </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="flex items-center gap-2 px-6 py-2 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-xs shadow-sm"
-          >
-            <Save className="w-4 h-4" />
-            <span>Save Tour Scorecard</span>
-          </button>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-[#F1EFE9] hover:bg-[#EAE7E0] text-[#606C5D] text-xs font-semibold border border-[#EAE7E0]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="flex items-center gap-2 px-6 py-2 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-xs shadow-sm cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save Tour Scorecard</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -36,7 +36,7 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
 }) => {
   const [contactSuccess, setContactSuccess] = useState<string | null>(null);
   const [showDirectMsgModal, setShowDirectMsgModal] = useState<boolean>(false);
-  const [buyerMsg, setBuyerMsg] = useState({ name: "", email: "", phone: "", notes: "" });
+  const [buyerMsg, setBuyerMsg] = useState({ name: "", email: "", phone: "", notes: "", smsConsentAuthorized: true });
 
   const showAgent = isCoBranded && !!activeAgent;
 
@@ -385,6 +385,24 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
                   />
                 </div>
+              </div>
+
+              {/* TCPA SMS Consent Question */}
+              <div className="bg-[#FAF9F5] p-2.5 rounded-xl border border-[#EAE7E0] space-y-1">
+                <label className="flex items-start gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={buyerMsg.smsConsentAuthorized}
+                    onChange={(e) => setBuyerMsg(prev => ({ ...prev, smsConsentAuthorized: e.target.checked }))}
+                    className="mt-0.5 rounded border-[#9A9488] text-[#4A5D4E] focus:ring-[#4A5D4E]"
+                  />
+                  <span className="text-[11px] text-[#2D362E] font-semibold leading-tight">
+                    I authorize team to send text messages (SMS) regarding rate updates, DPA grants, and requested property listings.
+                  </span>
+                </label>
+                <p className="text-[10px] text-[#9A9488] pl-5">
+                  Msg & data rates may apply. Reply STOP to cancel anytime.
+                </p>
               </div>
 
               <div className="space-y-1">

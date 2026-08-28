@@ -2343,7 +2343,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                         </div>
                       )}
                       <div className={`overflow-x-auto ${selectedLeadIds.size > 0 ? "mt-12" : ""}`}>
-                        <table className="w-full text-left text-xs border-collapse">
+                        <table className="w-full min-w-[1400px] text-left text-xs border-collapse">
                           <thead>
                             <tr className="bg-[#FAF9F5] border-b border-[#EAE7E0] text-[#606C5D] uppercase tracking-wider font-bold">
                               <th className="py-3.5 px-4 font-bold w-10">

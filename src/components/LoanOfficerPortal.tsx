@@ -99,6 +99,7 @@ import { TaskManagementPanel } from "./TaskManagementPanel";
 import { SmsTemplateLibrary } from "./SmsTemplateLibrary";
 import { BulkSmsModal } from "./BulkSmsModal";
 import { ScrapeLoRosterModal } from "./ScrapeLoRosterModal";
+import { ScrapeRealtorModal } from "./ScrapeRealtorModal";
 import { LoOutreachModal } from "./LoOutreachModal";
 import { RecruitingCampaignModal } from "./RecruitingCampaignModal";
 
@@ -264,9 +265,139 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   // Modals / Editors
   const [showAddLoModal, setShowAddLoModal] = useState<boolean>(false);
   const [showScrapeLoModal, setShowScrapeLoModal] = useState<boolean>(false);
+  const [showScrapeRealtorModal, setShowScrapeRealtorModal] = useState<boolean>(false);
+
+  const csvFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split('\n').filter(line => line.trim());
+      if (lines.length < 2) {
+        triggerToast("CSV file is empty or invalid.");
+        return;
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+      const nameIdx = headers.findIndex(h => h.includes('name'));
+      const titleIdx = headers.findIndex(h => h === 'title');
+      const nmlsIdx = headers.findIndex(h => h.includes('nmls'));
+      const companyIdx = headers.findIndex(h => h.includes('company') || h.includes('business'));
+      const branchIdx = headers.findIndex(h => h === 'branch');
+      const cityIdx = headers.findIndex(h => h === 'city');
+      const stateIdx = headers.findIndex(h => h === 'state');
+      const emailIdx = headers.findIndex(h => h === 'email');
+      const phoneIdx = headers.findIndex(h => h === 'phone');
+      const yearsIdx = headers.findIndex(h => h.includes('year') || h.includes('experience'));
+      const unitsIdx = headers.findIndex(h => h.includes('unit'));
+      const volumeIdx = headers.findIndex(h => h.includes('volume'));
+      const statusIdx = headers.findIndex(h => h.includes('status'));
+
+      const newOfficers: LoanOfficerProfile[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        // Regex to split by comma, ignoring commas inside quotes
+        const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(col => col.trim().replace(/^"|"$/g, ''));
+        if (row.length === 0 || (nameIdx !== -1 && !row[nameIdx])) continue;
+
+        const name = nameIdx !== -1 ? row[nameIdx] : `Imported LO ${i}`;
+        const company = companyIdx !== -1 ? row[companyIdx] : '';
+        const yearsExperience = yearsIdx !== -1 ? parseInt(row[yearsIdx]) || 0 : undefined;
+
+        newOfficers.push({
+          id: `lo-imported-csv-${Date.now()}-${i}`,
+          name,
+          title: titleIdx !== -1 && row[titleIdx] ? row[titleIdx] : "Loan Officer",
+          nmlsId: nmlsIdx !== -1 ? row[nmlsIdx] : "",
+          company,
+          branch: branchIdx !== -1 ? row[branchIdx] : "",
+          city: cityIdx !== -1 ? row[cityIdx] : undefined,
+          state: stateIdx !== -1 ? row[stateIdx] : undefined,
+          email: emailIdx !== -1 ? row[emailIdx] : "",
+          phone: phoneIdx !== -1 ? row[phoneIdx] : "",
+          yearsExperience,
+          production12MoUnits: unitsIdx !== -1 && row[unitsIdx] ? parseInt(row[unitsIdx]) : undefined,
+          production12MoVolume: volumeIdx !== -1 && row[volumeIdx] ? parseInt(row[volumeIdx]) : undefined,
+          recruitmentStatus: (statusIdx !== -1 && row[statusIdx] ? row[statusIdx] : 'Not Contacted') as any,
+          isTeamMember: true,
+          outreachHistory: [],
+          bio: "",
+          headshotUrl: "",
+          specialties: [],
+          bookingUrl: "",
+          licenseStates: ["OR"]
+        } as LoanOfficerProfile);
+      }
+
+      if (newOfficers.length > 0) {
+        onUpdateGuidesState({
+          ...guidesState,
+          loanOfficers: [...guidesState.loanOfficers, ...newOfficers]
+        });
+        triggerToast(`✅ Successfully imported ${newOfficers.length} candidates from CSV!`);
+      } else {
+        triggerToast("No valid candidates found in CSV.");
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    e.target.value = '';
+  };
+
+  const handleExportCsv = () => {
+    let losToExport = guidesState.loanOfficers;
+    if (selectedRosterLoIds.size > 0) {
+      losToExport = losToExport.filter(lo => selectedRosterLoIds.has(lo.id));
+    }
+    
+    if (losToExport.length === 0) {
+      triggerToast("No Loan Officers to export.");
+      return;
+    }
+
+    const headers = [
+      "Name", "Title", "NMLS ID", "Company", "Branch", "City", "State",
+      "Email", "Phone", "Years Experience", "12Mo Units", "12Mo Volume", "Recruitment Status"
+    ];
+
+    const rows = losToExport.map(lo => [
+      `"${(lo.name || '').replace(/"/g, '""')}"`,
+      `"${(lo.title || '').replace(/"/g, '""')}"`,
+      `"${(lo.nmlsId || '').replace(/"/g, '""')}"`,
+      `"${(lo.company || '').replace(/"/g, '""')}"`,
+      `"${(lo.branch || '').replace(/"/g, '""')}"`,
+      `"${(lo.city || '').replace(/"/g, '""')}"`,
+      `"${(lo.state || '').replace(/"/g, '""')}"`,
+      `"${(lo.email || '').replace(/"/g, '""')}"`,
+      `"${(lo.phone || '').replace(/"/g, '""')}"`,
+      `"${lo.yearsExperience || ''}"`,
+      `"${lo.production12MoUnits || ''}"`,
+      `"${lo.production12MoVolume || ''}"`,
+      `"${(lo.recruitmentStatus || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `lo_recruitment_list_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    triggerToast(`✅ Exported ${losToExport.length} Loan Officers to CSV`);
+  };
   const [showLoOutreachModal, setShowLoOutreachModal] = useState<boolean>(false);
   const [showRecruitingCampaignModal, setShowRecruitingCampaignModal] = useState<boolean>(false);
   const [loSearchQuery, setLoSearchQuery] = useState<string>("");
+  const [generatingOutreachFor, setGeneratingOutreachFor] = useState<string | null>(null);
+  const [generatedOutreachContent, setGeneratedOutreachContent] = useState<{name: string, content: string} | null>(null);
   const [loRegionSearch, setLoRegionSearch] = useState<string>("");
   const [loCompanyFilter, setLoCompanyFilter] = useState<string>("all");
   const [loBranchFilter, setLoBranchFilter] = useState<string>("all");
@@ -353,6 +484,37 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const [activeNurtureTab, setActiveNurtureTab] = useState<'overview' | 'stage_1' | 'stage_2' | 'stage_3' | 'stage_4' | 'stage_5' | 'logs'>('overview');
   const [testNurtureEmail, setTestNurtureEmail] = useState<string>("");
   const [nurtureTone, setNurtureTone] = useState<'helpful' | 'concierge' | 'financial'>('helpful');
+
+  const handleGenerateSingleOutreach = async (lo: LoanOfficerProfile) => {
+    setGeneratingOutreachFor(lo.id);
+    try {
+      const res = await fetch("/api/gemini/generate-outreach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateName: lo.name,
+          yearsExperience: lo.yearsExperience,
+          company: lo.company,
+          recruitmentStatus: lo.recruitmentStatus,
+          myName: loggedInUser?.name || guidesState.loanOfficer.name,
+          myTitle: loggedInUser?.title || guidesState.loanOfficer.title
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setGeneratedOutreachContent({ name: lo.name, content: data.emailBody });
+        triggerToast(`✅ Draft generated for ${lo.name}!`);
+      } else {
+        triggerToast("Failed to generate outreach draft.");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast("Error generating outreach draft.");
+    } finally {
+      setGeneratingOutreachFor(null);
+    }
+  };
 
   // AI Agent Profile Lookup Handler
   const handleAiSearchAgent = async () => {
@@ -442,7 +604,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         });
       } else {
         setNewAgentForm(prev => ({
-          ...prev,
+          
           name: simulatedName,
           title: "Senior Buyer Specialist, REALTOR®",
           brokerage: aiAgentQuery.includes("Realty") ? aiAgentQuery.split(",")[1]?.trim() || "Premier Cascade Realty" : "Cascade Heritage Real Estate",
@@ -3142,8 +3304,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             </div>
 
             <div className="flex gap-4 overflow-x-auto pb-4 items-start h-[70vh]">
-              {['New', 'Contacted', 'Scheduled Interview', 'Onboarding', 'Declined'].map(status => {
-                const columnLos = guidesState.loanOfficers.filter(lo => !lo.isTeamMember && !lo.isAdmin && ((lo.recruitmentStatus || 'New') === status));
+              {['Not Contacted', 'In Outreach', 'Interested', 'Meeting Scheduled', 'Declined'].map(status => {
+                const columnLos = guidesState.loanOfficers.filter(lo => !lo.isTeamMember && !lo.isAdmin && ((lo.recruitmentStatus || 'Not Contacted') === status));
                 
                 return (
                   <div key={status} className="w-80 shrink-0 bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-4 flex flex-col h-full max-h-full">
@@ -3195,7 +3357,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
                           <div className="pt-2 border-t border-[#EAE7E0]">
                             <select
-                              value={lo.recruitmentStatus || 'New'}
+                              value={lo.recruitmentStatus || 'Not Contacted'}
                               onChange={(e) => {
                                 const updatedLos = guidesState.loanOfficers.map(l => 
                                   l.id === lo.id ? { ...l, recruitmentStatus: e.target.value as any } : l
@@ -3205,10 +3367,10 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                               }}
                               className="w-full bg-white border border-[#EAE7E0] rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:border-[#4A5D4E] text-[#606C5D]"
                             >
-                              <option value="New">New</option>
-                              <option value="Contacted">Contacted</option>
-                              <option value="Scheduled Interview">Scheduled Interview</option>
-                              <option value="Onboarding">Onboarding</option>
+                              <option value="Not Contacted">Not Contacted</option>
+                              <option value="In Outreach">In Outreach</option>
+                              <option value="Interested">Interested</option>
+                              <option value="Meeting Scheduled">Meeting Scheduled</option>
                               <option value="Declined">Declined</option>
                             </select>
                           </div>
@@ -3254,6 +3416,27 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 >
                   <UserPlus className="w-4 h-4" />
                   <span>Add Manual LO</span>
+                </button>
+                <button
+                  onClick={handleExportCsv}
+                  className="px-5 py-2.5 bg-[#FAF9F5] text-[#2D362E] border border-[#EAE7E0] hover:bg-[#F1EFE9] text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                >
+                  <Download className="w-4 h-4 text-[#4A5D4E]" />
+                  <span>Export CSV</span>
+                </button>
+                <input 
+                  type="file" 
+                  accept=".csv" 
+                  ref={csvFileInputRef} 
+                  onChange={handleImportCsv} 
+                  className="hidden" 
+                />
+                <button
+                  onClick={() => csvFileInputRef.current?.click()}
+                  className="px-5 py-2.5 bg-[#FAF9F5] text-[#2D362E] border border-[#EAE7E0] hover:bg-[#F1EFE9] text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                >
+                  <Upload className="w-4 h-4 text-[#4A5D4E]" />
+                  <span>Import CSV</span>
                 </button>
               </div>
             </div>
@@ -3542,6 +3725,53 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           </a>
                         )}
                       </div>
+
+                      {!lo.isTeamMember && !isMike && (
+                        <div className="pt-2 mt-2 border-t border-[#EAE7E0] space-y-2">
+                           <div className="flex items-center justify-between">
+                             <span className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Recruiting Status</span>
+                             {lo.recruitmentStatus === 'Not Contacted' ? (
+                               <span className="text-[9px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-full border border-gray-200">⚪ Not Contacted</span>
+                             ) : lo.recruitmentStatus === 'In Outreach' ? (
+                               <span className="text-[9px] bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-200">🔵 In Outreach</span>
+                             ) : lo.recruitmentStatus === 'Interested' ? (
+                               <span className="text-[9px] bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full border border-amber-200">🟠 Interested</span>
+                             ) : lo.recruitmentStatus === 'Meeting Scheduled' ? (
+                               <span className="text-[9px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200">🟢 Meeting</span>
+                             ) : lo.recruitmentStatus === 'Declined' ? (
+                               <span className="text-[9px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full border border-red-200">🔴 Declined</span>
+                             ) : (
+                               <span className="text-[9px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-full border border-gray-200">⚪ {lo.recruitmentStatus || 'Not Contacted'}</span>
+                             )}
+                           </div>
+                           <select
+                              value={lo.recruitmentStatus || 'Not Contacted'}
+                              onChange={(e) => {
+                                const updatedLos = guidesState.loanOfficers.map(l => 
+                                  l.id === lo.id ? { ...l, recruitmentStatus: e.target.value as any } : l
+                                );
+                                onUpdateGuidesState({ ...guidesState, loanOfficers: updatedLos });
+                                triggerToast(`Updated status for ${lo.name} to ${e.target.value}`);
+                              }}
+                              className="w-full bg-white border border-[#EAE7E0] rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:border-[#4A5D4E] text-[#606C5D] shadow-sm transition-colors"
+                            >
+                              <option value="Not Contacted">Not Contacted</option>
+                              <option value="In Outreach">In Outreach</option>
+                              <option value="Interested">Interested</option>
+                              <option value="Meeting Scheduled">Meeting Scheduled</option>
+                              <option value="Declined">Declined</option>
+                            </select>
+                            
+                            <button
+                              onClick={() => handleGenerateSingleOutreach(lo)}
+                              disabled={generatingOutreachFor === lo.id}
+                              className="w-full mt-2 py-1.5 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors text-[11px] disabled:opacity-50"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>{generatingOutreachFor === lo.id ? 'Drafting...' : 'Generate Outreach Email'}</span>
+                            </button>
+                        </div>
+                      )}
 
                       <div className="space-y-1.5 pt-2 border-t border-[#EAE7E0] text-xs">
                         <div className="flex items-center justify-between text-[#606C5D]">
@@ -4122,6 +4352,13 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   <span>Bulk Email Outreach</span>
                 </button>
                 <button
+                  onClick={() => setShowScrapeRealtorModal(true)}
+                  className="px-4 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>AI Assist: Scrape Realtors</span>
+                </button>
+                <button
                   onClick={() => setShowAddAgentModal(true)}
                   className="px-4 py-2.5 bg-[#2D362E] hover:bg-[#1f2520] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] shrink-0"
                 >
@@ -4264,8 +4501,17 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                         <div className="flex items-center justify-between text-[11px] bg-[#FAF9F5] px-3 py-1.5 rounded-xl border border-[#EAE7E0] text-[#606C5D]">
                           <span>⭐ <strong>{agent.rating || 4.9}</strong> Rating</span>
                           <span><strong>{agent.experienceYears || 8}</strong> yrs exp</span>
-                          <span><strong>{agent.activeListingsCount || 10}</strong> active listings</span>
+                          {agent.production12MoUnits ? (
+                             <span className="text-emerald-700 bg-emerald-50 px-1.5 rounded border border-emerald-100"><strong>{agent.production12MoUnits}</strong> units/12mo</span>
+                          ) : (
+                             <span><strong>{agent.activeListingsCount || 10}</strong> active listings</span>
+                          )}
                         </div>
+                        {agent.production12MoVolume && (
+                           <div className="text-[10px] font-bold bg-[#E8F3F1] text-emerald-800 px-2 py-0.5 rounded border border-emerald-200 self-start inline-block">
+                             ${(agent.production12MoVolume / 1000000).toFixed(1)}M Vol / 12mo
+                           </div>
+                        )}
 
                         <p className="text-xs text-[#606C5D] line-clamp-2 leading-relaxed">
                           {agent.bio}
@@ -6288,6 +6534,53 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         />
       )}
 
+      {/* Generated Outreach Draft Modal */}
+      {generatedOutreachContent && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 text-[#2D362E]">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
+              <h4 className="font-serif font-bold text-lg text-[#2D362E] flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                Draft for {generatedOutreachContent.name}
+              </h4>
+              <button onClick={() => setGeneratedOutreachContent(null)} className="text-[#9A9488] hover:text-[#2D362E]">
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <p className="text-xs text-[#606C5D]">Review and copy this personalized outreach email.</p>
+              <div className="relative">
+                <textarea
+                  readOnly
+                  value={generatedOutreachContent.content}
+                  className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl p-4 text-xs focus:outline-none focus:border-[#4A5D4E] text-[#606C5D] whitespace-pre-wrap leading-relaxed h-64 resize-none"
+                />
+                <button
+                  onClick={() => {
+                    copyToClipboard(generatedOutreachContent.content, 'generated-outreach');
+                    triggerToast("✅ Email body copied to clipboard!");
+                  }}
+                  className="absolute top-2 right-2 p-1.5 bg-white hover:bg-[#EAE7E0] border border-[#EAE7E0] rounded-lg text-xs font-bold text-[#4A5D4E] shadow-sm flex items-center gap-1 transition-colors"
+                >
+                  {copiedKey === 'generated-outreach' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>Copy</span>
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex justify-end pt-3">
+              <button
+                onClick={() => setGeneratedOutreachContent(null)}
+                className="py-2 px-6 bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#606C5D] font-bold rounded-xl text-xs transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scrape LO Roster Modal */}
       <ScrapeLoRosterModal
         isOpen={showScrapeLoModal}
@@ -6337,7 +6630,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
               return {
                 ...lo,
-                recruitmentStatus: (lo.recruitmentStatus === 'New' || !lo.recruitmentStatus) ? 'Contacted' : lo.recruitmentStatus,
+                recruitmentStatus: (lo.recruitmentStatus === 'Not Contacted' || lo.recruitmentStatus === 'New' || !lo.recruitmentStatus) ? 'In Outreach' : lo.recruitmentStatus,
                 outreachHistory: newHistory
               };
             }
@@ -6373,7 +6666,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             if (selectedRosterLoIds.has(lo.id)) {
               return {
                 ...lo,
-                recruitmentStatus: (lo.recruitmentStatus === 'New' || !lo.recruitmentStatus) ? 'Contacted' : lo.recruitmentStatus,
+                recruitmentStatus: (lo.recruitmentStatus === 'Not Contacted' || lo.recruitmentStatus === 'New' || !lo.recruitmentStatus) ? 'In Outreach' : lo.recruitmentStatus,
                 outreachHistory: [...(lo.outreachHistory || []), historyEntry]
               };
             }

@@ -25,6 +25,10 @@ export function hasAuthenticPropertyPhoto(listing?: PropertyListing | null): boo
  * In GeoSphere Oregon GIS, USDA source polygons represent ineligible urban areas,
  * so listings situated outside those boundaries are classified as USDA RD eligible.
  */
+export function isLakeviewNationalEligible(listing: PropertyListing): boolean {
+  return Boolean(listing.overlayEligibility?.lakeviewNational ?? listing.overlayEligibility?.lakeviewNationalEligible);
+}
+
 export function isUsdaEligible(listing: PropertyListing): boolean {
   if (!listing || !listing.overlayEligibility) return false;
   const el = listing.overlayEligibility;
@@ -163,6 +167,7 @@ export interface OverlayBadgeInfo {
 export function getListingOverlayBadges(listing: PropertyListing): OverlayBadgeInfo[] {
   const badges: OverlayBadgeInfo[] = [];
 
+  const lakeviewNational = isLakeviewNationalEligible(listing);
   const usda = isUsdaEligible(listing);
   const lmi = isLmiEligible(listing);
   const dual = usda && lmi;
@@ -177,6 +182,17 @@ export function getListingOverlayBadges(listing: PropertyListing): OverlayBadgeI
   );
 
   // 1. Primary Financing & DPA Badges
+  if (lakeviewNational) {
+    badges.push({
+      id: "lakeviewNational",
+      label: "Lakeview National (Low/No Down Payment)",
+      shortLabel: "Lakeview",
+      bgClass: "bg-blue-900 text-blue-100 border-blue-500/40",
+      textClass: "text-blue-100",
+      borderClass: "border-blue-500/40",
+      description: "Eligible for Lakeview National low or no down payment option."
+    });
+  }
   if (dual) {
     badges.push({
       id: "dual_usda_lmi",
@@ -254,6 +270,7 @@ export function getListingOverlayBadges(listing: PropertyListing): OverlayBadgeI
 
 export interface OverlaySummaryCounts {
   total: number;
+  lakeviewNational: number;
   usda: number;
   lmi: number;
   lmiUsda: number;
@@ -276,6 +293,7 @@ export interface OverlaySummaryCounts {
 export function calculateOverlayCounts(listings: PropertyListing[]): OverlaySummaryCounts {
   const counts: OverlaySummaryCounts = {
     total: listings.length,
+    lakeviewNational: 0,
     usda: 0,
     lmi: 0,
     lmiUsda: 0,
@@ -293,6 +311,7 @@ export function calculateOverlayCounts(listings: PropertyListing[]): OverlaySumm
   };
 
   listings.forEach((l) => {
+    const lakeviewNational = isLakeviewNationalEligible(l);
     const usda = isUsdaEligible(l);
     const lmi = isLmiEligible(l);
     const dual = usda && lmi;
@@ -301,6 +320,7 @@ export function calculateOverlayCounts(listings: PropertyListing[]): OverlaySumm
     const nonTargetedPriceEligible = isNonTargetedPriceEligible(l);
     const targetedPriceEligible = isTargetedPriceEligible(l);
 
+    if (lakeviewNational) counts.lakeviewNational++;
     if (usda) counts.usda++;
     if (lmi) counts.lmi++;
     if (dual) counts.lmiUsda++;
@@ -353,6 +373,7 @@ export function filterListings(
 
   return listings.filter((listing) => {
     // 1. Overlay & Price Cap Filter Logic
+    if (overlayFilter === "lakeviewNational" && !isLakeviewNationalEligible(listing)) return false;
     if (overlayFilter === "usda" && !isUsdaEligible(listing)) return false;
     if (overlayFilter === "lmi" && !isLmiEligible(listing)) return false;
     if (overlayFilter === "lmi_usda" && !isLmiUsdaDual(listing)) return false;

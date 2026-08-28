@@ -58,6 +58,8 @@ export interface FirstHomeDetails {
 }
 
 export interface OverlayEligibility {
+  lakeviewNationalEligible?: boolean;
+  lakeviewNational?: boolean;
   usdaEligible?: boolean;
   usda?: boolean;
   usdaZoneName?: string;
@@ -202,7 +204,7 @@ export interface LoanOfficerProfile {
   county?: string;
   state?: string;
   isTeamMember?: boolean;
-  recruitmentStatus?: 'New' | 'Contacted' | 'Scheduled Interview' | 'Onboarding' | 'Declined';
+  recruitmentStatus?: 'Not Contacted' | 'In Outreach' | 'Interested' | 'Meeting Scheduled' | 'Declined';
   outreachHistory?: { id: string; date: string; type: 'email' | 'sms'; subject?: string; content: string }[];
   email: string;
   phone: string;
@@ -243,6 +245,8 @@ export interface RealEstateAgentProfile {
   marketAreas: string[];
   agentType?: 'buyer_agent' | 'listing_agent' | 'dual_agent';
   experienceYears?: number;
+  production12MoVolume?: number;
+  production12MoUnits?: number;
   activeListingsCount?: number;
   rating?: number;
   websiteUrl?: string;

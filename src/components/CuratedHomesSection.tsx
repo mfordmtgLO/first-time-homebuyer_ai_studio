@@ -182,6 +182,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
         <div className="flex items-center gap-1.5 flex-wrap pt-1">
           {[
             { id: "all", label: `All Homes (${publishedHomes.length})`, short: "All" },
+            { id: "lakeviewNational", label: `Lakeview (${counts.lakeviewNational})`, short: "Lakeview" },
             { id: "usda", label: `USDA RD (${counts.usda})`, short: "USDA RD" },
             { id: "lmi", label: `Flex Lending/LMI (${counts.lmi})`, short: "Flex Lending/LMI" },
             { id: "lmi_usda", label: `USDA RD+Flex (${counts.lmiUsda})`, short: "USDA RD+Flex" },

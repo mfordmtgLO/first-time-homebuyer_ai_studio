@@ -26,6 +26,7 @@ import {
 import { PropertyListing, FinancialProfile } from "../types";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
 import { 
+  isLakeviewNationalEligible,
   isUsdaEligible, 
   isLmiEligible, 
   isTargetedArea, 
@@ -64,6 +65,7 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
     : "N/A";
   
   const totalEstimatedReno = touredProperties.reduce((sum, p) => sum + (p.scorecard?.estimatedRenovationCost || 0), 0);
+  const lakeviewNationalCount = properties.filter(p => isLakeviewNationalEligible(p)).length;
   const usdaEligibleCount = properties.filter(p => isUsdaEligible(p)).length;
   const lmiEligibleCount = properties.filter(p => isLmiEligible(p)).length;
 
@@ -306,7 +308,7 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-[#EAE7E0]">
                   <span className="text-[10px] text-[#606C5D] block">Program Overlay Matches</span>
-                  <strong className="text-lg font-bold text-emerald-800">{usdaEligibleCount} USDA • {lmiEligibleCount} LMI</strong>
+                  <strong className="text-lg font-bold text-emerald-800">{lakeviewNationalCount} Lakeview • {usdaEligibleCount} USDA • {lmiEligibleCount} LMI</strong>
                 </div>
               </div>
             </div>
@@ -395,6 +397,11 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
 
                     {/* DPA & Overlay Badges */}
                     <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                      {isLakeviewNationalEligible(property) && (
+                        <span className="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-900 font-bold border border-blue-300">
+                          ✓ Lakeview National Eligible
+                        </span>
+                      )}
                       {isUsdaEligible(property) && (
                         <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 font-bold border border-emerald-300">
                           ✓ USDA RD 100% Financing Eligible
@@ -536,7 +543,7 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
                         <th className="p-3">Beds / Baths / SqFt</th>
                         <th className="p-3">Tour Grade</th>
                         <th className="p-3">Est. Reno Cost</th>
-                        <th className="p-3">USDA / LMI</th>
+                        <th className="p-3">Lakeview / USDA / LMI</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#EAE7E0]">
@@ -565,7 +572,7 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
                             </td>
                             <td className="p-3">
                               <span className="text-[10px] font-bold text-emerald-800">
-                                {isUsdaEligible(p) ? "USDA " : ""}{isLmiEligible(p) ? "LMI" : ""}
+                                {isLakeviewNationalEligible(p) ? "Lakeview " : ""}{isUsdaEligible(p) ? "USDA " : ""}{isLmiEligible(p) ? "LMI" : ""}
                               </span>
                             </td>
                           </tr>

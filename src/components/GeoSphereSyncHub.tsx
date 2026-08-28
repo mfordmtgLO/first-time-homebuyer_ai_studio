@@ -515,6 +515,8 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
               <span>Database Total: <strong className="text-emerald-800">{overlayCounts.total} Properties</strong></span>
             </span>
             <span>•</span>
+            <span>Lakeview National: <strong className="text-blue-700">{overlayCounts.lakeviewNational}</strong></span>
+            <span>•</span>
             <span>USDA Eligible: <strong className="text-emerald-700">{overlayCounts.usda}</strong></span>
             <span>•</span>
             <span>OHCS LMI: <strong className="text-amber-700">{overlayCounts.lmi}</strong></span>
@@ -725,6 +727,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             {[
               { id: "all", label: `All Database (${overlayCounts.total})` },
+              { id: "lakeviewNational", label: `Lakeview (${overlayCounts.lakeviewNational})` },
               { id: "usda", label: `USDA RD (${overlayCounts.usda})` },
               { id: "lmi", label: `Flex Lending/LMI (${overlayCounts.lmi})` },
               { id: "lmi_usda", label: `USDA RD+Flex (${overlayCounts.lmiUsda})` },

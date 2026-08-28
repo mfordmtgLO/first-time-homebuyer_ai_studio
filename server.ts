@@ -275,6 +275,37 @@ Provide:
     }
   });
 
+  // API Route: Generate Outreach Email
+  app.post("/api/gemini/generate-outreach", async (req, res) => {
+    try {
+      const { candidateName, yearsExperience, company, recruitmentStatus, myName, myTitle } = req.body;
+      const ai = getGeminiClient();
+      const prompt = `Draft a personalized, professional outreach email to a Loan Officer candidate. 
+Candidate details:
+- Name: ${candidateName || "Loan Officer"}
+- Experience: ${yearsExperience ? yearsExperience + " years" : "experienced"}
+- Current Company: ${company || "their current brokerage"}
+- Status: ${recruitmentStatus || "Not Contacted"}
+
+Sender details:
+- Name: ${myName || "Mike Ford"}
+- Title: ${myTitle || "Branch Manager"}
+
+The email should be warm, inviting, and focus on growth opportunities. Mention their experience. Do not include subject line, just the body of the email. Make it 2-3 short paragraphs.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: prompt,
+        config: { temperature: 0.7 },
+      });
+
+      res.json({ emailBody: response.text });
+    } catch (error) {
+      console.error("Outreach generation error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate outreach email" });
+    }
+  });
+
   // API Route: AI Agent Profile Lookup & Generation
   app.post("/api/gemini/agent-lookup", async (req, res) => {
     try {
@@ -393,6 +424,70 @@ Choose realistic Unsplash portrait images for headshotUrl.`;
     } catch (error: any) {
       console.error("LO lookup error:", error);
       res.status(500).json({ error: error.message || "Failed to generate AI LO profiles" });
+    }
+  });
+
+  app.post("/api/gemini/realtor-roster-lookup", async (req, res) => {
+    try {
+      const { query, minYearsExp, minUnits, minVolume, licenseStateFilter } = req.body;
+      if (!query || typeof query !== "string" || !query.trim()) {
+        return res.status(400).json({ error: "Realtor search query required" });
+      }
+
+      const ai = getGeminiClient();
+      const systemInstruction = `You are a specialized AI Real Estate & Mortgage Intelligence Assistant.
+Given a query like a branch name, team website, or company name, generate a comprehensive array of professional real estate agent profiles. Return at least 3-5 realistic profiles to simulate scraping a team roster.
+
+STRICT RECRUITING FILTERS APPLIED:
+- ALL returned agents MUST operate in: ${licenseStateFilter || 'Oregon (OR)'} (Ensure this is in their marketAreas array).
+- ALL returned agents MUST have at least ${minYearsExp || 3} years of experience as a licensed Agent.
+- ALL returned agents MUST have closed at least ${minUnits || 20} units in the last 12 months.
+- ALL returned agents MUST have produced at least ${minVolume || 10} Million in volume in the last 12 months.
+
+You MUST respond strictly with valid JSON containing a single array called "profiles" (no markdown fences). Structure:
+{
+  "profiles": [
+    {
+      "name": "Full Agent Name",
+      "title": "Professional Title (e.g., Senior Broker)",
+      "licenseNumber": "License #123456",
+      "company": "Brokerage Name",
+      "city": "City Name",
+      "county": "County Name",
+      "state": "State Name",
+      "email": "agent.email@domain.com",
+      "phone": "(503) 555-0192",
+      "websiteUrl": "https://brokerage.com/agent-name",
+      "headshotUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
+      "bio": "Comprehensive, compelling professional biography detailing real estate experience.",
+      "specialties": ["First-Time Homebuyers", "Luxury Homes", "Relocation"],
+      "marketAreas": ["Portland Metro", "Oregon"],
+      "agentType": "buyer_agent",
+      "experienceYears": 5,
+      "production12MoVolume": 15000000,
+      "production12MoUnits": 35,
+      "activeListingsCount": 4
+    }
+  ]
+}
+Choose realistic Unsplash portrait images for headshotUrl.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: `Search Query: "${query.trim()}"`,
+        config: {
+          systemInstruction,
+          temperature: 0.5,
+          responseMimeType: "application/json"
+        },
+      });
+
+      const jsonText = response.text || "{}";
+      const data = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
+      res.json({ success: true, profiles: data.profiles || [] });
+    } catch (error: any) {
+      console.error("Realtor lookup error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate AI Realtor profiles" });
     }
   });
 
@@ -678,6 +773,7 @@ Additional Custom Instructions: ${customNotes || "None"}`;
           const usda = Boolean(item.overlayEligibility?.usda ?? item.overlayEligibility?.usdaEligible);
           const lmi = Boolean(item.overlayEligibility?.lmi ?? item.overlayEligibility?.lmiEligible);
           const firstHome = item.overlayEligibility?.firstHome;
+          const lakeviewNational = Boolean(item.overlayEligibility?.lakeviewNational ?? item.overlayEligibility?.lakeviewNationalEligible);
 
           return {
             id: item.id || `geo-${Date.now()}-${idx}`,
@@ -694,7 +790,7 @@ Additional Custom Instructions: ${customNotes || "None"}`;
             propertyType,
             imageUrl: (item.photos && item.photos[0] && !item.photos[0].includes("unsplash.com")) ? item.photos[0] : (item.imageUrl && !item.imageUrl.includes("unsplash.com") ? item.imageUrl : undefined),
             status: "saved",
-            notes: `MLS #${item.mlsNumber || "N/A"}. ${usda ? "USDA 100% Financing Eligible. " : ""}${lmi ? "OHCS LMI Tract Approved. " : ""}${firstHome?.targetedAreaDetails || ""}`.trim(),
+            notes: `MLS #${item.mlsNumber || "N/A"}. ${usda ? "USDA 100% Financing Eligible. " : ""}${lmi ? "OHCS LMI Tract Approved. " : ""}${firstHome?.targetedAreaDetails || ""}${lakeviewNational ? " Lakeview National Eligible. " : ""}`.trim(),
             daysOnMarket: Number(item.daysOnMarket) || 14,
             hoaMonthly: Number(item.hoaMonthly || item.hoa?.fee || 0),
             propertyTaxAnnual: Number(item.propertyTaxAnnual || Math.round(price * 0.009)),
@@ -720,6 +816,8 @@ Additional Custom Instructions: ${customNotes || "None"}`;
               targetedArea: firstHome?.areaType === "targeted" || Boolean(item.overlayEligibility?.targetedArea),
               countyName: item.county || firstHome?.county || item.overlayEligibility?.countyName || "Coos",
               sourceDataset: "GeoSphere Oregon GIS",
+              lakeviewNational,
+              lakeviewNationalEligible: lakeviewNational,
               firstHome: firstHome ? {
                 available: Boolean(firstHome.available),
                 priceEligible: firstHome.priceEligible !== undefined ? firstHome.priceEligible : (price <= (firstHome.priceLimit || 692211)),

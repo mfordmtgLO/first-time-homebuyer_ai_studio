@@ -29,6 +29,7 @@ import {
   hasAuthenticPropertyPhoto, 
   getListingOverlayBadges,
   calculateOverlayCounts,
+  isLakeviewNationalEligible,
   isUsdaEligible,
   isLmiEligible,
   isLmiUsdaDual,
@@ -123,6 +124,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       "Listing Agent Email",
       "Listing Agent Phone",
       "MLS Number",
+      "Lakeview National Eligible",
       "USDA Eligible",
       "Flex Lending / LMI Eligible",
       "OHCS Targeted Area"
@@ -415,6 +417,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           <span className="text-[11px] font-bold text-[#606C5D] uppercase tracking-wider mr-1">Overlay Filter:</span>
           {[
             { id: "all", label: `All (${properties.length})` },
+            { id: "lakeviewNational", label: `Lakeview (${overlayCounts.lakeviewNational})` },
             { id: "usda", label: `USDA RD (${overlayCounts.usda})` },
             { id: "lmi", label: `Flex Lending/LMI (${overlayCounts.lmi})` },
             { id: "lmi_usda", label: `USDA RD+Flex (${overlayCounts.lmiUsda})` },

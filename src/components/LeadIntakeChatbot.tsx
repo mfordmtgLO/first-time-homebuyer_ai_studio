@@ -292,6 +292,7 @@ interface LeadIntakeChatbotProps {
   sourcePropertyAddress?: string;
   initialSourceType?: 'campaign' | 'property_listing' | 'chatbot' | 'flyer' | 'calculator';
   initialLeadSource?: string;
+  initialIntent?: "chat_listings" | "blueprint_download" | "buying_power";
   onSaveLead: (lead: CapturedLead) => void;
   isOpen: boolean;
   onClose: () => void;
@@ -392,6 +393,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   sourcePropertyAddress,
   initialSourceType,
   initialLeadSource,
+  initialIntent,
   onSaveLead,
   isOpen,
   onClose,
@@ -423,6 +425,46 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   const [showTeaser, setShowTeaser] = useState<boolean>(true);
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  
+  // Fast-track contact form for contextual intents
+  useEffect(() => {
+    if (isOpen && initialIntent) {
+      if (initialIntent === "chat_listings") {
+        setLeadState(prev => ({ ...prev, sendSampleHomesOption: "YES - Please send available homes with low/no down payment options" }));
+      }
+      setCurrentStepIndex(INTAKE_STEPS.length);
+    }
+  }, [isOpen, initialIntent]);
+
+  // Handle setting messages for initial intent
+  useEffect(() => {
+    if (isOpen && initialIntent) {
+      let msgText = "";
+      if (initialIntent === "blueprint_download") {
+        msgText = "Great! Let's get your personalized Homebuyer Journey Blueprint sent over immediately. Where should we send it?";
+      } else if (initialIntent === "chat_listings") {
+        msgText = "Awesome! We will compile a curated list of low and no down payment homes in your target area. Who should we send it to?";
+      } else if (initialIntent === "buying_power") {
+        msgText = "Great! I have your Buying Power results ready to send. What is the best Name and Email to send your customized report to?";
+      }
+      
+      setMessages([{
+        id: `msg-initial-${Date.now()}`,
+        sender: "advisor",
+        text: msgText,
+        time: "Just now"
+      }]);
+    } else if (isOpen && currentStepIndex === 0 && messages.length === 0) {
+      // Original initial greeting
+      setMessages([{
+        id: "msg-initial",
+        sender: "advisor",
+        text: `Hi there! I'm ${loanOfficer.name}'s AI assistant. Ready to build your customized First-Time Homebuyer Blueprint?`,
+        time: "Just now"
+      }]);
+    }
+  }, [isOpen, initialIntent]);
 
   // Detect scroll to expand or make compact
   useEffect(() => {
@@ -807,9 +849,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       interactedSourceType: finalSourceType,
       intentScore: (leadState.timeline?.includes("30-60") || leadState.timeline?.includes("Found")) ? "hot" : "warm",
       status: "new",
-      notes: contactForm.notes?.trim() 
+      notes: (initialIntent === "chat_listings" ? "[URGENT ACTION REQUIRED]: Lead requested a curated list of low/no down payment homes in their desired city. Generate and send a property list via the SMS Hub or Email Outreach!\n\n" : "") + (contactForm.notes?.trim() 
         ? `${sanitizeSSN(contactForm.notes.trim())}\n\n[System Record]: Captured via 24/7 AI Lead Intake Assistant. Source: ${computedLeadSource}. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}.`
-        : `Captured via 24/7 AI Lead Intake Assistant. Source: ${computedLeadSource}. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}.`,
+        : `Captured via 24/7 AI Lead Intake Assistant. Source: ${computedLeadSource}. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}.`),
       chatTranscript: messages.map(m => ({ sender: m.sender, text: sanitizeSSN(m.text), time: m.time })),
       createdAt: new Date().toISOString(),
       // TCPA SMS Consent & Automated Text Nurture
@@ -1559,7 +1601,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
               <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 shadow-sm space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-[#4A5D4E]">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Where should we deliver your Prequalification Blueprint?</span>
+                  <span>{initialIntent === "chat_listings" ? "Where should we send your curated list of low/no down payment homes?" : initialIntent === "blueprint_download" ? "Where should we deliver your completed Blueprint?" : "Where should we deliver your Prequalification Blueprint?"}</span>
                 </div>
 
                 <form onSubmit={handleSubmitLead} className="space-y-3 text-xs">

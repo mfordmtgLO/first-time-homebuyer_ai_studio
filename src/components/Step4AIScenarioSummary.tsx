@@ -27,6 +27,8 @@ interface Step4AIScenarioSummaryProps {
   isCoBranded?: boolean;
   onNavigate: (tab: string, mode: "website" | "dashboard") => void;
   onOpenLoPortal?: () => void;
+  onRequestBlueprint?: () => void;
+  onRequestListings?: () => void;
 }
 
 export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
@@ -37,6 +39,8 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
   isCoBranded = false,
   onNavigate,
   onOpenLoPortal,
+  onRequestBlueprint,
+  onRequestListings,
 }) => {
   const breakdown = calculateMortgageBreakdown(profile);
   const targetMaxPayment = profile.targetMaxMonthlyPayment || 3200;
@@ -348,6 +352,24 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
           >
             <RotateCcw className="w-3.5 h-3.5 text-[#D4A373]" />
             <span>Return to Start / Home</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => onRequestBlueprint?.()}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#D4A373] hover:bg-[#C18C5D] text-white text-xs font-bold shadow-sm transition-colors cursor-pointer"
+          >
+            <FileCheck className="w-4 h-4 text-white" />
+            <span>Receive My Completed Blueprint NOW</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => onRequestListings?.()}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#2D362E] hover:bg-[#1A201A] text-white text-xs font-bold shadow-sm transition-colors cursor-pointer"
+          >
+            <Building className="w-4 h-4 text-[#D4A373]" />
+            <span>Send Low/No Down Homes in My Area</span>
           </button>
         </div>
       </div>

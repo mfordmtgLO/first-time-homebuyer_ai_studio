@@ -54,6 +54,7 @@ export default function App() {
   const [currentMode, setCurrentMode] = useState<"website" | "dashboard">("website");
   const [activeTab, setActiveTab] = useState<string>("hero");
   const [isLeadBotOpen, setIsLeadBotOpen] = useState<boolean>(false);
+  const [leadBotSourceContext, setLeadBotSourceContext] = useState<{ source?: string, intent?: "chat_listings" | "blueprint_download" | "buying_power" } | undefined>(undefined);
 
   // Global State
   const [profile, setProfile] = useState<FinancialProfile>(INITIAL_PROFILE);
@@ -456,7 +457,7 @@ export default function App() {
             setProfile={setProfile}
             savedCount={properties.length}
             onOpenLoPortal={() => setShowLoPortal(true)}
-            onOpenLeadBot={() => setIsLeadBotOpen(true)}
+            onOpenLeadBot={() => { setLeadBotSourceContext(undefined); setIsLeadBotOpen(true); }}
             onNavigateToGuides={handleNavigateToGuides}
             loName={guidesState.loanOfficer.name}
           />
@@ -527,7 +528,7 @@ export default function App() {
                     onOpenRoadmap={() => handleNavigate("roadmap", "website")}
                     onOpenGrants={() => handleNavigate("grants", "website")}
                     onOpenStep4={() => handleNavigate("step4_ai_plan", "dashboard")}
-                    onOpenLeadBot={() => setIsLeadBotOpen(true)}
+                    onOpenLeadBot={() => { setLeadBotSourceContext(undefined); setIsLeadBotOpen(true); }}
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
                     isCoBranded={guidesState.isCoBranded}
@@ -582,6 +583,8 @@ export default function App() {
 
                 {activeTab === "step4_ai_plan" && (
                   <Step4AIScenarioSummary
+                    onRequestBlueprint={() => { setLeadBotSourceContext({ source: "Step 4 - Blueprint Download Request", intent: "blueprint_download" }); setIsLeadBotOpen(true); }}
+                    onRequestListings={() => { setLeadBotSourceContext({ source: "Step 4 - Curated Listings Request", intent: "chat_listings" }); setIsLeadBotOpen(true); }}
                     profile={profile}
                     properties={properties}
                     loanOfficer={guidesState.loanOfficer}
@@ -679,13 +682,15 @@ export default function App() {
       {/* 24/7 AI Lead Intake & Prequal Chatbot */}
       {!showLoPortal && (
         <LeadIntakeChatbot
+          initialLeadSource={leadBotSourceContext?.source}
+          initialIntent={leadBotSourceContext?.intent}
           loanOfficer={guidesState.loanOfficer}
           agent={activeAgent}
           isCoBranded={guidesState.isCoBranded}
           financialProfile={profile}
           onSaveLead={handleSaveLead}
           isOpen={isLeadBotOpen}
-          onClose={() => setIsLeadBotOpen(false)}
+          onClose={() => { setLeadBotSourceContext(undefined); setIsLeadBotOpen(false); }}
           onOpen={() => setIsLeadBotOpen(true)}
         />
       )}

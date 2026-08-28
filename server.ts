@@ -331,6 +331,113 @@ Note on agentType: If the query emphasizes buyers or purchasing, use "buyer_agen
     }
   });
 
+  // API Route: AI Loan Officer Roster Lookup & Generation
+  app.post("/api/gemini/lo-roster-lookup", async (req, res) => {
+    try {
+      const { query, minYearsExp, minUnits, minVolume, licenseStateFilter } = req.body;
+      if (!query || typeof query !== "string" || !query.trim()) {
+        return res.status(400).json({ error: "LO search query required" });
+      }
+
+      const ai = getGeminiClient();
+      const systemInstruction = `You are a specialized AI Real Estate & Mortgage Intelligence Assistant.
+Given a query like a branch name, team website, or company name, generate a comprehensive array of professional loan officer profiles. Return at least 3-5 realistic profiles to simulate scraping a team roster.
+
+STRICT RECRUITING FILTERS APPLIED:
+- ALL returned loan officers MUST hold a mortgage license in: ${licenseStateFilter || 'Oregon (OR)'} (Ensure this is in their licenseStates array).
+- ALL returned loan officers MUST have at least ${minYearsExp || 3} years of experience as a licensed LO.
+- ALL returned loan officers MUST have closed at least ${minUnits || 20} units in the last 12 months.
+- ALL returned loan officers MUST have produced at least ${minVolume || 10} Million in volume in the last 12 months.
+
+You MUST respond strictly with valid JSON containing a single array called "profiles" (no markdown fences). Structure:
+{
+  "profiles": [
+    {
+      "name": "Full LO Name",
+      "title": "Professional Title (e.g., Senior Mortgage Advisor)",
+      "nmlsId": "NMLS #123456",
+      "company": "Brokerage / Firm Name",
+      "branch": "Branch Name",
+      "city": "City Name",
+      "county": "County Name",
+      "state": "State Name",
+      "isTeamMember": false,
+      "email": "professional.email@domain.com",
+      "phone": "(503) 555-0192",
+      "websiteUrl": "https://brokerage.com/lo-name",
+      "headshotUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
+      "bio": "Comprehensive, compelling professional biography detailing mortgage experience, zero-down programs, etc.",
+      "specialties": ["First-Time Homebuyers", "USDA 0% Down Loans", "Down Payment Assistance Grants"],
+      "licenseStates": ["Oregon", "Washington"],
+      "yearsExperience": 5,
+      "production12MoVolume": 15000000,
+      "production12MoUnits": 35
+    }
+  ]
+}
+Choose realistic Unsplash portrait images for headshotUrl.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: `Search Query: "${query.trim()}"`,
+        config: {
+          systemInstruction,
+          temperature: 0.5,
+          responseMimeType: "application/json"
+        },
+      });
+
+      const jsonText = response.text || "{}";
+      const data = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
+      res.json({ success: true, profiles: data.profiles || [] });
+    } catch (error: any) {
+      console.error("LO lookup error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate AI LO profiles" });
+    }
+  });
+
+  // API Route: AI LO Recruiter Outreach Draft
+  app.post("/api/gemini/lo-outreach-draft", async (req, res) => {
+    try {
+      const { adminName, adminTitle, adminCompany, outreachType, tone, keywords, loCount } = req.body || {};
+      
+      const ai = getGeminiClient();
+      
+      const systemInstruction = `You are an elite real estate & mortgage recruiting copywriter.
+You are drafting an ${outreachType} (email or SMS) on behalf of ${adminName}, ${adminTitle} at ${adminCompany}.
+The goal is to recruit ${loCount > 1 ? "multiple Loan Officers" : "a Loan Officer"} to join the team.
+Tone: ${tone}.
+Keywords/Focus: ${keywords || "General opportunities, better technology, proprietary tools"}.
+
+If outreachType is 'sms', make it very short (under 160 characters if possible), punchy, and include a call to action to reply or call. DO NOT INCLUDE A SUBJECT LINE.
+If outreachType is 'email', write a compelling subject line and a professional body paragraph (2-3 short paragraphs), focusing on the value proposition.
+
+Respond ONLY with a valid JSON object:
+{
+  "subject": "Email Subject Line (leave empty if SMS)",
+  "draft": "The body of the message."
+}
+No markdown formatting.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: "Generate the recruiting draft.",
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+          responseMimeType: "application/json"
+        },
+      });
+
+      const jsonText = response.text || "{}";
+      const data = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
+      res.json({ success: true, subject: data.subject, draft: data.draft });
+    } catch (error: any) {
+      console.error("LO Outreach draft error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate outreach draft" });
+    }
+  });
+
   // API Route: AI Buyer Lead Outreach & Co-Branded Template Generator
   app.post("/api/gemini/website-lead-email", async (req, res) => {
     const { lead, lo, agent, matchingListings } = req.body || {};

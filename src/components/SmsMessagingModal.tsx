@@ -21,7 +21,7 @@ import {
   MailCheck,
   Settings
 } from "lucide-react";
-import { CapturedLead, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing } from "../types";
+import { CapturedLead, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing, SmsTemplate } from "../types";
 import { TwilioSettingsModal, getSavedTwilioConfig } from "./TwilioSettingsModal";
 
 interface SmsMessagingModalProps {
@@ -32,6 +32,7 @@ interface SmsMessagingModalProps {
   agent?: RealEstateAgentProfile;
   onUpdateLead: (updatedLead: CapturedLead) => void;
   syncedProperties?: PropertyListing[];
+  smsTemplates?: SmsTemplate[];
 }
 
 export const FLYER_ATTACHMENTS = [
@@ -142,6 +143,8 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
   loanOfficer,
   agent,
   onUpdateLead,
+  syncedProperties = [],
+  smsTemplates = [],
 }) => {
   if (!isOpen) return null;
 
@@ -150,6 +153,7 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
   const [selectedFlyerId, setSelectedFlyerId] = useState<string>("");
   const [selectedListId, setSelectedListId] = useState<string>("");
   const [showAttachmentMenu, setShowAttachmentMenu] = useState<boolean>(false);
+  const [showTemplateMenu, setShowTemplateMenu] = useState<boolean>(false);
   const [showTwilioSettings, setShowTwilioSettings] = useState<boolean>(false);
   const [twilioDispatchStatus, setTwilioDispatchStatus] = useState<string | null>(null);
 
@@ -623,10 +627,67 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
                 </div>
               )}
 
+              {showTemplateMenu && (
+                <div className="bg-[#FAF9F5] border border-[#EAE7E0] p-3 rounded-2xl space-y-2.5 shadow-md animate-fade-in max-h-60 overflow-y-auto">
+                  <div className="flex justify-between items-center text-xs font-bold text-[#2D362E]">
+                    <span className="flex items-center gap-1.5">
+                      <MessageSquare className="w-4 h-4 text-[#4A5D4E]" />
+                      Select a Pre-Written Template:
+                    </span>
+                    <button
+                      onClick={() => setShowTemplateMenu(false)}
+                      className="text-[#9A9488] hover:text-[#2D362E] text-xs font-bold"
+                    >
+                      Close ✕
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {smsTemplates.length === 0 ? (
+                      <div className="col-span-full p-3 text-center text-gray-500 italic">
+                        No custom templates found. Go to the SMS Nurture Library tab to create them.
+                      </div>
+                    ) : (
+                      smsTemplates.map(template => (
+                        <button
+                          key={template.id}
+                          onClick={() => {
+                            const filledText = template.content
+                              .replace(/{{firstName}}/g, firstName)
+                              .replace(/\[Name\]/g, firstName)
+                              .replace(/{{loName}}/g, loName)
+                              .replace(/\[AgentName\]/g, agent?.name?.split(" ")[0] || "Your Agent")
+                              .replace(/{{location}}/g, lead.preferredLocations || "Oregon")
+                              .replace(/\[City\]/g, lead.preferredLocations || "Oregon");
+                            setMessageText(filledText);
+                            setShowTemplateMenu(false);
+                          }}
+                          className="text-left p-2 bg-white border border-[#EAE7E0] rounded-xl hover:border-emerald-400 hover:bg-emerald-50 transition-colors"
+                        >
+                          <div className="font-bold text-[#2D362E] mb-0.5 truncate">{template.title}</div>
+                          <div className="text-[10px] text-[#606C5D] truncate">{template.content}</div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                  onClick={() => { setShowTemplateMenu(!showTemplateMenu); setShowAttachmentMenu(false); }}
+                  className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                    showTemplateMenu
+                      ? "bg-emerald-100 border-emerald-400 text-emerald-800 font-bold"
+                      : "bg-[#FAF9F5] hover:bg-[#EAE7E0] border-[#EAE7E0] text-[#606C5D]"
+                  }`}
+                  title="Use Pre-written Template"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowAttachmentMenu(!showAttachmentMenu); setShowTemplateMenu(false); }}
                   className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
                     showAttachmentMenu || selectedFlyerId || selectedListId
                       ? "bg-emerald-100 border-emerald-400 text-emerald-800 font-bold"

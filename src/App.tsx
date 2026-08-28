@@ -29,6 +29,7 @@ import {
   INITIAL_AD_DRAFTS,
   INITIAL_LEADS
 } from "./data/initialData";
+import { INITIAL_RECRUITING_CAMPAIGNS } from "./data/recruitingData";
 import { 
   FinancialProfile, 
   PropertyListing, 
@@ -87,6 +88,7 @@ export default function App() {
       agentRoster: INITIAL_AGENT_ROSTER.map(sanitizeAgent),
       activeAgentId: INITIAL_AGENT_ROSTER[0].id,
       pairings: INITIAL_PAIRINGS,
+      recruitingCampaigns: INITIAL_RECRUITING_CAMPAIGNS,
       socialCampaigns: INITIAL_SOCIAL_CAMPAIGNS,
       adCampaignDrafts: INITIAL_AD_DRAFTS,
       leads: INITIAL_LEADS,
@@ -116,6 +118,9 @@ export default function App() {
           });
 
           // Merge initial pairings
+          if (!parsed.recruitingCampaigns) {
+            parsed.recruitingCampaigns = INITIAL_RECRUITING_CAMPAIGNS;
+          }
           INITIAL_PAIRINGS.forEach(defaultPairing => {
             const pairingExists = parsed.pairings.some((p: any) => p.id === defaultPairing.id);
             if (!pairingExists) {
@@ -227,6 +232,7 @@ export default function App() {
             loanOfficers: remoteState.loanOfficers.map(lo => sanitizeLoanOfficer(lo)),
             agentRoster: remoteState.agentRoster.map(agent => sanitizeAgent(agent)),
             pairings: remoteState.pairings || prev.pairings,
+            recruitingCampaigns: remoteState.recruitingCampaigns || prev.recruitingCampaigns || INITIAL_RECRUITING_CAMPAIGNS,
             socialCampaigns: remoteState.socialCampaigns || prev.socialCampaigns,
             adCampaignDrafts: remoteState.adCampaignDrafts || prev.adCampaignDrafts,
             leads: remoteState.leads || prev.leads,

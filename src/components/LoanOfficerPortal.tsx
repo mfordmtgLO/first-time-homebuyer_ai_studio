@@ -50,6 +50,7 @@ import {
   Home,
   TrendingUp,
   BarChart2,
+  BarChart3,
   PieChart,
   Target,
   Zap,
@@ -63,7 +64,8 @@ import {
   Settings,
   FileText,
   StickyNote,
-  Compass
+  Compass,
+  Footprints
 } from "lucide-react";
 import { 
   LoanOfficerProfile, 
@@ -74,7 +76,8 @@ import {
   AdCampaignDraft,
   LoanOfficerAdSettings,
   CapturedLead,
-  PropertyListing
+  PropertyListing,
+  SmsTemplate
 } from "../types";
 import { SocialPushHub } from "./SocialPushHub";
 import { AdsCampaignHub } from "./AdsCampaignHub";
@@ -88,6 +91,16 @@ import { AIPartnerCampaign } from "./AIPartnerCampaign";
 import { LeadJourneyModal } from "./LeadJourneyModal";
 import { SmsMessagingModal } from "./SmsMessagingModal";
 import { TwilioSettingsModal } from "./TwilioSettingsModal";
+import { SmsComplianceDashboard } from "./SmsComplianceDashboard";
+import { SourceBreakdownReportModal } from "./SourceBreakdownReportModal";
+import { BatchLeadRecommendations } from "./BatchLeadRecommendations";
+import { DailyMorningBriefing } from "./DailyMorningBriefing";
+import { TaskManagementPanel } from "./TaskManagementPanel";
+import { SmsTemplateLibrary } from "./SmsTemplateLibrary";
+import { BulkSmsModal } from "./BulkSmsModal";
+import { ScrapeLoRosterModal } from "./ScrapeLoRosterModal";
+import { LoOutreachModal } from "./LoOutreachModal";
+import { RecruitingCampaignModal } from "./RecruitingCampaignModal";
 
 interface LoanOfficerPortalProps {
   guidesState: ProfessionalGuidesState;
@@ -115,9 +128,10 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   });
 
   // Current user / viewing context
-  const [activeTab, setActiveTab] = useState<"leads" | "team_distribution" | "pairings" | "realtor_roster" | "ai_partner_campaign" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns">("leads");
+  const [activeTab, setActiveTab] = useState<"leads" | "sms_compliance" | "sms_templates" | "team_distribution" | "recruitment_pipeline" | "pairings" | "realtor_roster" | "ai_partner_campaign" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns">("leads");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [viewingHistoryLo, setViewingHistoryLo] = useState<string | null>(null);
 
   // Horizontal Menu Navigation Scroll State & Ref
   const menuScrollRef = useRef<HTMLDivElement>(null);
@@ -207,10 +221,14 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const [leadStartDate, setLeadStartDate] = useState<string>("");
   const [leadEndDate, setLeadEndDate] = useState<string>("");
   const [leadViewMode, setLeadViewMode] = useState<"table" | "cards">("table");
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [showBulkSmsModal, setShowBulkSmsModal] = useState<boolean>(false);
   const [viewingTranscriptLead, setViewingTranscriptLead] = useState<CapturedLead | null>(null);
   const [viewingJourneyLead, setViewingJourneyLead] = useState<CapturedLead | null>(null);
   const [smsModalLead, setSmsModalLead] = useState<CapturedLead | null>(null);
   const [showTwilioSettingsModal, setShowTwilioSettingsModal] = useState<boolean>(false);
+  const [showSourceReportModal, setShowSourceReportModal] = useState<boolean>(false);
+  const [selectedLeadIdsInCrm, setSelectedLeadIdsInCrm] = useState<string[]>([]);
 
   const handleUpdateLeadFromSmsModal = (updatedLead: CapturedLead) => {
     const currentLeads = guidesState.leads || [];
@@ -245,6 +263,15 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
   // Modals / Editors
   const [showAddLoModal, setShowAddLoModal] = useState<boolean>(false);
+  const [showScrapeLoModal, setShowScrapeLoModal] = useState<boolean>(false);
+  const [showLoOutreachModal, setShowLoOutreachModal] = useState<boolean>(false);
+  const [showRecruitingCampaignModal, setShowRecruitingCampaignModal] = useState<boolean>(false);
+  const [loSearchQuery, setLoSearchQuery] = useState<string>("");
+  const [loRegionSearch, setLoRegionSearch] = useState<string>("");
+  const [loCompanyFilter, setLoCompanyFilter] = useState<string>("all");
+  const [loBranchFilter, setLoBranchFilter] = useState<string>("all");
+  const [loTeamStatusFilter, setLoTeamStatusFilter] = useState<"all" | "assigned" | "unassigned">("all");
+  const [selectedRosterLoIds, setSelectedRosterLoIds] = useState<Set<string>>(new Set());
   const [editingLo, setEditingLo] = useState<LoanOfficerProfile | null>(null);
   const [showAddAgentModal, setShowAddAgentModal] = useState<boolean>(false);
   const [editingAgent, setEditingAgent] = useState<RealEstateAgentProfile | null>(null);
@@ -930,9 +957,73 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       : `⏸️ Automated Nurture sequence PAUSED for ${target.fullName}`);
   };
 
+  const handleBulkSmsDispatch = (template: SmsTemplate) => {
+    const currentLeads = guidesState.leads || [];
+    let dispatchCount = 0;
+    
+    const updated = currentLeads.map(l => {
+      if (selectedLeadIds.has(l.id) && l.smsConsentAuthorized) {
+        dispatchCount++;
+        const firstName = l.fullName ? l.fullName.split(" ")[0] : "there";
+        const loName = currentLo.name.split(" ")[0];
+        const agentName = l.assignedAgent ? l.assignedAgent.split(" ")[0] : "Your Agent";
+        
+        const filledText = template.content
+          .replace(/{{firstName}}/g, firstName)
+          .replace(/\[Name\]/g, firstName)
+          .replace(/{{loName}}/g, loName)
+          .replace(/\[AgentName\]/g, agentName)
+          .replace(/{{location}}/g, l.preferredLocations || "Oregon")
+          .replace(/\[City\]/g, l.preferredLocations || "Oregon");
+
+        const newMsg = {
+          id: `sms-bulk-${Date.now()}-${l.id}`,
+          direction: "outbound" as const,
+          text: filledText,
+          timestamp: new Date().toISOString(),
+          status: "delivered" as const
+        };
+
+        const existingSms = l.smsMessages || [];
+        
+        return {
+          ...l,
+          smsMessages: [...existingSms, newMsg],
+          lastTextSentAt: new Date().toISOString(),
+          lastTextTemplateName: template.title
+        };
+      }
+      return l;
+    });
+    
+    onUpdateGuidesState({
+      ...guidesState,
+      leads: updated
+    });
+    
+    triggerToast(`⚡ Bulk SMS successfully dispatched to ${dispatchCount} leads using '${template.title}'`);
+    setShowBulkSmsModal(false);
+    setSelectedLeadIds(new Set());
+  };
+
   const handleUpdateLeadStatus = (leadId: string, newStatus: CapturedLead['status']) => {
     const currentLeads = guidesState.leads || [];
     
+    // Real-time notification check
+    const targetLead = currentLeads.find(l => l.id === leadId);
+    if (targetLead && newStatus !== targetLead.status) {
+      if (targetLead.assignedAgentId || targetLead.assignedAgent) {
+        const agentName = targetLead.assignedAgent || "Co-branded Partner";
+        if (newStatus === 'pre_approved') {
+          triggerToast(`🔔 Real-Time Alert sent to ${agentName} (Email/In-App): "${targetLead.fullName} is now Prequalified and ready to tour!"`);
+        } else if (newStatus === 'in_escrow') {
+          triggerToast(`🔔 Real-Time Alert sent to ${agentName} (Email/In-App): "${targetLead.fullName} is officially In Escrow! Closing tasks initiated."`);
+        } else if (newStatus === 'closed') {
+          triggerToast(`🔔 Real-Time Alert sent to ${agentName} (Email/In-App): "Congratulations! ${targetLead.fullName} has officially Closed!"`);
+        }
+      }
+    }
+
     const updated = currentLeads.map(l => {
       if (l.id === leadId) {
         let stage: CapturedLead['nurtureSequenceStage'] = l.nurtureSequenceStage;
@@ -1253,6 +1344,46 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               </span>
             </button>
 
+            <button
+              data-tab-id="sms_compliance"
+              onClick={() => setActiveTab("sms_compliance")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "sms_compliance"
+                  ? "bg-[#2F5738] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-300" />
+              <span>SMS Compliance & Opt-in</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "sms_compliance"
+                  ? "bg-white/20 text-white"
+                  : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+              }`}>
+                {(guidesState.leads || []).filter(l => l.smsConsentAuthorized).length} Opted-In
+              </span>
+            </button>
+
+            <button
+              data-tab-id="sms_templates"
+              onClick={() => setActiveTab("sms_templates")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "sms_templates"
+                  ? "bg-[#2D362E] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <MessageSquare className="w-4 h-4 text-emerald-300" />
+              <span>SMS Nurture Library</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "sms_templates"
+                  ? "bg-white/20 text-white"
+                  : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+              }`}>
+                {guidesState.smsTemplates?.length || 0}
+              </span>
+            </button>
+
             {isSuperAdmin && (
               <button
                 data-tab-id="team_distribution"
@@ -1271,6 +1402,21 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     <span>Reset Requested</span>
                   </span>
                 )}
+              </button>
+            )}
+
+            {isSuperAdmin && (
+              <button
+                data-tab-id="recruitment_pipeline"
+                onClick={() => setActiveTab("recruitment_pipeline")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                  activeTab === "recruitment_pipeline"
+                    ? "bg-[#4A5D4E] text-white shadow-xs"
+                    : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+                }`}
+              >
+                <Target className="w-4 h-4" />
+                <span>Recruitment Pipeline</span>
               </button>
             )}
 
@@ -1441,6 +1587,50 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         {/* Tab 0: Leads & Inquiries CRM */}
         {activeTab === "leads" && (
           <div className="space-y-6">
+            {/* AI Executive Daily Morning Briefing */}
+            <DailyMorningBriefing
+              loanOfficer={currentLo}
+              leads={guidesState.leads || []}
+              properties={properties}
+              onUpdateLead={(updatedLead) => {
+                const currentLeads = guidesState.leads || [];
+                const updated = currentLeads.map(l => l.id === updatedLead.id ? updatedLead : l);
+                onUpdateGuidesState({
+                  ...guidesState,
+                  leads: updated
+                });
+              }}
+              onOpenSmsMessaging={(lead) => {
+                setSmsModalLead(lead);
+              }}
+              onOpenTranscript={(lead) => {
+                setViewingTranscriptLead(lead);
+              }}
+              onTriggerToast={triggerToast}
+            />
+
+            {/* Curation Task Management Queue */}
+            <TaskManagementPanel
+              leads={guidesState.leads || []}
+              properties={properties}
+              agents={guidesState.agentRoster || []}
+              loanOfficer={currentLo}
+              onOpenSmsMessaging={(lead) => setSmsModalLead(lead)}
+              onOpenEmailOutreach={(lead) => {
+                setInitialOutreachLeadId(lead.id);
+                setShowEmailOutreachModal(true);
+              }}
+              onUpdateLead={(updatedLead) => {
+                const currentLeads = guidesState.leads || [];
+                const updated = currentLeads.map(l => l.id === updatedLead.id ? updatedLead : l);
+                onUpdateGuidesState({
+                  ...guidesState,
+                  leads: updated
+                });
+              }}
+              onTriggerToast={triggerToast}
+            />
+
             {/* Header & Export Banner */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm">
               <div>
@@ -1457,10 +1647,19 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setShowSourceReportModal(true)}
+                  className="px-4 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  title="View marketing channel lead quality breakdown & export report"
+                >
+                  <BarChart3 className="w-4 h-4 text-emerald-300" />
+                  <span>Source Quality Report</span>
+                </button>
+
                 <button
                   onClick={handleExportLeadsCSV}
-                  className="px-4 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="px-4 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                 >
                   <Download className="w-4 h-4 text-[#E7C19D]" />
                   <span>Export to CSV / CRM</span>
@@ -1731,6 +1930,39 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               );
             })()}
 
+            {/* Smart Batch Lead Action Recommendations Banner */}
+            <BatchLeadRecommendations
+              leads={guidesState.leads || []}
+              loanOfficer={currentLo}
+              agents={guidesState.agentRoster || []}
+              onUpdateAllLeads={(updatedLeads) => {
+                onUpdateGuidesState({
+                  ...guidesState,
+                  leads: updatedLeads
+                });
+              }}
+              onTriggerToast={triggerToast}
+              onOpenBulkSmsModal={(leadIds) => {
+                const nowIso = new Date().toISOString();
+                const updated = (guidesState.leads || []).map(l => {
+                  if (leadIds.includes(l.id)) {
+                    return {
+                      ...l,
+                      smsConsentAuthorized: true,
+                      smsConsentTimestamp: nowIso,
+                      smsConsentSource: "LO Batch Authorization Dispatch"
+                    };
+                  }
+                  return l;
+                });
+                onUpdateGuidesState({
+                  ...guidesState,
+                  leads: updated
+                });
+                triggerToast(`Dispatched TCPA SMS consent requests to ${leadIds.length} leads!`);
+              }}
+            />
+
             {/* Filter & Search Bar */}
             <div className="bg-white p-4 rounded-2xl border border-[#EAE7E0] space-y-3.5 shadow-2xs">
               {/* Nurture Sequence Master Banner & Controls */}
@@ -1942,6 +2174,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   lead.email.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
                   lead.phone.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
                   lead.preferredLocations.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
+                  (lead.taggedCityArea && lead.taggedCityArea.toLowerCase().includes(leadSearchQuery.toLowerCase())) ||
+                  (lead.leadPathTag && lead.leadPathTag.toLowerCase().includes(leadSearchQuery.toLowerCase())) ||
                   (lead.sourceCampaignName && lead.sourceCampaignName.toLowerCase().includes(leadSearchQuery.toLowerCase())) ||
                   (lead.sourcePropertyAddress && lead.sourcePropertyAddress.toLowerCase().includes(leadSearchQuery.toLowerCase())) ||
                   (lead.leadSource && lead.leadSource.toLowerCase().includes(leadSearchQuery.toLowerCase()));
@@ -2090,11 +2324,42 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                       </button>
                     </div>
                   ) : leadViewMode === "table" ? (
-                    <div className="bg-white rounded-3xl border border-[#EAE7E0] shadow-sm overflow-hidden">
-                      <div className="overflow-x-auto">
+                    <div className="bg-white rounded-3xl border border-[#EAE7E0] shadow-sm overflow-hidden flex flex-col relative">
+                      {selectedLeadIds.size > 0 && (
+                        <div className="absolute top-0 left-0 right-0 bg-emerald-50 border-b border-emerald-200 p-3 flex items-center justify-between z-10 animate-fade-in">
+                          <span className="text-xs font-bold text-emerald-800 flex items-center gap-2">
+                            <span className="w-5 h-5 rounded bg-emerald-800 text-white flex items-center justify-center text-[10px]">
+                              {selectedLeadIds.size}
+                            </span>
+                            Leads Selected
+                          </span>
+                          <button
+                            onClick={() => setShowBulkSmsModal(true)}
+                            className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 transition-colors cursor-pointer"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            <span>Bulk SMS Template</span>
+                          </button>
+                        </div>
+                      )}
+                      <div className={`overflow-x-auto ${selectedLeadIds.size > 0 ? "mt-12" : ""}`}>
                         <table className="w-full text-left text-xs border-collapse">
                           <thead>
                             <tr className="bg-[#FAF9F5] border-b border-[#EAE7E0] text-[#606C5D] uppercase tracking-wider font-bold">
+                              <th className="py-3.5 px-4 font-bold w-10">
+                                <input
+                                  type="checkbox"
+                                  checked={filtered.length > 0 && selectedLeadIds.size === filtered.length}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedLeadIds(new Set(filtered.map(l => l.id)));
+                                    } else {
+                                      setSelectedLeadIds(new Set());
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer"
+                                />
+                              </th>
                               <th className="py-3.5 px-4 font-bold">Buyer / Lead Contact</th>
                               <th className="py-3.5 px-4 font-bold">Interacted Source (Campaign / Listing)</th>
                               <th className="py-3.5 px-4 font-bold">Target Area & Home Type</th>
@@ -2111,7 +2376,20 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                               const assignedAgent = guidesState.agentRoster.find(a => a.id === lead.assignedAgentId);
 
                               return (
-                                <tr key={lead.id} className="hover:bg-[#F9F8F4]/80 transition-colors">
+                                <tr key={lead.id} className={`transition-colors ${selectedLeadIds.has(lead.id) ? "bg-emerald-50/50" : "hover:bg-[#F9F8F4]/80"}`}>
+                                  <td className="py-3 px-4">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedLeadIds.has(lead.id)}
+                                      onChange={(e) => {
+                                        const newSet = new Set(selectedLeadIds);
+                                        if (e.target.checked) newSet.add(lead.id);
+                                        else newSet.delete(lead.id);
+                                        setSelectedLeadIds(newSet);
+                                      }}
+                                      className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer"
+                                    />
+                                  </td>
                                   {/* Lead Contact */}
                                   <td className="py-4 px-4 align-top">
                                     <div className="flex items-start gap-3">
@@ -2195,14 +2473,27 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                           🏠 Requested Low/No Down Homes
                                         </span>
                                       )}
+
+                                      {lead.leadPathTag && (
+                                        <div className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+                                          <Footprints className="w-2.5 h-2.5 text-purple-700 shrink-0" />
+                                          <span>Path: {lead.leadPathTag}</span>
+                                        </div>
+                                      )}
                                     </div>
                                   </td>
 
                                   {/* Target Area & Property */}
                                   <td className="py-4 px-4 align-top">
                                     <div className="space-y-1">
+                                      {lead.taggedCityArea && (
+                                        <div className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#4A5D4E]/10 text-[#4A5D4E] border border-[#4A5D4E]/30 mb-0.5">
+                                          <Compass className="w-2.5 h-2.5 text-[#4A5D4E] shrink-0" />
+                                          <span>City Tag: {lead.taggedCityArea}</span>
+                                        </div>
+                                      )}
                                       <div className="font-bold text-[#2D362E] flex items-center gap-1">
-                                        <MapPin className="w-3 h-3 text-[#C18C5D]" />
+                                        <MapPin className="w-3 h-3 text-[#C18C5D] shrink-0" />
                                         <span>{lead.preferredLocations}</span>
                                       </div>
                                       <div className="text-[11px] text-[#606C5D]">
@@ -2561,6 +2852,23 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                               </div>
                             </div>
 
+                            {(lead.taggedCityArea || lead.leadPathTag) && (
+                              <div className="flex flex-wrap items-center gap-2 text-xs">
+                                {lead.taggedCityArea && (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-xl bg-[#4A5D4E]/10 text-[#4A5D4E] border border-[#4A5D4E]/25">
+                                    <Compass className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                                    City Tag: {lead.taggedCityArea}
+                                  </span>
+                                )}
+                                {lead.leadPathTag && (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-xl bg-purple-100 text-purple-900 border border-purple-200">
+                                    <Footprints className="w-3.5 h-3.5 text-purple-700" />
+                                    Path: {lead.leadPathTag}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
                             {/* Tracked Marketing or Property Listing Source Banner */}
                             {(lead.sourcePropertyAddress || lead.sourceCampaignName) && (
                               <div className="bg-[#FAF9F5] border border-[#EAE7E0] p-3 rounded-2xl flex items-center justify-between text-xs gap-3">
@@ -2820,6 +3128,105 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           </div>
         )}
 
+        {activeTab === "recruitment_pipeline" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm">
+              <div>
+                <h3 className="font-serif font-bold text-2xl text-[#2D362E]">
+                  Recruitment Pipeline
+                </h3>
+                <p className="text-xs text-[#606C5D] mt-1 max-w-2xl">
+                  Track the recruitment status of prospective loan officers and view AI-generated outreach history.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 overflow-x-auto pb-4 items-start h-[70vh]">
+              {['New', 'Contacted', 'Scheduled Interview', 'Onboarding', 'Declined'].map(status => {
+                const columnLos = guidesState.loanOfficers.filter(lo => !lo.isTeamMember && !lo.isAdmin && ((lo.recruitmentStatus || 'New') === status));
+                
+                return (
+                  <div key={status} className="w-80 shrink-0 bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-4 flex flex-col h-full max-h-full">
+                    <div className="flex items-center justify-between mb-4 shrink-0">
+                      <h4 className="font-bold text-sm text-[#2D362E]">{status}</h4>
+                      <span className="text-[10px] font-bold bg-[#EAE7E0] text-[#606C5D] px-2 py-0.5 rounded-full">
+                        {columnLos.length}
+                      </span>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                      {columnLos.map(lo => (
+                        <div key={lo.id} className="bg-white rounded-2xl border border-[#EAE7E0] p-4 shadow-sm space-y-3">
+                          <div className="flex items-start gap-3">
+                            <HeadshotAvatar
+                              src={lo.headshotUrl}
+                              name={lo.name}
+                              title={lo.title}
+                              className="w-10 h-10 rounded-xl border border-gray-200 shrink-0"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <h5 className="font-bold text-sm text-[#2D362E] truncate">{lo.name}</h5>
+                              <p className="text-[10px] text-[#606C5D] truncate">{lo.company}</p>
+                            </div>
+                          </div>
+                          
+                          {/* Outreach History Link / Snippet */}
+                          {lo.outreachHistory && lo.outreachHistory.length > 0 ? (
+                            <div className="bg-[#FAF9F5] rounded-xl border border-[#EAE7E0] p-2.5">
+                              <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#4A5D4E] uppercase tracking-wider mb-1">
+                                {lo.outreachHistory[lo.outreachHistory.length - 1].type === 'email' ? <Mail className="w-3 h-3" /> : <MessageSquare className="w-3 h-3" />}
+                                Last Sent {new Date(lo.outreachHistory[lo.outreachHistory.length - 1].date).toLocaleDateString()}
+                              </div>
+                              <p className="text-[11px] text-[#606C5D] line-clamp-2 italic">
+                                "{lo.outreachHistory[lo.outreachHistory.length - 1].content}"
+                              </p>
+                              <button
+                                onClick={() => setViewingHistoryLo(lo.id)}
+                                className="text-[10px] font-bold text-emerald-700 hover:underline mt-1.5 inline-block"
+                              >
+                                View full history ({lo.outreachHistory.length})
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-[#9A9488] italic px-1">
+                              No outreach history yet.
+                            </div>
+                          )}
+
+                          <div className="pt-2 border-t border-[#EAE7E0]">
+                            <select
+                              value={lo.recruitmentStatus || 'New'}
+                              onChange={(e) => {
+                                const updatedLos = guidesState.loanOfficers.map(l => 
+                                  l.id === lo.id ? { ...l, recruitmentStatus: e.target.value as any } : l
+                                );
+                                onUpdateGuidesState({ ...guidesState, loanOfficers: updatedLos });
+                                triggerToast(`Updated status for ${lo.name} to ${e.target.value}`);
+                              }}
+                              className="w-full bg-white border border-[#EAE7E0] rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:border-[#4A5D4E] text-[#606C5D]"
+                            >
+                              <option value="New">New</option>
+                              <option value="Contacted">Contacted</option>
+                              <option value="Scheduled Interview">Scheduled Interview</option>
+                              <option value="Onboarding">Onboarding</option>
+                              <option value="Declined">Declined</option>
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                      {columnLos.length === 0 && (
+                        <div className="text-center p-6 text-xs text-[#9A9488]">
+                          No prospects in this stage.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Tab 1: Team LO Roster & Distribution (Admin for Mike Ford) */}
         {activeTab === "team_distribution" && (
           <div className="space-y-6">
@@ -2833,37 +3240,231 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 </p>
               </div>
 
-              <button
-                onClick={() => setShowAddLoModal(true)}
-                className="px-5 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] shrink-0"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>Add Downstream Loan Officer</span>
-              </button>
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                <button
+                  onClick={() => setShowScrapeLoModal(true)}
+                  className="px-5 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>AI Assist: Import Team</span>
+                </button>
+                <button
+                  onClick={() => setShowAddLoModal(true)}
+                  className="px-5 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Add Manual LO</span>
+                </button>
+              </div>
             </div>
 
-            {/* Team LO Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {guidesState.loanOfficers.map(lo => {
-                const loSlug = lo.customSlug || lo.id.replace(/^lo-/, "");
-                const loUrl = `${origin}/?lo=${loSlug}`;
-                const loPairings = guidesState.pairings.filter(p => p.loId === lo.id);
-                const isMike = lo.isAdmin;
+            {/* Robust LO Filter & Search Bar */}
+            {(() => {
+              const allCompanies = Array.from(new Set(guidesState.loanOfficers.map(lo => lo.company).filter(Boolean)));
+              const allBranches = Array.from(new Set(guidesState.loanOfficers.filter(lo => loCompanyFilter === 'all' || lo.company === loCompanyFilter).map(lo => lo.branch).filter(Boolean)));
 
-                return (
-                  <div 
-                    key={lo.id}
-                    className={`bg-white rounded-3xl border ${
-                      currentLo.id === lo.id ? "border-[#4A5D4E] ring-2 ring-[#4A5D4E]/20" : "border-[#EAE7E0]"
-                    } p-6 space-y-4 shadow-sm flex flex-col justify-between relative overflow-hidden`}
-                  >
-                    {isMike && (
-                      <div className="absolute top-0 right-0 px-3 py-1 bg-amber-500 text-white text-[10px] font-bold rounded-bl-xl uppercase tracking-wider">
-                        Branch Manager / Admin
+              const filteredLOs = guidesState.loanOfficers.filter(lo => {
+                if (loSearchQuery && !lo.name.toLowerCase().includes(loSearchQuery.toLowerCase())) return false;
+                if (loRegionSearch && !(lo.city?.toLowerCase().includes(loRegionSearch.toLowerCase()) || lo.county?.toLowerCase().includes(loRegionSearch.toLowerCase()) || lo.state?.toLowerCase().includes(loRegionSearch.toLowerCase()))) return false;
+                if (loCompanyFilter !== 'all' && lo.company !== loCompanyFilter) return false;
+                if (loBranchFilter !== 'all' && lo.branch !== loBranchFilter) return false;
+                if (loTeamStatusFilter === 'assigned' && !lo.isTeamMember) return false;
+                if (loTeamStatusFilter === 'unassigned' && lo.isTeamMember) return false;
+                return true;
+              });
+
+              return (
+                <div className="space-y-4">
+                  <div className="flex flex-col xl:flex-row gap-3 bg-[#FAF9F5] p-4 rounded-2xl border border-[#EAE7E0]">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                      {/* Name Search */}
+                      <div className="relative">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9A9488]" />
+                        <input
+                          type="text"
+                          placeholder="Search LO name..."
+                          value={loSearchQuery}
+                          onChange={(e) => setLoSearchQuery(e.target.value)}
+                          className="w-full bg-white border border-[#EAE7E0] rounded-xl pl-9 pr-3 py-2.5 text-xs focus:outline-none focus:border-[#4A5D4E] text-[#2D362E]"
+                        />
                       </div>
-                    )}
+                      
+                      {/* Region Search */}
+                      <div className="relative">
+                        <MapPin className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9A9488]" />
+                        <input
+                          type="text"
+                          placeholder="City, County, or State..."
+                          value={loRegionSearch}
+                          onChange={(e) => setLoRegionSearch(e.target.value)}
+                          className="w-full bg-white border border-[#EAE7E0] rounded-xl pl-9 pr-3 py-2.5 text-xs focus:outline-none focus:border-[#4A5D4E] text-[#2D362E]"
+                        />
+                      </div>
 
-                    <div className="space-y-4">
+                      {/* Company Filter */}
+                      <div className="relative">
+                        <Building className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9A9488]" />
+                        <select
+                          value={loCompanyFilter}
+                          onChange={(e) => {
+                            setLoCompanyFilter(e.target.value);
+                            setLoBranchFilter("all");
+                          }}
+                          className="w-full bg-white border border-[#EAE7E0] rounded-xl pl-9 pr-8 py-2.5 text-xs focus:outline-none focus:border-[#4A5D4E] text-[#2D362E] appearance-none"
+                        >
+                          <option value="all">All Companies</option>
+                          {allCompanies.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9488] pointer-events-none" />
+                      </div>
+
+                      {/* Branch Filter */}
+                      <div className="relative">
+                        <Layers className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9A9488]" />
+                        <select
+                          value={loBranchFilter}
+                          onChange={(e) => setLoBranchFilter(e.target.value)}
+                          className="w-full bg-white border border-[#EAE7E0] rounded-xl pl-9 pr-8 py-2.5 text-xs focus:outline-none focus:border-[#4A5D4E] text-[#2D362E] appearance-none"
+                        >
+                          <option value="all">All Branches</option>
+                          {allBranches.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                        <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9488] pointer-events-none" />
+                      </div>
+
+                      {/* Team Status Filter */}
+                      <div className="relative">
+                        <Users className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9A9488]" />
+                        <select
+                          value={loTeamStatusFilter}
+                          onChange={(e) => setLoTeamStatusFilter(e.target.value as any)}
+                          className="w-full bg-white border border-[#EAE7E0] rounded-xl pl-9 pr-8 py-2.5 text-xs focus:outline-none focus:border-[#4A5D4E] text-[#2D362E] appearance-none"
+                        >
+                          <option value="all">All Statuses</option>
+                          <option value="assigned">My Team Only</option>
+                          <option value="unassigned">Unassigned (Scraped)</option>
+                        </select>
+                        <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9488] pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Bulk Actions Banner */}
+                  {selectedRosterLoIds.size > 0 && (
+                    <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl flex items-center justify-between animate-fade-in shadow-sm">
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+                        <span className="w-6 h-6 rounded-lg bg-emerald-800 text-white flex items-center justify-center">
+                          {selectedRosterLoIds.size}
+                        </span>
+                        Selected Loan Officers
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const updatedLos = guidesState.loanOfficers.map(lo => {
+                              if (selectedRosterLoIds.has(lo.id)) {
+                                return { ...lo, isTeamMember: true };
+                              }
+                              return lo;
+                            });
+                            onUpdateGuidesState({
+                              ...guidesState,
+                              loanOfficers: updatedLos
+                            });
+                            triggerToast(`✅ Assigned ${selectedRosterLoIds.size} LOs to Mike Ford's Team`);
+                            setSelectedRosterLoIds(new Set());
+                          }}
+                          className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 transition-colors cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Assign to Team</span>
+                        </button>
+                        <button
+                          onClick={() => setShowLoOutreachModal(true)}
+                          className="px-4 py-2 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 transition-colors cursor-pointer"
+                        >
+                          <MessageSquare className="w-4 h-4 text-[#E7C19D]" />
+                          <span>AI Custom Outreach</span>
+                        </button>
+                        <button
+                          onClick={() => setShowRecruitingCampaignModal(true)}
+                          className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 transition-colors cursor-pointer"
+                        >
+                          <Target className="w-4 h-4 text-emerald-200" />
+                          <span>Automated Drip Campaign</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Select All Row */}
+                  <div className="flex items-center justify-between px-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#606C5D]">
+                      <input
+                        type="checkbox"
+                        checked={filteredLOs.length > 0 && selectedRosterLoIds.size === filteredLOs.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRosterLoIds(new Set(filteredLOs.map(lo => lo.id)));
+                          } else {
+                            setSelectedRosterLoIds(new Set());
+                          }
+                        }}
+                        className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      Select All Visible ({filteredLOs.length})
+                    </label>
+                  </div>
+
+                  {/* Team LO Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredLOs.map(lo => {
+                      const loSlug = lo.customSlug || lo.id.replace(/^lo-/, "");
+                      const loUrl = `${origin}/?lo=${loSlug}`;
+                      const loPairings = guidesState.pairings.filter(p => p.loId === lo.id);
+                      const isMike = lo.isAdmin;
+                      const isSelected = selectedRosterLoIds.has(lo.id);
+
+                      return (
+                        <div 
+                          key={lo.id}
+                          className={`bg-white rounded-3xl border transition-colors ${
+                            isSelected ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/10" :
+                            currentLo.id === lo.id ? "border-[#4A5D4E] ring-2 ring-[#4A5D4E]/20" : "border-[#EAE7E0]"
+                          } p-6 space-y-4 shadow-sm flex flex-col justify-between relative overflow-hidden`}
+                        >
+                          {/* Selection Checkbox */}
+                          <div className="absolute top-4 right-4 z-10">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const next = new Set(selectedRosterLoIds);
+                                if (e.target.checked) next.add(lo.id);
+                                else next.delete(lo.id);
+                                setSelectedRosterLoIds(next);
+                              }}
+                              className="w-5 h-5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer shadow-sm"
+                            />
+                          </div>
+
+                          {isMike && (
+                            <div className="absolute top-0 right-12 px-3 py-1 bg-amber-500 text-white text-[10px] font-bold rounded-b-xl uppercase tracking-wider">
+                              Admin
+                            </div>
+                          )}
+                          {lo.isTeamMember && !isMike && (
+                            <div className="absolute top-0 right-12 px-3 py-1 bg-[#4A5D4E] text-white text-[10px] font-bold rounded-b-xl uppercase tracking-wider">
+                              Assigned Team
+                            </div>
+                          )}
+                          {!lo.isTeamMember && !isMike && (
+                            <div className="absolute top-0 right-12 px-3 py-1 bg-[#9A9488] text-white text-[10px] font-bold rounded-b-xl uppercase tracking-wider">
+                              Unassigned
+                            </div>
+                          )}
+
+                          <div className="space-y-4 pt-2">
                       <div className="flex items-start gap-3.5">
                         <HeadshotAvatar
                           src={lo.headshotUrl}
@@ -2884,6 +3485,32 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                       <p className="text-xs text-[#606C5D] line-clamp-2 leading-relaxed">
                         {lo.bio}
                       </p>
+
+                      {/* AI Generated Recruiting Metrics */}
+                      {(lo.yearsExperience !== undefined || lo.production12MoUnits !== undefined) && (
+                        <div className="flex items-center gap-2 mt-2">
+                           {lo.yearsExperience !== undefined && (
+                             <span className="text-[10px] font-bold bg-[#E8F3F1] text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
+                               {lo.yearsExperience} Yrs Exp
+                             </span>
+                           )}
+                           {lo.production12MoUnits !== undefined && (
+                             <span className="text-[10px] font-bold bg-[#E8F3F1] text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
+                               {lo.production12MoUnits} Units / 12mo
+                             </span>
+                           )}
+                           {lo.production12MoVolume !== undefined && (
+                             <span className="text-[10px] font-bold bg-[#E8F3F1] text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
+                               ${(lo.production12MoVolume / 1000000).toFixed(1)}M Vol
+                             </span>
+                           )}
+                           {lo.licenseStates && lo.licenseStates.length > 0 && (
+                             <span className="text-[10px] font-bold bg-[#FFF9E6] text-amber-800 px-2 py-0.5 rounded border border-amber-200">
+                               {lo.licenseStates.join(', ')}
+                             </span>
+                           )}
+                        </div>
+                      )}
 
                       {/* Direct Phone, Email & Website Profile */}
                       <div className="flex flex-wrap gap-1.5 text-[11px] text-[#606C5D] pt-0.5">
@@ -3179,6 +3806,9 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 );
               })}
             </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -4024,6 +4654,63 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             pairingUrl={activePairingUrl}
           />
         )}
+
+        {/* Tab: SMS Compliance & Opt-in Management Dashboard */}
+        {activeTab === "sms_compliance" && (
+          <SmsComplianceDashboard
+            leads={guidesState.leads || []}
+            loanOfficer={currentLo}
+            onUpdateLead={(updatedLead) => {
+              const updatedLeads = (guidesState.leads || []).map(l => l.id === updatedLead.id ? updatedLead : l);
+              onUpdateGuidesState({
+                ...guidesState,
+                leads: updatedLeads
+              });
+            }}
+            onUpdateAllLeads={(updatedLeads) => {
+              onUpdateGuidesState({
+                ...guidesState,
+                leads: updatedLeads
+              });
+            }}
+            onOpenSmsMessaging={(lead) => {
+              setSmsModalLead(lead);
+            }}
+          />
+        )}
+
+        {/* Tab: Pre-written SMS Templates Library */}
+        {activeTab === "sms_templates" && (
+          <SmsTemplateLibrary
+            templates={guidesState.smsTemplates || []}
+            onSaveTemplate={(template) => {
+              const currentTemplates = guidesState.smsTemplates || [];
+              const existingIndex = currentTemplates.findIndex(t => t.id === template.id);
+              let updatedTemplates;
+              if (existingIndex >= 0) {
+                updatedTemplates = [...currentTemplates];
+                updatedTemplates[existingIndex] = template;
+              } else {
+                updatedTemplates = [template, ...currentTemplates];
+              }
+              onUpdateGuidesState({
+                ...guidesState,
+                smsTemplates: updatedTemplates
+              });
+              triggerToast(`⚡ Template '${template.title}' saved!`);
+            }}
+            onDeleteTemplate={(id) => {
+              const currentTemplates = guidesState.smsTemplates || [];
+              const updatedTemplates = currentTemplates.filter(t => t.id !== id);
+              onUpdateGuidesState({
+                ...guidesState,
+                smsTemplates: updatedTemplates
+              });
+              triggerToast("🗑️ Template removed from library.");
+            }}
+          />
+        )}
+
       </main>
 
       {/* Add / Edit Loan Officer Modal */}
@@ -5591,19 +6278,204 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       {/* 2-Way SMS Text Messaging & Nurture Hub Modal */}
       {smsModalLead && (
         <SmsMessagingModal
+          isOpen={true}
           lead={smsModalLead}
           loanOfficer={currentLo}
-          properties={properties}
+          syncedProperties={properties}
+          smsTemplates={guidesState.smsTemplates || []}
           onClose={() => setSmsModalLead(null)}
           onUpdateLead={handleUpdateLeadFromSmsModal}
         />
       )}
+
+      {/* Scrape LO Roster Modal */}
+      <ScrapeLoRosterModal
+        isOpen={showScrapeLoModal}
+        onClose={() => setShowScrapeLoModal(false)}
+        onAddMultipleLos={(los) => {
+          const newOfficers = los.map(lo => ({
+            ...lo,
+            id: `lo-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            isAdmin: false,
+          })) as LoanOfficerProfile[];
+          
+          onUpdateGuidesState({
+            ...guidesState,
+            loanOfficers: [...guidesState.loanOfficers, ...newOfficers]
+          });
+          triggerToast(`✅ Successfully imported ${newOfficers.length} Loan Officers to the team roster!`);
+        }}
+      />
+
+      {/* Recruiting Campaign Modal */}
+      <RecruitingCampaignModal
+        isOpen={showRecruitingCampaignModal}
+        onClose={() => setShowRecruitingCampaignModal(false)}
+        selectedLos={guidesState.loanOfficers.filter(lo => selectedRosterLoIds.has(lo.id))}
+        admin={currentLo}
+        campaigns={guidesState.recruitingCampaigns || []}
+        onDispatch={(campaignId) => {
+          const now = new Date().toISOString();
+          const campaign = (guidesState.recruitingCampaigns || []).find(c => c.id === campaignId);
+          if (!campaign) return;
+          
+          const updatedLos = guidesState.loanOfficers.map(lo => {
+            if (selectedRosterLoIds.has(lo.id)) {
+              // Create an immediate history entry for the first step if it's Day 0
+              let newHistory = [...(lo.outreachHistory || [])];
+              const immediateStep = campaign.steps.find(s => s.dayOffset === 0);
+              
+              if (immediateStep) {
+                newHistory.push({
+                  id: `outreach-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                  date: now,
+                  type: immediateStep.type,
+                  subject: immediateStep.subject,
+                  content: immediateStep.content.replace("[Name]", lo.name)
+                });
+              }
+
+              return {
+                ...lo,
+                recruitmentStatus: (lo.recruitmentStatus === 'New' || !lo.recruitmentStatus) ? 'Contacted' : lo.recruitmentStatus,
+                outreachHistory: newHistory
+              };
+            }
+            return lo;
+          });
+          
+          onUpdateGuidesState({
+            ...guidesState,
+            loanOfficers: updatedLos
+          });
+          triggerToast(`✅ Enrolled ${selectedRosterLoIds.size} prospects in "${campaign.name}"!`);
+          setSelectedRosterLoIds(new Set());
+        }}
+      />
+
+      {/* LO Outreach Modal */}
+      <LoOutreachModal
+        isOpen={showLoOutreachModal}
+        onClose={() => setShowLoOutreachModal(false)}
+        selectedLos={guidesState.loanOfficers.filter(lo => selectedRosterLoIds.has(lo.id))}
+        admin={currentLo}
+        onDispatch={(type, subject, content) => {
+          const now = new Date().toISOString();
+          const historyEntry = {
+            id: `outreach-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            date: now,
+            type,
+            subject,
+            content
+          };
+          
+          const updatedLos = guidesState.loanOfficers.map(lo => {
+            if (selectedRosterLoIds.has(lo.id)) {
+              return {
+                ...lo,
+                recruitmentStatus: (lo.recruitmentStatus === 'New' || !lo.recruitmentStatus) ? 'Contacted' : lo.recruitmentStatus,
+                outreachHistory: [...(lo.outreachHistory || []), historyEntry]
+              };
+            }
+            return lo;
+          });
+          
+          onUpdateGuidesState({
+            ...guidesState,
+            loanOfficers: updatedLos
+          });
+          triggerToast(`✅ Dispatched outreach to ${selectedRosterLoIds.size} prospects and updated pipeline!`);
+          setSelectedRosterLoIds(new Set());
+        }}
+      />
+
+      {/* Bulk SMS Dispatch Modal */}
+      <BulkSmsModal
+        isOpen={showBulkSmsModal}
+        onClose={() => setShowBulkSmsModal(false)}
+        selectedLeads={Array.from(selectedLeadIds).map(id => (guidesState.leads || []).find(l => l.id === id)!).filter(Boolean)}
+        templates={guidesState.smsTemplates || []}
+        loanOfficer={currentLo}
+        onDispatch={handleBulkSmsDispatch}
+      />
 
       {/* Twilio Carrier Credentials & Settings Modal */}
       <TwilioSettingsModal
         isOpen={showTwilioSettingsModal}
         onClose={() => setShowTwilioSettingsModal(false)}
       />
+
+      {/* Marketing Source Quality & Property Tracker Breakdown Modal */}
+      {showSourceReportModal && (
+        <SourceBreakdownReportModal
+          leads={guidesState.leads || []}
+          properties={properties}
+          loanOfficers={guidesState.loanOfficers}
+          onClose={() => setShowSourceReportModal(false)}
+          onTriggerToast={triggerToast}
+        />
+      )}
+
+      {/* LO Outreach History Modal */}
+      {viewingHistoryLo && (() => {
+        const lo = guidesState.loanOfficers.find(l => l.id === viewingHistoryLo);
+        if (!lo) return null;
+        
+        return (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E] max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3 shrink-0">
+                <div>
+                  <h4 className="font-serif font-bold text-lg text-[#2D362E] flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-[#4A5D4E]" />
+                    Outreach History: {lo.name}
+                  </h4>
+                  <p className="text-xs text-[#606C5D]">Review all AI-generated recruiter messages sent to this prospect.</p>
+                </div>
+                <button onClick={() => setViewingHistoryLo(null)} className="text-xs text-[#9A9488] hover:text-[#2D362E]">
+                  ✕ Close
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                {lo.outreachHistory && lo.outreachHistory.length > 0 ? (
+                  lo.outreachHistory.slice().reverse().map(history => (
+                    <div key={history.id} className="bg-[#FAF9F5] rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+                      <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-2">
+                        <div className="flex items-center gap-2 text-xs font-bold text-[#2D362E]">
+                          {history.type === 'email' ? <Mail className="w-4 h-4 text-[#4A5D4E]" /> : <MessageSquare className="w-4 h-4 text-[#4A5D4E]" />}
+                          {history.type === 'email' ? 'Email Draft' : 'SMS Draft'}
+                        </div>
+                        <span className="text-[10px] text-[#606C5D] font-medium">
+                          {new Date(history.date).toLocaleString()}
+                        </span>
+                      </div>
+                      
+                      {history.type === 'email' && history.subject && (
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold text-[#9A9488] uppercase tracking-wider">Subject</span>
+                          <p className="text-xs font-bold text-[#2D362E]">{history.subject}</p>
+                        </div>
+                      )}
+                      
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-[#9A9488] uppercase tracking-wider">Message</span>
+                        <div className="text-xs text-[#606C5D] whitespace-pre-wrap leading-relaxed bg-white border border-[#EAE7E0] rounded-xl p-3">
+                          {history.content}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center p-8 text-sm text-[#9A9488]">
+                    No outreach history recorded for this prospect.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

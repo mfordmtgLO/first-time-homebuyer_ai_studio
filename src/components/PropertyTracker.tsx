@@ -19,10 +19,12 @@ import {
   FileSpreadsheet,
   TrendingUp,
   Clock,
-  Mail
+  Mail,
+  Footprints
 } from "lucide-react";
 import { PropertyListing, FinancialProfile } from "../types";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
+import { calculateMockWalkScore } from "../utils/walkScoreUtils";
 import { 
   hasAuthenticPropertyPhoto, 
   getListingOverlayBadges,
@@ -746,6 +748,28 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                       <MapPin className="w-3.5 h-3.5 text-[#9A9488] shrink-0" />
                       <span className="truncate">{property.address}, {property.city}, {property.state} {property.zip}</span>
                     </p>
+
+                    {/* Walk Score Quick Badge */}
+                    {(() => {
+                      const walk = calculateMockWalkScore(property.address, property.city, property.zip, property.walkScore);
+                      return (
+                        <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-[#EAE7E0]/60">
+                          <div className="flex items-center gap-1.5 text-xs text-[#606C5D]">
+                            <Footprints className="w-3.5 h-3.5 text-[#4A5D4E] shrink-0" />
+                            <span className="text-[11px] font-bold">Walk Score®</span>
+                          </div>
+                          <div 
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold border ${walk.badgeBg} ${walk.badgeText} ${walk.badgeBorder} cursor-help transition-all hover:scale-105`}
+                            title={`Walk Score® ${walk.score}/100: ${walk.description}`}
+                          >
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shadow-2xs ${walk.badgePillBg}`}>
+                              {walk.score}
+                            </span>
+                            <span className="text-[10px] font-semibold">{walk.category}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Specs Pill Grid */}
@@ -792,6 +816,18 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                               <span>{b.shortLabel}</span>
                             </span>
                           ))}
+                          {(() => {
+                            const walk = calculateMockWalkScore(property.address, property.city, property.zip, property.walkScore);
+                            return (
+                              <span 
+                                className={`${walk.badgeBg} ${walk.badgeText} ${walk.badgeBorder} text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 shadow-2xs cursor-help`}
+                                title={`Walk Score® ${walk.score}/100: ${walk.description}`}
+                              >
+                                <Footprints className="w-2.5 h-2.5 shrink-0 opacity-80" />
+                                <span>Walk Score {walk.score}</span>
+                              </span>
+                            );
+                          })()}
                         </div>
 
                         {/* OHCS Purchase Price Cap Status */}
@@ -1013,6 +1049,21 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                         {formatUSD(p.propertyTaxAnnual)}/yr
                       </td>
                     ))}
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-[#606C5D]">Walk Score®</td>
+                    {comparedProperties.map(p => {
+                      const walk = calculateMockWalkScore(p.address, p.city, p.zip, p.walkScore);
+                      return (
+                        <td key={p.id} className="p-3">
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold border ${walk.badgeBg} ${walk.badgeText} ${walk.badgeBorder}`}>
+                            <Footprints className="w-3 h-3 shrink-0" />
+                            <span className={`px-1 py-0.2 rounded text-[10px] font-mono font-extrabold ${walk.badgePillBg}`}>{walk.score}</span>
+                            <span>{walk.category}</span>
+                          </span>
+                        </td>
+                      );
+                    })}
                   </tr>
                   <tr>
                     <td className="p-3 text-[#606C5D]">Tour Scorecard Grade</td>

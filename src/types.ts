@@ -100,6 +100,7 @@ export interface PropertyListing {
   propertyTaxAnnual: number;
   scorecard?: TourScorecard;
   isFavorite: boolean;
+  walkScore?: number;
   isPubliclyPublished?: boolean;
   overlayEligibility?: OverlayEligibility;
   sourceGeoSphereId?: string;
@@ -197,6 +198,12 @@ export interface LoanOfficerProfile {
   nmlsId: string;
   company: string;
   branch?: string;
+  city?: string;
+  county?: string;
+  state?: string;
+  isTeamMember?: boolean;
+  recruitmentStatus?: 'New' | 'Contacted' | 'Scheduled Interview' | 'Onboarding' | 'Declined';
+  outreachHistory?: { id: string; date: string; type: 'email' | 'sms'; subject?: string; content: string }[];
   email: string;
   phone: string;
   headshotUrl: string;
@@ -205,6 +212,9 @@ export interface LoanOfficerProfile {
   bookingUrl: string;
   licenseStates: string[];
   websiteUrl?: string;
+  yearsExperience?: number;
+  production12MoVolume?: number;
+  production12MoUnits?: number;
   licenseVerificationYear?: number;
   licenseLastVerifiedDate?: string;
   isAdmin?: boolean; // Mike Ford = true
@@ -325,6 +335,8 @@ export interface CapturedLead {
   sourcePropertyId?: string;
   sourcePropertyAddress?: string;
   interactedSourceType?: 'campaign' | 'property_listing' | 'chatbot' | 'flyer' | 'calculator';
+  taggedCityArea?: string;
+  leadPathTag?: string;
   intentScore: 'hot' | 'warm' | 'exploring';
   status: 'new' | 'contacted' | 'pre_approved' | 'in_escrow' | 'closed' | 'archived';
   notes?: string;
@@ -341,6 +353,10 @@ export interface CapturedLead {
   // SMS Text Messaging & TCPA Consent Fields
   smsConsentAuthorized?: boolean;
   smsConsentTimestamp?: string;
+  smsConsentSource?: string;
+  smsConsentIp?: string;
+  smsAuthRequestSentAt?: string;
+  smsOptOutTimestamp?: string;
   textNurtureEnabled?: boolean;
   textNurtureCurrentStep?: number;
   textNurtureTotalSteps?: number;
@@ -349,6 +365,31 @@ export interface CapturedLead {
   lastTextTemplateName?: string;
   smsMessages?: { id: string; direction: 'inbound' | 'outbound'; text: string; timestamp: string; attachmentUrl?: string; attachmentType?: 'flyer' | 'property_list' | 'link'; attachmentTitle?: string; status?: 'delivered' | 'sent' | 'read' }[];
   textNurtureLogs?: { id: string; stepNumber: number; templateName: string; messageText: string; sentAt: string; status: 'delivered' | 'scheduled' | 'sent' }[];
+}
+
+export interface RecruitingCampaignStep {
+  id: string;
+  dayOffset: number;
+  type: 'email' | 'sms';
+  subject?: string;
+  content: string;
+}
+
+export interface RecruitingCampaign {
+  id: string;
+  name: string;
+  category?: string;
+  targetAudience: string;
+  description: string;
+  steps: RecruitingCampaignStep[];
+  performanceMetrics?: {
+    sentCount: number;
+    activeTalksCount: number;
+    onboardedCount: number;
+    avgTouchesToHire: number;
+    avgJourneyDays: number;
+    conversionScore: number;
+  };
 }
 
 export interface ProfessionalGuidesState {
@@ -360,10 +401,12 @@ export interface ProfessionalGuidesState {
   activeAgentId: string;
   isCoBranded?: boolean; // false for individual LO links (/mike-ford, /mford), true for pairings (/mike-and-sarah)
   pairings: LOPairing[];
+  recruitingCampaigns: RecruitingCampaign[];
   socialCampaigns: SocialPushCampaign[];
   adCampaignDrafts: AdCampaignDraft[];
   leads?: CapturedLead[];
   syncedProperties?: PropertyListing[];
+  smsTemplates?: SmsTemplate[];
 }
 
 export interface ChatMessage {
@@ -384,6 +427,36 @@ export interface AmortizationPoint {
   principalPaidAccelerated: number;
 }
 
+
+export interface CurationTask {
+  id: string;
+  leadId: string;
+  leadName: string;
+  leadEmail: string;
+  leadPhone: string;
+  sourceTag: string;
+  requestedCityArea: string;
+  targetPriceRange: string;
+  grantInterest: boolean;
+  status: 'pending' | 'in_progress' | 'completed' | 'dismissed';
+  priority: 'urgent' | 'high' | 'normal';
+  createdAt: string;
+  completedAt?: string;
+  matchedPropertyIds?: string[];
+  assignedAgentId?: string;
+  notes?: string;
+}
+
+export interface SmsTemplate {
+  id: string;
+  title: string;
+  content: string;
+  category: 'new_lead' | 'follow_up' | 'pre_approved' | 'in_escrow' | 'post_close' | 'custom';
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
+  ownerId: string;
+}
 
 export interface EmailTemplate {
   id: string;

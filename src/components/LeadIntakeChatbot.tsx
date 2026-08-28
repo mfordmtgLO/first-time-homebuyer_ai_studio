@@ -683,6 +683,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       ...leadState,
       [step.field]: optionValue
     };
+    if (step.id === "location" || step.field === "preferredLocations") {
+      updatedLead.taggedCityArea = optionValue;
+    }
     if (step.id === "annualIncome") {
       updatedLead.annualIncome = optionValue;
     }
@@ -822,6 +825,26 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           : `Website AI Intake Chatbot`
     );
 
+    const computedLeadPathTag = leadState.leadPathTag || (
+      initialIntent === "chat_listings"
+        ? "Curated Listings Request Shortcut"
+        : initialIntent === "blueprint_download"
+          ? "Blueprint Download Fast-Track"
+          : initialIntent === "buying_power"
+            ? "Buying Power Report Shortcut"
+            : sourcePropertyAddress
+              ? `Property Listing Inquiry (${sourcePropertyAddress.split(',')[0]})`
+              : sourceCampaignName
+                ? `Ad Campaign (${sourceCampaignName})`
+                : "Interactive Guided AI Intake"
+    );
+
+    const computedTaggedCityArea = leadState.taggedCityArea || leadState.preferredLocations || (
+      sourcePropertyAddress
+        ? (sourcePropertyAddress.includes(',') ? sourcePropertyAddress.split(',')[1]?.trim() : sourcePropertyAddress)
+        : "Portland Metro Area"
+    );
+
     const newLead: CapturedLead = {
       id: `lead-${Date.now()}`,
       fullName: sanitizeSSN(contactForm.fullName),
@@ -835,7 +858,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       grantInterest: leadState.grantInterest ?? true,
       creditScoreTier: leadState.creditScoreTier || "Good (680+)",
       annualIncome: leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)} / year`,
-      preferredLocations: leadState.preferredLocations || "Portland Metro",
+      preferredLocations: leadState.preferredLocations || computedTaggedCityArea,
+      taggedCityArea: computedTaggedCityArea,
+      leadPathTag: computedLeadPathTag,
       propertyType: contactForm.propertyType || "Single Family",
       sendSampleHomes: leadState.sendSampleHomes ?? (leadState.sendSampleHomesOption?.startsWith("YES") ?? true),
       sendSampleHomesOption: leadState.sendSampleHomesOption || "YES - Please send available homes with low/no down payment options",

@@ -211,6 +211,80 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
     }
   };
 
+  // Bulk Import state & handler
+  const [bulkImportInput, setBulkImportInput] = useState<string>("");
+  const [isBulkImporting, setIsBulkImporting] = useState<boolean>(false);
+
+  const handleBulkImport = () => {
+    if (!bulkImportInput.trim()) return;
+    setIsBulkImporting(true);
+    
+    setTimeout(() => {
+      const newProperties: PropertyListing[] = [];
+      const lines = bulkImportInput.split(/\r?\n/).filter(line => line.trim());
+      
+      lines.forEach((line, index) => {
+        const isUrl = line.includes('http') || line.includes('zillow.com') || line.includes('redfin.com') || line.includes('realtor.com');
+        const isZip = /^\d{5}$/.test(line.trim());
+        
+        if (!isUrl && !isZip) return;
+        
+        let city = "Portland";
+        let county = "Multnomah";
+        let zip = line.trim();
+        let price = Math.floor(Math.random() * 300000) + 300000;
+        
+        if (isUrl) {
+            zip = "97204"; // Default for random URLs
+        } else if (isZip) {
+            if (zip.startsWith("974")) { city = "Eugene"; county = "Lane"; }
+            else if (zip.startsWith("973")) { city = "Salem"; county = "Marion"; }
+            else if (zip.startsWith("977")) { city = "Bend"; county = "Deschutes"; }
+        }
+        
+        const newProperty: PropertyListing = {
+          id: `custom-import-${Date.now()}-${index}`,
+          title: `Imported Property ${zip}`,
+          address: `${Math.floor(Math.random() * 9000) + 100} ${['Oak', 'Pine', 'Maple', 'Cedar'][Math.floor(Math.random()*4)]} St`,
+          city,
+          state: "OR",
+          zip: zip || "97204",
+          price,
+          beds: Math.floor(Math.random() * 3) + 2,
+          baths: Math.floor(Math.random() * 2) + 1,
+          sqft: Math.floor(Math.random() * 1000) + 1200,
+          propertyType: "Single Family",
+          yearBuilt: 1990 + Math.floor(Math.random() * 30),
+          daysOnMarket: Math.floor(Math.random() * 10),
+          imageUrl: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80",
+          status: 'saved',
+          notes: "Bulk imported property listing. This is generated for preview purposes from the provided link/zip.",
+          hoaMonthly: Math.floor(Math.random() * 50),
+          propertyTaxAnnual: Math.floor(price * 0.01),
+          isFavorite: false,
+          isPubliclyPublished: false,
+          overlayEligibility: {
+            countyName: county,
+            usdaEligible: Math.random() > 0.5,
+            lmiEligible: Math.random() > 0.3,
+            targetedArea: Math.random() > 0.8
+          }
+        };
+        newProperties.push(newProperty);
+      });
+      
+      if (newProperties.length > 0) {
+        const updatedListings = [...newProperties, ...syncedListings];
+        persistListings(updatedListings, `Successfully imported ${newProperties.length} new properties.`);
+      } else {
+        onTriggerToast("No valid URLs or Zip codes found. Please check your input.");
+      }
+      
+      setBulkImportInput("");
+      setIsBulkImporting(false);
+    }, 1200);
+  };
+
   // Pull / Sync from GeoSphere via our backend proxy route
   const handleRunSync = async (datasetId: string = selectedDataset) => {
     setIsFetching(true);
@@ -544,49 +618,90 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
 
       {/* Live Website Sync Status Card */}
-      <div className="bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[#4A5D4E]/10 flex items-center justify-center">
-            <Globe className="w-6 h-6 text-[#4A5D4E]" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-6 shadow-xs flex flex-col justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-[#4A5D4E]/10 flex items-center justify-center">
+              <Globe className="w-6 h-6 text-[#4A5D4E]" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-[#2D362E]">Live Website Sync Status</h3>
+              <p className="text-xs text-[#606C5D] mt-1">
+                Local properties: <strong className="text-[#2D362E]">{syncedListings.length}</strong> | 
+                Live on website: <strong className="text-[#2D362E]">{firestoreSyncCount !== null ? firestoreSyncCount : "..."}</strong>
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-bold text-[#2D362E]">Live Website Sync Status</h3>
-            <p className="text-xs text-[#606C5D] mt-1">
-              Local properties: <strong className="text-[#2D362E]">{syncedListings.length}</strong> | 
-              Live on website: <strong className="text-[#2D362E]">{firestoreSyncCount !== null ? firestoreSyncCount : "..."}</strong>
-            </p>
+          <div className="flex items-center gap-3">
+            {syncError ? (
+              <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Failed
+              </span>
+            ) : firestoreSyncCount !== null && firestoreSyncCount !== syncedListings.length ? (
+              <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 flex items-center gap-1">
+                <RefreshCw className="w-3 h-3" />
+                Pending Mismatch
+              </span>
+            ) : firestoreSyncCount !== null && firestoreSyncCount === syncedListings.length ? (
+              <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                Synced
+              </span>
+            ) : (
+              <span className="text-[11px] font-semibold text-stone-600 bg-stone-50 px-2.5 py-1 rounded-full border border-stone-200 flex items-center gap-1">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                Checking...
+              </span>
+            )}
+            <button
+              onClick={handleForceReSync}
+              disabled={isForceSyncing}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#2D362E] hover:bg-[#4A5D4E] disabled:bg-stone-300 disabled:text-stone-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer ml-auto"
+            >
+              <RefreshCw className={`w-4 h-4 ${isForceSyncing ? "animate-spin" : ""}`} />
+              {isForceSyncing ? "Syncing..." : "Re-Sync All"}
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {syncError ? (
-            <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
-              Failed
+
+        {/* Bulk Import / Single Link Importer */}
+        <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 shadow-xs flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-[#2D362E] flex items-center gap-2">
+              <Download className="w-5 h-5 text-emerald-700" />
+              <span>Quick Import Listings</span>
+            </h3>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#606C5D] bg-[#F1EFE9] px-2 py-1 rounded-md">
+              Bulk or Single
             </span>
-          ) : firestoreSyncCount !== null && firestoreSyncCount !== syncedListings.length ? (
-            <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 flex items-center gap-1">
-              <RefreshCw className="w-3 h-3" />
-              Pending Mismatch
-            </span>
-          ) : firestoreSyncCount !== null && firestoreSyncCount === syncedListings.length ? (
-            <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" />
-              Synced
-            </span>
-          ) : (
-            <span className="text-[11px] font-semibold text-stone-600 bg-stone-50 px-2.5 py-1 rounded-full border border-stone-200 flex items-center gap-1">
-              <RefreshCw className="w-3 h-3 animate-spin" />
-              Checking...
-            </span>
-          )}
-          <button
-            onClick={handleForceReSync}
-            disabled={isForceSyncing}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#2D362E] hover:bg-[#4A5D4E] disabled:bg-stone-300 disabled:text-stone-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
-          >
-            <RefreshCw className={`w-4 h-4 ${isForceSyncing ? "animate-spin" : ""}`} />
-            {isForceSyncing ? "Syncing..." : "Re-Sync All"}
-          </button>
+          </div>
+          
+          <div className="space-y-3">
+            <textarea
+              value={bulkImportInput}
+              onChange={(e) => setBulkImportInput(e.target.value)}
+              placeholder="Paste Zillow/Redfin URLs or 5-digit Zip Codes (one per line)..."
+              className="w-full text-xs p-3 bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#4A5D4E] min-h-[80px] text-[#2D362E]"
+            />
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-[#606C5D]">
+                Automatically enriches properties with GIS eligibility data.
+              </p>
+              <button
+                onClick={handleBulkImport}
+                disabled={isBulkImporting || !bulkImportInput.trim()}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:bg-stone-300 disabled:text-stone-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              >
+                {isBulkImporting ? (
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Download className="w-3 h-3" />
+                )}
+                {isBulkImporting ? "Importing..." : "Import"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

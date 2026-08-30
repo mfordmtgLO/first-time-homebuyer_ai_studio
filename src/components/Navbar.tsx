@@ -107,17 +107,19 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "roadmap", label: "Step 2: Explore Roadmap", shortLabel: "Step 2: Roadmap", icon: Compass, mode: "website" },
     { id: "dashboard", label: "Step 3: Buyer Dashboard", shortLabel: "Step 3: Dashboard", icon: LayoutDashboard, mode: "dashboard" },
     { id: "step4_ai_plan", label: "Step 4: AI Plan & Guides", shortLabel: "Step 4: AI Plan", icon: Sparkles, badge: "AI Plan", mode: "dashboard", highlight: true },
-    { id: "grants", label: "Down Payment Assistance (DPA) Finder", shortLabel: "DPA Finder", icon: Award, mode: "website" },
+    { id: "grants", label: "Down Payment Assistance (DPA) Finder", shortLabel: "DPA Finder", icon: Award, mode: "dashboard" },
     { id: "properties", label: `Saved Homes (${savedCount})`, shortLabel: `Homes (${savedCount})`, icon: Building, mode: "dashboard" },
     { id: "mortgagelab", label: "Mortgage Lab & PITI", shortLabel: "Mortgage Lab", icon: TrendingUp, mode: "dashboard" },
     { id: "ai_copilot", label: "AI Advisor Copilot", shortLabel: "AI Advisor", icon: Sparkles, badge: "Gemini 3.7", mode: "dashboard" },
     { id: "escrow", label: "Closing & Escrow Tracker", shortLabel: "Closing Tracker", icon: ShieldCheck, mode: "dashboard" },
   ];
 
-  // Secondary Tools Nav Items (Steps 1-4 removed because they are presented in the dedicated Guided 4-Step block)
-  const nonStepNavItems = allNavItems.filter(
-    (item) => !["hero", "calculator", "roadmap", "dashboard", "step4_ai_plan"].includes(item.id)
-  );
+  // Secondary Tools Nav Items (Steps 1-4 removed because they are in the dedicated Guided 4-Step block; DPA is secured to dashboard mode)
+  const nonStepNavItems = allNavItems.filter((item) => {
+    if (["hero", "calculator", "roadmap", "dashboard", "step4_ai_plan"].includes(item.id)) return false;
+    if (activeMode === "website" && item.id === "grants") return false;
+    return true;
+  });
 
   // Check scroll positions and update arrow button states
   const checkScroll = useCallback(() => {
@@ -360,13 +362,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* DPA Quick Badge */}
-            <button
-              onClick={() => handleNavClick("grants", "website")}
-              className="text-[#C18C5D] font-medium hidden md:flex items-center gap-1 hover:text-[#a67448] transition-colors"
-            >
-              <Award className="w-3 h-3" /> State & Local DPA Programs Available
-            </button>
+            {/* Top Bar DPA / Status Quick Link */}
+            {activeMode === "dashboard" ? (
+              <button
+                onClick={() => handleNavClick("grants", "dashboard")}
+                className="text-[#C18C5D] font-medium hidden md:flex items-center gap-1 hover:text-[#a67448] transition-colors cursor-pointer text-xs"
+              >
+                <Award className="w-3.5 h-3.5" /> Secured DPA Grant Finder
+              </button>
+            ) : (
+              <span className="text-[#606C5D] text-xs font-medium hidden md:flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#4A5D4E]" /> First-Time Homebuyer Guidance
+              </span>
+            )}
           </div>
 
           {/* Right section: Interactive Target Purchase Price & Cash Saved Inputs + Gyrating Dark Green GO Button */}
@@ -710,7 +718,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#9A9488] px-2 pt-2">
               {activeMode === "website" ? "Phase 1 & 2: Planning & Research" : "Phase 3 & 4: Search, AI Plan & Closing"}
             </div>
-            {allNavItems.map((item) => {
+            {allNavItems
+              .filter((item) => !(activeMode === "website" && item.id === "grants"))
+              .map((item) => {
               const Icon = item.icon;
               const isActive = currentTab === item.id;
               return (

@@ -363,7 +363,7 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                 </div>
                 <button
                   type="button"
-                  onClick={() => onNavigate && onNavigate("grants", "website")}
+                  onClick={() => onNavigate && onNavigate("grants", "dashboard")}
                   className="px-2 py-1 bg-white border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#C18C5D] font-bold rounded-lg text-[11px] shrink-0 transition-colors"
                 >
                   View Grants →

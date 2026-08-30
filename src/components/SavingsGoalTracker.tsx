@@ -801,7 +801,7 @@ export const SavingsGoalTracker: React.FC<SavingsGoalTrackerProps> = ({
             </div>
             <button
               id="check-grants-btn"
-              onClick={() => onNavigate("grants", "website")}
+              onClick={() => onNavigate("grants", "dashboard")}
               className="shrink-0 px-3 py-1.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#C18C5D] font-bold border border-[#C18C5D]/30 flex items-center gap-1 transition-colors shadow-xs text-[11px]"
             >
               <span>Explore Oregon DPA</span>

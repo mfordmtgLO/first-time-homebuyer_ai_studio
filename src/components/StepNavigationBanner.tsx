@@ -75,8 +75,8 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   let activeStep = 0;
   if (currentTab === "hero") activeStep = 0;
   else if (currentTab === "calculator") activeStep = 1;
-  else if (currentTab === "roadmap" || currentTab === "grants") activeStep = 2;
-  else if (currentTab === "dashboard" || currentTab === "properties" || currentTab === "mortgagelab" || currentTab === "escrow") activeStep = 3;
+  else if (currentTab === "roadmap") activeStep = 2;
+  else if (currentTab === "dashboard" || currentTab === "properties" || currentTab === "mortgagelab" || currentTab === "escrow" || currentTab === "grants") activeStep = 3;
   else if (currentTab === "step4_ai_plan" || currentTab === "ai_copilot") activeStep = 4;
 
   const steps = [
@@ -94,7 +94,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
       id: "roadmap",
       mode: "website" as const,
       label: "Explore & Learn",
-      tagline: "10-step roadmap & DPA programs",
+      tagline: "10-step roadmap & homebuyer guide",
       shortLabel: "Roadmap",
       icon: Compass
     },
@@ -121,7 +121,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   const financialTools = [
     { id: "calculator", label: "Affordability Calculator", icon: Calculator, mode: "website" as const, badge: "Step 1" },
     { id: "mortgagelab", label: "Mortgage Lab & 2-1 Buydown", icon: TrendingUp, mode: "dashboard" as const, badge: "Lab" },
-    { id: "grants", label: "DPA Grant Finder & Census", icon: Award, mode: "website" as const, badge: "Grants" },
+    { id: "grants", label: "DPA Grant Finder & Census", icon: Award, mode: "dashboard" as const, badge: "Secured" },
   ];
 
   const searchTools = [
@@ -231,13 +231,13 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
 
             <button
               type="button"
-              onClick={() => onNavigate("grants", "website")}
+              onClick={() => onNavigate("grants", "dashboard")}
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
                 currentTab === "grants"
                   ? "bg-[#4A5D4E] text-white shadow-xs"
                   : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#FAF9F5] hover:text-[#4A5D4E]"
               }`}
-              title="DPA Grant & Spatial Boundary Finder"
+              title="DPA Grant & Census Tracker (Secured Portal)"
             >
               <Award className="w-4 h-4" />
             </button>

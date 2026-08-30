@@ -548,7 +548,6 @@ export default function App() {
                     onOpenDashboard={() => handleNavigate("dashboard", "dashboard")}
                     onOpenCalculator={() => handleNavigate("calculator", "website")}
                     onOpenRoadmap={() => handleNavigate("roadmap", "website")}
-                    onOpenGrants={() => handleNavigate("grants", "website")}
                     onOpenStep4={() => handleNavigate("step4_ai_plan", "dashboard")}
                     onOpenLeadBot={() => { setLeadBotSourceContext(undefined); setIsLeadBotOpen(true); }}
                     loanOfficer={guidesState.loanOfficer}
@@ -559,7 +558,7 @@ export default function App() {
                   />
                 )}
 
-                {(activeTab === "calculator" || (!["hero", "roadmap", "grants"].includes(activeTab))) && (
+                {(activeTab === "calculator" || (!["hero", "roadmap"].includes(activeTab))) && (
                   <InstantAffordabilityCalculator
                     profile={profile}
                     setProfile={setProfile}
@@ -585,17 +584,13 @@ export default function App() {
                     onNavigate={handleNavigate}
                   />
                 )}
-
-                {activeTab === "grants" && (
-                  <GrantFinder guidesState={guidesState} onNavigate={handleNavigate} />
-                )}
               </div>
             )}
 
-            {/* DASHBOARD MODE VIEWS */}
+            {/* DASHBOARD MODE VIEWS (SECURED USER DASHBOARD) */}
             {currentMode === "dashboard" && (
               <div>
-                {(activeTab === "dashboard" || (!["step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow"].includes(activeTab))) && (
+                {(activeTab === "dashboard" || (!["step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow", "grants"].includes(activeTab))) && (
                   <DashboardOverview
                     profile={profile}
                     setProfile={setProfile}
@@ -610,6 +605,10 @@ export default function App() {
                     isSidebarCollapsed={isSidebarCollapsed}
                     onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
                   />
+                )}
+
+                {activeTab === "grants" && (
+                  <GrantFinder guidesState={guidesState} onNavigate={handleNavigate} />
                 )}
 
                 {activeTab === "step4_ai_plan" && (

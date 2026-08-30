@@ -446,7 +446,7 @@ export const SearchGroundedSidebarBot: React.FC<SearchGroundedSidebarBotProps> =
                 {isDpaRelated && (
                   <button
                     type="button"
-                    onClick={() => onNavigate?.("grants", "website")}
+                    onClick={() => onNavigate?.("grants", "dashboard")}
                     className="w-full p-2 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] flex items-center justify-between text-[11px] font-bold text-[#4A5D4E] transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-1.5">
@@ -594,7 +594,7 @@ export const SearchGroundedSidebarBot: React.FC<SearchGroundedSidebarBotProps> =
                 </button>
                 <button
                   type="button"
-                  onClick={() => onNavigate?.("grants", "website")}
+                  onClick={() => onNavigate?.("grants", "dashboard")}
                   className="font-bold text-[#4A5D4E] hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Layers className="w-3 h-3" />

@@ -119,7 +119,30 @@ export const GrantFinder: React.FC<GrantFinderProps> = ({ guidesState, onNavigat
   };
 
   return (
-    <div className="space-y-10 max-w-6xl mx-auto px-4 sm:px-6 py-6 animate-fadeIn">
+    <div className="space-y-8 max-w-6xl mx-auto px-4 sm:px-6 py-4 animate-fadeIn">
+      {/* Secured Dashboard Top Breadcrumb Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 sm:px-5 sm:py-3 rounded-2xl border border-[#EAE7E0] shadow-2xs">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#EBF3ED] text-[#2F5738] border border-[#C2DEC8] px-2.5 py-0.5 rounded-full flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3" /> Secured Buyer Dashboard
+          </span>
+          <span className="text-xs text-[#9A9488]">•</span>
+          <span className="text-xs font-semibold text-[#606C5D]">
+            Down Payment Assistance & State HFA Grant Hub
+          </span>
+        </div>
+
+        {onNavigate && (
+          <button
+            type="button"
+            onClick={() => onNavigate("dashboard", "dashboard")}
+            className="self-start sm:self-auto text-xs font-bold text-[#4A5D4E] hover:text-[#2D362E] flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] transition-colors cursor-pointer"
+          >
+            <span>← Back to Dashboard Overview</span>
+          </button>
+        )}
+      </div>
+
       {/* Header Banner */}
       <div className="bg-[#2D362E] text-[#F9F8F4] rounded-2xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-96 h-96 bg-[#C18C5D]/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>

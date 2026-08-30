@@ -23,7 +23,6 @@ interface HeroWebsiteProps {
   onOpenDashboard: () => void;
   onOpenCalculator: () => void;
   onOpenRoadmap: () => void;
-  onOpenGrants: () => void;
   onOpenStep4?: () => void;
   onOpenLeadBot?: () => void;
   loanOfficer?: LoanOfficerProfile;
@@ -39,7 +38,6 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
   onOpenDashboard,
   onOpenCalculator,
   onOpenRoadmap,
-  onOpenGrants,
   onOpenStep4,
   onOpenLeadBot,
   loanOfficer,
@@ -103,7 +101,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
                 className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] font-bold text-sm transition-all cursor-pointer"
               >
                 <Compass className="w-4 h-4 text-[#4A5D4E]" />
-                <span>Step 2: Explore 10-Step Roadmap & DPA</span>
+                <span>Step 2: Explore 10-Step Roadmap</span>
               </button>
             </div>
 
@@ -115,7 +113,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#4A5D4E] shrink-0" />
-                <span>Oregon DPA Program Search</span>
+                <span>Local Mortgage Prequal</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#4A5D4E] shrink-0" />
@@ -350,20 +348,20 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
 
           {/* Stage 2 */}
           <div 
-            onClick={onOpenGrants}
+            onClick={onOpenRoadmap}
             className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm min-w-[260px] md:min-w-0 snap-center shrink-0"
           >
             <div className="w-9 h-9 rounded-lg bg-[#F1EFE9] border border-[#EAE7E0] flex items-center justify-center text-[#4A5D4E] font-bold text-xs group-hover:bg-[#4A5D4E] group-hover:text-white transition-colors">
               02
             </div>
             <h3 className="font-bold text-[#2D362E] text-sm group-hover:text-[#4A5D4E] transition-colors">
-              Pre-Approval & DPA
+              Pre-Approval & Lending
             </h3>
             <p className="text-xs text-[#606C5D] leading-relaxed">
-              Shop 3 lenders in 14-day window, explore Down Payment Assistance (DPA) and Fannie Mae 3% programs.
+              Shop 3 lenders in a 14-day window, lock loan options, and review Fannie Mae 3% / FHA 3.5% guidelines.
             </p>
             <div className="text-[11px] font-semibold text-[#4A5D4E] flex items-center gap-1">
-              <span>Find DPA Programs</span>
+              <span>View 10-Step Roadmap</span>
               <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>

@@ -102,6 +102,7 @@ import { ScrapeLoRosterModal } from "./ScrapeLoRosterModal";
 import { ScrapeRealtorModal } from "./ScrapeRealtorModal";
 import { LoOutreachModal } from "./LoOutreachModal";
 import { RecruitingCampaignModal } from "./RecruitingCampaignModal";
+import { GrantFinder } from "./GrantFinder";
 
 interface LoanOfficerPortalProps {
   guidesState: ProfessionalGuidesState;
@@ -1606,6 +1607,26 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             >
               <UserCheck className="w-4 h-4" />
               <span>Realtor Partner Roster ({guidesState.agentRoster.length})</span>
+            </button>
+
+            <button
+              data-tab-id="dpa_grants"
+              onClick={() => setActiveTab("dpa_grants")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "dpa_grants"
+                  ? "bg-[#C18C5D] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Award className="w-4 h-4 text-amber-400" />
+              <span>DPA & State Grant Intelligence</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "dpa_grants"
+                  ? "bg-white/20 text-white"
+                  : "bg-amber-100 text-amber-900 border border-amber-300"
+              }`}>
+                50 States + OHCS
+              </span>
             </button>
 
             <button
@@ -4835,6 +4856,14 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               </button>
             </div>
           </div>
+        )}
+
+        {/* Tab: DPA & State Grant Intelligence */}
+        {activeTab === "dpa_grants" && (
+          <GrantFinder
+            guidesState={guidesState}
+            onTriggerToast={triggerToast}
+          />
         )}
 
         {/* Tab: AI Partner Campaign Engine */}

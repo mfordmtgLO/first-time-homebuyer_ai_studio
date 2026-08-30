@@ -426,29 +426,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <ArrowRight className="w-4 h-4 text-[#9A9488]" />
             </div>
 
-            {/* Action 5: Secured Down Payment Assistance (DPA) & State Grants */}
-            <div
-              onClick={() => onNavigate("grants", "dashboard")}
-              className="cursor-pointer bg-white hover:bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] hover:border-[#4A5D4E] p-4 flex items-center justify-between gap-3 transition-all shadow-sm"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-[#F1EFE9] text-[#C18C5D] border border-[#EAE7E0] flex items-center justify-center shrink-0">
-                  <Award className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h4 className="font-bold text-sm text-[#2D362E]">State DPA & Grant Finder</h4>
-                    <span className="text-[9px] bg-[#EBF3ED] text-[#2F5738] border border-[#C2DEC8] px-1.5 py-0.2 rounded-full font-bold">
-                      Secured
-                    </span>
-                  </div>
-                  <p className="text-xs text-[#606C5D]">50-state HFA programs, Oregon OHCS flex lending, and CRA tracts.</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-[#9A9488]" />
-            </div>
-
-            {/* Action 6: Step 4 AI Plan & Local Professional Guides */}
+            {/* Action 5: Step 4 AI Plan & Local Professional Guides */}
             {loanOfficer && activeAgent && (
               <div
                 onClick={() => onNavigate("step4_ai_plan", "dashboard")}

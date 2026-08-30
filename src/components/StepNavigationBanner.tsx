@@ -76,7 +76,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   if (currentTab === "hero") activeStep = 0;
   else if (currentTab === "calculator") activeStep = 1;
   else if (currentTab === "roadmap") activeStep = 2;
-  else if (currentTab === "dashboard" || currentTab === "properties" || currentTab === "mortgagelab" || currentTab === "escrow" || currentTab === "grants") activeStep = 3;
+  else if (currentTab === "dashboard" || currentTab === "properties" || currentTab === "mortgagelab" || currentTab === "escrow") activeStep = 3;
   else if (currentTab === "step4_ai_plan" || currentTab === "ai_copilot") activeStep = 4;
 
   const steps = [
@@ -121,7 +121,6 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   const financialTools = [
     { id: "calculator", label: "Affordability Calculator", icon: Calculator, mode: "website" as const, badge: "Step 1" },
     { id: "mortgagelab", label: "Mortgage Lab & 2-1 Buydown", icon: TrendingUp, mode: "dashboard" as const, badge: "Lab" },
-    { id: "grants", label: "DPA Grant Finder & Census", icon: Award, mode: "dashboard" as const, badge: "Secured" },
   ];
 
   const searchTools = [

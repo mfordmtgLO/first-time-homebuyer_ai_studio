@@ -446,12 +446,12 @@ export const SearchGroundedSidebarBot: React.FC<SearchGroundedSidebarBotProps> =
                 {isDpaRelated && (
                   <button
                     type="button"
-                    onClick={() => onNavigate?.("grants", "dashboard")}
+                    onClick={() => onNavigate?.("step4_ai_plan", "dashboard")}
                     className="w-full p-2 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] flex items-center justify-between text-[11px] font-bold text-[#4A5D4E] transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-1.5">
                       <DollarSign className="w-3.5 h-3.5 text-[#C18C5D]" />
-                      <span>Explore DPA Grants & Boundary Finder</span>
+                      <span>Review DPA Eligibility with Step 4 AI Plan</span>
                     </div>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
@@ -469,7 +469,7 @@ export const SearchGroundedSidebarBot: React.FC<SearchGroundedSidebarBotProps> =
                 </p>
                 <button
                   type="button"
-                  onClick={() => onNavigate?.("advisor", "website")}
+                  onClick={() => onNavigate?.("step4_ai_plan", "dashboard")}
                   className="w-full py-1 px-2 rounded-lg bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-[10px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <PhoneCall className="w-3 h-3 text-[#D4A373]" />

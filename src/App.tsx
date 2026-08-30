@@ -8,7 +8,6 @@ import { MobileBottomNav } from "./components/MobileBottomNav";
 import { HeroWebsite } from "./components/HeroWebsite";
 import { InstantAffordabilityCalculator } from "./components/InstantAffordabilityCalculator";
 import { RoadmapView } from "./components/RoadmapView";
-import { GrantFinder } from "./components/GrantFinder";
 import { DashboardOverview } from "./components/DashboardOverview";
 import { PropertyTracker } from "./components/PropertyTracker";
 import { TourScorecardModal } from "./components/TourScorecardModal";
@@ -590,7 +589,7 @@ export default function App() {
             {/* DASHBOARD MODE VIEWS (SECURED USER DASHBOARD) */}
             {currentMode === "dashboard" && (
               <div>
-                {(activeTab === "dashboard" || (!["step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow", "grants"].includes(activeTab))) && (
+                {(activeTab === "dashboard" || (!["step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow"].includes(activeTab))) && (
                   <DashboardOverview
                     profile={profile}
                     setProfile={setProfile}
@@ -605,10 +604,6 @@ export default function App() {
                     isSidebarCollapsed={isSidebarCollapsed}
                     onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
                   />
-                )}
-
-                {activeTab === "grants" && (
-                  <GrantFinder guidesState={guidesState} onNavigate={handleNavigate} />
                 )}
 
                 {activeTab === "step4_ai_plan" && (

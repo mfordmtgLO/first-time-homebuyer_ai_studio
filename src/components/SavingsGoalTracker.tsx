@@ -790,21 +790,21 @@ export const SavingsGoalTracker: React.FC<SavingsGoalTrackerProps> = ({
           </div>
         </div>
 
-        {/* DPA Prompt */}
+        {/* Step 4 AI Plan Prompt */}
         {onNavigate && (
-          <div className="bg-[#C18C5D]/10 p-3.5 rounded-2xl border border-[#C18C5D]/25 flex items-center justify-between gap-3 text-xs">
+          <div className="bg-[#4A5D4E]/10 p-3.5 rounded-2xl border border-[#4A5D4E]/25 flex items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 text-[#2D362E]">
-              <Sparkles className="w-4 h-4 text-[#C18C5D] shrink-0" />
+              <Sparkles className="w-4 h-4 text-[#4A5D4E] shrink-0" />
               <span>
-                Want to accelerate your goal? You may be eligible for up to <strong className="text-[#A87447]">$15,000+ in Oregon Down Payment Assistance (DPA)</strong>.
+                Want to optimize your purchasing plan? Review custom pre-qualification options with <strong className="text-[#2F5738]">Step 4: AI Plan & Local Professional Alignment</strong>.
               </span>
             </div>
             <button
-              id="check-grants-btn"
-              onClick={() => onNavigate("grants", "dashboard")}
-              className="shrink-0 px-3 py-1.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#C18C5D] font-bold border border-[#C18C5D]/30 flex items-center gap-1 transition-colors shadow-xs text-[11px]"
+              id="check-step4-plan-btn"
+              onClick={() => onNavigate("step4_ai_plan", "dashboard")}
+              className="shrink-0 px-3 py-1.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#4A5D4E] font-bold border border-[#4A5D4E]/30 flex items-center gap-1 transition-colors shadow-xs text-[11px] cursor-pointer"
             >
-              <span>Explore Oregon DPA</span>
+              <span>View Step 4 Plan</span>
               <ArrowRight className="w-3 h-3" />
             </button>
           </div>

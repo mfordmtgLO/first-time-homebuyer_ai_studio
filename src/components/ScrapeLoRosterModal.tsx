@@ -56,13 +56,14 @@ export const ScrapeLoRosterModal: React.FC<ScrapeLoRosterModalProps> = ({
           // Auto-select all by default
           setSelectedIndices(new Set(data.profiles.map((_: any, i: number) => i)));
         } else {
-          setErrorMsg("No profiles found for that query.");
+          setErrorMsg(data.error || "No qualified profiles found matching your search parameters.");
         }
       } else {
-        setErrorMsg("Failed to connect to AI Scraper.");
+        const data = await res.json().catch(() => null);
+        setErrorMsg(data?.error || "Unable to scrape roster at this time. Click Retry to re-run.");
       }
     } catch (err: any) {
-      setErrorMsg("Error searching for profiles: " + err.message);
+      setErrorMsg("Error searching for profiles: " + (err?.message || "Network error"));
     } finally {
       setIsSearching(false);
     }
@@ -198,8 +199,16 @@ export const ScrapeLoRosterModal: React.FC<ScrapeLoRosterModalProps> = ({
         </div>
 
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 text-xs font-bold shrink-0">
-            {errorMsg}
+          <div className="p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 text-xs font-bold shrink-0 flex items-center justify-between gap-2">
+            <span>{errorMsg}</span>
+            <button
+              type="button"
+              onClick={handleSearch}
+              disabled={isSearching}
+              className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-bold shrink-0 transition-colors shadow-2xs"
+            >
+              Retry
+            </button>
           </div>
         )}
 

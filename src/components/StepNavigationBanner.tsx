@@ -160,7 +160,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
       </div>
 
       {/* Interactive Step Cards */}
-      <div className={isVertical ? "flex flex-col gap-2.5 w-full" : "grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5 w-full"}>
+      <div className={isVertical ? "flex flex-col gap-2.5 w-full" : "flex overflow-x-auto snap-x snap-mandatory gap-2 pb-3 -mx-3 px-3 sm:mx-0 sm:px-0 sm:pb-0 lg:grid lg:grid-cols-4 sm:gap-2.5 w-full hide-scrollbar"}>
         {steps.map((s) => {
           const Icon = s.icon;
           const isActive = activeStep === s.stepNum;
@@ -174,7 +174,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
               onClick={() => handleStepClick(s)}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.985 }}
-              className={`text-left p-2 sm:p-2.5 rounded-xl border transition-all relative flex flex-col justify-between group min-h-[76px] sm:min-h-[82px] w-full cursor-pointer select-none ${
+              className={`text-left p-2 sm:p-2.5 rounded-xl border transition-all relative flex flex-col justify-between group min-h-[76px] sm:min-h-[82px] min-w-[200px] lg:min-w-0 snap-center shrink-0 lg:w-full cursor-pointer select-none ${
                 isActive
                   ? "border-[#4A5D4E] bg-[#FAF9F5] shadow-xs"
                   : isCompleted

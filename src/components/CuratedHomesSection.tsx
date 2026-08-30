@@ -228,7 +228,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
         </div>
       ) : (
         /* Property Cards Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible hide-scrollbar">
           {visibleProperties.map(property => {
             const loanAmount = property.price * 0.965;
             const monthlyPI = calculateMonthlyPI(loanAmount, 6.5, 30);

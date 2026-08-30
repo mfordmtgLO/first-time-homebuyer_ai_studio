@@ -117,7 +117,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       <ScreeningDisclaimerBanner variant="full" />
 
       {/* 4-Stat Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible hide-scrollbar">
         {/* Card 1: Readiness Score */}
         <div 
           onClick={() => onNavigate("roadmap", "website")}

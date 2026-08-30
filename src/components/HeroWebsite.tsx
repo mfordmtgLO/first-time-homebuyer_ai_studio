@@ -327,11 +327,11 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 lg:grid-cols-5 md:overflow-visible hide-scrollbar">
           {/* Stage 1 */}
           <div 
             onClick={onOpenRoadmap}
-            className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm"
+            className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm min-w-[260px] md:min-w-0 snap-center shrink-0"
           >
             <div className="w-9 h-9 rounded-lg bg-[#F1EFE9] border border-[#EAE7E0] flex items-center justify-center text-[#4A5D4E] font-bold text-xs group-hover:bg-[#4A5D4E] group-hover:text-white transition-colors">
               01
@@ -351,7 +351,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
           {/* Stage 2 */}
           <div 
             onClick={onOpenGrants}
-            className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm"
+            className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm min-w-[260px] md:min-w-0 snap-center shrink-0"
           >
             <div className="w-9 h-9 rounded-lg bg-[#F1EFE9] border border-[#EAE7E0] flex items-center justify-center text-[#4A5D4E] font-bold text-xs group-hover:bg-[#4A5D4E] group-hover:text-white transition-colors">
               02
@@ -371,7 +371,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
           {/* Stage 3 */}
           <div 
             onClick={onOpenDashboard}
-            className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm"
+            className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm min-w-[260px] md:min-w-0 snap-center shrink-0"
           >
             <div className="w-9 h-9 rounded-lg bg-[#F1EFE9] border border-[#EAE7E0] flex items-center justify-center text-[#4A5D4E] font-bold text-xs group-hover:bg-[#4A5D4E] group-hover:text-white transition-colors">
               03
@@ -391,7 +391,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
           {/* Stage 4 */}
           <div 
             onClick={onOpenDashboard}
-            className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm"
+            className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm min-w-[260px] md:min-w-0 snap-center shrink-0"
           >
             <div className="w-9 h-9 rounded-lg bg-[#F1EFE9] border border-[#EAE7E0] flex items-center justify-center text-[#4A5D4E] font-bold text-xs group-hover:bg-[#4A5D4E] group-hover:text-white transition-colors">
               04
@@ -411,7 +411,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
           {/* Stage 5 */}
           <div 
             onClick={onOpenDashboard}
-            className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm"
+            className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm min-w-[260px] md:min-w-0 snap-center shrink-0"
           >
             <div className="w-9 h-9 rounded-lg bg-[#F1EFE9] border border-[#EAE7E0] flex items-center justify-center text-[#4A5D4E] font-bold text-xs group-hover:bg-[#4A5D4E] group-hover:text-white transition-colors">
               05
@@ -454,7 +454,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:overflow-visible hide-scrollbar">
           <div className="bg-white rounded-2xl p-6 border border-[#EAE7E0] shadow-sm space-y-3">
             <div className="flex items-center gap-2 text-[#C18C5D] text-xs font-bold">
               <span className="px-2 py-0.5 rounded bg-[#C18C5D]/10 border border-[#C18C5D]/20">MYTH #1</span>

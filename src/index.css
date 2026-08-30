@@ -102,3 +102,13 @@
 .dashboard-vertical-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #606C5D;
 }
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

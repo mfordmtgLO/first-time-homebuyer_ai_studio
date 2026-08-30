@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { useIsMobile } from "./hooks/useIsMobile";
 import { Compass, ShieldCheck } from "lucide-react";
 import { Navbar } from "./components/Navbar";
 import { StepNavigationBanner } from "./components/StepNavigationBanner";
+import { MobileBottomNav } from "./components/MobileBottomNav";
 import { HeroWebsite } from "./components/HeroWebsite";
 import { InstantAffordabilityCalculator } from "./components/InstantAffordabilityCalculator";
 import { RoadmapView } from "./components/RoadmapView";
@@ -506,7 +509,7 @@ export default function App() {
         )}
 
         {/* Main Content Area */}
-        <main className={showLoPortal ? "flex-1 w-full min-h-screen p-0 m-0" : "flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6"}>
+        <main className={showLoPortal ? "flex-1 w-full min-h-screen p-0 m-0" : "flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 lg:pb-8 pb-24"}>
           {/* LOAN OFFICER PORTAL VIEW */}
           {showLoPortal ? (
           <LoanOfficerPortal
@@ -564,7 +567,7 @@ export default function App() {
                 )}
 
                 {activeTab === "grants" && (
-                  <GrantFinder />
+                  <GrantFinder guidesState={guidesState} onNavigate={handleNavigate} />
                 )}
               </div>
             )}
@@ -632,6 +635,7 @@ export default function App() {
         )}
       </main>
       </div>
+      <MobileBottomNav activeTab={activeTab} onNavigate={handleNavigate} />
 
       {/* Footer */}
       {!showLoPortal && (

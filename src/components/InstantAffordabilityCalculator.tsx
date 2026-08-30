@@ -17,12 +17,18 @@ import {
   RotateCcw,
   LayoutDashboard,
   Globe,
-  Building
+  Building,
+  BookmarkPlus,
+  MailCheck,
+  Check
 } from "lucide-react";
-import { FinancialProfile } from "../types";
+import { FinancialProfile, CapturedLead, SavedScenario, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 import { US_STATES } from "./StateLicensingSelector";
 import { getNationwideHfaDetails } from "../utils/nationwideHfaLimits";
+import { LeadScenarioSearch } from "./LeadScenarioSearch";
+import { ScenarioOutreachModal } from "./ScenarioOutreachModal";
+import { buildSavedScenario } from "../utils/scenarioOutreachGenerator";
 
 interface InstantAffordabilityCalculatorProps {
   profile: FinancialProfile;
@@ -30,6 +36,12 @@ interface InstantAffordabilityCalculatorProps {
   onOpenAdvisor?: () => void;
   onNextStep?: () => void;
   onNavigate?: (tab: string, mode?: "website" | "dashboard") => void;
+  leads?: CapturedLead[];
+  onUpdateLead?: (lead: CapturedLead) => void;
+  loanOfficer?: LoanOfficerProfile;
+  activeAgent?: RealEstateAgentProfile;
+  onOpenEmailOutreach?: (leadId: string, subject?: string, body?: string) => void;
+  onOpenSmsOutreach?: (leadId: string, text?: string) => void;
 }
 
 export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalculatorProps> = ({
@@ -38,12 +50,34 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
   onOpenAdvisor,
   onNextStep,
   onNavigate,
+  leads = [],
+  onUpdateLead,
+  loanOfficer,
+  activeAgent,
+  onOpenEmailOutreach,
+  onOpenSmsOutreach
 }) => {
   const [loanTypePreset, setLoanTypePreset] = useState<"30yr" | "fha" | "usda" | "va">("30yr");
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
 
+  // Lead linking & scenario saving state
+  const [selectedLead, setSelectedLead] = useState<CapturedLead | null>(() => {
+    return leads.length > 0 ? leads[0] : null;
+  });
+  const [activeOutreachScenario, setActiveOutreachScenario] = useState<SavedScenario | null>(null);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+
   const breakdown = calculateMortgageBreakdown(profile);
+
+  const getLoanProgramName = () => {
+    switch (loanTypePreset) {
+      case "fha": return "FHA 3.5% Down";
+      case "usda": return "USDA 100% Zero Down";
+      case "va": return "VA 0% Down Military";
+      default: return "30-Year Conventional";
+    }
+  };
 
   const handlePresetChange = (type: "30yr" | "fha" | "usda" | "va") => {
     setLoanTypePreset(type);
@@ -56,6 +90,54 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
     } else if (type === "va") {
       setProfile(prev => ({ ...prev, loanTermYears: 30, interestRate: 6.000, pmiRate: 0 }));
     }
+  };
+
+  // Pre-fill calculator from selected lead's target parameters if available
+  const handleApplyLeadFinancials = (lead: CapturedLead) => {
+    // Parse target price if numeric
+    if (lead.targetPriceRange) {
+      const match = lead.targetPriceRange.match(/\$?(\d[\d,]*)/);
+      if (match) {
+        const parsed = parseInt(match[1].replace(/,/g, ""), 10);
+        if (!isNaN(parsed) && parsed > 50000) {
+          setProfile(prev => ({
+            ...prev,
+            targetPrice: parsed,
+            downPaymentSavings: Math.round(parsed * 0.05)
+          }));
+        }
+      }
+    }
+  };
+
+  // Save current scenario to selected lead profile
+  const handleSaveScenarioToLead = () => {
+    if (!selectedLead) return;
+
+    const newScenario = buildSavedScenario({
+      lead: selectedLead,
+      profile,
+      breakdown,
+      loanProgram: getLoanProgramName(),
+      sourceTool: "calculator",
+      loanOfficer,
+      agent: activeAgent,
+      scenarioName: `${getLoanProgramName()} @ ${formatUSD(profile.targetPrice)} (${formatUSD(breakdown.totalMonthly)}/mo)`
+    });
+
+    const updatedScenarios = [newScenario, ...(selectedLead.savedScenarios || [])];
+    const updatedLead: CapturedLead = {
+      ...selectedLead,
+      savedScenarios: updatedScenarios
+    };
+
+    if (onUpdateLead) {
+      onUpdateLead(updatedLead);
+    }
+    setSelectedLead(updatedLead);
+    setActiveOutreachScenario(newScenario);
+    setSaveSuccessMsg(`✓ Saved scenario to ${selectedLead.fullName}'s profile! Ready-made drafts generated.`);
+    setTimeout(() => setSaveSuccessMsg(null), 4000);
   };
 
   const handleRunAiAnalysis = async () => {
@@ -131,6 +213,21 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
 
   return (
     <div className="space-y-10">
+      {/* Lead Profile Search & Auto-Sync Bar */}
+      {leads.length > 0 && (
+        <LeadScenarioSearch
+          leads={leads}
+          selectedLead={selectedLead}
+          onSelectLead={(lead) => {
+            setSelectedLead(lead);
+            if (lead) {
+              handleApplyLeadFinancials(lead);
+            }
+          }}
+          calculatorName="How Much House Can I Afford Scenario Engine"
+        />
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
         <div className="space-y-2">
@@ -146,42 +243,73 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
           </p>
         </div>
 
-        {/* Loan Program Presets */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-[#F1EFE9] p-1.5 rounded-xl border border-[#EAE7E0]">
-          <button
-            onClick={() => handlePresetChange("30yr")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              loanTypePreset === "30yr" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
-            }`}
-          >
-            30-Yr Conventional
-          </button>
-          <button
-            onClick={() => handlePresetChange("fha")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              loanTypePreset === "fha" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
-            }`}
-          >
-            FHA 3.5%
-          </button>
-          <button
-            onClick={() => handlePresetChange("usda")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              loanTypePreset === "usda" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
-            }`}
-          >
-            USDA 0%
-          </button>
-          <button
-            onClick={() => handlePresetChange("va")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              loanTypePreset === "va" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
-            }`}
-          >
-            VA 0%
-          </button>
+        {/* Loan Program Presets & Save Action */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex flex-wrap items-center gap-1.5 bg-[#F1EFE9] p-1.5 rounded-xl border border-[#EAE7E0]">
+            <button
+              onClick={() => handlePresetChange("30yr")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                loanTypePreset === "30yr" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
+              }`}
+            >
+              30-Yr Conventional
+            </button>
+            <button
+              onClick={() => handlePresetChange("fha")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                loanTypePreset === "fha" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
+              }`}
+            >
+              FHA 3.5%
+            </button>
+            <button
+              onClick={() => handlePresetChange("usda")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                loanTypePreset === "usda" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
+              }`}
+            >
+              USDA 0%
+            </button>
+            <button
+              onClick={() => handlePresetChange("va")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                loanTypePreset === "va" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
+              }`}
+            >
+              VA 0%
+            </button>
+          </div>
+
+          {selectedLead && (
+            <button
+              type="button"
+              onClick={handleSaveScenarioToLead}
+              className="px-4 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer"
+            >
+              <BookmarkPlus className="w-4 h-4 text-[#D4A373]" />
+              <span>Save Scenario to {selectedLead.fullName.split(" ")[0]}</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {saveSuccessMsg && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between gap-3 text-xs text-emerald-900 animate-fadeIn">
+          <span className="font-bold flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-600" />
+            {saveSuccessMsg}
+          </span>
+          {activeOutreachScenario && (
+            <button
+              type="button"
+              onClick={() => setActiveOutreachScenario(activeOutreachScenario)}
+              className="font-bold text-emerald-800 underline hover:text-emerald-950"
+            >
+              View Drafts Now →
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Input Sliders */}
@@ -935,6 +1063,17 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
           </div>
         </div>
       </div>
+      {/* Scenario Outreach Modal for Draft Review / Dispatch */}
+      {selectedLead && activeOutreachScenario && (
+        <ScenarioOutreachModal
+          isOpen={!!activeOutreachScenario}
+          onClose={() => setActiveOutreachScenario(null)}
+          lead={selectedLead}
+          scenario={activeOutreachScenario}
+          onOpenEmailOutreach={onOpenEmailOutreach}
+          onOpenSmsOutreach={onOpenSmsOutreach}
+        />
+      )}
     </div>
   );
 };

@@ -311,6 +311,40 @@ export interface AdCampaignDraft {
   lastSaved: string;
 }
 
+export interface SavedScenario {
+  id: string;
+  sourceTool: 'calculator' | 'mortgagelab';
+  scenarioName: string;
+  createdAt: string;
+  targetPrice: number;
+  downPayment: number;
+  downPaymentPercent: number;
+  loanAmount: number;
+  loanProgram: string;
+  interestRate: number;
+  loanTermYears: number;
+  monthlyPrincipalInterest: number;
+  monthlyPropertyTax: number;
+  monthlyHomeInsurance: number;
+  monthlyPmi: number;
+  monthlyHoa: number;
+  totalMonthlyPayment: number;
+  annualIncome?: number;
+  monthlyDebt?: number;
+  frontEndDti?: number;
+  backEndDti?: number;
+  extraMonthlyPrincipal?: number;
+  totalInterestSaved?: number;
+  yearsSaved?: number;
+  estimatedClosingCosts?: number;
+  notes?: string;
+  draftBorrowerEmailSubject: string;
+  draftBorrowerEmailBody: string;
+  draftBorrowerSmsText: string;
+  draftRealtorEmailSubject: string;
+  draftRealtorEmailBody: string;
+}
+
 export interface CapturedLead {
   id: string;
   fullName: string;
@@ -345,6 +379,7 @@ export interface CapturedLead {
   status: 'new' | 'contacted' | 'pre_approved' | 'in_escrow' | 'closed' | 'archived';
   notes?: string;
   chatTranscript?: { sender: string; text: string; time: string }[];
+  savedScenarios?: SavedScenario[];
   createdAt: string;
   nurtureSequenceEnabled?: boolean;
   nurtureSequenceStage?: 'new_welcome' | 'contacted_followup' | 'pre_approved_homehunt' | 'escrow_closing_prep' | 'closed_post_close' | 'paused';

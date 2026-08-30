@@ -271,6 +271,9 @@ export default function App() {
   const [showLoPortal, setShowLoPortal] = useState<boolean>(false);
   const [scorecardProperty, setScorecardProperty] = useState<PropertyListing | null>(null);
   const [showNewPropertyModal, setShowNewPropertyModal] = useState<boolean>(false);
+  
+  // Collapsible Sidebar Layout State (Initial state: collapsed)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true);
 
   // Dynamic Header Height for sticky sidebar
   const [headerHeight, setHeaderHeight] = useState(72);
@@ -488,11 +491,13 @@ export default function App() {
       {/* Scrollable Content Area (Flex 1) */}
       <div className="flex-1 w-full overflow-y-auto overflow-x-hidden flex flex-col relative scroll-smooth">
         {/* Main Layout Wrapper */}
-      <div className={showLoPortal ? "flex-1 w-full" : "flex-1 w-full max-w-[1500px] mx-auto flex"}>
-        {/* Desktop Only: Left Sidebar for Step Navigation */}
+      <div className={showLoPortal ? "flex-1 w-full" : "flex-1 w-full max-w-[1700px] mx-auto flex transition-all duration-300"}>
+        {/* Desktop Only: Left Sidebar for Step Navigation & Tools Hub */}
         {!showLoPortal && (
           <aside 
-            className="hidden lg:flex w-72 flex-col shrink-0 border-r border-[#EAE7E0] bg-[#F9F8F4] overflow-hidden p-4 z-30 self-start sticky top-0"
+            className={`hidden lg:flex flex-col shrink-0 border-r border-[#EAE7E0] bg-[#F9F8F4] z-30 self-start sticky top-0 transition-all duration-300 ease-in-out ${
+              isSidebarCollapsed ? "w-16 sm:w-18 md:w-20 p-2" : "w-80 sm:w-84 xl:w-88 p-3 sm:p-4"
+            }`}
             style={{ 
               height: `calc(100vh - ${headerHeight}px)` 
             }}
@@ -505,14 +510,19 @@ export default function App() {
               loanOfficerName={guidesState.loanOfficer.name}
               activeAgentName={activeAgent.name}
               isVertical={true}
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
               profile={profile}
               setProfile={setProfile}
+              loanOfficer={guidesState.loanOfficer}
+              activeAgent={activeAgent}
+              propertiesCount={properties.length}
             />
           </aside>
         )}
 
-        {/* Main Content Area */}
-        <main className={showLoPortal ? "flex-1 w-full p-0 m-0" : "flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 pb-8"}>
+        {/* Main Content Area: Expands & shrinks dynamically to match sidebar state */}
+        <main className={showLoPortal ? "flex-1 w-full p-0 m-0" : "flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 pb-8 transition-all duration-300 ease-in-out"}>
           {/* LOAN OFFICER PORTAL VIEW */}
           {showLoPortal ? (
           <LoanOfficerPortal
@@ -556,6 +566,13 @@ export default function App() {
                     onOpenAdvisor={() => handleNavigate("step4_ai_plan", "dashboard")}
                     onNextStep={() => handleNavigate("roadmap", "website")}
                     onNavigate={handleNavigate}
+                    leads={guidesState.leads}
+                    onUpdateLead={(updatedLead) => {
+                      const newLeads = (guidesState.leads || []).map(l => l.id === updatedLead.id ? updatedLead : l);
+                      handleUpdateGuidesState({ ...guidesState, leads: newLeads });
+                    }}
+                    loanOfficer={guidesState.loanOfficer}
+                    activeAgent={activeAgent}
                   />
                 )}
 
@@ -590,6 +607,8 @@ export default function App() {
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
                     onOpenLoPortal={() => setShowLoPortal(true)}
+                    isSidebarCollapsed={isSidebarCollapsed}
+                    onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
                   />
                 )}
 
@@ -619,7 +638,16 @@ export default function App() {
                 )}
 
                 {activeTab === "mortgagelab" && (
-                  <MortgageLab profile={profile} />
+                  <MortgageLab 
+                    profile={profile}
+                    leads={guidesState.leads}
+                    onUpdateLead={(updatedLead) => {
+                      const newLeads = (guidesState.leads || []).map(l => l.id === updatedLead.id ? updatedLead : l);
+                      handleUpdateGuidesState({ ...guidesState, leads: newLeads });
+                    }}
+                    loanOfficer={guidesState.loanOfficer}
+                    activeAgent={activeAgent}
+                  />
                 )}
 
                 {activeTab === "ai_copilot" && (

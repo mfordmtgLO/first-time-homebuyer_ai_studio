@@ -521,10 +521,80 @@ export const LeadJourneyModal: React.FC<LeadJourneyModalProps> = ({
                 </div>
               </div>
 
-              {/* Event 4: Loan Officer Interaction Notes & Annotations */}
+              {/* Event 4: Saved Calculator & Affordability Scenarios */}
+              <div className="relative space-y-2">
+                <div className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-[#4A5D4E] text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
+                  4
+                </div>
+                <div className="bg-[#FAF9F5] p-4 rounded-2xl border border-[#EAE7E0] space-y-3">
+                  <div className="flex items-center justify-between text-xs flex-wrap gap-2">
+                    <span className="font-bold text-[#2D362E] flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
+                      Saved Calculator Scenarios & Pre-Filled Drafts ({lead.savedScenarios?.length || 0})
+                    </span>
+                    {lead.savedScenarios && lead.savedScenarios.length > 0 && (
+                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                        {lead.savedScenarios.length} Scenarios Available
+                      </span>
+                    )}
+                  </div>
+
+                  {lead.savedScenarios && lead.savedScenarios.length > 0 ? (
+                    <div className="space-y-3">
+                      {lead.savedScenarios.map((scen) => (
+                        <div key={scen.id} className="bg-white p-3.5 rounded-xl border border-[#EAE7E0] hover:border-[#4A5D4E]/50 transition-all space-y-2 text-xs shadow-2xs">
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-[#2D362E]">{scen.scenarioName}</span>
+                                <span className="text-[10px] bg-[#F1EFE9] text-[#4A5D4E] font-semibold px-1.5 py-0.2 rounded">
+                                  {scen.sourceTool === "calculator" ? "Quick Payment" : "Mortgage Lab"}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-[#606C5D] mt-0.5 font-mono">
+                                Target: ${scen.targetPrice.toLocaleString()} • Down: ${scen.downPayment.toLocaleString()} ({scen.downPaymentPercent}%) • Rate: {scen.interestRate}%
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <span className="text-xs font-extrabold text-[#4A5D4E] bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 block">
+                                ${scen.totalMonthlyPayment.toLocaleString()}/mo PITI
+                              </span>
+                              <span className="text-[10px] text-[#9A9488] block font-mono mt-0.5">
+                                {formatDate(scen.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Quick Draft Actions */}
+                          <div className="pt-2 border-t border-[#EAE7E0] flex items-center justify-between gap-2 flex-wrap">
+                            <span className="text-[10px] text-[#606C5D] italic truncate max-w-xs">
+                              Subject: "{scen.draftBorrowerEmailSubject}"
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onOpenOutreachModal(lead.id)}
+                              className="px-2.5 py-1 bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold rounded-lg text-[11px] flex items-center gap-1 transition-colors"
+                            >
+                              <Mail className="w-3 h-3" />
+                              <span>Load & Send Draft Email/SMS →</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-white p-3 rounded-xl border border-[#EAE7E0] text-xs text-[#9A9488] italic">
+                      No custom scenarios saved to this profile yet. Run the Quick Payment or How Much House Can I Afford calculator to attach scenarios.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Event 5: Loan Officer Interaction Notes & Annotations */}
               <div className="relative space-y-2">
                 <div className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-[#C18C5D] text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
-                  4
+                  5
                 </div>
                 <div className="bg-[#FAF9F5] p-4 rounded-2xl border border-[#EAE7E0] space-y-2">
                   <div className="flex items-center justify-between text-xs">
@@ -551,10 +621,10 @@ export const LeadJourneyModal: React.FC<LeadJourneyModalProps> = ({
                 </div>
               </div>
 
-              {/* Event 5: Pre-Approval Audit Status */}
+              {/* Event 6: Pre-Approval Audit Status */}
               <div className="relative space-y-2">
                 <div className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-emerald-700 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
-                  5
+                  6
                 </div>
                 <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-200 space-y-2">
                   <div className="flex items-center justify-between text-xs">

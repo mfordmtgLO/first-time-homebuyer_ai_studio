@@ -16,7 +16,9 @@ import {
   Calendar,
   Compass,
   RotateCcw,
-  ExternalLink
+  ExternalLink,
+  PanelLeftOpen,
+  PanelLeftClose
 } from "lucide-react";
 import { FinancialProfile, PropertyListing, RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
@@ -38,6 +40,8 @@ interface DashboardOverviewProps {
   activeAgent?: RealEstateAgentProfile;
   isCoBranded?: boolean;
   onOpenLoPortal?: () => void;
+  isSidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -53,6 +57,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   activeAgent,
   isCoBranded = false,
   onOpenLoPortal,
+  isSidebarCollapsed = false,
+  onToggleSidebar,
 }) => {
   const breakdown = calculateMortgageBreakdown(profile);
 
@@ -95,10 +101,31 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {onToggleSidebar && (
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#F9F8F4] hover:bg-[#F1EFE9] text-[#4A5D4E] font-semibold text-xs border border-[#EAE7E0] transition-colors cursor-pointer"
+              title={isSidebarCollapsed ? "Expand Sidebar Navigation" : "Collapse Sidebar"}
+            >
+              {isSidebarCollapsed ? (
+                <>
+                  <PanelLeftOpen className="w-4 h-4 text-[#4A5D4E]" />
+                  <span>Expand Sidebar</span>
+                </>
+              ) : (
+                <>
+                  <PanelLeftClose className="w-4 h-4 text-[#606C5D]" />
+                  <span>Collapse Sidebar</span>
+                </>
+              )}
+            </button>
+          )}
+
           <button
             onClick={onOpenNewPropertyModal}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-xs shadow-sm transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-xs shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Property to Tour</span>
@@ -106,7 +133,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
           <button
             onClick={() => onNavigate("ai_copilot", "dashboard")}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#4A5D4E] font-semibold text-xs border border-[#EAE7E0] transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#4A5D4E] font-semibold text-xs border border-[#EAE7E0] transition-colors cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-[#C18C5D]" />
             <span>AI Advisor</span>

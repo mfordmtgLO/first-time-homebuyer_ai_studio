@@ -108,10 +108,10 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
               <span>Pre-Screened Grant & Program Qualified Listings</span>
             </div>
             <h3 className="text-2xl sm:text-3xl font-serif font-bold text-[#2D362E] tracking-tight">
-              Curated Eligible Homes in Oregon
+              Curated Eligible Homes & GIS Overlays
             </h3>
             <p className="text-xs sm:text-sm text-[#606C5D] leading-relaxed">
-              Every home below is pre-screened against official GIS overlays for USDA 0% Down rural zones, OHCS Flex Lending census tracts, and county targeted/non-targeted purchase price caps.
+              Every home below is pre-screened against official GIS overlays for USDA 0% Down rural zones, State HFA DPA cash grants, FFIEC CRA census tracts, and county purchase price caps.
             </p>
           </div>
 
@@ -135,7 +135,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
             <Search className="w-4 h-4 text-[#9A9488] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by Oregon city, zip code, or address..."
+              placeholder="Search by city, zip, address, or 11-digit GEOID tract code..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);

@@ -492,10 +492,8 @@ export default function App() {
         {/* Desktop Only: Left Sidebar for Step Navigation */}
         {!showLoPortal && (
           <aside 
-            className="hidden lg:flex w-72 flex-col shrink-0 border-r border-[#EAE7E0] bg-[#F9F8F4] overflow-hidden p-4 z-30"
+            className="hidden lg:flex w-72 flex-col shrink-0 border-r border-[#EAE7E0] bg-[#F9F8F4] overflow-hidden p-4 z-30 self-start sticky top-0"
             style={{ 
-              position: 'sticky', 
-              top: `${headerHeight}px`, 
               height: `calc(100vh - ${headerHeight}px)` 
             }}
           >

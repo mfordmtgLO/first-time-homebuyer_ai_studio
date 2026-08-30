@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { 
   Calculator, 
   DollarSign, 
@@ -15,10 +15,14 @@ import {
   ShieldCheck,
   Compass,
   RotateCcw,
-  LayoutDashboard
+  LayoutDashboard,
+  Globe,
+  Building
 } from "lucide-react";
 import { FinancialProfile } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
+import { US_STATES } from "./StateLicensingSelector";
+import { getNationwideHfaDetails } from "../utils/nationwideHfaLimits";
 
 interface InstantAffordabilityCalculatorProps {
   profile: FinancialProfile;
@@ -182,10 +186,63 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Input Sliders */}
         <div className="lg:col-span-6 space-y-6 bg-white rounded-2xl border border-[#EAE7E0] p-6 shadow-sm">
-          <h3 className="text-base font-bold text-[#2D362E] flex items-center justify-between">
-            <span>Your Financial Inputs</span>
-            <span className="text-xs text-[#9A9488] font-normal">Adjust values in real-time</span>
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EAE7E0] pb-4">
+            <div>
+              <h3 className="text-base font-bold text-[#2D362E] flex items-center gap-2">
+                <Globe className="w-4 h-4 text-[#C18C5D]" />
+                <span>Financial Inputs & Location</span>
+              </h3>
+              <span className="text-xs text-[#9A9488]">Adjust values & state in real-time</span>
+            </div>
+
+            {/* State Selector */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-bold text-[#2D362E]">State:</label>
+              <select
+                id="calculator-state-selector"
+                value={profile.state || "OR"}
+                onChange={(e) => {
+                  const newState = e.target.value;
+                  const hfa = getNationwideHfaDetails(newState);
+                  setProfile(prev => ({
+                    ...prev,
+                    state: newState,
+                    propertyTaxRate: Number((hfa.avgPropertyTaxRate * 100).toFixed(2))
+                  }));
+                }}
+                className="bg-[#F9F8F4] border border-[#EAE7E0] rounded-lg px-2.5 py-1 text-xs font-bold text-[#2D362E] focus:outline-none focus:ring-1 focus:ring-[#C18C5D]"
+              >
+                {US_STATES.map((st) => (
+                  <option key={st.code} value={st.code}>
+                    {st.name} ({st.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* State HFA Grant Snapshot Pill */}
+          {(() => {
+            const hfa = getNationwideHfaDetails(profile.state || "OR");
+            return (
+              <div className="bg-[#F9F8F4] rounded-xl p-3 border border-[#EAE7E0] flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <Building className="w-4 h-4 text-[#C18C5D] shrink-0" />
+                  <div>
+                    <span className="font-bold text-[#2D362E] block">{hfa.agencyAcronym}: {hfa.featuredProgramName}</span>
+                    <span className="text-stone-500 text-[11px]">2026 Conforming Limit: ${hfa.conformingBaselineLimit.toLocaleString()} • Avg Tax: {(hfa.avgPropertyTaxRate * 100).toFixed(2)}%</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigate && onNavigate("grants", "website")}
+                  className="px-2 py-1 bg-white border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#C18C5D] font-bold rounded-lg text-[11px] shrink-0 transition-colors"
+                >
+                  View Grants →
+                </button>
+              </div>
+            );
+          })()}
 
           <div className="space-y-5">
             {/* User Input at top of Financial Inputs: Self-Restricted Target Max Monthly Payment Goal */}

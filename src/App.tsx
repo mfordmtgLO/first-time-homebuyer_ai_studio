@@ -453,10 +453,11 @@ export default function App() {
   const activeAgent = guidesState.agentRoster.find(a => a.id === guidesState.activeAgentId) || guidesState.agentRoster[0];
 
   return (
-    <div className="min-h-screen bg-[#F9F8F4] text-[#2D362E] flex flex-col selection:bg-[#C18C5D]/25 selection:text-[#2D362E] font-sans antialiased">
-      {/* Top Sticky Navigation + Sticky Guided 4-Step Homebuyer Journey */}
+    <div className="h-[100dvh] w-full bg-[#F9F8F4] text-[#2D362E] flex flex-col selection:bg-[#C18C5D]/25 selection:text-[#2D362E] font-sans antialiased overflow-hidden relative">
+      
+      {/* Top Navigation (Flex None - Pinned to Top) */}
       {!showLoPortal && (
-        <div ref={headerRef} className="sticky top-0 z-40 bg-[#F9F8F4]/98 backdrop-blur-md border-b border-[#EAE7E0]/80 shadow-md">
+        <div ref={headerRef} className="flex-none relative z-40 bg-[#F9F8F4]/98 backdrop-blur-md border-b border-[#EAE7E0]/80 shadow-md">
           <Navbar
             currentTab={activeTab}
             setCurrentTab={setActiveTab}
@@ -471,7 +472,7 @@ export default function App() {
             loName={guidesState.loanOfficer.name}
           />
           {/* Mobile Only: Horizontal Step Banner */}
-          <div className="lg:hidden max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
+          <div className="lg:hidden w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 bg-[#F9F8F4] border-t border-[#EAE7E0]/80 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.05)]">
             <StepNavigationBanner
               currentTab={activeTab}
               currentMode={currentMode}
@@ -484,7 +485,9 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Layout Wrapper */}
+      {/* Scrollable Content Area (Flex 1) */}
+      <div className="flex-1 w-full overflow-y-auto overflow-x-hidden flex flex-col relative scroll-smooth">
+        {/* Main Layout Wrapper */}
       <div className={showLoPortal ? "flex-1 w-full" : "flex-1 w-full max-w-[1500px] mx-auto flex"}>
         {/* Desktop Only: Left Sidebar for Step Navigation */}
         {!showLoPortal && (
@@ -509,7 +512,7 @@ export default function App() {
         )}
 
         {/* Main Content Area */}
-        <main className={showLoPortal ? "flex-1 w-full min-h-screen p-0 m-0" : "flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 lg:pb-8 pb-24"}>
+        <main className={showLoPortal ? "flex-1 w-full p-0 m-0" : "flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 pb-8"}>
           {/* LOAN OFFICER PORTAL VIEW */}
           {showLoPortal ? (
           <LoanOfficerPortal
@@ -635,7 +638,6 @@ export default function App() {
         )}
       </main>
       </div>
-      <MobileBottomNav activeTab={activeTab} onNavigate={handleNavigate} />
 
       {/* Footer */}
       {!showLoPortal && (
@@ -671,6 +673,9 @@ export default function App() {
           </div>
         </footer>
       )}
+      </div>
+      {/* Bottom Nav (Flex None - Pinned to Bottom on Mobile) */}
+      <MobileBottomNav activeTab={activeTab} onNavigate={handleNavigate} />
 
       {/* Scorecard Modal */}
       {scorecardProperty && (

@@ -178,7 +178,7 @@ export const GrantFinder: React.FC<GrantFinderProps> = ({ guidesState, onNavigat
 
         {/* Right Column: Lead Capture Form */}
         <div className="lg:col-span-5 xl:col-span-4">
-          <div className="sticky top-6">
+          <div className="lg:sticky top-6">
             <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 shadow-xl overflow-hidden relative">
               <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#4A5D4E] to-[#C18C5D]" />
               

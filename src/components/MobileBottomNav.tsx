@@ -8,7 +8,7 @@ interface MobileBottomNavProps {
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, onNavigate }) => {
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#EAE7E0] z-50 px-2 py-2 flex items-center justify-around shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
+    <div className="lg:hidden flex-none w-full bg-white border-t border-[#EAE7E0] z-50 px-2 py-2 flex items-center justify-around shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-[env(safe-area-inset-bottom)]">
       <button 
         onClick={() => onNavigate('hero', 'website')}
         className={`flex flex-col items-center justify-center p-2 rounded-xl transition-colors \${activeTab === 'hero' ? 'text-[#4A5D4E]' : 'text-[#9A9488] hover:text-[#606C5D]'}`}

@@ -23,6 +23,7 @@ import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mo
 import { hasAuthenticPropertyPhoto, getZillowUrl } from "../utils/overlayClassification";
 import { SavingsGoalTracker } from "./SavingsGoalTracker";
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
+import { RealTimeMortgageRateTracker } from "./RealTimeMortgageRateTracker";
 
 interface DashboardOverviewProps {
   profile: FinancialProfile;
@@ -223,6 +224,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         profile={profile}
         onUpdateSavings={handleSavingsUpdate}
         onUpdateTargetPrice={handleTargetPriceUpdate}
+        onNavigate={onNavigate}
+      />
+
+      {/* Real-Time Search-Grounded National Mortgage Rate Tracker (Dashboard Users Only) */}
+      <RealTimeMortgageRateTracker
+        profile={profile}
+        setProfile={setProfile}
         onNavigate={onNavigate}
       />
 

@@ -766,6 +766,90 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             </div>
           </div>
 
+          {/* Spatial Map & Geographic Program Qualification Matrix */}
+          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-3.5 shadow-sm">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-[#4A5D4E]/10 flex items-center justify-center text-[#4A5D4E]">
+                  <Building className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-[#2D362E]">Spatial Map & Loan Program Qualification</h4>
+                  <span className="text-[10px] text-[#606C5D]">Boundaries, 2026 FHFA Limits & DPA Program Matrix</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate("properties", "dashboard")}
+                className="text-[11px] font-bold text-[#4A5D4E] hover:underline flex items-center gap-1"
+              >
+                <span>Open Spatial Map →</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              {/* Conventional 2026 Conforming Limit */}
+              <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">2026 Conforming Cap</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                    breakdown.loanAmount <= 806495 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"
+                  }`}>
+                    {breakdown.loanAmount <= 806495 ? "✓ Conforming" : "High Balance / Jumbo"}
+                  </span>
+                </div>
+                <div className="text-sm font-extrabold text-[#2D362E]">$806,495 baseline</div>
+                <p className="text-[10px] text-[#606C5D]">
+                  Current loan of {formatUSD(breakdown.loanAmount)} is {breakdown.loanAmount <= 806495 ? "within standard baseline limit." : "above baseline."}
+                </p>
+              </div>
+
+              {/* FHA Loan Limit */}
+              <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">2026 FHA Floor/Ceiling</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                    breakdown.loanAmount <= 632500 ? "bg-emerald-100 text-emerald-800" : "bg-stone-100 text-stone-700"
+                  }`}>
+                    {breakdown.loanAmount <= 632500 ? "✓ FHA Eligible" : "Exceeds FHA Cap"}
+                  </span>
+                </div>
+                <div className="text-sm font-extrabold text-[#2D362E]">$524,225 – $1,209,750</div>
+                <p className="text-[10px] text-[#606C5D]">
+                  3.5% down payment qualification with 0.55% annual MIP.
+                </p>
+              </div>
+
+              {/* USDA 100% 0%-Down Boundary */}
+              <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">USDA Rural Boundary</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800">
+                    ✓ 0% Down Active
+                  </span>
+                </div>
+                <div className="text-sm font-extrabold text-[#4A5D4E]">Eligible in Rural Zones</div>
+                <p className="text-[10px] text-[#606C5D]">
+                  Marion, Yamhill, Polk & rural Oregon counties qualify for 100% financing with 0.35% guarantee fee.
+                </p>
+              </div>
+
+              {/* LMI Census Tract & State DPA Grant */}
+              <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">LMI / CRA & DPA Grant</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#EBF3ED] text-[#2F5738]">
+                    ✓ Grants Available
+                  </span>
+                </div>
+                <div className="text-sm font-extrabold text-[#C18C5D]">Up to $15,000 DPA</div>
+                <p className="text-[10px] text-[#606C5D]">
+                  OHCS Flex Lending & FirstLine assistance grants apply directly toward down payment & rate buydowns.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* AI Mortgage Analysis Button & Response */}
           <div className="bg-[#F1EFE9] rounded-2xl border border-[#EAE7E0] p-5 space-y-4">
             <div className="flex items-center justify-between">

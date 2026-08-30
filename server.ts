@@ -1169,6 +1169,116 @@ Make sure to include specific percentages clearly. Sources to check include Fred
     }
   });
 
+  // API Route: Live Search-Grounded Intelligence & Affordability Scenario Engine (Dashboard Only)
+  app.post("/api/ai/search-grounded-intelligence", async (req, res) => {
+    try {
+      const { query, userContext = {} } = req.body || {};
+
+      if (!query || typeof query !== "string" || !query.trim()) {
+        return res.status(400).json({ error: "Query string is required." });
+      }
+
+      const ai = getGeminiClient();
+      const currentDate = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+      
+      const prompt = `You are an elite Mortgage Underwriting, Spatial GIS & Housing Market Intelligence Engine powered by live Google Search Grounding.
+Current Context Date: ${currentDate}.
+
+User Context:
+- State/Location: ${userContext.state || "Oregon (OR)"}
+- Annual Household Income: $${userContext.annualIncome || 98000}
+- Monthly Recurring Debt: $${userContext.monthlyDebt || 450}
+- Available Cash / Down Payment: $${userContext.downPayment || 35000}
+- Target Home Price: $${userContext.targetPrice || 450000}
+- Credit Score: ${userContext.creditScore || 720}
+
+User Query: "${query}"
+
+Instructions:
+1. Use Google Search to retrieve current, verified, and official housing data, mortgage rate trends, 2026 FHFA / FHA loan limits for the county, DPA grant program availability (e.g. OHCS, CalHFA, TDHCA, CHFA, state HFAs, city silent seconds), local property tax millage rates, or census tract/GEOID / USDA rural boundary / LMI targeted area eligibility rules.
+2. Provide a thorough, professional, and easily readable analysis with clear markdown headers and bullet points.
+3. Quantify the direct impact on:
+   - Monthly Principal & Interest + Escrow (PITI)
+   - Maximum Safe Purchase Price / Affordability Ceiling
+   - Loan Program Qualifying (Conventional vs FHA vs USDA vs VA)
+   - Spatial Map Overlay Impact (Census Tract, LMI Area, USDA RD Boundary, FirstHome Price Cap)
+4. At the very end of your response, output a structured JSON code block marked with \`\`\`json containing extractable parameters if relevant to update the user's affordability calculator:
+\`\`\`json
+{
+  "interestRate": <number or null>,
+  "conformingLoanLimit": <number or null>,
+  "fhaLoanLimit": <number or null>,
+  "propertyTaxRate": <number or null (e.g. 1.15 for 1.15%)>,
+  "homeInsuranceAnnual": <number or null>,
+  "dpaGrantAmount": <number or null>,
+  "isLmiEligible": <boolean or null>,
+  "isUsdaEligible": <boolean or null>,
+  "amiPercentage": <number or null>,
+  "suggestedTargetPrice": <number or null>,
+  "recommendedLoanType": <"30yr" | "fha" | "usda" | "va" | null>,
+  "summaryHeadline": <short 1-sentence takeaway string>
+}
+\`\`\`
+Ensure all numbers are realistic and verified via live search.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+        },
+      });
+
+      const responseText = response.text || "";
+      const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
+      const groundingChunks = groundingMetadata?.groundingChunks || [];
+      const webSearchQueries = groundingMetadata?.webSearchQueries || [];
+
+      // Extract verified citations/sources
+      const sources = groundingChunks
+        .filter((c: any) => c.web?.uri)
+        .map((c: any) => ({
+          title: c.web?.title || "Authoritative Housing & Lending Source",
+          url: c.web?.uri,
+        }));
+
+      const uniqueSources = Array.from(
+        new Map(sources.map((s: any) => [s.url, s])).values()
+      ).slice(0, 8);
+
+      // Parse structured JSON block from response if present
+      let detectedParameters: any = {};
+      const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch && jsonMatch[1]) {
+        try {
+          detectedParameters = JSON.parse(jsonMatch[1]);
+        } catch (e) {
+          console.warn("Could not parse structured JSON from grounded response:", e);
+        }
+      }
+
+      // Clean the display text (optional: remove the raw json code block so the UI reads cleanly, while preserving formatting)
+      const cleanDisplayText = responseText.replace(/```json\s*[\s\S]*?\s*```/, "").trim();
+
+      res.json({
+        success: true,
+        isGrounded: true,
+        timestamp: new Date().toISOString(),
+        query,
+        answer: cleanDisplayText || responseText,
+        detectedParameters,
+        sources: uniqueSources,
+        webSearchQueries,
+      });
+    } catch (error: any) {
+      console.error("Search-grounded intelligence error:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to retrieve search-grounded intelligence.",
+      });
+    }
+  });
+
   // API Route: Check Twilio Config Status
   app.get("/api/twilio/config-status", (_req, res) => {
     const hasSid = Boolean(process.env.TWILIO_ACCOUNT_SID);

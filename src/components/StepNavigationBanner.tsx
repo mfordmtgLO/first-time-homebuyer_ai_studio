@@ -14,6 +14,8 @@ import {
   ShieldCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { FinancialProfile } from "../types";
+import { SearchGroundedSidebarBot } from "./SearchGroundedSidebarBot";
 
 interface StepNavigationBannerProps {
   currentTab: string;
@@ -24,16 +26,25 @@ interface StepNavigationBannerProps {
   loanOfficerName?: string;
   activeAgentName?: string;
   isVertical?: boolean;
+  profile?: FinancialProfile;
+  setProfile?: React.Dispatch<React.SetStateAction<FinancialProfile>>;
+  onTriggerToast?: (msg: string) => void;
 }
 
 export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   currentTab,
+  currentMode = "website",
+  activeMode,
   onNavigate,
   onNavigateToGuides,
   loanOfficerName,
   activeAgentName,
   isVertical = false,
+  profile,
+  setProfile,
+  onTriggerToast,
 }) => {
+  const effectiveMode = activeMode || currentMode;
   // Determine current active step index (0 = Home, 1 = Step 1, 2 = Step 2, 3 = Step 3, 4 = Step 4)
   let activeStep = 0;
   if (currentTab === "hero") activeStep = 0;
@@ -271,31 +282,48 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
       </div>
 
       {isVertical && (
-        <div className="mt-8 pt-6 pb-6 border-t border-[#EAE7E0]/80">
-          <span className="text-[10px] font-bold tracking-wider uppercase text-[#9A9488] px-2 block mb-3">
-            Advanced Tools
-          </span>
-          <div className="flex flex-col gap-1.5 w-full">
-            {secondaryItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onNavigate(item.id, item.mode)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all w-full text-left ${
-                    isActive
-                      ? "bg-[#4A5D4E] text-white shadow-xs ring-1 ring-[#38463B]"
-                      : "text-[#4A5D4E] hover:bg-[#F1EFE9] hover:text-[#2D362E] bg-white border border-[#EAE7E0] hover:border-[#DCD7CD]"
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 shrink-0 transition-transform ${
-                    isActive ? "text-white" : "text-[#606C5D]"
-                  }`} />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
+        <div className="mt-6 pt-4 pb-6 border-t border-[#EAE7E0]/80 space-y-5">
+          {/* Dashboard-Exclusive: Search Grounding Market & Affordability AI */}
+          {effectiveMode === "dashboard" && profile && (
+            <div className="w-full">
+              <span className="text-[10px] font-bold tracking-wider uppercase text-[#9A9488] px-1 block mb-2">
+                Live Search Grounding AI
+              </span>
+              <SearchGroundedSidebarBot
+                profile={profile}
+                setProfile={setProfile}
+                onNavigate={onNavigate}
+                onTriggerToast={onTriggerToast}
+              />
+            </div>
+          )}
+
+          <div>
+            <span className="text-[10px] font-bold tracking-wider uppercase text-[#9A9488] px-2 block mb-3">
+              Advanced Tools
+            </span>
+            <div className="flex flex-col gap-1.5 w-full">
+              {secondaryItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onNavigate(item.id, item.mode)}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all w-full text-left ${
+                      isActive
+                        ? "bg-[#4A5D4E] text-white shadow-xs ring-1 ring-[#38463B]"
+                        : "text-[#4A5D4E] hover:bg-[#F1EFE9] hover:text-[#2D362E] bg-white border border-[#EAE7E0] hover:border-[#DCD7CD]"
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 transition-transform ${
+                      isActive ? "text-white" : "text-[#606C5D]"
+                    }`} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

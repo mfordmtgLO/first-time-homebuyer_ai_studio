@@ -505,6 +505,8 @@ export default function App() {
               loanOfficerName={guidesState.loanOfficer.name}
               activeAgentName={activeAgent.name}
               isVertical={true}
+              profile={profile}
+              setProfile={setProfile}
             />
           </aside>
         )}

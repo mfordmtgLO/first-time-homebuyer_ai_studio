@@ -112,3 +112,27 @@
     scrollbar-width: none;
   }
 }
+
+/* Print Optimization for Homebuying Plan & Property Notes */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt !important;
+  }
+
+  nav, header, footer, aside, .print\\:hidden, #ai-lead-bot-container, .lead-bot-floating {
+    display: none !important;
+  }
+
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  @page {
+    margin: 12mm;
+    size: auto;
+  }
+}
+

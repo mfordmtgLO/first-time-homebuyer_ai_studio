@@ -65,7 +65,9 @@ import {
   FileText,
   StickyNote,
   Compass,
-  Footprints
+  Footprints,
+  Calculator,
+  BookmarkPlus
 } from "lucide-react";
 import { 
   LoanOfficerProfile, 
@@ -103,6 +105,7 @@ import { ScrapeRealtorModal } from "./ScrapeRealtorModal";
 import { LoOutreachModal } from "./LoOutreachModal";
 import { RecruitingCampaignModal } from "./RecruitingCampaignModal";
 import { GrantFinder } from "./GrantFinder";
+import { LoanOfficerScenarioWorkbench } from "./LoanOfficerScenarioWorkbench";
 
 interface LoanOfficerPortalProps {
   guidesState: ProfessionalGuidesState;
@@ -130,7 +133,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   });
 
   // Current user / viewing context
-  const [activeTab, setActiveTab] = useState<"leads" | "sms_compliance" | "sms_templates" | "team_distribution" | "recruitment_pipeline" | "pairings" | "realtor_roster" | "ai_partner_campaign" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns">("leads");
+  const [activeTab, setActiveTab] = useState<"leads" | "scenario_workbench" | "sms_compliance" | "sms_templates" | "team_distribution" | "recruitment_pipeline" | "pairings" | "realtor_roster" | "dpa_grants" | "ai_partner_campaign" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns">("leads");
+  const [scenarioWorkbenchLeadId, setScenarioWorkbenchLeadId] = useState<string | undefined>(undefined);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [viewingHistoryLo, setViewingHistoryLo] = useState<string | null>(null);
@@ -1504,6 +1508,26 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   : "bg-[#4A5D4E]/10 text-[#4A5D4E]"
               }`}>
                 {guidesState.leads?.length || 0}
+              </span>
+            </button>
+
+            <button
+              data-tab-id="scenario_workbench"
+              onClick={() => setActiveTab("scenario_workbench")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "scenario_workbench"
+                  ? "bg-[#4A5D4E] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Calculator className="w-4 h-4 text-[#D4A373]" />
+              <span>Loan & Affordability Scenarios</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "scenario_workbench"
+                  ? "bg-white/20 text-white"
+                  : "bg-amber-100 text-amber-900 border border-amber-300"
+              }`}>
+                Auto-Sync & Drafts
               </span>
             </button>
 
@@ -2931,6 +2955,18 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                        </button>
 
                                        <button
+                                         onClick={() => {
+                                           setScenarioWorkbenchLeadId(lead.id);
+                                           setActiveTab("scenario_workbench");
+                                         }}
+                                         className="px-2.5 py-1 bg-[#2D362E] hover:bg-[#1E251F] text-white font-bold text-[11px] rounded-lg flex items-center gap-1 transition-all shadow-2xs cursor-pointer"
+                                         title="Model and save loan scenarios for this lead"
+                                       >
+                                         <Calculator className="w-3 h-3 text-[#D4A373]" />
+                                         <span>Scenarios {lead.savedScenarios && lead.savedScenarios.length > 0 ? `(${lead.savedScenarios.length})` : ''}</span>
+                                       </button>
+
+                                       <button
                                          onClick={() => setViewingJourneyLead(lead)}
                                          className="px-2.5 py-1 bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-[11px] rounded-lg flex items-center gap-1 transition-all shadow-2xs"
                                          title="View full historical Lead Journey Timeline"
@@ -3281,6 +3317,18 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                 </button>
 
                                 <button
+                                  onClick={() => {
+                                    setScenarioWorkbenchLeadId(lead.id);
+                                    setActiveTab("scenario_workbench");
+                                  }}
+                                  className="px-3 py-1.5 bg-[#2D362E] hover:bg-[#1E251F] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                                  title="Model and save loan scenarios for this lead"
+                                >
+                                  <Calculator className="w-3.5 h-3.5 text-[#D4A373]" />
+                                  <span>Scenarios {lead.savedScenarios && lead.savedScenarios.length > 0 ? `(${lead.savedScenarios.length})` : ''}</span>
+                                </button>
+
+                                <button
                                   onClick={() => setViewingJourneyLead(lead)}
                                   className="px-3 py-1.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-2xs"
                                   title="View full historical Lead Journey Timeline"
@@ -3309,6 +3357,32 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               );
             })()}
           </div>
+        )}
+
+        {/* Tab: Loan Officer Client Scenario & Payment Workbench */}
+        {activeTab === "scenario_workbench" && (
+          <LoanOfficerScenarioWorkbench
+            leads={guidesState.leads || []}
+            loanOfficer={currentLo}
+            agentRoster={guidesState.agentRoster || []}
+            initialLeadId={scenarioWorkbenchLeadId}
+            onUpdateLead={(updatedLead) => {
+              const currentLeads = guidesState.leads || [];
+              const updated = currentLeads.map(l => l.id === updatedLead.id ? updatedLead : l);
+              onUpdateGuidesState({
+                ...guidesState,
+                leads: updated
+              });
+            }}
+            onOpenEmailOutreach={(leadId) => {
+              setInitialOutreachLeadId(leadId);
+              setShowEmailOutreachModal(true);
+            }}
+            onOpenSmsMessaging={(lead) => {
+              setSmsModalLead(lead);
+            }}
+            onTriggerToast={triggerToast}
+          />
         )}
 
         {activeTab === "recruitment_pipeline" && (

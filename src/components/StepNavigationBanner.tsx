@@ -25,7 +25,10 @@ import {
   Percent,
   Layers,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  QrCode,
+  Smartphone,
+  Copy
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
@@ -70,6 +73,17 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   propertiesCount = 0
 }) => {
   const effectiveMode = activeMode || currentMode;
+  const [showNavQrModal, setShowNavQrModal] = useState<boolean>(false);
+  const [navCopiedUrl, setNavCopiedUrl] = useState<boolean>(false);
+
+  const leadGenUrl = loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM";
+  const leadQrUrl = loanOfficer?.leadGenQrCodeUrl || "/lead-gen-qr-code.png";
+
+  const handleCopyNavUrl = () => {
+    navigator.clipboard.writeText(leadGenUrl);
+    setNavCopiedUrl(true);
+    setTimeout(() => setNavCopiedUrl(false), 2500);
+  };
   
   // Active step index (0 = Home, 1 = Step 1, 2 = Step 2, 3 = Step 3, 4 = Step 4)
   let activeStep = 0;
@@ -706,6 +720,30 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
                 )}
               </div>
 
+              <div className="pt-1 flex items-center gap-1.5">
+                <a
+                  href={leadGenUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-1.5 px-2 rounded-lg bg-[#D4A373] hover:bg-[#C18C5D] text-white font-bold text-[10px] flex items-center justify-center gap-1 transition-colors text-center"
+                  title="Open official pre-approval application online"
+                >
+                  <Smartphone className="w-3 h-3 text-white shrink-0" />
+                  <span>Start Loan App</span>
+                  <ExternalLink className="w-2.5 h-2.5 opacity-80" />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setShowNavQrModal(true)}
+                  className="py-1.5 px-2 rounded-lg bg-[#FAF9F5] hover:bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                  title="Scan QR code with phone"
+                >
+                  <QrCode className="w-3 h-3 text-[#4A5D4E]" />
+                  <span>QR</span>
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={() => {
@@ -737,6 +775,80 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
           </div>
         )}
       </div>
+
+      {/* QR Code Modal */}
+      {showNavQrModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E] text-center">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-2.5 text-left">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#D4A373]"></div>
+                <h4 className="font-serif font-bold text-base text-[#2D362E]">
+                  Scan to Start Loan App
+                </h4>
+              </div>
+              <button
+                onClick={() => setShowNavQrModal(false)}
+                className="text-xs text-[#9A9488] hover:text-[#2D362E] p-1"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="inline-block p-3.5 bg-[#FAF9F5] border-2 border-[#EAE7E0] rounded-2xl shadow-inner">
+              <img 
+                src={leadQrUrl} 
+                alt="Loan Officer Pre-Approval QR Code" 
+                className="w-44 h-44 mx-auto object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-[#606C5D] leading-relaxed">
+                Scan with your phone to open <strong className="text-[#2D362E]">{loanOfficerName || "Mike Ford"}</strong>'s official HomeTrac secure pre-approval application.
+              </p>
+            </div>
+
+            <div className="p-2.5 bg-[#FAF9F5] rounded-xl border border-[#EAE7E0] space-y-1.5 text-left">
+              <div className="flex items-center gap-1.5">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={leadGenUrl} 
+                  className="flex-1 bg-white border border-[#EAE7E0] rounded-lg px-2 py-1 text-[11px] text-[#606C5D] select-all font-mono"
+                />
+                <button
+                  onClick={handleCopyNavUrl}
+                  className="px-2.5 py-1 rounded-lg bg-[#4A5D4E] hover:bg-[#38463B] text-white text-[11px] font-bold flex items-center gap-1 shrink-0"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>{navCopiedUrl ? "Copied!" : "Copy"}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowNavQrModal(false)}
+                className="flex-1 py-2 text-xs font-semibold text-[#606C5D] hover:bg-[#F1EFE9] rounded-xl border border-[#EAE7E0]"
+              >
+                Close
+              </button>
+              <a
+                href={leadGenUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#38463B] rounded-xl shadow-xs"
+              >
+                <span>Open Link</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

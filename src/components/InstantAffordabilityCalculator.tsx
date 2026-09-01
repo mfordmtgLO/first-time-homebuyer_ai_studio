@@ -29,6 +29,7 @@ import { getNationwideHfaDetails } from "../utils/nationwideHfaLimits";
 import { LeadScenarioSearch } from "./LeadScenarioSearch";
 import { ScenarioOutreachModal } from "./ScenarioOutreachModal";
 import { buildSavedScenario } from "../utils/scenarioOutreachGenerator";
+import { DTIUnderwritingMeter } from "./DTIUnderwritingMeter";
 
 interface InstantAffordabilityCalculatorProps {
   profile: FinancialProfile;
@@ -42,6 +43,7 @@ interface InstantAffordabilityCalculatorProps {
   activeAgent?: RealEstateAgentProfile;
   onOpenEmailOutreach?: (leadId: string, subject?: string, body?: string) => void;
   onOpenSmsOutreach?: (leadId: string, text?: string) => void;
+  isLoanOfficerMode?: boolean;
 }
 
 export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalculatorProps> = ({
@@ -55,7 +57,8 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
   loanOfficer,
   activeAgent,
   onOpenEmailOutreach,
-  onOpenSmsOutreach
+  onOpenSmsOutreach,
+  isLoanOfficerMode = false
 }) => {
   const [loanTypePreset, setLoanTypePreset] = useState<"30yr" | "fha" | "usda" | "va">("30yr");
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
@@ -213,8 +216,8 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
 
   return (
     <div className="space-y-10">
-      {/* Lead Profile Search & Auto-Sync Bar */}
-      {leads.length > 0 && (
+      {/* Lead Profile Search & Auto-Sync Bar (Only shown in Loan Officer Portal mode) */}
+      {isLoanOfficerMode && leads.length > 0 && (
         <LeadScenarioSearch
           leads={leads}
           selectedLead={selectedLead}
@@ -224,7 +227,7 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
               handleApplyLeadFinancials(lead);
             }
           }}
-          calculatorName="How Much House Can I Afford Scenario Engine"
+          toolName="How Much House Can I Afford Scenario Engine"
         />
       )}
 
@@ -280,7 +283,7 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             </button>
           </div>
 
-          {selectedLead && (
+          {isLoanOfficerMode && selectedLead && (
             <button
               type="button"
               onClick={handleSaveScenarioToLead}
@@ -293,7 +296,7 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
         </div>
       </div>
 
-      {saveSuccessMsg && (
+      {isLoanOfficerMode && saveSuccessMsg && (
         <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between gap-3 text-xs text-emerald-900 animate-fadeIn">
           <span className="font-bold flex items-center gap-2">
             <Check className="w-4 h-4 text-emerald-600" />
@@ -795,76 +798,16 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
               </div>
             </div>
 
-            {/* DTI Ratios Bar */}
-            {(() => {
-              const backEndDtiStatus = getDTIStatus(breakdown.backEndDTI);
-              return (
-                <div className="bg-[#F1EFE9] rounded-xl p-4 border border-[#EAE7E0] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#2D362E]">Underwriting DTI Ratios</span>
-                    {backEndDtiStatus.isIneligible ? (
-                      <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-red-50 text-black border border-red-300">
-                        <span className="line-through decoration-red-600 decoration-2">most loan programs ineligible over 50% DTI</span>
-                      </span>
-                    ) : (
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                        backEndDtiStatus.isHigh
-                          ? "bg-red-50 text-red-600 border border-red-200"
-                          : breakdown.backEndDTI <= 36 
-                          ? "bg-white text-[#4A5D4E] border border-[#EAE7E0]"
-                          : "bg-[#C18C5D]/10 text-[#C18C5D] border border-[#C18C5D]/20"
-                      }`}>
-                        {backEndDtiStatus.isHigh ? "High DTI (45.01% - 50%)" : breakdown.backEndDTI <= 36 ? "Optimal Tier (≤36%)" : "Moderate Risk (36.01% - 45%)"}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <div className="flex justify-between text-[#606C5D] mb-1">
-                        <span>Front-End DTI (Housing Only)</span>
-                        <strong className="text-[#2D362E]">{breakdown.frontEndDTI}%</strong>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#DEDAD2] rounded-full overflow-hidden">
-                        <div 
-                          style={{ width: `${Math.min(100, (breakdown.frontEndDTI / 28) * 100)}%` }} 
-                          className={`h-full ${breakdown.frontEndDTI <= 28 ? "bg-[#4A5D4E]" : "bg-[#C18C5D]"}`}
-                        />
-                      </div>
-                      <span className="text-[10px] text-[#9A9488] mt-0.5 block">Standard benchmark: ≤28%</span>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-[#606C5D] mb-1">
-                        <span>Back-End DTI (Housing + Debts)</span>
-                        {backEndDtiStatus.isIneligible ? (
-                          <strong className="text-black font-bold line-through decoration-red-600 decoration-2">
-                            {breakdown.backEndDTI}%
-                          </strong>
-                        ) : backEndDtiStatus.isHigh ? (
-                          <strong className="text-red-600 font-bold">{breakdown.backEndDTI}% (High)</strong>
-                        ) : (
-                          <strong className={breakdown.backEndDTI <= 36 ? "text-[#4A5D4E]" : "text-[#C18C5D]"}>{breakdown.backEndDTI}%</strong>
-                        )}
-                      </div>
-                      <div className="w-full h-1.5 bg-[#DEDAD2] rounded-full overflow-hidden">
-                        <div 
-                          style={{ width: `${Math.min(100, (breakdown.backEndDTI / 50) * 100)}%` }} 
-                          className={`h-full ${breakdown.backEndDTI <= 36 ? "bg-[#4A5D4E]" : breakdown.backEndDTI <= 45 ? "bg-[#C18C5D]" : "bg-red-600"}`}
-                        />
-                      </div>
-                      {backEndDtiStatus.isIneligible ? (
-                        <span className="text-[10px] text-black font-semibold line-through decoration-red-600 decoration-2 mt-0.5 block">
-                          most loan programs ineligible over 50% DTI
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-[#9A9488] mt-0.5 block">Standard benchmark: ≤36-45%</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            {/* DTI Underwriting Progress Meter */}
+            <DTIUnderwritingMeter
+              frontEndDTI={breakdown.frontEndDTI}
+              backEndDTI={breakdown.backEndDTI}
+              grossMonthlyIncome={Math.max(1, profile.annualIncome / 12)}
+              totalHousingPayment={breakdown.totalMonthly}
+              monthlyDebts={profile.monthlyDebt}
+              isLoanOfficerMode={isLoanOfficerMode}
+              showCalculations={true}
+            />
           </div>
 
           {/* Purchasing Power Tier Matrix */}
@@ -1063,13 +1006,15 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
           </div>
         </div>
       </div>
-      {/* Scenario Outreach Modal for Draft Review / Dispatch */}
-      {selectedLead && activeOutreachScenario && (
+      {/* Scenario Outreach Modal for Draft Review / Dispatch (Loan Officer Portal only) */}
+      {isLoanOfficerMode && selectedLead && activeOutreachScenario && (
         <ScenarioOutreachModal
           isOpen={!!activeOutreachScenario}
           onClose={() => setActiveOutreachScenario(null)}
           lead={selectedLead}
           scenario={activeOutreachScenario}
+          loanOfficer={loanOfficer}
+          agent={activeAgent}
           onOpenEmailOutreach={onOpenEmailOutreach}
           onOpenSmsOutreach={onOpenSmsOutreach}
         />

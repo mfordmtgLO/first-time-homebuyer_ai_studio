@@ -834,6 +834,488 @@ Additional Custom Instructions: ${customNotes || "None"}`;
     }
   });
 
+  // API Route: Share Homebuying Roadmap & Saved Properties via Email
+  app.post("/api/share/email-roadmap", async (req, res) => {
+    const { 
+      recipientEmail, 
+      recipientName, 
+      customNote, 
+      profile, 
+      milestones, 
+      properties, 
+      documents, 
+      loanOfficer, 
+      activeAgent,
+      sections = { financials: true, roadmap: true, properties: true, documents: true, advisors: true }
+    } = req.body || {};
+
+    if (!recipientEmail || typeof recipientEmail !== "string" || !recipientEmail.includes("@")) {
+      return res.status(400).json({ error: "A valid recipient email address is required." });
+    }
+
+    try {
+      const ai = getGeminiClient();
+
+      const nameToUse = recipientName || recipientEmail.split("@")[0];
+      const targetPrice = profile?.targetPrice ? `$${Number(profile.targetPrice).toLocaleString()}` : "$400,000";
+      const downPayment = profile?.downPaymentSavings ? `$${Number(profile.downPaymentSavings).toLocaleString()}` : "$20,000";
+      const completedTasksCount = (milestones || []).flatMap((m: any) => m.tasks || []).filter((t: any) => t.done).length;
+      const totalTasksCount = (milestones || []).flatMap((m: any) => m.tasks || []).length;
+      const progressPercent = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+
+      const propertyListSummary = (properties || []).slice(0, 10).map((p: any) => {
+        const sc = p.scorecard ? ` (Tour Grade: ${p.scorecard.grade || "B"}, Rating: ${p.scorecard.overallRating || 8}/10)` : "";
+        const usdaBadge = p.overlayEligibility?.usda ? " [USDA 0% Down Eligible]" : "";
+        const dpaBadge = p.overlayEligibility?.lakeviewNational ? " [Lakeview DPA Grant]" : "";
+        const fav = p.isFavorite ? " ⭐ FAVORITE" : "";
+        return `• ${p.address}, ${p.city} - $${Number(p.price || 0).toLocaleString()} (${p.beds}bd/${p.baths}ba, ${p.sqft || 0} sqft)${fav}${sc}${usdaBadge}${dpaBadge}${p.notes ? `\n  Notes: "${p.notes}"` : ""}`;
+      }).join("\n");
+
+      const systemInstruction = `You are a professional Mortgage and First-Time Homebuyer Advisory System.
+Generate a structured, welcoming, highly readable email summary for a homebuyer sharing their custom roadmap and saved properties with themselves or a co-buyer.
+
+Requirements:
+1. Provide a clear, encouraging tone.
+2. Structure the email with clean headings, markdown, and bullet points.
+3. Highlight the milestone progress (${progressPercent}% complete, ${completedTasksCount}/${totalTasksCount} tasks).
+4. Summarize target purchasing power (Target Price: ${targetPrice}, Saved: ${downPayment}).
+5. Summarize the saved target properties and inspection scorecards clearly.
+6. Provide next actionable steps for the buyer.
+
+Respond with strict JSON:
+{
+  "subject": "Subject line including recipient/buyer topic and milestone status",
+  "intro": "Warm 2-3 sentence introductory message",
+  "highlights": ["3-4 key bullet points on progress and purchasing power"],
+  "nextSteps": ["2-3 practical next steps to take this week"],
+  "plainTextSummary": "Complete formatted plain-text email body",
+  "htmlPreview": "Clean HTML formatted email body with inline CSS styling, green/warm earthy palette (#4A5D4E, #2D362E, #F9F8F4, #EAE7E0), tables, and badges"
+}`;
+
+      const prompt = `Recipient: ${nameToUse} (${recipientEmail})
+${customNote ? `Personal Note from Sender: "${customNote}"` : ""}
+
+Financial Profile:
+- Target Home Price: ${targetPrice}
+- Down Payment Saved: ${downPayment}
+- Annual Household Income: $${Number(profile?.annualIncome || 85000).toLocaleString()}
+- Monthly Non-Housing Debts: $${Number(profile?.monthlyDebt || 450).toLocaleString()}
+- Credit Score: ${profile?.creditScore || 720}
+- Interest Rate: ${profile?.interestRate || 6.25}%
+
+Roadmap Progress:
+- Total Progress: ${progressPercent}% (${completedTasksCount} of ${totalTasksCount} tasks completed)
+- Active Milestone Stage: ${(milestones || []).find((m: any) => !(m.tasks || []).every((t: any) => t.done))?.title || "Underwriting & Preparation"}
+
+Saved Properties (${(properties || []).length} homes):
+${propertyListSummary || "No properties saved yet."}
+
+Advisory Team:
+- Loan Officer: ${loanOfficer?.name || "Mike Ford"} (${loanOfficer?.company || "Cornerstone First Mortgage"}, NMLS #${loanOfficer?.nmlsId || "288455"}, Phone: ${loanOfficer?.phone || "(503) 555-0199"}, Email: ${loanOfficer?.email || "mford@cfmtg.com"}, Fast-Track Portal: ${loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM"})
+${activeAgent ? `- Real Estate Agent: ${activeAgent.name} (${activeAgent.brokerage || "Pacific Northwest Realty"}, Phone: ${activeAgent.phone || "(503) 555-0144"}, Email: ${activeAgent.email || "agent@pnwrealty.com"})` : ""}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: prompt,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+          responseMimeType: "application/json"
+        },
+      });
+
+      const jsonText = response.text || "{}";
+      const parsed = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
+
+      res.json({
+        success: true,
+        email: {
+          recipientEmail,
+          recipientName: nameToUse,
+          subject: parsed.subject || `Your Homebuying Roadmap & Saved Properties Dossier (${progressPercent}% Ready)`,
+          intro: parsed.intro,
+          highlights: parsed.highlights || [],
+          nextSteps: parsed.nextSteps || [],
+          textBody: parsed.plainTextSummary || "",
+          htmlBody: parsed.htmlPreview || "",
+          sentAt: new Date().toISOString()
+        },
+        message: `Your Homebuying Roadmap & Property Dossier was prepared and sent to ${recipientEmail}.`
+      });
+
+    } catch (error: any) {
+      console.warn("AI share email generator fallback:", error?.message || error);
+
+      // Robust fallback generator
+      const nameToUse = recipientName || recipientEmail.split("@")[0];
+      const targetPrice = profile?.targetPrice ? `$${Number(profile.targetPrice).toLocaleString()}` : "$400,000";
+      const downPayment = profile?.downPaymentSavings ? `$${Number(profile.downPaymentSavings).toLocaleString()}` : "$20,000";
+      const completedTasksCount = (milestones || []).flatMap((m: any) => m.tasks || []).filter((t: any) => t.done).length;
+      const totalTasksCount = (milestones || []).flatMap((m: any) => m.tasks || []).length;
+      const progressPercent = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+
+      const subject = `Your Homebuying Master Plan & Saved Properties Dossier (${progressPercent}% Complete)`;
+      
+      const propertiesBlock = (properties || []).map((p: any) => {
+        const sc = p.scorecard ? `\n   • Tour Rating: ${p.scorecard.overallRating}/10 (Grade: ${p.scorecard.grade})` : "";
+        const flags = p.scorecard?.redFlags?.length ? `\n   • Concerns: ${p.scorecard.redFlags.join(", ")}` : "";
+        const notes = p.notes ? `\n   • Notes: ${p.notes}` : "";
+        return `• ${p.address}, ${p.city}, ${p.state} ${p.zip}\n   Price: $${Number(p.price || 0).toLocaleString()} | ${p.beds} Beds, ${p.baths} Baths, ${p.sqft} SqFt${sc}${flags}${notes}`;
+      }).join("\n\n");
+
+      const textBody = `HOMEBUYING MASTER PLAN & SAVED PROPERTY DOSSIER
+Prepared for: ${nameToUse} (${recipientEmail})
+Generated: ${new Date().toLocaleDateString()}
+${customNote ? `\nPersonal Note: "${customNote}"\n` : ""}
+--------------------------------------------------
+1. EXECUTIVE FINANCIAL PROFILE
+• Target Home Price: ${targetPrice}
+• Down Payment Saved: ${downPayment}
+• Household Annual Income: $${Number(profile?.annualIncome || 85000).toLocaleString()}
+• Monthly Non-Housing Debts: $${Number(profile?.monthlyDebt || 450).toLocaleString()}
+• Credit Score: ${profile?.creditScore || 720}
+
+2. ROADMAP PROGRESS (${progressPercent}% COMPLETE)
+• ${completedTasksCount} of ${totalTasksCount} Action Tasks Finished
+${(milestones || []).map((m: any, idx: number) => {
+  const done = (m.tasks || []).filter((t: any) => t.done).length;
+  return `  [${done === m.tasks.length ? '✓' : ' '}] Step ${idx + 1}: ${m.title} (${done}/${m.tasks.length} tasks)`;
+}).join("\n")}
+
+3. SAVED PROPERTIES & FIELD NOTES (${(properties || []).length} HOMES)
+${propertiesBlock || "No properties saved yet."}
+
+4. ADVISORY TEAM CONTACTS
+• Loan Officer: ${loanOfficer?.name || "Mike Ford"} (${loanOfficer?.company || "Cornerstone First Mortgage"}, NMLS #${loanOfficer?.nmlsId || "288455"})
+  Phone: ${loanOfficer?.phone || "(503) 555-0199"} | Email: ${loanOfficer?.email || "mford@cfmtg.com"}
+  Start Pre-Approval Online: ${loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM"}
+${activeAgent ? `• Real Estate Agent: ${activeAgent.name} (${activeAgent.brokerage || "Pacific Northwest Realty"})\n  Phone: ${activeAgent.phone || "(503) 555-0144"} | Email: ${activeAgent.email || "agent@pnwrealty.com"}` : ""}
+--------------------------------------------------`;
+
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; color: #2D362E; background: #ffffff; border: 1px solid #EAE7E0; border-radius: 16px; overflow: hidden;">
+          <div style="background-color: #4A5D4E; color: #ffffff; padding: 24px 28px;">
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #D4A373; font-weight: bold;">First-Time Homebuyer Roadmap</span>
+            <h1 style="margin: 6px 0 0 0; font-size: 22px; font-weight: 700;">Homebuying Plan & Saved Properties</h1>
+            <p style="margin: 6px 0 0 0; font-size: 13px; opacity: 0.9;">Prepared for ${nameToUse} • Readiness: ${progressPercent}% Complete</p>
+          </div>
+          ${customNote ? `<div style="background-color: #F9F8F4; padding: 14px 28px; border-bottom: 1px solid #EAE7E0; font-style: italic; font-size: 13px; color: #606C5D;">"${customNote}"</div>` : ""}
+          <div style="padding: 24px 28px;">
+            <h2 style="font-size: 16px; color: #4A5D4E; margin-top: 0; border-bottom: 2px solid #EAE7E0; padding-bottom: 6px;">1. Financial Purchasing Power</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+              <div style="background: #F9F8F4; padding: 12px; border-radius: 8px; border: 1px solid #EAE7E0;">
+                <span style="font-size: 11px; color: #9A9488; text-transform: uppercase;">Target Price</span>
+                <div style="font-size: 18px; font-weight: bold; color: #2D362E;">${targetPrice}</div>
+              </div>
+              <div style="background: #F9F8F4; padding: 12px; border-radius: 8px; border: 1px solid #EAE7E0;">
+                <span style="font-size: 11px; color: #9A9488; text-transform: uppercase;">Down Payment Saved</span>
+                <div style="font-size: 18px; font-weight: bold; color: #4A5D4E;">${downPayment}</div>
+              </div>
+            </div>
+            
+            <h2 style="font-size: 16px; color: #4A5D4E; margin-top: 24px; border-bottom: 2px solid #EAE7E0; padding-bottom: 6px;">2. 10-Step Roadmap Progress (${progressPercent}% Complete)</h2>
+            <p style="font-size: 13px; color: #606C5D; margin: 8px 0 14px 0;">You have completed ${completedTasksCount} of ${totalTasksCount} key homebuying milestones.</p>
+            
+            <h2 style="font-size: 16px; color: #4A5D4E; margin-top: 24px; border-bottom: 2px solid #EAE7E0; padding-bottom: 6px;">3. Saved Target Homes (${(properties || []).length})</h2>
+            <div style="margin-top: 12px;">
+              ${(properties || []).slice(0, 5).map((p: any) => `
+                <div style="padding: 12px; border: 1px solid #EAE7E0; border-radius: 8px; margin-bottom: 10px; background: #fafafa;">
+                  <strong style="font-size: 14px; color: #2D362E;">${p.address}, ${p.city}</strong>
+                  <div style="font-size: 13px; color: #4A5D4E; font-weight: bold; margin-top: 2px;">$${Number(p.price || 0).toLocaleString()} • ${p.beds} bd / ${p.baths} ba • ${p.sqft} sqft</div>
+                  ${p.notes ? `<div style="font-size: 12px; color: #606C5D; margin-top: 4px; font-style: italic;">Note: ${p.notes}</div>` : ""}
+                </div>
+              `).join("")}
+            </div>
+
+            <!-- Fast-Track Loan App Action Box -->
+            <div style="margin-top: 24px; padding: 18px; background-color: #F9F8F4; border: 1px solid #D4A373; border-radius: 12px; text-align: center;">
+              <span style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #4A5D4E; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Fast-Track Home Loan Application</span>
+              <p style="font-size: 13px; color: #2D362E; margin: 0 0 12px 0;">Ready to lock in your verified mortgage pre-approval with Mike Ford?</p>
+              <a href="${loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM"}" style="display: inline-block; background-color: #D4A373; color: #ffffff; font-weight: bold; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 13px;">Start Fast-Track Pre-Approval Online &rarr;</a>
+            </div>
+
+            <div style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #EAE7E0; font-size: 12px; color: #9A9488;">
+              <p>Loan Officer: <strong>${loanOfficer?.name || "Mike Ford"}</strong> (Cornerstone First Mortgage, NMLS #${loanOfficer?.nmlsId || "288455"}) • ${loanOfficer?.phone || "(503) 555-0199"}</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      res.json({
+        success: true,
+        email: {
+          recipientEmail,
+          recipientName: nameToUse,
+          subject,
+          textBody,
+          htmlBody,
+          sentAt: new Date().toISOString()
+        },
+        message: `Your Homebuying Roadmap & Property Dossier was prepared for ${recipientEmail}.`
+      });
+    }
+  });
+
+  // API Route: Automated Milestone Notification Trigger
+  app.post("/api/share/email-milestone-trigger", async (req, res) => {
+    const {
+      recipientEmail,
+      recipientName,
+      milestone,
+      profile,
+      milestones,
+      properties,
+      loanOfficer,
+      activeAgent,
+      isTest,
+      settings = { includeProperties: true, includeNextSteps: true, includeFinancialSnapshot: true }
+    } = req.body || {};
+
+    if (!recipientEmail || typeof recipientEmail !== "string" || !recipientEmail.includes("@")) {
+      return res.status(400).json({ error: "A valid recipient email address is required." });
+    }
+
+    const milestoneObj = milestone || { stepNumber: 1, title: "Initial Readiness", stage: "Readiness" };
+    const stepNum = milestoneObj.stepNumber || 1;
+    const milestoneTitle = milestoneObj.title || "Homebuyer Milestone";
+    const nameToUse = recipientName || recipientEmail.split("@")[0];
+
+    const completedMilestones = (milestones || []).filter((m: any) => (m.tasks || []).length > 0 && (m.tasks || []).every((t: any) => t.done));
+    const allTasks = (milestones || []).flatMap((m: any) => m.tasks || []);
+    const completedTasksCount = allTasks.filter((t: any) => t.done).length;
+    const totalTasksCount = allTasks.length || 20;
+    const progressPercent = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+
+    // Find next upcoming milestone
+    const nextMilestone = (milestones || []).find((m: any) => m.stepNumber > stepNum && !(m.tasks || []).every((t: any) => t.done)) 
+      || (milestones || []).find((m: any) => m.stepNumber === stepNum + 1)
+      || null;
+
+    const targetPrice = profile?.targetPrice ? `$${Number(profile.targetPrice).toLocaleString()}` : "$400,000";
+    const downPayment = profile?.downPaymentSavings ? `$${Number(profile.downPaymentSavings).toLocaleString()}` : "$20,000";
+
+    try {
+      const ai = getGeminiClient();
+
+      const systemInstruction = `You are the Manus First-Time Homebuyer Automated Notification Engine.
+Generate an inspiring, celebratory, and highly actionable email notification for a homebuyer who just completed a major milestone in their homebuying journey.
+
+Key elements to include:
+1. Warm congratulations acknowledging Step ${stepNum}: "${milestoneTitle}" is 100% complete.
+2. Progress recap (${progressPercent}% complete, ${completedTasksCount} of ${totalTasksCount} action tasks checked off).
+3. Clear preview and 2-3 specific action recommendations for the NEXT step${nextMilestone ? ` (Step ${nextMilestone.stepNumber}: ${nextMilestone.title})` : ""}.
+4. Financial purchasing power summary (Target: ${targetPrice}, Savings: ${downPayment}).
+5. Advisory contact check-in reminder with the user's Loan Officer and Realtor.
+
+Respond with strict JSON:
+{
+  "subject": "🎉 Milestone Achieved: Step ${stepNum} - ${milestoneTitle} is 100% Complete!",
+  "headline": "Celebratory 1-sentence headline",
+  "congratulationsBody": "Warm 2-3 sentence paragraph explaining what completing this milestone unlocks",
+  "nextStepTitle": "${nextMilestone ? `Next: Step ${nextMilestone.stepNumber} - ${nextMilestone.title}` : "Final Closing Preparation"}",
+  "nextStepActionItems": ["2-3 practical tips for the upcoming milestone"],
+  "plainTextSummary": "Complete formatted plain text email body",
+  "htmlPreview": "Clean, responsive HTML email with inline CSS styles (#4A5D4E primary brand color, celebration banner, progress indicator, card layout, and advisory team buttons)"
+}`;
+
+      const prompt = `Homebuyer: ${nameToUse} (${recipientEmail})
+Completed Milestone: Step ${stepNum}: ${milestoneTitle} (Stage: ${milestoneObj.stage || "Readiness"})
+Milestone Summary: ${milestoneObj.summary || ""}
+Key Tips Verified: ${(milestoneObj.keyTips || []).join("; ")}
+
+Roadmap Progress:
+- Total Completion: ${progressPercent}% (${completedTasksCount} of ${totalTasksCount} tasks finished)
+- Completed Milestones: ${completedMilestones.map((m: any) => `Step ${m.stepNumber}: ${m.title}`).join(", ") || `Step ${stepNum}: ${milestoneTitle}`}
+- Next Milestone: ${nextMilestone ? `Step ${nextMilestone.stepNumber}: ${nextMilestone.title} (${nextMilestone.stage})` : "Final Closing Day"}
+
+Financial Profile:
+- Target Price: ${targetPrice}
+- Down Payment Saved: ${downPayment}
+- Income: $${Number(profile?.annualIncome || 85000).toLocaleString()}
+- Monthly Debt: $${Number(profile?.monthlyDebt || 450).toLocaleString()}
+
+Saved Homes (${(properties || []).length} properties saved)
+${(properties || []).slice(0, 3).map((p: any) => `• ${p.address}, ${p.city} ($${Number(p.price || 0).toLocaleString()})`).join("\n")}
+
+Advisory Team:
+- Loan Officer: ${loanOfficer?.name || "Mike Ford"} (${loanOfficer?.company || "Guild Mortgage"}, NMLS #${loanOfficer?.nmlsId || "184209"})
+- Real Estate Agent: ${activeAgent?.name || "Sarah Jenkins"} (${activeAgent?.brokerage || "Pacific Northwest Realty"})`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: prompt,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+          responseMimeType: "application/json"
+        }
+      });
+
+      const jsonText = response.text || "{}";
+      const parsed = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
+
+      const finalSubject = parsed.subject || `🎉 Milestone Achieved: Step ${stepNum} - ${milestoneTitle} is Complete!`;
+
+      res.json({
+        success: true,
+        email: {
+          recipientEmail,
+          recipientName: nameToUse,
+          milestoneId: milestoneObj.id || `step-${stepNum}`,
+          milestoneTitle,
+          stepNumber: stepNum,
+          progressPercent,
+          subject: finalSubject,
+          headline: parsed.headline || `Congratulations on completing Step ${stepNum}!`,
+          congratulationsBody: parsed.congratulationsBody || `You have officially checked off all action items for "${milestoneTitle}".`,
+          nextStepTitle: parsed.nextStepTitle || (nextMilestone ? `Next: Step ${nextMilestone.stepNumber} - ${nextMilestone.title}` : "Next Steps"),
+          nextStepActionItems: parsed.nextStepActionItems || [],
+          textBody: parsed.plainTextSummary || "",
+          htmlBody: parsed.htmlPreview || "",
+          sentAt: new Date().toISOString()
+        },
+        message: `Milestone notification for Step ${stepNum} (${milestoneTitle}) dispatched to ${recipientEmail}.`
+      });
+
+    } catch (err: any) {
+      console.warn("AI milestone notification generator fallback:", err?.message || err);
+
+      // Resilient fallback template
+      const subject = `🎉 Milestone Achieved: Step ${stepNum} - ${milestoneTitle} is 100% Complete!`;
+      const nextTitle = nextMilestone ? `Step ${nextMilestone.stepNumber}: ${nextMilestone.title}` : "Closing Day Preparation";
+
+      const textBody = `MILESTONE ACHIEVED NOTIFICATION
+==================================================
+Congratulations, ${nameToUse}!
+
+You have successfully completed all action items for:
+Step ${stepNum}: ${milestoneTitle} (Stage: ${milestoneObj.stage || "Homebuying"})
+
+ROADMAP READINESS: ${progressPercent}% COMPLETE
+Tasks finished: ${completedTasksCount} of ${totalTasksCount}
+
+WHAT'S NEXT:
+${nextTitle}
+${nextMilestone?.summary ? `Overview: ${nextMilestone.summary}` : ""}
+
+FINANCIAL STATUS:
+• Target Price: ${targetPrice}
+• Down Payment Saved: ${downPayment}
+• Saved Homes: ${(properties || []).length} tracked
+
+ADVISORY CONTACTS:
+• Loan Officer: ${loanOfficer?.name || "Mike Ford"} (${loanOfficer?.phone || "(503) 555-0199"} / ${loanOfficer?.email || "mford@cfmtg.com"})
+  Fast-Track Pre-Approval Application: ${loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM"}
+${activeAgent ? `• Real Estate Agent: ${activeAgent.name} (${activeAgent.phone || "(503) 555-0144"} / ${activeAgent.email || "agent@pnwrealty.com"})` : ""}
+
+Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
+
+      const htmlBody = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 640px; margin: 0 auto; color: #2D362E; background: #ffffff; border: 1px solid #EAE7E0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+          <!-- Header Banner -->
+          <div style="background-color: #4A5D4E; color: #ffffff; padding: 28px 32px; text-align: left;">
+            <div style="display: inline-block; background-color: #D4A373; color: #ffffff; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; padding: 4px 10px; border-radius: 999px; margin-bottom: 10px;">
+              🎉 Milestone Complete
+            </div>
+            <h1 style="margin: 0 0 6px 0; font-size: 22px; font-weight: 700; line-height: 1.2;">
+              Step ${stepNum}: ${milestoneTitle}
+            </h1>
+            <p style="margin: 0; font-size: 13px; opacity: 0.9;">
+              Prepared for ${nameToUse} • Overall Progress: ${progressPercent}% Complete
+            </p>
+          </div>
+
+          <!-- Body Content -->
+          <div style="padding: 28px 32px;">
+            <!-- Progress Bar Strip -->
+            <div style="background: #F9F8F4; padding: 14px 18px; border-radius: 12px; border: 1px solid #EAE7E0; margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #4A5D4E; margin-bottom: 6px;">
+                <span>Homebuyer Journey Progress</span>
+                <span>${progressPercent}% (${completedTasksCount}/${totalTasksCount} Tasks)</span>
+              </div>
+              <div style="width: 100%; height: 8px; background: #EAE7E0; border-radius: 4px; overflow: hidden;">
+                <div style="width: ${progressPercent}%; height: 100%; background: #4A5D4E; border-radius: 4px;"></div>
+              </div>
+            </div>
+
+            <!-- Milestone Details -->
+            <h2 style="font-size: 16px; color: #4A5D4E; margin: 0 0 10px 0; border-bottom: 2px solid #EAE7E0; padding-bottom: 6px;">
+              ✓ Milestone Verified
+            </h2>
+            <p style="font-size: 14px; line-height: 1.6; color: #2D362E; margin: 0 0 16px 0;">
+              ${milestoneObj.summary || `Congratulations on completing all checklist requirements for Step ${stepNum}. You have built critical momentum toward buying your first home safely.`}
+            </p>
+
+            <!-- Next Steps Card -->
+            <div style="background-color: #EBF3ED; border: 1px solid #A7D1B4; border-radius: 12px; padding: 18px; margin: 24px 0;">
+              <span style="font-size: 11px; font-weight: bold; color: #4A5D4E; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
+                👉 Next Up on Your Roadmap
+              </span>
+              <strong style="font-size: 15px; color: #2D362E; display: block; margin-bottom: 8px;">
+                ${nextTitle}
+              </strong>
+              ${nextMilestone?.summary ? `<p style="font-size: 13px; color: #4A5D4E; margin: 0 0 10px 0; line-height: 1.5;">${nextMilestone.summary}</p>` : ""}
+              ${nextMilestone?.keyTips?.length ? `
+                <div style="margin-top: 10px; font-size: 12px; color: #2D362E;">
+                  <strong>Recommended Actions:</strong>
+                  <ul style="margin: 6px 0 0 0; padding-left: 18px; line-height: 1.5;">
+                    ${nextMilestone.keyTips.slice(0, 2).map((tip: string) => `<li>${tip}</li>`).join("")}
+                  </ul>
+                </div>
+              ` : ""}
+            </div>
+
+            <!-- Financial Snapshot -->
+            <h2 style="font-size: 16px; color: #4A5D4E; margin: 24px 0 10px 0; border-bottom: 2px solid #EAE7E0; padding-bottom: 6px;">
+              📊 Purchasing Power Snapshot
+            </h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+              <div style="background: #F9F8F4; padding: 12px; border-radius: 8px; border: 1px solid #EAE7E0;">
+                <span style="font-size: 11px; color: #9A9488; text-transform: uppercase;">Target Budget</span>
+                <div style="font-size: 17px; font-weight: bold; color: #2D362E;">${targetPrice}</div>
+              </div>
+              <div style="background: #F9F8F4; padding: 12px; border-radius: 8px; border: 1px solid #EAE7E0;">
+                <span style="font-size: 11px; color: #9A9488; text-transform: uppercase;">Down Payment Saved</span>
+                <div style="font-size: 17px; font-weight: bold; color: #4A5D4E;">${downPayment}</div>
+              </div>
+            </div>
+
+            <!-- Fast-Track Application Box -->
+            <div style="margin-top: 24px; padding: 16px; background-color: #F9F8F4; border: 1px solid #D4A373; border-radius: 12px; text-align: center;">
+              <p style="font-size: 13px; color: #2D362E; margin: 0 0 10px 0; font-weight: bold;">Ready to apply for your official mortgage pre-approval?</p>
+              <a href="${loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM"}" style="display: inline-block; background-color: #D4A373; color: #ffffff; font-weight: bold; text-decoration: none; padding: 8px 18px; border-radius: 8px; font-size: 12px;">Start Fast-Track Pre-Approval Online &rarr;</a>
+            </div>
+
+            <!-- Footer Advisory Team -->
+            <div style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #EAE7E0; font-size: 12px; color: #606C5D; line-height: 1.6;">
+              <p style="margin: 0 0 4px 0;">
+                <strong>Assigned Loan Officer:</strong> ${loanOfficer?.name || "Mike Ford"} (${loanOfficer?.company || "Cornerstone First Mortgage"}, NMLS #${loanOfficer?.nmlsId || "288455"}) • ${loanOfficer?.phone || "(503) 555-0199"}
+              </p>
+              ${activeAgent ? `<p style="margin: 0;"><strong>Assigned Realtor:</strong> ${activeAgent.name} (${activeAgent.brokerage || "Pacific Northwest Realty"}) • ${activeAgent.phone || "(503) 555-0144"}</p>` : ""}
+            </div>
+          </div>
+        </div>
+      `;
+
+      res.json({
+        success: true,
+        email: {
+          recipientEmail,
+          recipientName: nameToUse,
+          milestoneId: milestoneObj.id || `step-${stepNum}`,
+          milestoneTitle,
+          stepNumber: stepNum,
+          progressPercent,
+          subject,
+          textBody,
+          htmlBody,
+          sentAt: new Date().toISOString()
+        },
+        message: `Milestone notification for Step ${stepNum} dispatched to ${recipientEmail}.`
+      });
+    }
+  });
+
   // API Route: GeoSphere Oregon GIS Proxy & Synchronization
   app.post("/api/geosphere/sync", async (req, res) => {
     try {

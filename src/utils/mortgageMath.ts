@@ -22,18 +22,20 @@ export function calculateMonthlyPI(principal: number, annualRatePercent: number,
  * Calculates complete monthly mortgage breakdown including taxes, insurance, PMI, and HOA
  */
 export function calculateMortgageBreakdown(profile: FinancialProfile): MonthlyMortgageBreakdown {
-  const {
-    annualIncome,
-    monthlyDebt,
-    downPaymentSavings,
-    targetPrice,
-    interestRate,
-    loanTermYears,
-    propertyTaxRate,
-    annualHomeInsurance,
-    monthlyHOA,
-    pmiRate
-  } = profile;
+  const annualIncome = Math.max(0, Number(profile?.annualIncome) || 0);
+  const monthlyDebt = Math.max(0, Number(profile?.monthlyDebt) || 0);
+  const downPaymentSavings = Math.max(0, Number(profile?.downPaymentSavings) || 0);
+  const targetPrice = Math.max(0, Number(profile?.targetPrice) || 0);
+  const interestRate = Number(profile?.interestRate) || 0;
+  const loanTermYears = Number(profile?.loanTermYears) || 30;
+  const propertyTaxRate = Number(profile?.propertyTaxRate) || 0;
+  const annualHomeInsurance = Number(
+    profile?.annualHomeInsurance ?? (profile as any)?.homeInsuranceAnnual ?? 1200
+  ) || 0;
+  const monthlyHOA = Number(
+    profile?.monthlyHOA ?? (profile as any)?.hoaMonthly ?? 0
+  ) || 0;
+  const pmiRate = Number(profile?.pmiRate) || 0;
 
   const downPayment = Math.min(downPaymentSavings, targetPrice);
   const loanAmount = Math.max(0, targetPrice - downPayment);
@@ -50,9 +52,9 @@ export function calculateMortgageBreakdown(profile: FinancialProfile): MonthlyMo
 
   const totalMonthly = principalAndInterest + monthlyPropertyTax + monthlyInsurance + monthlyPMI + monthlyHOA;
 
-  const monthlyGrossIncome = Math.max(1, annualIncome / 12);
-  const frontEndDTI = Math.round((totalMonthly / monthlyGrossIncome) * 1000) / 10;
-  const backEndDTI = Math.round(((totalMonthly + monthlyDebt) / monthlyGrossIncome) * 1000) / 10;
+  const monthlyGrossIncome = annualIncome > 0 ? annualIncome / 12 : 1;
+  const frontEndDTI = annualIncome > 0 ? Math.round((totalMonthly / monthlyGrossIncome) * 1000) / 10 : 0;
+  const backEndDTI = annualIncome > 0 ? Math.round(((totalMonthly + monthlyDebt) / monthlyGrossIncome) * 1000) / 10 : 0;
 
   // Maximum purchasing power calculation using back-end DTI caps
   // Max housing budget = (MonthlyGross * TargetDTI) - MonthlyDebt
@@ -102,8 +104,8 @@ export function calculateMortgageBreakdown(profile: FinancialProfile): MonthlyMo
     totalMonthly,
     loanAmount,
     downPaymentPercent: Math.round(downPaymentPercent * 10) / 10,
-    frontEndDTI,
-    backEndDTI,
+    frontEndDTI: isNaN(frontEndDTI) ? 0 : frontEndDTI,
+    backEndDTI: isNaN(backEndDTI) ? 0 : backEndDTI,
     maxSafePriceConservative,
     maxSafePriceModerate,
     maxSafePriceAggressive
@@ -491,7 +493,9 @@ export interface DTIStatusInfo {
  * - Ineligible: > 50.00% (Black text with red strikethrough line "most loan programs ineligible over 50% DTI")
  */
 export function getDTIStatus(dti: number): DTIStatusInfo {
-  if (dti <= 36) {
+  const safeDti = typeof dti === "number" && !isNaN(dti) && isFinite(dti) ? dti : 0;
+
+  if (safeDti <= 36) {
     return {
       tier: "optimal",
       label: "Optimal",
@@ -502,7 +506,7 @@ export function getDTIStatus(dti: number): DTIStatusInfo {
       badgeClass: "text-[#4A5D4E] bg-white border-[#EAE7E0]",
       ineligibleMessage: "",
     };
-  } else if (dti <= 45) {
+  } else if (safeDti <= 45) {
     return {
       tier: "moderate",
       label: "Moderate",
@@ -513,7 +517,7 @@ export function getDTIStatus(dti: number): DTIStatusInfo {
       badgeClass: "text-[#C18C5D] bg-amber-50 border-amber-200",
       ineligibleMessage: "",
     };
-  } else if (dti <= 50) {
+  } else if (safeDti <= 50) {
     return {
       tier: "high",
       label: "High",

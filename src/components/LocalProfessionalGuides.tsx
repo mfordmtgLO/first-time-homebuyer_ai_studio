@@ -12,7 +12,11 @@ import {
   Sparkles,
   Users,
   Settings,
-  Globe
+  Globe,
+  QrCode,
+  Smartphone,
+  Check,
+  Copy
 } from "lucide-react";
 import { LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { HeadshotAvatar } from "./HeadshotAvatar";
@@ -36,7 +40,12 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
 }) => {
   const [contactSuccess, setContactSuccess] = useState<string | null>(null);
   const [showDirectMsgModal, setShowDirectMsgModal] = useState<boolean>(false);
+  const [showQrModal, setShowQrModal] = useState<boolean>(false);
+  const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
   const [buyerMsg, setBuyerMsg] = useState({ name: "", email: "", phone: "", notes: "", smsConsentAuthorized: true });
+
+  const leadGenUrl = loanOfficer.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM";
+  const qrCodeUrl = loanOfficer.leadGenQrCodeUrl || "/lead-gen-qr-code.png";
 
   const showAgent = isCoBranded && !!activeAgent;
 
@@ -58,7 +67,13 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
       : loanOfficer.name;
     setContactSuccess(`Thank you! Your message has been sent directly to ${recipientText}. They will reach out to you within 2-4 business hours.`);
     setShowDirectMsgModal(false);
-    setBuyerMsg({ name: "", email: "", phone: "", notes: "" });
+    setBuyerMsg({ name: "", email: "", phone: "", notes: "", smsConsentAuthorized: true });
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(leadGenUrl);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2500);
   };
 
   return (
@@ -87,12 +102,34 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
           </p>
         </div>
 
-        {/* Quick Contact CTA */}
-        <div className="flex flex-col sm:items-end gap-2 shrink-0">
+        {/* Quick Contact & Lead Gen CTAs */}
+        <div className="flex flex-wrap items-center sm:items-end gap-2 shrink-0">
+          <a
+            href={leadGenUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4A373] hover:bg-[#C18C5D] text-white font-bold text-xs shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+            title="Start your official pre-approval application online"
+          >
+            <Smartphone className="w-4 h-4 text-white" />
+            <span>Start Loan App Online</span>
+            <ExternalLink className="w-3 h-3 opacity-80" />
+          </a>
+
+          <button
+            type="button"
+            onClick={() => setShowQrModal(true)}
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] text-[#4A5D4E] font-bold text-xs border border-[#EAE7E0] transition-colors cursor-pointer"
+            title="Scan QR code with phone camera to apply"
+          >
+            <QrCode className="w-4 h-4 text-[#4A5D4E]" />
+            <span className="hidden sm:inline">Scan QR</span>
+          </button>
+
           <button
             id="contact-guides-btn"
             onClick={() => setShowDirectMsgModal(true)}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-xs shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-xs shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <MessageSquare className="w-4 h-4 text-[#D4A373]" />
             <span>{showAgent ? "Message Both Guides" : `Message ${loanOfficer.name.split(" ")[0]}`}</span>
@@ -158,6 +195,61 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
                 ))}
               </div>
             </div>
+
+            {/* Direct Fast-Track Application Box with QR Code */}
+            <div className="mt-4 p-4 rounded-2xl bg-white border-2 border-[#D4A373]/40 shadow-xs space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#2D362E]">
+                    <Sparkles className="w-3.5 h-3.5 text-[#D4A373]" />
+                    <span>Fast-Track Pre-Approval Portal</span>
+                  </div>
+                  <p className="text-[11px] text-[#606C5D] leading-snug">
+                    Submit your details securely to {loanOfficer.name.split(" ")[0]}'s direct loan intake portal to check your qualification status today.
+                  </p>
+                </div>
+
+                {/* QR Code Mini-Card */}
+                <div 
+                  onClick={() => setShowQrModal(true)}
+                  className="group relative cursor-pointer shrink-0 p-1.5 bg-[#FAF9F5] border border-[#EAE7E0] hover:border-[#D4A373] rounded-xl flex flex-col items-center gap-1 transition-all"
+                  title="Click to view & scan full QR Code"
+                >
+                  <img 
+                    src={qrCodeUrl} 
+                    alt="Scan to start application" 
+                    className="w-14 h-14 object-contain rounded-lg group-hover:scale-105 transition-transform"
+                    referrerPolicy="no-referrer"
+                  />
+                  <span className="text-[9px] font-bold text-[#4A5D4E] flex items-center gap-0.5">
+                    <QrCode className="w-2.5 h-2.5 text-[#D4A373]" />
+                    <span>Scan QR</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                <a
+                  href={leadGenUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold shadow-xs transition-all hover:scale-[1.01]"
+                >
+                  <Smartphone className="w-3.5 h-3.5 text-[#D4A373]" />
+                  <span>Start Online Application</span>
+                  <ExternalLink className="w-3 h-3 opacity-80" />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setShowQrModal(true)}
+                  className="w-full sm:w-auto flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] text-[#2D362E] text-xs font-semibold border border-[#EAE7E0] transition-colors"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-[#C18C5D]" />
+                  <span>View QR Code</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Contact Actions for Loan Officer */}
@@ -196,10 +288,10 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
               href={loanOfficer.bookingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-semibold shadow-xs transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white hover:bg-[#FAF9F5] text-[#4A5D4E] border border-[#4A5D4E] text-xs font-semibold shadow-2xs transition-colors"
             >
               <Calendar className="w-3.5 h-3.5 text-[#D4A373]" />
-              <span>Schedule Free Pre-Approval Call with {loanOfficer.name.split(" ")[0]}</span>
+              <span>Schedule Free Strategy Call with {loanOfficer.name.split(" ")[0]}</span>
               <ExternalLink className="w-3 h-3 opacity-70" />
             </a>
           </div>
@@ -327,6 +419,88 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
           </div>
           <div className="text-[11px] font-bold text-[#4A5D4E] shrink-0">
             ✓ Direct Lender Pre-Approval
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Modal for Phone Camera Scanning */}
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E] text-center">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3 text-left">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#D4A373]"></div>
+                <h4 className="font-serif font-bold text-lg text-[#2D362E]">
+                  Scan to Start Application
+                </h4>
+              </div>
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="text-xs text-[#9A9488] hover:text-[#2D362E] p-1"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="inline-block p-4 bg-[#FAF9F5] border-2 border-[#EAE7E0] rounded-2xl shadow-inner">
+                <img 
+                  src={qrCodeUrl} 
+                  alt="Loan Officer Pre-Approval QR Code" 
+                  className="w-48 h-48 sm:w-56 sm:h-56 mx-auto object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <h5 className="font-bold text-sm text-[#2D362E]">
+                  Point Your Phone Camera at the QR Code
+                </h5>
+                <p className="text-xs text-[#606C5D] leading-relaxed max-w-xs mx-auto">
+                  Instantly open <strong className="text-[#2D362E]">{loanOfficer.name}</strong>'s official HomeTrac secure pre-approval application on your mobile device.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-[#FAF9F5] rounded-xl border border-[#EAE7E0] space-y-2 text-left">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488] block">
+                Direct Portal Link:
+              </span>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={leadGenUrl} 
+                  className="flex-1 bg-white border border-[#EAE7E0] rounded-lg px-2.5 py-1.5 text-xs text-[#606C5D] select-all font-mono"
+                />
+                <button
+                  onClick={handleCopyLink}
+                  className="px-3 py-1.5 rounded-lg bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold flex items-center gap-1 shrink-0 transition-colors"
+                >
+                  {copiedUrl ? <Check className="w-3.5 h-3.5 text-[#D4A373]" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedUrl ? "Copied!" : "Copy"}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowQrModal(false)}
+                className="flex-1 py-2.5 text-xs font-semibold text-[#606C5D] hover:bg-[#F1EFE9] rounded-xl border border-[#EAE7E0]"
+              >
+                Close Window
+              </button>
+              <a
+                href={leadGenUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#38463B] rounded-xl shadow-xs"
+              >
+                <span>Open in Browser</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
           </div>
         </div>
       )}

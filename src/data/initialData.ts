@@ -864,6 +864,8 @@ export const DEFAULT_LOAN_OFFICER: LoanOfficerProfile = {
     "2/1 Rate Buydown Engineering"
   ],
   bookingUrl: "https://calendly.com",
+  leadGenFormUrl: "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM",
+  leadGenQrCodeUrl: "/lead-gen-qr-code.png",
   licenseStates: ["Oregon", "Washington", "California", "Idaho"],
   licenseVerificationYear: 2026,
   licenseLastVerifiedDate: "2026-01-10",

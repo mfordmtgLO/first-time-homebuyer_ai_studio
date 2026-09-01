@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   LayoutDashboard, 
   TrendingUp, 
@@ -19,7 +19,9 @@ import {
   ExternalLink,
   PanelLeftOpen,
   PanelLeftClose,
-  Award
+  Award,
+  Printer,
+  Mail
 } from "lucide-react";
 import { FinancialProfile, PropertyListing, RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
@@ -27,6 +29,8 @@ import { hasAuthenticPropertyPhoto, getZillowUrl } from "../utils/overlayClassif
 import { SavingsGoalTracker } from "./SavingsGoalTracker";
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 import { RealTimeMortgageRateTracker } from "./RealTimeMortgageRateTracker";
+import { HomebuyingPlanPrintModal } from "./HomebuyingPlanPrintModal";
+import { ShareViaEmailModal } from "./ShareViaEmailModal";
 
 interface DashboardOverviewProps {
   profile: FinancialProfile;
@@ -61,6 +65,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   isSidebarCollapsed = false,
   onToggleSidebar,
 }) => {
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const breakdown = calculateMortgageBreakdown(profile);
 
   const handleSavingsUpdate = (amount: number) => {
@@ -123,6 +129,24 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               )}
             </button>
           )}
+
+          <button
+            onClick={() => setIsShareModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#4A5D4E] font-semibold text-xs border border-[#4A5D4E] transition-colors cursor-pointer shadow-2xs"
+            title="Send your Homebuying Roadmap & Saved Properties to your email"
+          >
+            <Mail className="w-4 h-4 text-[#4A5D4E]" />
+            <span>Share via Email</span>
+          </button>
+
+          <button
+            onClick={() => setIsPrintModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#2D362E] font-semibold text-xs border border-[#EAE7E0] transition-colors cursor-pointer shadow-2xs"
+            title="Print your customized Homebuying Plan, Milestones & Property Notes"
+          >
+            <Printer className="w-4 h-4 text-[#4A5D4E]" />
+            <span>Print Plan & Notes</span>
+          </button>
 
           <button
             onClick={onOpenNewPropertyModal}
@@ -506,6 +530,31 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Printable Master Plan & Property Field Notes Modal */}
+      <HomebuyingPlanPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        profile={profile}
+        milestones={milestones}
+        properties={properties}
+        documents={documents}
+        loanOfficer={loanOfficer}
+        activeAgent={activeAgent}
+        isCoBranded={isCoBranded}
+      />
+
+      {/* Share Roadmap & Saved Properties via Email Modal */}
+      <ShareViaEmailModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        profile={profile}
+        milestones={milestones}
+        properties={properties}
+        documents={documents}
+        loanOfficer={loanOfficer}
+        activeAgent={activeAgent}
+      />
     </div>
   );
 };

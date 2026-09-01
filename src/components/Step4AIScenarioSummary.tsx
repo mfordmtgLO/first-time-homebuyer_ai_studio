@@ -8,20 +8,32 @@ import {
   DollarSign, 
   TrendingUp, 
   Compass, 
-  RotateCcw,
-  Building,
-  Target,
-  FileCheck,
-  Calendar,
-  MessageSquare
+  RotateCcw, 
+  Building, 
+  Target, 
+  FileCheck, 
+  Calendar, 
+  MessageSquare, 
+  Printer, 
+  Mail,
+  QrCode,
+  ExternalLink,
+  Smartphone,
+  Copy,
+  Check
 } from "lucide-react";
-import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing } from "../types";
+import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing, RoadmapMilestone, DocumentItem } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 import { LocalProfessionalGuides } from "./LocalProfessionalGuides";
+import { HomebuyingPlanPrintModal } from "./HomebuyingPlanPrintModal";
+import { ShareViaEmailModal } from "./ShareViaEmailModal";
+import { ROADMAP_MILESTONES } from "../data/initialData";
 
 interface Step4AIScenarioSummaryProps {
   profile: FinancialProfile;
   properties: PropertyListing[];
+  milestones?: RoadmapMilestone[];
+  documents?: DocumentItem[];
   loanOfficer: LoanOfficerProfile;
   activeAgent: RealEstateAgentProfile;
   isCoBranded?: boolean;
@@ -34,6 +46,8 @@ interface Step4AIScenarioSummaryProps {
 export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
   profile,
   properties,
+  milestones = ROADMAP_MILESTONES,
+  documents = [],
   loanOfficer,
   activeAgent,
   isCoBranded = false,
@@ -42,6 +56,20 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
   onRequestBlueprint,
   onRequestListings,
 }) => {
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [showStep4QrModal, setShowStep4QrModal] = useState(false);
+  const [copiedStep4Url, setCopiedStep4Url] = useState(false);
+
+  const leadGenUrl = loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM";
+  const leadQrUrl进 = loanOfficer?.leadGenQrCodeUrl || "/lead-gen-qr-code.png";
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(leadGenUrl);
+    setCopiedStep4Url(true);
+    setTimeout(() => setCopiedStep4Url(false), 2500);
+  };
+
   const breakdown = calculateMortgageBreakdown(profile);
   const targetMaxPayment = profile.targetMaxMonthlyPayment || 3200;
   const currentMonthly = breakdown.totalMonthly;
@@ -83,7 +111,23 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A5D4E] bg-white hover:bg-[#F9F8F4] px-3.5 py-1.5 rounded-lg border border-[#4A5D4E] shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              title="Share your customized Homebuying Plan & Saved Properties to your email"
+            >
+              <Mail className="w-3.5 h-3.5 text-[#4A5D4E]" />
+              <span>Share via Email</span>
+            </button>
+            <button
+              onClick={() => setIsPrintModalOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#38463B] px-3.5 py-1.5 rounded-lg shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              title="Print your customized Homebuying Plan, Milestones & Property Notes"
+            >
+              <Printer className="w-3.5 h-3.5 text-[#D4A373]" />
+              <span>Print Plan & Notes</span>
+            </button>
             <button
               onClick={() => onNavigate("dashboard", "dashboard")}
               className="text-xs font-semibold text-[#606C5D] hover:text-[#4A5D4E] px-3 py-1.5 rounded-lg border border-[#EAE7E0] hover:bg-[#F9F8F4] transition-colors"
@@ -281,15 +325,35 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
             Online estimates only take you so far. The essential next step is having <strong className="text-white">{loanOfficer.name}</strong> issue a fully underwritten pre-approval letter{isCoBranded && activeAgent ? <> and synchronizing with <strong className="text-white">{activeAgent.name}</strong> to view off-market and on-market homes within your exact comfort zone</> : ""}.
           </p>
 
-          <div className="flex flex-wrap gap-3 pt-2">
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <a
+              href={leadGenUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#D4A373] hover:bg-[#C18C5D] text-white font-bold text-xs transition-all shadow-md hover:scale-[1.02]"
+            >
+              <Smartphone className="w-4 h-4 text-white" />
+              <span>Start Fast-Track Loan App Online</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+            </a>
+
+            <button
+              type="button"
+              onClick={() => setShowStep4QrModal(true)}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs border border-white/25 transition-colors cursor-pointer"
+            >
+              <QrCode className="w-4 h-4 text-[#D4A373]" />
+              <span>Scan QR on Mobile</span>
+            </button>
+
             <a
               href={loanOfficer.bookingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-xs transition-all shadow-md hover:scale-[1.02]"
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-xs transition-all shadow-md hover:scale-[1.02]"
             >
               <Calendar className="w-4 h-4 text-[#D4A373]" />
-              <span>Book Pre-Approval Call with {loanOfficer.name}</span>
+              <span>Book Call with {loanOfficer.name.split(" ")[0]}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </a>
 
@@ -303,10 +367,10 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
                   window.scrollTo({ top: y, behavior: "smooth" });
                 }
               }}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition-colors"
+              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition-colors"
             >
               <MessageSquare className="w-4 h-4 text-[#D4A373]" />
-              <span>Meet & Contact Your Guides Below</span>
+              <span>Meet Guides Below</span>
             </button>
           </div>
         </div>
@@ -337,12 +401,32 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <a
+            href={leadGenUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#D4A373] hover:bg-[#C18C5D] text-white text-xs font-bold shadow-sm transition-colors cursor-pointer"
+          >
+            <Smartphone className="w-4 h-4 text-white" />
+            <span>Start Pre-Approval App</span>
+            <ExternalLink className="w-3 h-3 opacity-80" />
+          </a>
+
+          <button
+            type="button"
+            onClick={() => setShowStep4QrModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-xs font-bold text-[#4A5D4E] transition-colors cursor-pointer"
+          >
+            <QrCode className="w-3.5 h-3.5 text-[#4A5D4E]" />
+            <span>Scan QR</span>
+          </button>
+
           <button
             type="button"
             onClick={() => onNavigate("dashboard", "dashboard")}
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[#EAE7E0] hover:bg-[#F9F8F4] text-xs font-semibold text-[#2D362E] transition-colors cursor-pointer"
           >
-            <span>← Back to Step 3 (Dashboard)</span>
+            <span>← Back to Step 3</span>
           </button>
 
           <button
@@ -357,7 +441,7 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
           <button
             type="button"
             onClick={() => onRequestBlueprint?.()}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#D4A373] hover:bg-[#C18C5D] text-white text-xs font-bold shadow-sm transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#606C5D] hover:bg-[#4A5D4E] text-white text-xs font-bold shadow-sm transition-colors cursor-pointer"
           >
             <FileCheck className="w-4 h-4 text-white" />
             <span>Receive My Completed Blueprint NOW</span>
@@ -373,6 +457,113 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
           </button>
         </div>
       </div>
+
+      {/* QR Code Modal for Phone Camera Scanning */}
+      {showStep4QrModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E] text-center">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3 text-left">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#D4A373]"></div>
+                <h4 className="font-serif font-bold text-lg text-[#2D362E]">
+                  Scan to Start Loan App
+                </h4>
+              </div>
+              <button
+                onClick={() => setShowStep4QrModal(false)}
+                className="text-xs text-[#9A9488] hover:text-[#2D362E] p-1"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="inline-block p-4 bg-[#FAF9F5] border-2 border-[#EAE7E0] rounded-2xl shadow-inner">
+                <img 
+                  src={leadQrUrl进} 
+                  alt="Loan Officer Pre-Approval QR Code" 
+                  className="w-48 h-48 sm:w-56 sm:h-56 mx-auto object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <h5 className="font-bold text-sm text-[#2D362E]">
+                  Point Your Phone Camera at the QR Code
+                </h5>
+                <p className="text-xs text-[#606C5D] leading-relaxed max-w-xs mx-auto">
+                  Instantly open <strong className="text-[#2D362E]">{loanOfficer?.name || "Mike Ford"}</strong>'s official HomeTrac secure pre-approval portal on your mobile device.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-[#FAF9F5] rounded-xl border border-[#EAE7E0] space-y-2 text-left">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488] block">
+                Direct Portal Link:
+              </span>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={leadGenUrl} 
+                  className="flex-1 bg-white border border-[#EAE7E0] rounded-lg px-2.5 py-1.5 text-xs text-[#606C5D] select-all font-mono"
+                />
+                <button
+                  onClick={handleCopyLink}
+                  className="px-3 py-1.5 rounded-lg bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold flex items-center gap-1 shrink-0 transition-colors"
+                >
+                  {copiedStep4Url ? <Check className="w-3.5 h-3.5 text-[#D4A373]" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedStep4Url ? "Copied!" : "Copy"}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowStep4QrModal(false)}
+                className="flex-1 py-2.5 text-xs font-semibold text-[#606C5D] hover:bg-[#F1EFE9] rounded-xl border border-[#EAE7E0]"
+              >
+                Close Window
+              </button>
+              <a
+                href={leadGenUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#38463B] rounded-xl shadow-xs"
+              >
+                <span>Open in Browser</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Printable Master Plan & Property Notes Modal */}
+      <HomebuyingPlanPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        profile={profile}
+        milestones={milestones}
+        properties={properties}
+        documents={documents}
+        loanOfficer={loanOfficer}
+        activeAgent={activeAgent}
+        isCoBranded={isCoBranded}
+      />
+
+      {/* Share Master Plan & Properties via Email Modal */}
+      <ShareViaEmailModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        profile={profile}
+        milestones={milestones}
+        properties={properties}
+        documents={documents}
+        loanOfficer={loanOfficer}
+        activeAgent={activeAgent}
+      />
     </div>
   );
 };

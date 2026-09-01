@@ -31,6 +31,7 @@ import {
 import { LeadScenarioSearch } from "./LeadScenarioSearch";
 import { ScenarioOutreachModal } from "./ScenarioOutreachModal";
 import { buildSavedScenario } from "../utils/scenarioOutreachGenerator";
+import { DTIUnderwritingMeter } from "./DTIUnderwritingMeter";
 
 interface MortgageLabProps {
   profile: FinancialProfile;
@@ -41,6 +42,7 @@ interface MortgageLabProps {
   onOpenEmailOutreach?: (leadId: string, subject?: string, body?: string) => void;
   onOpenSmsOutreach?: (leadId: string, text?: string) => void;
   initialTab?: "buydown" | "costofwaiting" | "accelerator" | "amortization" | "closingcosts" | "rentvsbuy";
+  isLoanOfficerMode?: boolean;
 }
 
 export const MortgageLab: React.FC<MortgageLabProps> = ({
@@ -51,7 +53,8 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
   activeAgent,
   onOpenEmailOutreach,
   onOpenSmsOutreach,
-  initialTab = "buydown"
+  initialTab = "buydown",
+  isLoanOfficerMode = false
 }) => {
   const [activeTab, setActiveTab] = useState<"buydown" | "costofwaiting" | "accelerator" | "amortization" | "closingcosts" | "rentvsbuy">(initialTab);
   const [extraPrincipal, setExtraPrincipal] = useState<number>(150);
@@ -175,13 +178,13 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Lead Profile Search & Link Bar */}
-      {leads.length > 0 && (
+      {/* Lead Profile Search & Link Bar (Only in Loan Officer Mode) */}
+      {isLoanOfficerMode && leads.length > 0 && (
         <LeadScenarioSearch
           leads={leads}
           selectedLead={selectedLead}
           onSelectLead={(lead) => setSelectedLead(lead)}
-          calculatorName="Mortgage Lab & Financial Modeling Suite"
+          toolName="Mortgage Lab & Financial Modeling Suite"
         />
       )}
 
@@ -201,7 +204,7 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
             </p>
           </div>
 
-          {selectedLead && (
+          {isLoanOfficerMode && selectedLead && (
             <button
               type="button"
               onClick={handleSaveScenario}
@@ -213,7 +216,7 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
           )}
         </div>
 
-        {saveSuccessMsg && (
+        {isLoanOfficerMode && saveSuccessMsg && (
           <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between gap-3 text-xs text-emerald-900 animate-fadeIn">
             <span className="font-bold flex items-center gap-2">
               <Check className="w-4 h-4 text-emerald-600" />
@@ -435,6 +438,17 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Real-time DTI Underwriting Risk Meter */}
+              <DTIUnderwritingMeter
+                frontEndDTI={breakdown.frontEndDTI}
+                backEndDTI={breakdown.backEndDTI}
+                grossMonthlyIncome={Math.max(1, profile.annualIncome / 12)}
+                totalHousingPayment={breakdown.totalMonthly}
+                monthlyDebts={profile.monthlyDebt}
+                isLoanOfficerMode={isLoanOfficerMode}
+                showCalculations={true}
+              />
             </div>
           </div>
         </div>
@@ -880,13 +894,15 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
         </div>
       )}
 
-      {/* Scenario Outreach Modal for Draft Review / Dispatch */}
-      {selectedLead && activeOutreachScenario && (
+      {/* Scenario Outreach Modal for Draft Review / Dispatch (Loan Officer Portal only) */}
+      {isLoanOfficerMode && selectedLead && activeOutreachScenario && (
         <ScenarioOutreachModal
           isOpen={!!activeOutreachScenario}
           onClose={() => setActiveOutreachScenario(null)}
           lead={selectedLead}
           scenario={activeOutreachScenario}
+          loanOfficer={loanOfficer}
+          agent={activeAgent}
           onOpenEmailOutreach={onOpenEmailOutreach}
           onOpenSmsOutreach={onOpenSmsOutreach}
         />

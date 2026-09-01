@@ -564,13 +564,9 @@ export default function App() {
                     onOpenAdvisor={() => handleNavigate("step4_ai_plan", "dashboard")}
                     onNextStep={() => handleNavigate("roadmap", "website")}
                     onNavigate={handleNavigate}
-                    leads={guidesState.leads}
-                    onUpdateLead={(updatedLead) => {
-                      const newLeads = (guidesState.leads || []).map(l => l.id === updatedLead.id ? updatedLead : l);
-                      handleUpdateGuidesState({ ...guidesState, leads: newLeads });
-                    }}
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
+                    isLoanOfficerMode={false}
                   />
                 )}
 
@@ -581,6 +577,12 @@ export default function App() {
                     onGoToDashboard={() => handleNavigate("dashboard", "dashboard")}
                     onBackToStep1={() => handleNavigate("calculator", "website")}
                     onNavigate={handleNavigate}
+                    profile={profile}
+                    properties={properties}
+                    documents={documents}
+                    loanOfficer={guidesState.loanOfficer}
+                    activeAgent={activeAgent}
+                    isCoBranded={guidesState.isCoBranded}
                   />
                 )}
               </div>
@@ -612,6 +614,8 @@ export default function App() {
                     onRequestListings={() => { setLeadBotSourceContext({ source: "Step 4 - Curated Listings Request", intent: "chat_listings" }); setIsLeadBotOpen(true); }}
                     profile={profile}
                     properties={properties}
+                    milestones={milestones}
+                    documents={documents}
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
                     isCoBranded={guidesState.isCoBranded}
@@ -625,6 +629,10 @@ export default function App() {
                     properties={properties}
                     setProperties={setProperties}
                     profile={profile}
+                    milestones={milestones}
+                    documents={documents}
+                    loanOfficer={guidesState.loanOfficer}
+                    activeAgent={activeAgent}
                     onOpenScorecard={(prop) => setScorecardProperty(prop)}
                     onOpenNewModal={() => setShowNewPropertyModal(true)}
                     onAskAiAboutProperty={handleAskAiAboutProperty}
@@ -634,13 +642,9 @@ export default function App() {
                 {activeTab === "mortgagelab" && (
                   <MortgageLab 
                     profile={profile}
-                    leads={guidesState.leads}
-                    onUpdateLead={(updatedLead) => {
-                      const newLeads = (guidesState.leads || []).map(l => l.id === updatedLead.id ? updatedLead : l);
-                      handleUpdateGuidesState({ ...guidesState, leads: newLeads });
-                    }}
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
+                    isLoanOfficerMode={false}
                   />
                 )}
 

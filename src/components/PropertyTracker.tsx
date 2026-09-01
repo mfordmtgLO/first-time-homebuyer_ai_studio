@@ -42,6 +42,9 @@ import { getPropertyOhcsPriceLimit, OREGON_COUNTY_PRICE_LIMITS } from "../utils/
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 import { EmailOutreachModal } from "./EmailOutreachModal";
 import { PropertyReportModal } from "./PropertyReportModal";
+import { ShareViaEmailModal } from "./ShareViaEmailModal";
+import { ROADMAP_MILESTONES, DOCUMENT_VAULT_ITEMS } from "../data/initialData";
+import { RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -50,6 +53,10 @@ interface PropertyTrackerProps {
   properties: PropertyListing[];
   setProperties: React.Dispatch<React.SetStateAction<PropertyListing[]>>;
   profile: FinancialProfile;
+  milestones?: RoadmapMilestone[];
+  documents?: DocumentItem[];
+  loanOfficer?: LoanOfficerProfile;
+  activeAgent?: RealEstateAgentProfile;
   onOpenScorecard: (property: PropertyListing) => void;
   onOpenNewModal: () => void;
   onAskAiAboutProperty: (property: PropertyListing) => void;
@@ -59,6 +66,10 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   properties,
   setProperties,
   profile,
+  milestones = ROADMAP_MILESTONES,
+  documents = DOCUMENT_VAULT_ITEMS,
+  loanOfficer,
+  activeAgent,
   onOpenScorecard,
   onOpenNewModal,
   onAskAiAboutProperty,
@@ -68,6 +79,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showShareViaEmailModal, setShowShareViaEmailModal] = useState(false);
   const [showPdfReportModal, setShowPdfReportModal] = useState(false);
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
@@ -345,7 +357,15 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             </p>
           </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => setShowShareViaEmailModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-[#4A5D4E] text-[#4A5D4E] hover:bg-[#F9F8F4] font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105"
+              title="Share your saved properties & roadmap via email"
+            >
+              <Mail className="w-4 h-4 text-[#4A5D4E]" />
+              <span>Share Plan & Homes</span>
+            </button>
             <button
               onClick={() => setShowEmailModal(true)}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#FAF9F5] border border-[#C18C5D] text-[#C18C5D] hover:bg-[#C18C5D] hover:text-white font-semibold text-xs shadow-sm transition-all"
@@ -1121,6 +1141,18 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           </div>
         </div>
       )}
+
+      {/* Share Saved Properties & Roadmap via Email Modal */}
+      <ShareViaEmailModal
+        isOpen={showShareViaEmailModal}
+        onClose={() => setShowShareViaEmailModal(false)}
+        profile={profile}
+        milestones={milestones}
+        properties={properties}
+        documents={documents}
+        loanOfficer={loanOfficer}
+        activeAgent={activeAgent}
+      />
     </div>
   );
 };

@@ -153,6 +153,30 @@ export interface RoadmapMilestone {
   commonPitfalls: string[];
 }
 
+export interface MilestoneNotificationHistoryItem {
+  id: string;
+  milestoneId: string;
+  milestoneTitle: string;
+  stepNumber: number;
+  sentAt: string;
+  recipientEmail: string;
+  progressPercent: number;
+  subject: string;
+  status: 'sent' | 'simulated' | 'failed';
+}
+
+export interface MilestoneEmailAlertSettings {
+  enabled: boolean;
+  recipientEmail: string;
+  recipientName?: string;
+  includeProperties: boolean;
+  includeNextSteps: boolean;
+  includeFinancialSnapshot: boolean;
+  lastNotifiedMilestoneId?: string;
+  lastNotifiedAt?: string;
+  history: MilestoneNotificationHistoryItem[];
+}
+
 export interface DocumentItem {
   id: string;
   title: string;
@@ -222,6 +246,8 @@ export interface LoanOfficerProfile {
   isAdmin?: boolean; // Mike Ford = true
   parentManagerId?: string;
   customSlug?: string;
+  leadGenFormUrl?: string;
+  leadGenQrCodeUrl?: string;
   password?: string;
   passwordResetAuthorized?: boolean; // Must be authorized by Branch Manager (Mike Ford)
   passwordResetRequestedAt?: string;

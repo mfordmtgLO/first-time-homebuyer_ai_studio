@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   ShieldCheck, 
   ArrowRight, 
@@ -10,7 +10,12 @@ import {
   Building2, 
   BadgePercent,
   Home,
-  HeartHandshake
+  HeartHandshake,
+  QrCode,
+  ExternalLink,
+  Smartphone,
+  Check,
+  Copy
 } from "lucide-react";
 import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
@@ -46,8 +51,20 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
   onOpenLoPortal,
   properties = [],
 }) => {
+  const [showHeroQrModal, setShowHeroQrModal] = useState<boolean>(false);
+  const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
+
+  const leadGenUrlwk = loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM";
+  const qrCodeUrlwk进 = loanOfficer?.leadGenQrCodeUrl || "/lead-gen-qr-code.png";
+
   const breakdown = calculateMortgageBreakdown(profile);
   const dtiStatus = getDTIStatus(breakdown.backEndDTI);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(leadGenUrlwk);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2500);
+  };
 
   return (
     <div className="space-y-16 pb-12">
@@ -76,32 +93,54 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
             </p>
 
             {/* CTAs */}
-            <div className="flex flex-wrap gap-3.5 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
                 onClick={onOpenCalculator}
-                className="flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-sm shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                className="flex items-center gap-2.5 px-5 py-3.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-sm shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
               >
                 <DollarSign className="w-4 h-4 text-[#D4A373]" />
                 <span>Step 1: Calculate Buying Power</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
+              <a
+                href={leadGenUrlwk}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-3.5 rounded-xl bg-[#D4A373] hover:bg-[#C18C5D] text-white font-bold text-sm shadow-xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                title="Start official pre-approval application online"
+              >
+                <Smartphone className="w-4 h-4 text-white" />
+                <span>Apply Online</span>
+                <ExternalLink className="w-3 h-3 opacity-80" />
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setShowHeroQrModal(true)}
+                className="flex items-center gap-1.5 px-3 py-3.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] font-bold text-sm transition-all cursor-pointer"
+                title="Scan QR Code with phone camera"
+              >
+                <QrCode className="w-4 h-4 text-[#4A5D4E]" />
+                <span>Scan QR</span>
+              </button>
+
               {onOpenLeadBot && (
                 <button
                   onClick={onOpenLeadBot}
-                  className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-bold text-sm shadow-xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-3.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#2D362E] border border-[#EAE7E0] font-bold text-sm shadow-2xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
                 >
-                  <Sparkles className="w-4 h-4 text-white" />
-                  <span>24/7 AI Prequal Chatbot</span>
+                  <Sparkles className="w-4 h-4 text-[#C18C5D]" />
+                  <span>24/7 AI Chatbot</span>
                 </button>
               )}
 
               <button
                 onClick={onOpenRoadmap}
-                className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] font-bold text-sm transition-all cursor-pointer"
+                className="flex items-center gap-2 px-4 py-3.5 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] font-bold text-sm transition-all cursor-pointer"
               >
                 <Compass className="w-4 h-4 text-[#4A5D4E]" />
-                <span>Step 2: Explore 10-Step Roadmap</span>
+                <span>Step 2: Roadmap</span>
               </button>
             </div>
 
@@ -496,6 +535,88 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
           isCoBranded={isCoBranded}
           onOpenLoPortal={onOpenLoPortal}
         />
+      )}
+
+      {/* QR Code Modal for Phone Camera Scanning */}
+      {showHeroQrModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E] text-center">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3 text-left">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#D4A373]"></div>
+                <h4 className="font-serif font-bold text-lg text-[#2D362E]">
+                  Scan to Start Application
+                </h4>
+              </div>
+              <button
+                onClick={() => setShowHeroQrModal(false)}
+                className="text-xs text-[#9A9488] hover:text-[#2D362E] p-1"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="inline-block p-4 bg-[#FAF9F5] border-2 border-[#EAE7E0] rounded-2xl shadow-inner">
+                <img 
+                  src={qrCodeUrlwk进} 
+                  alt="Loan Officer Pre-Approval QR Code" 
+                  className="w-48 h-48 sm:w-56 sm:h-56 mx-auto object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <h5 className="font-bold text-sm text-[#2D362E]">
+                  Point Your Phone Camera at the QR Code
+                </h5>
+                <p className="text-xs text-[#606C5D] leading-relaxed max-w-xs mx-auto">
+                  Instantly open <strong className="text-[#2D362E]">{loanOfficer?.name || "Mike Ford"}</strong>'s official HomeTrac secure pre-approval application on your mobile device.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-[#FAF9F5] rounded-xl border border-[#EAE7E0] space-y-2 text-left">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488] block">
+                Direct Portal Link:
+              </span>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={leadGenUrlwk} 
+                  className="flex-1 bg-white border border-[#EAE7E0] rounded-lg px-2.5 py-1.5 text-xs text-[#606C5D] select-all font-mono"
+                />
+                <button
+                  onClick={handleCopyLink}
+                  className="px-3 py-1.5 rounded-lg bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold flex items-center gap-1 shrink-0 transition-colors"
+                >
+                  {copiedUrl ? <Check className="w-3.5 h-3.5 text-[#D4A373]" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedUrl ? "Copied!" : "Copy"}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowHeroQrModal(false)}
+                className="flex-1 py-2.5 text-xs font-semibold text-[#606C5D] hover:bg-[#F1EFE9] rounded-xl border border-[#EAE7E0]"
+              >
+                Close Window
+              </button>
+              <a
+                href={leadGenUrlwk}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#38463B] rounded-xl shadow-xs"
+              >
+                <span>Open in Browser</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

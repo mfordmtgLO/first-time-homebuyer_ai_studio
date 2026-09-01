@@ -185,6 +185,13 @@ export interface DocumentItem {
   status: 'pending' | 'ready' | 'submitted';
   description: string;
   acceptedFormats: string;
+  fileUrl?: string;
+  driveFileId?: string;
+  driveMimeType?: string;
+  driveWebViewLink?: string;
+  importedFrom?: 'google_drive' | 'google_docs' | 'upload' | 'sample';
+  importedAt?: string;
+  fileSizeFormatted?: string;
 }
 
 export interface EscrowMilestone {

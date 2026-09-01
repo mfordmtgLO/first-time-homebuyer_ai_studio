@@ -112,6 +112,10 @@ import { AILoanOfficer2ndBrain } from "./AILoanOfficer2ndBrain";
 import { ScheduleCTaxAnalyzer } from "./ScheduleCTaxAnalyzer";
 import { Buydown21ScenarioEngine } from "./Buydown21ScenarioEngine";
 import { RealtorCoBrandingHub } from "./RealtorCoBrandingHub";
+import { GoogleWorkspaceHub } from "./GoogleWorkspaceHub";
+import { GoogleWorkspaceModal } from "./GoogleWorkspaceModal";
+import { WorkspaceStatusWidget } from "./WorkspaceStatusWidget";
+import { googleWorkspace, GoogleWorkspaceUser } from "../services/googleWorkspaceService";
 
 interface LoanOfficerPortalProps {
   guidesState: ProfessionalGuidesState;
@@ -139,11 +143,24 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   });
 
   // Current user / viewing context
-  const [activeTab, setActiveTab] = useState<"leads" | "ai_2nd_brain" | "tax_schedule_c" | "buydown_2_1" | "realtor_cobranding" | "scenario_workbench" | "sms_compliance" | "sms_templates" | "team_distribution" | "recruitment_pipeline" | "pairings" | "realtor_roster" | "dpa_grants" | "ai_partner_campaign" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns">("leads");
+  const [activeTab, setActiveTab] = useState<"leads" | "google_workspace" | "ai_2nd_brain" | "tax_schedule_c" | "buydown_2_1" | "realtor_cobranding" | "scenario_workbench" | "sms_compliance" | "sms_templates" | "team_distribution" | "recruitment_pipeline" | "pairings" | "realtor_roster" | "dpa_grants" | "ai_partner_campaign" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns">("leads");
   const [scenarioWorkbenchLeadId, setScenarioWorkbenchLeadId] = useState<string | undefined>(undefined);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [viewingHistoryLo, setViewingHistoryLo] = useState<string | null>(null);
+
+  // Google Workspace Integration State
+  const [workspaceUser, setWorkspaceUser] = useState<GoogleWorkspaceUser | null>(() => googleWorkspace.getUser());
+  const [googleWorkspaceModalOpen, setGoogleWorkspaceModalOpen] = useState(false);
+  const [googleWorkspaceModalLead, setGoogleWorkspaceModalLead] = useState<CapturedLead | null>(null);
+  const [googleWorkspaceModalTab, setGoogleWorkspaceModalTab] = useState<"gmail" | "calendar" | "drive" | "tasks" | "sheets">("gmail");
+
+  useEffect(() => {
+    const unsub = googleWorkspace.subscribe((user) => {
+      setWorkspaceUser(user);
+    });
+    return () => unsub();
+  }, []);
 
   // Horizontal Menu Navigation Scroll State & Ref
   const menuScrollRef = useRef<HTMLDivElement>(null);
@@ -1408,6 +1425,30 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               </div>
             )}
 
+            {/* Google Workspace Integration Button */}
+            <button
+              onClick={() => setActiveTab("google_workspace")}
+              title="Google Workspace (Gmail, Calendar, Sheets, Drive, Tasks, Contacts)"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                workspaceUser
+                  ? "bg-emerald-50 border border-emerald-300 text-emerald-900 hover:bg-emerald-100"
+                  : "bg-[#FAF9F5] border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#2D362E]"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <span className="hidden sm:inline">Workspace</span>
+              {workspaceUser ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              ) : (
+                <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded-full font-bold">Sync</span>
+              )}
+            </button>
+
             {/* Password Change Button */}
             <button
               onClick={() => {
@@ -1514,6 +1555,31 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   : "bg-[#4A5D4E]/10 text-[#4A5D4E]"
               }`}>
                 {guidesState.leads?.length || 0}
+              </span>
+            </button>
+
+            <button
+              data-tab-id="google_workspace"
+              onClick={() => setActiveTab("google_workspace")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "google_workspace"
+                  ? "bg-[#2D362E] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <span>Google Workspace</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "google_workspace"
+                  ? "bg-white/20 text-white"
+                  : "bg-blue-100 text-blue-800 border border-blue-300"
+              }`}>
+                {workspaceUser ? "Connected" : "OAuth Sync"}
               </span>
             </button>
 
@@ -1920,6 +1986,19 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   ...guidesState,
                   leads: updated
                 });
+              }}
+              onTriggerToast={triggerToast}
+            />
+
+            {/* Google Workspace Operations & Status Unified Card */}
+            <WorkspaceStatusWidget
+              currentLo={currentLo}
+              guidesState={guidesState}
+              onNavigateToWorkspaceTab={() => setActiveTab("google_workspace")}
+              onOpenContextualModal={(lead, defaultTab) => {
+                setGoogleWorkspaceModalLead(lead);
+                setGoogleWorkspaceModalTab(defaultTab || "gmail");
+                setGoogleWorkspaceModalOpen(true);
               }}
               onTriggerToast={triggerToast}
             />
@@ -3404,6 +3483,24 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
                                 <button
                                   onClick={() => {
+                                    setGoogleWorkspaceModalLead(lead);
+                                    setGoogleWorkspaceModalTab("gmail");
+                                    setGoogleWorkspaceModalOpen(true);
+                                  }}
+                                  className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                                  title="Open Google Workspace (Gmail, Calendar, Drive, Tasks) for this lead"
+                                >
+                                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                                  </svg>
+                                  <span>Workspace</span>
+                                </button>
+
+                                <button
+                                  onClick={() => {
                                     setScenarioWorkbenchLeadId(lead.id);
                                     setActiveTab("scenario_workbench");
                                   }}
@@ -3443,6 +3540,17 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               );
             })()}
           </div>
+        )}
+
+        {/* Tab: Google Workspace Command Hub (OAuth Connected) */}
+        {activeTab === "google_workspace" && (
+          <GoogleWorkspaceHub
+            currentLo={currentLo}
+            guidesState={guidesState}
+            onUpdateGuidesState={onUpdateGuidesState}
+            selectedLeadId={scenarioWorkbenchLeadId}
+            onTriggerToast={triggerToast}
+          />
         )}
 
         {/* Tab: Loan Officer Client Scenario & Payment Workbench */}
@@ -7028,6 +7136,21 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           </div>
         );
       })()}
+
+      {/* Google Workspace Contextual Lead Modal */}
+      {googleWorkspaceModalLead && (
+        <GoogleWorkspaceModal
+          isOpen={googleWorkspaceModalOpen}
+          onClose={() => {
+            setGoogleWorkspaceModalOpen(false);
+            setGoogleWorkspaceModalLead(null);
+          }}
+          lead={googleWorkspaceModalLead}
+          loanOfficer={currentLo}
+          defaultTab={googleWorkspaceModalTab}
+          onTriggerToast={triggerToast}
+        />
+      )}
     </div>
   );
 };

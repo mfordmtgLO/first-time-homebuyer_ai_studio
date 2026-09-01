@@ -21,7 +21,8 @@ import {
   PanelLeftClose,
   Award,
   Printer,
-  Mail
+  Mail,
+  FolderLock
 } from "lucide-react";
 import { FinancialProfile, PropertyListing, RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
@@ -445,6 +446,28 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <div>
                   <h4 className="font-bold text-sm text-[#2D362E]">30-Day Escrow Tracker</h4>
                   <p className="text-xs text-[#606C5D]">Critical deadlines, wiring safety, and CTC milestones.</p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-[#9A9488]" />
+            </div>
+
+            {/* Action 5: Underwriting Document Vault & Google Drive Sync */}
+            <div
+              onClick={() => onNavigate("documents", "dashboard")}
+              className="cursor-pointer bg-white hover:bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] hover:border-[#4A5D4E] p-4 flex items-center justify-between gap-3 transition-all shadow-sm"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 flex items-center justify-center shrink-0">
+                  <FolderLock className="w-5 h-5 text-amber-800" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="font-bold text-sm text-[#2D362E]">Document Vault & Drive Sync</h4>
+                    <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded-md border border-amber-200">
+                      Drive / Docs
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#606C5D]">Import tax returns, W-2s, and letters directly from Google Drive.</p>
                 </div>
               </div>
               <ArrowRight className="w-4 h-4 text-[#9A9488]" />

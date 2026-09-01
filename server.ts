@@ -126,6 +126,137 @@ Key general guidelines:
     }
   });
 
+  // API Route: LO AI 2nd Brain Copilot (Vantage Command Center)
+  app.post("/api/gemini/lo-2nd-brain", async (req, res) => {
+    try {
+      const { message, loProfile, activeLead, scenarioContext, chatHistory, mode } = req.body;
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const ai = getGeminiClient();
+      const systemInstruction = `You are the AI 2nd Brain Copilot for Mike Ford and Top-Producing Mortgage Loan Officers (Vantage Master Command Center).
+You operate as an elite Senior Mortgage Underwriter, Guideline Expert, and Production Strategist.
+
+Your Deep Expertise Covers:
+1. AGENCY & GOV UNDERWRITING GUIDELINES:
+   - Fannie Mae (DU) & Freddie Mac (LPA): standard DTI limits (45% - 50% max with strong AUS approval), reserves, student loans (0.5% calculation vs IBR $0), non-occupant co-borrowers, gift funds.
+   - FHA (HUD 4000.1): 31/43 benchmark, manual underwriting tolerances (31/43 with 0 compensating factors, 37/47 with 1, 40/50 with 2), 6% IPC cap, 3.5% down.
+   - VA (Pamphlet 26-7): Residual income tables, 41% DTI benchmark, 4% seller concession rule (separate from customary closing costs).
+   - USDA (HB-1-3555): 29/41 ratio guidelines, household income limits, 6% seller credit limit.
+   - IPC (Interested Party Contribution) rules: Conventional >90% LTV = 3%, 80-90% = 6%, <=80% = 9%.
+2. 2-1 TEMPORARY RATE BUYDOWN STRUCTURING:
+   - Mathematics: Year 1 rate = Note Rate - 2%, Year 2 rate = Note Rate - 1%, Year 3+ = Note Rate.
+   - Escrow Subsidy calculation: difference between note rate payment and reduced rate payment over 24 months.
+   - Regulatory rule: borrower must qualify at the full Note Rate (for Conventional/FHA), funded exclusively via seller or builder concessions (cannot come from buyer's own funds or lender rebate that exceeds limits).
+3. SCHEDULE C SELF-EMPLOYED CASH FLOW ANALYSIS (Fannie Form 1084 / Freddie Form 91):
+   - Net Profit (Line 31) + Depreciation (Line 13) + Depletion (Line 12) + Amortization + Business Use of Home (Line 30/Form 8829) - 50% Meals/Entertainment adjustment.
+   - Multi-year trending: increasing = 24-month average; declining = 12-month most recent year (or decline explanation/ineligibility review).
+4. HIGH-CONVERTING CLIENT & REALTOR COMMUNICATION:
+   - Overcome rate hesitation ("Why waiting for 5.5% loses you money against a 2-1 buydown today").
+   - Seller concession negotiation scripts for Buyer's Agents.
+   - Pre-approval confidence letters and AUS findings summaries.
+
+LO Profile: ${loProfile?.name || "Mike Ford"} (${loProfile?.nmls ? "NMLS #" + loProfile.nmls : "Branch Manager"}, ${loProfile?.company || "Mortgage Advisory Group"})
+Active Lead Context: ${activeLead ? JSON.stringify({ name: activeLead.fullName, price: activeLead.targetPriceRange, credit: activeLead.creditScore, dti: activeLead.estimatedDti, notes: activeLead.notes }) : "No active borrower selected"}
+Scenario Financials: ${scenarioContext ? JSON.stringify(scenarioContext) : "None provided"}
+Mode: ${mode || "general"}
+
+Formatting Guidelines:
+- Be concise, decisive, authoritative, and actionable.
+- Use clear bullet points, bold key terms, and exact mathematical figures.
+- Include practical next steps for the Loan Officer and ready-to-use borrower/agent copy snippets when appropriate.`;
+
+      let promptContent = "";
+      if (chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0) {
+        promptContent += "Prior Copilot context:\n";
+        chatHistory.slice(-6).forEach((h: { sender: string; text: string }) => {
+          promptContent += `${h.sender === "user" ? "LO" : "2nd Brain"}: ${h.text}\n`;
+        });
+        promptContent += `\nCurrent Inquiry: ${message}`;
+      } else {
+        promptContent = message;
+      }
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: promptContent,
+        config: {
+          systemInstruction,
+          temperature: 0.5,
+        },
+      });
+
+      res.json({ reply: response.text || "LO 2nd Brain standing by. How can I assist with your loan structuring or guideline query?" });
+    } catch (error: any) {
+      console.error("LO 2nd Brain API error:", error);
+      res.status(500).json({
+        error: error.message || "Failed to generate LO 2nd Brain response",
+        fallback: "2nd Brain offline temporarily. Please check connection."
+      });
+    }
+  });
+
+  // API Route: Schedule C AI Tax Document & Text Parser
+  app.post("/api/gemini/analyze-tax-schedule-c", async (req, res) => {
+    try {
+      const { textData, taxYear } = req.body;
+      if (!textData) {
+        return res.status(400).json({ error: "Text or numbers are required" });
+      }
+
+      const ai = getGeminiClient();
+      const systemInstruction = `You are a Mortgage Tax Analysis Engine specialized in Fannie Mae Form 1084 & Freddie Mac Form 91 Schedule C income extraction.
+Given raw tax data, pasted notes, or OCR text of a 1040 Schedule C, parse and extract the exact numerical line items:
+- grossReceipts (Line 3: Gross receipts or sales)
+- netProfit (Line 31: Net profit or loss)
+- depreciation (Line 13: Depreciation)
+- depletion (Line 12: Depletion)
+- amortization (Amortization/Casualty loss)
+- homeOffice (Line 30: Expenses for business use of your home / Form 8829)
+- mealsDeduction (Non-deductible meals / 50% exclusion)
+- businessMiles (Total business miles driven for depreciation add-back)
+- otherIncomeOrLoss (Other non-recurring income/loss)
+- qualitativeNotes (Brief underwriting observations regarding income sustainability or one-time writeoffs)
+
+Return ONLY valid JSON matching this exact structure:
+{
+  "grossReceipts": number,
+  "netProfit": number,
+  "depreciation": number,
+  "depletion": number,
+  "amortization": number,
+  "homeOffice": number,
+  "mealsDeduction": number,
+  "businessMiles": number,
+  "otherIncomeOrLoss": number,
+  "qualitativeNotes": "string"
+}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: `Tax Year: ${taxYear || 2024}\n\nSchedule C Input Data:\n${textData}`,
+        config: {
+          systemInstruction,
+          responseMimeType: "application/json",
+          temperature: 0.1,
+        },
+      });
+
+      let parsed = {};
+      try {
+        parsed = JSON.parse(response.text || "{}");
+      } catch {
+        parsed = {};
+      }
+
+      res.json({ success: true, data: parsed });
+    } catch (error: any) {
+      console.error("Tax parse API error:", error);
+      res.status(500).json({ error: error.message || "Failed to analyze tax data" });
+    }
+  });
+
   // API Route: Lead Intake Chatbot & Pre-Qualification Assistant
   app.post("/api/gemini/lead-intake", async (req, res) => {
     try {

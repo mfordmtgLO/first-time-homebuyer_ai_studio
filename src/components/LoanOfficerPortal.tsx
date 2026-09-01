@@ -67,7 +67,9 @@ import {
   Compass,
   Footprints,
   Calculator,
-  BookmarkPlus
+  BookmarkPlus,
+  Brain,
+  Percent
 } from "lucide-react";
 import { 
   LoanOfficerProfile, 
@@ -106,6 +108,10 @@ import { LoOutreachModal } from "./LoOutreachModal";
 import { RecruitingCampaignModal } from "./RecruitingCampaignModal";
 import { GrantFinder } from "./GrantFinder";
 import { LoanOfficerScenarioWorkbench } from "./LoanOfficerScenarioWorkbench";
+import { AILoanOfficer2ndBrain } from "./AILoanOfficer2ndBrain";
+import { ScheduleCTaxAnalyzer } from "./ScheduleCTaxAnalyzer";
+import { Buydown21ScenarioEngine } from "./Buydown21ScenarioEngine";
+import { RealtorCoBrandingHub } from "./RealtorCoBrandingHub";
 
 interface LoanOfficerPortalProps {
   guidesState: ProfessionalGuidesState;
@@ -133,7 +139,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   });
 
   // Current user / viewing context
-  const [activeTab, setActiveTab] = useState<"leads" | "scenario_workbench" | "sms_compliance" | "sms_templates" | "team_distribution" | "recruitment_pipeline" | "pairings" | "realtor_roster" | "dpa_grants" | "ai_partner_campaign" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns">("leads");
+  const [activeTab, setActiveTab] = useState<"leads" | "ai_2nd_brain" | "tax_schedule_c" | "buydown_2_1" | "realtor_cobranding" | "scenario_workbench" | "sms_compliance" | "sms_templates" | "team_distribution" | "recruitment_pipeline" | "pairings" | "realtor_roster" | "dpa_grants" | "ai_partner_campaign" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns">("leads");
   const [scenarioWorkbenchLeadId, setScenarioWorkbenchLeadId] = useState<string | undefined>(undefined);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -1508,6 +1514,86 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   : "bg-[#4A5D4E]/10 text-[#4A5D4E]"
               }`}>
                 {guidesState.leads?.length || 0}
+              </span>
+            </button>
+
+            <button
+              data-tab-id="ai_2nd_brain"
+              onClick={() => setActiveTab("ai_2nd_brain")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "ai_2nd_brain"
+                  ? "bg-[#2D362E] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Brain className="w-4 h-4 text-[#E7C19D]" />
+              <span>AI 2nd Brain Copilot</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "ai_2nd_brain"
+                  ? "bg-emerald-500/30 text-emerald-200 border border-emerald-400/40"
+                  : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+              }`}>
+                Vantage Copilot
+              </span>
+            </button>
+
+            <button
+              data-tab-id="tax_schedule_c"
+              onClick={() => setActiveTab("tax_schedule_c")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "tax_schedule_c"
+                  ? "bg-[#4A5D4E] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Calculator className="w-4 h-4 text-[#E7C19D]" />
+              <span>Schedule C Tax Analyzer</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "tax_schedule_c"
+                  ? "bg-white/20 text-white"
+                  : "bg-amber-100 text-amber-900 border border-amber-300"
+              }`}>
+                Form 1084
+              </span>
+            </button>
+
+            <button
+              data-tab-id="buydown_2_1"
+              onClick={() => setActiveTab("buydown_2_1")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "buydown_2_1"
+                  ? "bg-[#C18C5D] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Percent className="w-4 h-4 text-amber-200" />
+              <span>2-1 Buydown Scenario Engine</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "buydown_2_1"
+                  ? "bg-white/20 text-white"
+                  : "bg-orange-100 text-orange-900 border border-orange-300"
+              }`}>
+                Seller Concessions
+              </span>
+            </button>
+
+            <button
+              data-tab-id="realtor_cobranding"
+              onClick={() => setActiveTab("realtor_cobranding")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "realtor_cobranding"
+                  ? "bg-[#2F5738] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Users className="w-4 h-4 text-[#D4A373]" />
+              <span>Realtor Co-Branding Command Hub</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "realtor_cobranding"
+                  ? "bg-white/20 text-white"
+                  : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+              }`}>
+                {guidesState.agentRoster.length} Partners
               </span>
             </button>
 
@@ -3381,6 +3467,76 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             onOpenSmsMessaging={(lead) => {
               setSmsModalLead(lead);
             }}
+            onTriggerToast={triggerToast}
+          />
+        )}
+
+        {/* Tab: AI 2nd Brain Copilot */}
+        {activeTab === "ai_2nd_brain" && (
+          <AILoanOfficer2ndBrain
+            currentLo={currentLo}
+            leads={guidesState.leads || []}
+            activeLeadId={scenarioWorkbenchLeadId}
+            onOpenScenarioWorkbench={(leadId) => {
+              setScenarioWorkbenchLeadId(leadId);
+              setActiveTab("scenario_workbench");
+            }}
+            onTriggerToast={triggerToast}
+          />
+        )}
+
+        {/* Tab: Schedule C Tax Analyzer (Form 1084 / Form 91) */}
+        {activeTab === "tax_schedule_c" && (
+          <ScheduleCTaxAnalyzer
+            currentLo={currentLo}
+            leads={guidesState.leads || []}
+            activeLeadId={scenarioWorkbenchLeadId}
+            onSaveQualifyingIncome={(leadId, monthlyIncome, details) => {
+              const currentLeads = guidesState.leads || [];
+              const updated = currentLeads.map(l => l.id === leadId ? {
+                ...l,
+                annualIncome: Math.round(monthlyIncome * 12),
+                notes: (l.notes ? l.notes + "\n\n" : "") + `[Schedule C Underwriting Form 1084]: Calculated Qualifying Income: $${Math.round(monthlyIncome).toLocaleString()}/mo ($${Math.round(monthlyIncome * 12).toLocaleString()}/yr).`
+              } : l);
+              onUpdateGuidesState({
+                ...guidesState,
+                leads: updated
+              });
+              triggerToast(`✓ Saved Schedule C Qualifying Income ($${Math.round(monthlyIncome).toLocaleString()}/mo) to borrower record!`);
+            }}
+            onTriggerToast={triggerToast}
+          />
+        )}
+
+        {/* Tab: 2-1 Buydown Scenario Engine */}
+        {activeTab === "buydown_2_1" && (
+          <Buydown21ScenarioEngine
+            currentLo={currentLo}
+            leads={guidesState.leads || []}
+            activeLeadId={scenarioWorkbenchLeadId}
+            onSaveScenarioToLead={(leadId, scenarioData) => {
+              const currentLeads = guidesState.leads || [];
+              const updated = currentLeads.map(l => l.id === leadId ? {
+                ...l,
+                notes: (l.notes ? l.notes + "\n\n" : "") + `[2-1 Buydown Scenario]: Price: $${scenarioData.purchasePrice.toLocaleString()}, Note Rate: ${scenarioData.noteRate}%, Yr 1 Rate: ${scenarioData.yr1Rate}%, Yr 1 Savings: $${scenarioData.yr1MonthlySavings}/mo, Total Concession: $${scenarioData.totalBuydownSubsidy.toLocaleString()}`
+              } : l);
+              onUpdateGuidesState({
+                ...guidesState,
+                leads: updated
+              });
+            }}
+            onTriggerToast={triggerToast}
+          />
+        )}
+
+        {/* Tab: Realtor Co-Branding Command Hub */}
+        {activeTab === "realtor_cobranding" && (
+          <RealtorCoBrandingHub
+            guidesState={guidesState}
+            onUpdateGuidesState={onUpdateGuidesState}
+            currentLo={currentLo}
+            leads={guidesState.leads || []}
+            properties={properties}
             onTriggerToast={triggerToast}
           />
         )}

@@ -1,0 +1,523 @@
+import React, { useState, useRef, useEffect } from "react";
+import { 
+  Brain, 
+  Sparkles, 
+  Send, 
+  RefreshCw, 
+  Copy, 
+  Check, 
+  ShieldCheck, 
+  Calculator, 
+  FileText, 
+  Users, 
+  Percent, 
+  HelpCircle, 
+  BookOpen, 
+  ArrowRight, 
+  ChevronRight,
+  TrendingUp,
+  AlertTriangle,
+  Lightbulb,
+  Zap,
+  MessageSquare,
+  FileCheck,
+  Building,
+  UserCheck
+} from "lucide-react";
+import { LoanOfficerProfile, CapturedLead, FinancialProfile } from "../types";
+import { formatUSD } from "../utils/mortgageMath";
+
+interface AILoanOfficer2ndBrainProps {
+  currentLo: LoanOfficerProfile;
+  leads?: CapturedLead[];
+  activeLeadId?: string;
+  onSelectLead?: (leadId: string) => void;
+  onUpdateLeadNotes?: (leadId: string, note: string) => void;
+  onTriggerToast?: (msg: string) => void;
+}
+
+interface BrainMessage {
+  id: string;
+  sender: "user" | "copilot";
+  text: string;
+  timestamp: string;
+  category?: "guidelines" | "scenario" | "objection" | "cobrand";
+  suggestedFollowups?: string[];
+  referenceLinks?: { title: string; doc: string }[];
+}
+
+export const AILoanOfficer2ndBrain: React.FC<AILoanOfficer2ndBrainProps> = ({
+  currentLo,
+  leads = [],
+  activeLeadId,
+  onSelectLead,
+  onUpdateLeadNotes,
+  onTriggerToast
+}) => {
+  const [selectedLeadIdState, setSelectedLeadIdState] = useState<string>(activeLeadId || (leads[0]?.id || ""));
+  const [activeCategory, setActiveCategory] = useState<"all" | "guidelines" | "scenario" | "objection" | "cobrand">("all");
+  const [inputQuery, setInputQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const activeLead = leads.find(l => l.id === selectedLeadIdState);
+
+  const [messages, setMessages] = useState<BrainMessage[]>([
+    {
+      id: "init-1",
+      sender: "copilot",
+      text: `👋 Welcome to your **AI 2nd Brain & Underwriting Copilot**, ${currentLo.name.split(" ")[0]}!
+
+I am calibrated specifically to Fannie Mae (DU), Freddie Mac (LPA), FHA 4000.1, VA Pamphlet 26-7, USDA RD, Interested Party Contributions (IPC), 2-1 Rate Buydowns, and Schedule C Self-Employed cash flow math.
+
+How can I assist your pipeline today? You can select any active borrower from your CRM to test file structure, or ask any complex underwriting question.`,
+      timestamp: "Just now",
+      category: "guidelines",
+      suggestedFollowups: [
+        "How do Conventional IPC limits differ between 95% LTV, 85% LTV, and 80% LTV?",
+        "Borrower has 48.5% DTI. What are the best strategies to pass Desktop Underwriter (DU)?",
+        "Explain how to structure a 2-1 Buydown using a 2% seller concession to save $350+/mo in Year 1.",
+        "Calculate Fannie Mae Form 1084 Depreciation & Home Office add-backs for Schedule C self-employed."
+      ],
+      referenceLinks: [
+        { title: "Fannie Mae B3-4.1-02 (IPC Caps)", doc: "Conventional IPC 3%/6%/9%" },
+        { title: "HUD Handbook 4000.1", doc: "FHA 6% Seller Concession Limit" },
+        { title: "Form 1084 Cash Flow", doc: "Schedule C Add-back Guidelines" }
+      ]
+    }
+  ]);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    if (onTriggerToast) onTriggerToast("✓ Copied response to clipboard!");
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleSend = async (queryToSend?: string) => {
+    const q = (queryToSend || inputQuery).trim();
+    if (!q || loading) return;
+
+    const userMsg: BrainMessage = {
+      id: `user-${Date.now()}`,
+      sender: "user",
+      text: q,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages(prev => [...prev, userMsg]);
+    setInputQuery("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/gemini/lo-2nd-brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: q,
+          loProfile: {
+            name: currentLo.name,
+            nmls: currentLo.nmlsNumber,
+            company: currentLo.company,
+            email: currentLo.email
+          },
+          activeLead: activeLead ? {
+            fullName: activeLead.fullName,
+            targetPriceRange: activeLead.targetPriceRange,
+            creditScore: activeLead.creditScore,
+            estimatedDti: activeLead.estimatedDti,
+            notes: activeLead.notes,
+            leadSource: activeLead.leadSource
+          } : undefined,
+          chatHistory: messages.slice(-5).map(m => ({ sender: m.sender, text: m.text })),
+          mode: activeCategory
+        })
+      });
+
+      const data = await res.json();
+      const botText = data.reply || data.fallback || "Here is the guidance for your scenario.";
+
+      const botMsg: BrainMessage = {
+        id: `copilot-${Date.now()}`,
+        sender: "copilot",
+        text: botText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        category: activeCategory === "all" ? "guidelines" : activeCategory,
+        suggestedFollowups: [
+          "Generate a pre-formatted email script to explain this to the borrower.",
+          "What compensating factors would strengthen an AUS approval for this?",
+          "How does this impact the Realtor partner's offer strategy?"
+        ]
+      };
+
+      setMessages(prev => [...prev, botMsg]);
+    } catch (err: any) {
+      console.error("2nd brain error:", err);
+      const fallbackMsg: BrainMessage = {
+        id: `copilot-${Date.now()}`,
+        sender: "copilot",
+        text: `### 📋 LO Guideline Reference Summary\n\n**Key Guideline Takeaway:**\n- **Conventional Loans (Fannie Mae B3-4.1-02)**: LTV >90% allows max **3.0%** IPC; LTV 80.01% - 90.00% allows max **6.0%**; LTV ≤80% allows max **9.0%**.\n- **FHA (HUD 4000.1)**: Max **6.0%** seller contribution.\n- **VA (Pamphlet 26-7)**: Max **4.0%** seller concessions for debt payoff / buydowns / fees, plus standard buyer closing costs.\n- **2-1 Buydown Rule**: Borrower must qualify at the full note rate. Year 1 rate = Note - 2%, Year 2 = Note - 1%.\n\n*Synced with LO Master Command Center.*`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, fallbackMsg]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveToLeadNotes = (text: string) => {
+    if (!activeLead) {
+      if (onTriggerToast) onTriggerToast("⚠️ Select an active lead first.");
+      return;
+    }
+    const timestamp = new Date().toLocaleDateString();
+    const snippet = `[${timestamp} AI 2nd Brain Analysis]: ${text.slice(0, 240)}...`;
+    if (onUpdateLeadNotes) {
+      onUpdateLeadNotes(activeLead.id, snippet);
+      if (onTriggerToast) onTriggerToast(`✓ Saved analysis to ${activeLead.fullName}'s CRM profile!`);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-[#2D362E] via-[#3B483C] to-[#2D362E] rounded-3xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
+        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#E7C19D] border border-white/15 text-xs font-bold uppercase tracking-wider">
+              <Brain className="w-3.5 h-3.5 text-[#E7C19D]" />
+              <span>Vantage Command Architecture</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
+              AI 2nd Brain Underwriting & Production Copilot
+            </h2>
+            <p className="text-sm text-[#D8D2C2] max-w-2xl leading-relaxed">
+              Instant agency guideline intelligence (Fannie/Freddie, FHA, VA, USDA), 2-1 buydown structurer, Schedule C tax analyzer, and high-converting client & realtor objection scripts.
+            </p>
+          </div>
+
+          {/* Quick Stats Pill */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="px-4 py-3 bg-white/10 backdrop-blur-xs rounded-2xl border border-white/15 text-center">
+              <span className="text-[11px] text-[#D8D2C2] font-medium block">Lead Pipeline Context</span>
+              <span className="text-lg font-bold text-white">{leads.length} Active Leads</span>
+            </div>
+            <div className="px-4 py-3 bg-emerald-500/20 backdrop-blur-xs rounded-2xl border border-emerald-400/30 text-center">
+              <span className="text-[11px] text-emerald-200 font-medium block">Copilot Engine</span>
+              <span className="text-lg font-bold text-emerald-300">Gemini 3.7 Flash</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Grid: Left Controls / Presets + Right Interactive Terminal */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Context Selector & Quick Tools (4 cols) */}
+        <div className="lg:col-span-4 space-y-4">
+          {/* Active Borrower Context Box */}
+          <div className="bg-white rounded-2xl p-5 border border-[#EAE7E0] shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#606C5D] flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                <span>Active Lead Focus</span>
+              </span>
+              <span className="text-[11px] text-[#9A9488]">{leads.length} Available</span>
+            </div>
+
+            <select
+              value={selectedLeadIdState}
+              onChange={(e) => {
+                setSelectedLeadIdState(e.target.value);
+                if (onSelectLead) onSelectLead(e.target.value);
+              }}
+              className="w-full text-xs font-semibold bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2.5 text-[#2D362E] focus:outline-none focus:ring-2 focus:ring-[#4A5D4E]/30"
+            >
+              <option value="">-- General Inquiries (No Borrower Selected) --</option>
+              {leads.map(l => (
+                <option key={l.id} value={l.id}>
+                  {l.fullName} ({l.targetPriceRange || "$450k"}, FICO {l.creditScore || "720"})
+                </option>
+              ))}
+            </select>
+
+            {activeLead && (
+              <div className="p-3 bg-[#F9F8F4] rounded-xl border border-[#EAE7E0] space-y-1.5 text-xs text-[#606C5D]">
+                <div className="flex justify-between">
+                  <span className="text-[#9A9488]">Target Price:</span>
+                  <span className="font-bold text-[#2D362E]">{activeLead.targetPriceRange || "$425,000"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#9A9488]">Credit Score:</span>
+                  <span className="font-bold text-[#2D362E]">{activeLead.creditScore || "720"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#9A9488]">Estimated DTI:</span>
+                  <span className="font-bold text-[#4A5D4E]">{activeLead.estimatedDti || "38%"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#9A9488]">Lead Source:</span>
+                  <span className="font-medium text-[#2D362E] truncate max-w-[150px]">{activeLead.leadSource || "Website"}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Domain Prompt Launchers */}
+          <div className="bg-white rounded-2xl p-5 border border-[#EAE7E0] shadow-xs space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#2D362E] flex items-center gap-2">
+              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              <span>LO Knowledge Quick Launchers</span>
+            </h4>
+
+            <div className="space-y-2">
+              {[
+                {
+                  title: "Fannie / FHA IPC Limit Matrix",
+                  desc: "Compare max seller credits across LTV tiers",
+                  prompt: "Provide an exact breakdown of Interested Party Contribution (IPC) and seller concession limits for Conventional, FHA, VA, and USDA loans.",
+                  icon: ShieldCheck
+                },
+                {
+                  title: "2-1 Buydown vs Price Cut Battle",
+                  desc: "Explain why $8k buydown beats an $8k price drop",
+                  prompt: "Write a clear comparison showing why an $8,000 seller credit for a 2-1 buydown saves the buyer 3x to 4x more monthly payment than an $8,000 purchase price reduction.",
+                  icon: Percent
+                },
+                {
+                  title: "Schedule C Cash Flow Add-backs",
+                  desc: "Form 1084 depreciation, home office, miles",
+                  prompt: "What are all allowable Fannie Mae Form 1084 add-backs for Schedule C self-employed borrowers (depreciation, depletion, business use of home, mileage)?",
+                  icon: Calculator
+                },
+                {
+                  title: "Overcoming Rate Hesitation Script",
+                  desc: "Talk track for buyers waiting for 5% rates",
+                  prompt: "Draft a persuasive, mathematically grounded SMS/email script for a borrower who wants to wait for interest rates to drop before buying.",
+                  icon: MessageSquare
+                },
+                {
+                  title: "Agent Pitch: Seller Concession Strategy",
+                  desc: "How Realtors can write winning buydown offers",
+                  prompt: "Create a 3-bullet talking point sheet for a Buyer's Agent on how to structure a 2-1 buydown in an offer without lowering the seller's net proceeds.",
+                  icon: Building
+                }
+              ].map((preset, idx) => {
+                const Icon = preset.icon;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSend(preset.prompt)}
+                    className="w-full text-left p-2.5 rounded-xl border border-[#EAE7E0] hover:border-[#4A5D4E] hover:bg-[#F9F8F4] transition-all group cursor-pointer"
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-[#4A5D4E]/10 text-[#4A5D4E] group-hover:bg-[#4A5D4E] group-hover:text-white transition-colors shrink-0 mt-0.5">
+                        <Icon className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#2D362E] group-hover:text-[#4A5D4E] transition-colors leading-tight">
+                          {preset.title}
+                        </p>
+                        <p className="text-[11px] text-[#606C5D] truncate">
+                          {preset.desc}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Interactive Copilot Terminal (8 cols) */}
+        <div className="lg:col-span-8 flex flex-col bg-white rounded-3xl border border-[#EAE7E0] shadow-xs overflow-hidden h-[700px]">
+          {/* Terminal Header & Mode Filter */}
+          <div className="p-4 border-b border-[#EAE7E0] bg-[#FDFCF9] flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-bold text-[#2D362E]">
+                LO 2nd Brain Interactive Session
+              </span>
+              {activeLead && (
+                <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#4A5D4E]/10 text-[#4A5D4E] font-medium border border-[#4A5D4E]/20">
+                  Focus: {activeLead.fullName}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {[
+                { id: "all", label: "All Modes" },
+                { id: "guidelines", label: "AUS / Guidelines" },
+                { id: "scenario", label: "Scenario Math" },
+                { id: "objection", label: "Client Scripts" }
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setActiveCategory(cat.id as any)}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                    activeCategory === cat.id
+                      ? "bg-[#4A5D4E] text-white"
+                      : "bg-[#F9F8F4] text-[#606C5D] hover:bg-[#EAE7E0]"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Messages Feed */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex gap-3 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {msg.sender === "copilot" && (
+                  <div className="w-8 h-8 rounded-xl bg-[#2D362E] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                    <Brain className="w-4 h-4 text-[#E7C19D]" />
+                  </div>
+                )}
+
+                <div className={`max-w-[85%] space-y-2.5 ${msg.sender === "user" ? "items-end" : "items-start"}`}>
+                  <div
+                    className={`rounded-2xl p-4 text-xs leading-relaxed ${
+                      msg.sender === "user"
+                        ? "bg-[#4A5D4E] text-white rounded-tr-none shadow-xs"
+                        : "bg-[#F9F8F4] text-[#2D362E] border border-[#EAE7E0] rounded-tl-none shadow-2xs"
+                    }`}
+                  >
+                    {/* Render message with linebreaks and bold tags */}
+                    <div className="whitespace-pre-wrap space-y-2 font-sans">
+                      {msg.text}
+                    </div>
+
+                    {/* Reference Citations */}
+                    {msg.referenceLinks && msg.referenceLinks.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-[#EAE7E0] flex flex-wrap gap-2">
+                        {msg.referenceLinks.map((ref, rIdx) => (
+                          <span
+                            key={rIdx}
+                            className="inline-flex items-center gap-1 text-[10px] bg-white text-[#4A5D4E] px-2 py-0.5 rounded border border-[#EAE7E0] font-semibold"
+                          >
+                            <BookOpen className="w-2.5 h-2.5" />
+                            {ref.title}: {ref.doc}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions & Followups for Copilot Responses */}
+                  {msg.sender === "copilot" && (
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#606C5D] pl-1">
+                      <span className="text-[10px] text-[#9A9488]">{msg.timestamp}</span>
+                      
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(msg.text, msg.id)}
+                        className="inline-flex items-center gap-1 text-[#4A5D4E] hover:underline font-semibold cursor-pointer ml-2"
+                      >
+                        {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedId === msg.id ? "Copied" : "Copy"}</span>
+                      </button>
+
+                      {activeLead && (
+                        <button
+                          type="button"
+                          onClick={() => handleSaveToLeadNotes(msg.text)}
+                          className="inline-flex items-center gap-1 text-[#C18C5D] hover:underline font-semibold cursor-pointer ml-2"
+                        >
+                          <FileCheck className="w-3 h-3" />
+                          <span>Save to {activeLead.fullName.split(" ")[0]}'s CRM Notes</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Suggested Followups */}
+                  {msg.suggestedFollowups && msg.suggestedFollowups.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1 pl-1">
+                      {msg.suggestedFollowups.map((sug, sIdx) => (
+                        <button
+                          key={sIdx}
+                          type="button"
+                          onClick={() => handleSend(sug)}
+                          className="text-[11px] bg-white border border-[#EAE7E0] hover:border-[#4A5D4E] text-[#606C5D] hover:text-[#4A5D4E] px-2.5 py-1 rounded-full transition-all text-left cursor-pointer flex items-center gap-1"
+                        >
+                          <span>{sug}</span>
+                          <ArrowRight className="w-2.5 h-2.5 opacity-50 shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {msg.sender === "user" && (
+                  <div className="w-8 h-8 rounded-xl bg-[#4A5D4E] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                    <span className="text-xs font-bold">{currentLo.name.charAt(0)}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {loading && (
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[#2D362E] text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Brain className="w-4 h-4 text-[#E7C19D] animate-spin" />
+                </div>
+                <div className="p-3.5 bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] text-xs text-[#606C5D] flex items-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#4A5D4E]" />
+                  <span>2nd Brain is analyzing underwriting guidelines and scenario data...</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input Box */}
+          <div className="p-4 border-t border-[#EAE7E0] bg-[#FDFCF9]">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSend();
+              }}
+              className="flex items-center gap-2"
+            >
+              <input
+                type="text"
+                value={inputQuery}
+                onChange={(e) => setInputQuery(e.target.value)}
+                placeholder={
+                  activeLead
+                    ? `Ask anything about ${activeLead.fullName}'s loan structure, DTI, IPC limits, or scripts...`
+                    : "Ask about AUS rules, DTI caps, 2-1 buydowns, Schedule C cash flow, or borrower scripts..."
+                }
+                disabled={loading}
+                className="flex-1 bg-white border border-[#EAE7E0] rounded-xl px-4 py-3 text-xs text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:ring-2 focus:ring-[#4A5D4E]/30"
+              />
+              <button
+                type="submit"
+                disabled={!inputQuery.trim() || loading}
+                className="px-5 py-3 rounded-xl bg-[#4A5D4E] text-white font-bold text-xs flex items-center gap-1.5 hover:bg-[#3d4d40] transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Ask Copilot</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

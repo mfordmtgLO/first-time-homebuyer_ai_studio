@@ -59,6 +59,7 @@ export const AILoanOfficer2ndBrain: React.FC<AILoanOfficer2ndBrainProps> = ({
   const [inputQuery, setInputQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   const activeLead = leads.find(l => l.id === selectedLeadIdState);
 
@@ -171,7 +172,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
     }
   };
 
-  const handleSaveToLeadNotes = (text: string) => {
+  const handleSaveToLeadNotes = (text: string, id: string) => {
     if (!activeLead) {
       if (onTriggerToast) onTriggerToast("⚠️ Select an active lead first.");
       return;
@@ -181,6 +182,8 @@ How can I assist your pipeline today? You can select any active borrower from yo
     if (onUpdateLeadNotes) {
       onUpdateLeadNotes(activeLead.id, snippet);
       if (onTriggerToast) onTriggerToast(`✓ Saved analysis to ${activeLead.fullName}'s CRM profile!`);
+      setSavedId(id);
+      setTimeout(() => setSavedId(null), 2000);
     }
   };
 
@@ -435,11 +438,11 @@ How can I assist your pipeline today? You can select any active borrower from yo
                       {activeLead && (
                         <button
                           type="button"
-                          onClick={() => handleSaveToLeadNotes(msg.text)}
-                          className="inline-flex items-center gap-1 text-[#C18C5D] hover:underline font-semibold cursor-pointer ml-2"
+                          onClick={() => handleSaveToLeadNotes(msg.text, msg.id)}
+                          className={`inline-flex items-center gap-1 hover:underline font-semibold cursor-pointer ml-2 ${savedId === msg.id ? 'text-emerald-600' : 'text-[#C18C5D]'}`}
                         >
-                          <FileCheck className="w-3 h-3" />
-                          <span>Save to {activeLead.fullName.split(" ")[0]}'s CRM Notes</span>
+                          {savedId === msg.id ? <Check className="w-3 h-3" /> : <FileCheck className="w-3 h-3" />}
+                          <span>{savedId === msg.id ? "Saved to CRM Notes" : `Save to ${activeLead.fullName.split(" ")[0]}'s CRM Notes`}</span>
                         </button>
                       )}
                     </div>

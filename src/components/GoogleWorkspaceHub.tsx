@@ -305,12 +305,15 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
   const applyEmailTemplate = (templateKey: "needs_list" | "buydown" | "pre_approved" | "realtor_intro") => {
     const leadName = targetBorrowerName || activeLead?.fullName || "Homebuyer";
     if (templateKey === "needs_list") {
+      setEmailTo(activeLead?.email || "buyer@gmail.com");
       setEmailSubject(`Initial Mortgage Documentation Checklist - ${leadName}`);
       setEmailBody(`Hi ${leadName},\n\nTo keep your loan moving forward seamlessly, please reply or upload the following items:\n\n1. 2 most recent paystubs covering 30 days\n2. 2 years of W-2 forms & federal tax returns\n3. 2 most recent full bank statements (all pages)\n4. Government-issued photo ID\n\nLet me know if you have any questions!\n\nBest,\n${currentLo.name}\n${currentLo.phone}`);
     } else if (templateKey === "buydown") {
+      setEmailTo(activeLead?.email || "buyer@gmail.com");
       setEmailSubject(`2-1 Temporary Buydown Savings Breakdown - ${leadName}`);
       setEmailBody(`Hi ${leadName},\n\nI calculated your 2-1 Buydown scenario to lower your initial monthly payments:\n\n- Year 1: Rate reduced by 2.00% (Instant monthly payment relief)\n- Year 2: Rate reduced by 1.00%\n- Year 3-30: Permanent Note Rate\n\nThis seller-funded concession provides significantly more immediate cash-flow relief than a basic price reduction. Let's schedule a call to review the comparison.\n\nBest,\n${currentLo.name}\n${currentLo.phone}`);
     } else if (templateKey === "pre_approved") {
+      setEmailTo(activeLead?.email || "buyer@gmail.com");
       setEmailSubject(`CONGRATULATIONS: You are Pre-Approved! - ${leadName}`);
       setEmailBody(`Hi ${leadName},\n\nGreat news! Your pre-approval is complete and your official Pre-Approval Letter is ready. You are positioned to make competitive offers on homes within your target price range.\n\nI have also connected with your Realtor partner to ensure we are aligned on your offer timelines.\n\nWarm regards,\n${currentLo.name}\n${currentLo.phone}`);
     } else if (templateKey === "realtor_intro") {

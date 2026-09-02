@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { 
+import { MessageSquare, Mail, 
   Users, 
   Link as LinkIcon, 
   QrCode, 
@@ -76,7 +76,10 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
     p => p.loId === currentLo.id && p.agentId === selectedAgent?.id
   );
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://homereadypdx.com";
+  let origin = typeof window !== "undefined" ? window.location.origin : "https://homereadypdx.com";
+  if (origin.includes("ais-dev-")) {
+    origin = origin.replace("ais-dev-", "ais-pre-");
+  }
   const agentSlug = selectedAgent?.customSlug || selectedAgent?.name.toLowerCase().replace(/[^a-z0-9]/g, "-") || "partner";
   const loSlug = currentLo.customSlug || currentLo.name.toLowerCase().replace(/[^a-z0-9]/g, "-") || "mike-ford";
   
@@ -681,7 +684,7 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {(() => {
             const smsBody = `Hi ${selectedAgent?.name?.split(" ")[0]}! I just built a custom co-branded first-time homebuyer portal for us with live 2-1 buydown calculators, Oregon DPA grant lookups, and instant pre-qualification.\n\nTake a look: ${coBrandedUrl}\n\nWe can put this on our open house flyers this weekend! - ${currentLo.name}`;
-            const smsLink = `sms:?body=${encodeURIComponent(smsBody)}`;
+            const smsLink = `sms:?&body=${encodeURIComponent(smsBody)}`;
             
             const emailSubject = `Co-Branded Homebuyer Portal & 2-1 Buydown Flyer Kit for ${selectedAgent?.name}`;
             const emailBody = `Hi ${selectedAgent?.name?.split(" ")[0]},\n\nI wanted to share a new marketing technology asset I created for our partnership: a dedicated co-branded digital portal that features both of our headshots, contact information, and interactive loan tools for your buyer clients.\n\nHere is your portal link: ${coBrandedUrl}\n\nTop features ready to use:\n1. Live 2-1 Seller Rate Buydown Engine (shows buyers how to save $350-$500/mo without price cuts)\n2. Oregon Bond & Flex DPA 3.5% Grant Finders\n3. Co-branded Open House flyer generator with instant QR codes\n\nLet's connect this week to launch our next co-branded open house campaign.\n\nBest,\n${currentLo.name}\n${currentLo.company} (NMLS #${currentLo.nmlsNumber})`;
@@ -708,6 +711,7 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
                       </button>
                       <a
                         href={smsLink}
+                        target="_top"
                         className="text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#3A4A3D] px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
                       >
                         <MessageSquare className="w-3.5 h-3.5" />
@@ -738,6 +742,7 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
                       </button>
                       <a
                         href={mailtoLink}
+                        target="_top"
                         className="text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#3A4A3D] px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
                       >
                         <Mail className="w-3.5 h-3.5" />

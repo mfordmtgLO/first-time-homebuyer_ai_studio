@@ -22,7 +22,7 @@ import {
   MessageSquare,
   FileCheck,
   Building,
-  UserCheck, Paperclip, Database, Mail
+  UserCheck, Paperclip, Database, Mail, MinusCircle, Trash2
 } from "lucide-react";
 import { LoanOfficerProfile, CapturedLead, FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
@@ -327,6 +327,16 @@ How can I assist your pipeline today? You can select any active borrower from yo
     window.location.href = mailtoUrl;
   };
 
+  const handleDeleteMessage = (msgId: string) => {
+    setMessages(prev => prev.filter(m => m.id !== msgId));
+  };
+
+  const handleClearChat = () => {
+    if (window.confirm("Are you sure you want to clear the entire chat history?")) {
+      setMessages([]);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -497,6 +507,15 @@ How can I assist your pipeline today? You can select any active borrower from yo
             </div>
 
             <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleClearChat}
+                className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/50 mr-1"
+                title="Reset entire chat history"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
               {[
                 { id: "all", label: "All Modes" },
                 { id: "guidelines", label: "AUS / Guidelines" },
@@ -524,7 +543,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-3 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex gap-3 group ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.sender === "copilot" && (
                   <div className="w-8 h-8 rounded-xl bg-[#2D362E] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
@@ -532,7 +551,17 @@ How can I assist your pipeline today? You can select any active borrower from yo
                   </div>
                 )}
 
-                <div className={`max-w-[85%] space-y-2.5 ${msg.sender === "user" ? "items-end" : "items-start"}`}>
+                {msg.sender === "user" && (
+                  <button 
+                    onClick={() => handleDeleteMessage(msg.id)}
+                    className="mt-2 text-red-400 hover:text-red-600 transition-colors flex-shrink-0 cursor-pointer"
+                    title="Delete Message"
+                  >
+                    <MinusCircle className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                <div className={`max-w-[85%] space-y-2.5 flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}>
                   <div
                     className={`rounded-2xl p-4 text-xs leading-relaxed ${
                       msg.sender === "user"
@@ -614,6 +643,16 @@ How can I assist your pipeline today? You can select any active borrower from yo
                     </div>
                   )}
                 </div>
+
+                {msg.sender === "copilot" && (
+                  <button 
+                    onClick={() => handleDeleteMessage(msg.id)}
+                    className="mt-2 text-red-400 hover:text-red-600 transition-colors flex-shrink-0 cursor-pointer"
+                    title="Delete Message"
+                  >
+                    <MinusCircle className="w-3.5 h-3.5" />
+                  </button>
+                )}
 
                 {msg.sender === "user" && (
                   <div className="w-8 h-8 rounded-xl bg-[#4A5D4E] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">

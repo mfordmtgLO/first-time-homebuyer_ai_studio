@@ -239,7 +239,8 @@ export interface LoanOfficerProfile {
   county?: string;
   state?: string;
   isTeamMember?: boolean;
-  recruitmentStatus?: 'Not Contacted' | 'In Outreach' | 'Interested' | 'Meeting Scheduled' | 'Declined';
+  teamStarStatus?: 'red' | 'blue' | 'green';
+  recruitmentStatus?: 'Not Contacted' | 'In Outreach' | 'Interested' | 'Meeting Scheduled' | 'Declined' | 'Hired';
   outreachHistory?: { id: string; date: string; type: 'email' | 'sms'; subject?: string; content: string }[];
   email: string;
   phone: string;

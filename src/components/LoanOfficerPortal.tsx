@@ -110,6 +110,7 @@ import { GrantFinder } from "./GrantFinder";
 import { LoanOfficerScenarioWorkbench } from "./LoanOfficerScenarioWorkbench";
 import { SystemPitchDeck } from "./SystemPitchDeck";
 import { BranchManagerDashboard } from "./BranchManagerDashboard";
+import { GrowthDashboard } from "./GrowthDashboard";
 import { AILoanOfficer2ndBrain } from "./AILoanOfficer2ndBrain";
 import { ScheduleCTaxAnalyzer } from "./ScheduleCTaxAnalyzer";
 import { Buydown21ScenarioEngine } from "./Buydown21ScenarioEngine";
@@ -145,7 +146,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   });
 
   // Current user / viewing context
-  const [activeTab, setActiveTab] = useState<"leads" | "google_workspace" | "ai_2nd_brain" | "tax_schedule_c" | "buydown_2_1" | "realtor_cobranding" | "scenario_workbench" | "sms_compliance" | "sms_templates" | "team_distribution" | "recruitment_pipeline" | "pairings" | "realtor_roster" | "dpa_grants" | "ai_partner_campaign" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns" | "system_pitch_deck" | "branch_admin_metrics">("leads");
+  const [activeTab, setActiveTab] = useState<"leads" | "google_workspace" | "ai_2nd_brain" | "tax_schedule_c" | "buydown_2_1" | "realtor_cobranding" | "scenario_workbench" | "sms_compliance" | "sms_templates" | "team_distribution" | "recruitment_pipeline" | "pairings" | "realtor_roster" | "dpa_grants" | "ai_partner_campaign" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns" | "system_pitch_deck" | "branch_admin_metrics" | "growth_dashboard">("leads");
   const [scenarioWorkbenchLeadId, setScenarioWorkbenchLeadId] = useState<string | undefined>(undefined);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -1909,6 +1910,19 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             >
               <ShieldCheck className="w-4 h-4 text-[#C18C5D]" />
               <span>Branch Manager Admin</span>
+            </button>
+
+            <button
+              data-tab-id="growth_dashboard"
+              onClick={() => setActiveTab("growth_dashboard")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "growth_dashboard"
+                  ? "bg-[#4A5D4E] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <TrendingUp className="w-4 h-4 text-[#C18C5D]" />
+              <span>Growth Dashboard</span>
             </button>
           </nav>
 
@@ -5362,6 +5376,10 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
         {activeTab === "branch_admin_metrics" && (
           <BranchManagerDashboard />
+        )}
+
+        {activeTab === "growth_dashboard" && (
+          <GrowthDashboard guidesState={guidesState} />
         )}
 
       </main>

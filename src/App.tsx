@@ -328,8 +328,6 @@ export default function App() {
       pathname.includes("/portal") || 
       pathname.includes("/admin") || 
       pathname.includes("/login") ||
-      pathname.includes("first-time_homebuyer_portal") ||
-      pathname.includes("first-time-homebuyer-portal") ||
       hash.includes("portal") || 
       hash.includes("admin") ||
       params.get("portal") === "lo" || 

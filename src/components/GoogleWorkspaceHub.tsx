@@ -317,10 +317,30 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
       setEmailSubject(`CONGRATULATIONS: You are Pre-Approved! - ${leadName}`);
       setEmailBody(`Hi ${leadName},\n\nGreat news! Your pre-approval is complete and your official Pre-Approval Letter is ready. You are positioned to make competitive offers on homes within your target price range.\n\nI have also connected with your Realtor partner to ensure we are aligned on your offer timelines.\n\nWarm regards,\n${currentLo.name}\n${currentLo.phone}`);
     } else if (templateKey === "realtor_intro") {
-      const agent = guidesState.agentRoster[0];
+      let agent = guidesState.agentRoster[0];
+      if (activeLead?.assignedAgentId) {
+        agent = guidesState.agentRoster.find(a => a.id === activeLead.assignedAgentId) || agent;
+      }
+      
+      const pairing = guidesState.pairings.find(p => p.loId === currentLo.id && p.agentId === agent?.id);
+      const portalUrl = pairing?.customSlug 
+        ? `https://homereadypdx.com/?pair=${pairing.customSlug}`
+        : `https://homereadypdx.com/?lo=${currentLo.customSlug || "lo"}&agent=${agent?.customSlug || "agent"}`;
+        
+      const locations = activeLead?.preferredLocations || activeLead?.taggedCityArea || "their desired area";
+      
+      const sourceNotes = activeLead?.leadSource 
+        ? `This lead came through our co-branded First-Time Buyer website (Source: ${activeLead.leadSource}).` 
+        : `This lead came through our co-branded digital portal.`;
+        
+      let buyerRequests = "";
+      if (activeLead?.interactedSourceType === 'chatbot' || activeLead?.sendSampleHomes) {
+        buyerRequests = `\nThey interacted with our 24/7 AI Chatbot and requested a list of low/no down payment homes recently for sale in ${locations}. `;
+      }
+
       setEmailTo(agent?.email || "partner@realty.com");
-      setEmailSubject(`Co-Branded First-Time Homebuyer Portal for ${agent?.name || "Partner"}`);
-      setEmailBody(`Hi ${agent?.name || "Partner"},\n\nI've launched our dedicated co-branded First-Time Homebuyer portal where your buyers can run real-time payment estimates, explore local DPA grants, and access open house 2-1 buydown flyers:\n\nPortal: https://homereadypdx.com/?lo=${currentLo.customSlug || "lo"}&agent=${agent?.customSlug || "agent"}\n\nLet's connect this week on joint marketing opportunities!\n\nBest,\n${currentLo.name}`);
+      setEmailSubject(`New Co-Branded Lead: ${leadName} - ${locations}`);
+      setEmailBody(`Hi ${agent?.name || "Partner"},\n\nWe have a new active buyer lead that registered on our co-branded First-Time Homebuyer portal!\n\n${sourceNotes}${buyerRequests}\n\nLead Details:\nName: ${leadName}\nEmail: ${activeLead?.email || "N/A"}\nPhone: ${activeLead?.phone || "N/A"}\nTarget Price: ${activeLead?.targetPriceRange || "TBD"}\nDesired Locations: ${locations}\n\nI am handling the initial pre-approval and financing steps. Could you please also follow up with ${leadName} on the real estate side to get them set up with a tailored property search?\n\nOur joint portal link for reference: ${portalUrl}\n\nLet's get this one closed together!\n\nBest,\n${currentLo.name}\n${currentLo.phone}`);
     }
   };
 

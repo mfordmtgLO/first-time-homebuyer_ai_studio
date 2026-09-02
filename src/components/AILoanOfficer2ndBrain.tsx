@@ -133,6 +133,10 @@ How can I assist your pipeline today? You can select any active borrower from yo
         });
         const data = await res.json();
         
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to ingest knowledge");
+        }
+        
         const botMsg: BrainMessage = {
           id: `copilot-train-${Date.now()}`,
           sender: "copilot",
@@ -143,8 +147,19 @@ How can I assist your pipeline today? You can select any active borrower from yo
           category: "guidelines"
         };
         setMessages(prev => [...prev, botMsg]);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Training error:", error);
+        const isMissingKey = error.message?.includes("No AI key configured");
+        const botMsg: BrainMessage = {
+          id: `copilot-train-${Date.now()}`,
+          sender: "copilot",
+          text: isMissingKey 
+            ? `⚠️ **AI Copilot Disconnected**\n\nNo AI Provider configured. Please add your \`GEMINI_API_KEY\` or \`DEEPSEEK_API_KEY\` in the Google AI Studio Settings > Secrets panel to activate knowledge ingestion.`
+            : `**Error:** Failed to memorize document. ${error.message}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          category: "guidelines"
+        };
+        setMessages(prev => [...prev, botMsg]);
       } finally {
         setLoading(false);
       }
@@ -181,6 +196,11 @@ How can I assist your pipeline today? You can select any active borrower from yo
           })
         });
         const data = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to analyze document");
+        }
+        
         const botText = data.analysis || "Document analysis complete.";
 
         const botMsg: BrainMessage = {
@@ -191,8 +211,19 @@ How can I assist your pipeline today? You can select any active borrower from yo
           category: "guidelines"
         };
         setMessages(prev => [...prev, botMsg]);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Doc analysis error:", error);
+        const isMissingKey = error.message?.includes("No AI key configured");
+        const botMsg: BrainMessage = {
+          id: `copilot-${Date.now()}`,
+          sender: "copilot",
+          text: isMissingKey 
+            ? `⚠️ **AI Copilot Disconnected**\n\nNo AI Provider configured. Please add your \`GEMINI_API_KEY\` or \`DEEPSEEK_API_KEY\` in the Google AI Studio Settings > Secrets panel to activate document analysis.`
+            : `**Error:** Failed to analyze document. ${error.message}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          category: "guidelines"
+        };
+        setMessages(prev => [...prev, botMsg]);
       } finally {
         setLoading(false);
       }
@@ -228,7 +259,13 @@ How can I assist your pipeline today? You can select any active borrower from yo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: fullPrompt })
       });
+      
       const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to connect to AI Provider.");
+      }
+      
       const botText = data.response || "Here is the guidance for your scenario.";
 
       const botMsg: BrainMessage = {
@@ -247,10 +284,15 @@ How can I assist your pipeline today? You can select any active borrower from yo
       setMessages(prev => [...prev, botMsg]);
     } catch (err: any) {
       console.error("2nd brain error:", err);
+      
+      const isMissingKey = err.message?.includes("No AI Provider configured");
+      
       const fallbackMsg: BrainMessage = {
         id: `copilot-${Date.now()}`,
         sender: "copilot",
-        text: `### 📋 LO Guideline Reference Summary\n\n**Key Guideline Takeaway:**\n- **Conventional Loans (Fannie Mae B3-4.1-02)**: LTV >90% allows max **3.0%** IPC; LTV 80.01% - 90.00% allows max **6.0%**; LTV ≤80% allows max **9.0%**.\n- **FHA (HUD 4000.1)**: Max **6.0%** seller contribution.\n- **VA (Pamphlet 26-7)**: Max **4.0%** seller concessions for debt payoff / buydowns / fees, plus standard buyer closing costs.\n- **2-1 Buydown Rule**: Borrower must qualify at the full note rate. Year 1 rate = Note - 2%, Year 2 = Note - 1%.\n\n*Synced with LO Master Command Center.*`,
+        text: isMissingKey 
+          ? `⚠️ **AI Copilot Disconnected**\n\nNo AI Provider configured. Please add your \`GEMINI_API_KEY\` or \`DEEPSEEK_API_KEY\` in the Google AI Studio Settings > Secrets panel to activate the AI 2nd Brain.`
+          : `⚠️ **AI Copilot Error**\n\nAn error occurred while connecting to the AI: ${err.message || 'Unknown error'}\n\n### 📋 LO Guideline Reference Summary\n\n**Key Guideline Takeaway:**\n- **Conventional Loans (Fannie Mae B3-4.1-02)**: LTV >90% allows max **3.0%** IPC; LTV 80.01% - 90.00% allows max **6.0%**; LTV ≤80% allows max **9.0%**.\n- **FHA (HUD 4000.1)**: Max **6.0%** seller contribution.\n- **VA (Pamphlet 26-7)**: Max **4.0%** seller concessions for debt payoff / buydowns / fees, plus standard buyer closing costs.\n- **2-1 Buydown Rule**: Borrower must qualify at the full note rate. Year 1 rate = Note - 2%, Year 2 = Note - 1%.\n\n*Synced with LO Master Command Center.*`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, fallbackMsg]);

@@ -226,6 +226,9 @@ export interface LoanOfficerAdSettings {
 }
 
 export interface LoanOfficerProfile {
+  enrichmentStatus?: 'none' | 'syncing' | 'enriched';
+  topRealtorPartners?: { name: string; volume: number; company: string }[];
+  nmlsNumber?: string;
   id: string;
   name: string;
   title: string;

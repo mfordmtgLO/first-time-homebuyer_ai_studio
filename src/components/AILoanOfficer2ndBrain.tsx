@@ -22,7 +22,7 @@ import {
   MessageSquare,
   FileCheck,
   Building,
-  UserCheck
+  UserCheck, Paperclip, Database
 } from "lucide-react";
 import { LoanOfficerProfile, CapturedLead, FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
@@ -60,6 +60,9 @@ export const AILoanOfficer2ndBrain: React.FC<AILoanOfficer2ndBrainProps> = ({
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const trainInputRef = useRef<HTMLInputElement>(null);
+
 
   const activeLead = leads.find(l => l.id === selectedLeadIdState);
 
@@ -101,6 +104,103 @@ How can I assist your pipeline today? You can select any active borrower from yo
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+
+  const handleTrainUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || loading) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      
+      const userMsg: BrainMessage = {
+        id: `user-train-${Date.now()}`,
+        sender: "user",
+        text: `🧠 Uploading to Knowledge Base: ${file.name}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, userMsg]);
+      setLoading(true);
+
+      try {
+        const res = await fetch("/api/knowledge/ingest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: text,
+            fileName: file.name
+          })
+        });
+        const data = await res.json();
+        
+        const botMsg: BrainMessage = {
+          id: `copilot-train-${Date.now()}`,
+          sender: "copilot",
+          text: data.success 
+            ? `**Successfully memorized!**\n\nI have added \`${file.name}\` to my Vector Database memory. I will now reference this case study and underwriting logic in future responses to ensure 100% accuracy tailored to your Oregon market.` 
+            : `**Error:** Failed to ingest knowledge.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          category: "guidelines"
+        };
+        setMessages(prev => [...prev, botMsg]);
+      } catch (error) {
+        console.error("Training error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    reader.readAsText(file);
+    if (trainInputRef.current) trainInputRef.current.value = '';
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || loading) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      
+      const userMsg: BrainMessage = {
+        id: `user-doc-${Date.now()}`,
+        sender: "user",
+        text: `📎 Uploaded Document for Analysis: ${file.name}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, userMsg]);
+      setLoading(true);
+
+      try {
+        const res = await fetch("/api/analyze-doc", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            documentText: text,
+            fileName: file.name,
+            documentType: file.type || "text/plain"
+          })
+        });
+        const data = await res.json();
+        const botText = data.analysis || "Document analysis complete.";
+
+        const botMsg: BrainMessage = {
+          id: `copilot-${Date.now()}`,
+          sender: "copilot",
+          text: botText,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          category: "guidelines"
+        };
+        setMessages(prev => [...prev, botMsg]);
+      } catch (error) {
+        console.error("Doc analysis error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSend = async (queryToSend?: string) => {
     const q = (queryToSend || inputQuery).trim();
     if (!q || loading) return;
@@ -117,32 +217,19 @@ How can I assist your pipeline today? You can select any active borrower from yo
     setLoading(true);
 
     try {
-      const res = await fetch("/api/gemini/lo-2nd-brain", {
+      let promptContext = "";
+      if (activeLead) {
+        promptContext = `[Context - Active Lead: ${activeLead.fullName} | Price Range: ${activeLead.targetPriceRange} | FICO: ${activeLead.creditScore} | DTI: ${activeLead.estimatedDti} | Notes: ${activeLead.notes || 'None'}]\n\n`;
+      }
+      const fullPrompt = `${promptContext}User Query: ${q}`;
+
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: q,
-          loProfile: {
-            name: currentLo.name,
-            nmls: currentLo.nmlsNumber,
-            company: currentLo.company,
-            email: currentLo.email
-          },
-          activeLead: activeLead ? {
-            fullName: activeLead.fullName,
-            targetPriceRange: activeLead.targetPriceRange,
-            creditScore: activeLead.creditScore,
-            estimatedDti: activeLead.estimatedDti,
-            notes: activeLead.notes,
-            leadSource: activeLead.leadSource
-          } : undefined,
-          chatHistory: messages.slice(-5).map(m => ({ sender: m.sender, text: m.text })),
-          mode: activeCategory
-        })
+        body: JSON.stringify({ prompt: fullPrompt })
       });
-
       const data = await res.json();
-      const botText = data.reply || data.fallback || "Here is the guidance for your scenario.";
+      const botText = data.response || "Here is the guidance for your scenario.";
 
       const botMsg: BrainMessage = {
         id: `copilot-${Date.now()}`,
@@ -509,6 +596,39 @@ How can I assist your pipeline today? You can select any active borrower from yo
                 disabled={loading}
                 className="flex-1 bg-white border border-[#EAE7E0] rounded-xl px-4 py-3 text-xs text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:ring-2 focus:ring-[#4A5D4E]/30"
               />
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept=".txt,.csv,.json,.pdf"
+                className="hidden"
+              />
+              
+              <input
+                type="file"
+                ref={trainInputRef}
+                onChange={handleTrainUpload}
+                accept=".txt,.csv,.json,.pdf"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => trainInputRef.current?.click()}
+                disabled={loading}
+                title="Train AI Memory (Add to Vector DB)"
+                className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
+              >
+                <Database className="w-4 h-4" />
+              </button>
+<button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                title="Upload Document for Analysis"
+                className="p-3 rounded-xl bg-white border border-[#EAE7E0] text-[#606C5D] hover:bg-[#F9F8F4] transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
+              >
+                <Paperclip className="w-4 h-4" />
+              </button>
               <button
                 type="submit"
                 disabled={!inputQuery.trim() || loading}

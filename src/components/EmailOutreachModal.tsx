@@ -814,25 +814,43 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   };
 
   const launchInOutlook = () => {
-    if (selectedAgentEmails.length === 0) {
-      alert("Please select at least one agent first.");
-      return;
-    }
-    
-    const to = selectedAgentEmails.join(";");
-    
+    let to = "";
+    let cc = "";
     let subjectText = editSubject;
-    if (selectedAgentEmails.length === 1) {
-      const agent = agentProperties.find(a => a.email === selectedAgentEmails[0]);
-      if (agent && agent.properties.length > 0) {
-        subjectText = subjectText.replace(/\[Address\]/g, agent.properties[0].address);
-        subjectText = subjectText.replace(/\[City\]/g, agent.properties[0].city);
-        subjectText = subjectText.replace(/\[AgentName\]/g, agent.agentName);
+
+    if (recipientTab === 'website_leads') {
+      if (!selectedLeadId) {
+        alert("Please select a website lead first.");
+        return;
+      }
+      const lead = leads.find(l => l.id === selectedLeadId);
+      if (!lead || !lead.email) {
+        alert("Selected lead does not have a valid email address.");
+        return;
+      }
+      to = lead.email;
+      if (selectedAgentEmails.length > 0) {
+        cc = selectedAgentEmails.join(";");
       }
     } else {
-      subjectText = subjectText.replace(/\[Address\]/g, 'Featured Listings');
-      subjectText = subjectText.replace(/\[City\]/g, 'Target Area');
-      subjectText = subjectText.replace(/\[AgentName\]/g, 'Agent Partners');
+      if (selectedAgentEmails.length === 0) {
+        alert("Please select at least one agent first.");
+        return;
+      }
+      to = selectedAgentEmails.join(";");
+      
+      if (selectedAgentEmails.length === 1) {
+        const agent = agentProperties.find(a => a.email === selectedAgentEmails[0]);
+        if (agent && agent.properties.length > 0) {
+          subjectText = subjectText.replace(/\[Address\]/g, agent.properties[0].address);
+          subjectText = subjectText.replace(/\[City\]/g, agent.properties[0].city);
+          subjectText = subjectText.replace(/\[AgentName\]/g, agent.agentName);
+        }
+      } else {
+        subjectText = subjectText.replace(/\[Address\]/g, 'Featured Listings');
+        subjectText = subjectText.replace(/\[City\]/g, 'Target Area');
+        subjectText = subjectText.replace(/\[AgentName\]/g, 'Agent Partners');
+      }
     }
 
     const plainBody = generateBodyContent(false);
@@ -845,7 +863,11 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
     }
 
     // mailto URL protocol with pre-encoded subject line and body
-    window.location.href = `mailto:${to}?subject=${encodedSubject}&body=${encodedBody}`;
+    let mailtoLink = `mailto:${to}?subject=${encodedSubject}`;
+    if (cc) mailtoLink += `&cc=${cc}`;
+    mailtoLink += `&body=${encodedBody}`;
+    
+    window.location.href = mailtoLink;
   };
 
   const handleDownloadAttachment = () => {
@@ -855,9 +877,20 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       if (agent) targetProperties.push(...agent.properties);
     });
 
+    let preparedFor = selectedAgentEmails.join('; ');
+    if (recipientTab === 'website_leads' && selectedLeadId) {
+      const lead = leads.find(l => l.id === selectedLeadId);
+      if (lead) {
+        preparedFor = lead.fullName;
+        if (selectedAgentEmails.length > 0) {
+          preparedFor += ` (cc: ${selectedAgentEmails.join('; ')})`;
+        }
+      }
+    }
+
     let fileContent = `========================================================================\n`;
     fileContent += `LOAN OFFICER OUTREACH & PROPERTY FINANCING DATASHEET\n`;
-    fileContent += `Prepared for: ${selectedAgentEmails.join('; ')}\n`;
+    fileContent += `Prepared for: ${preparedFor}\n`;
     fileContent += `Date: ${new Date().toLocaleDateString()}\n`;
     fileContent += `========================================================================\n\n`;
 
@@ -1744,7 +1777,15 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-[#606C5D]">
-                <span className="font-bold text-[#2D362E]">{selectedAgentEmails.length}</span> agent(s) targeted
+                {recipientTab === 'website_leads' ? (
+                  <>
+                    <span className="font-bold text-[#2D362E]">{selectedLeadId ? 1 : 0}</span> lead(s) targeted {selectedAgentEmails.length > 0 && `(cc: ${selectedAgentEmails.length} agent${selectedAgentEmails.length === 1 ? '' : 's'})`}
+                  </>
+                ) : (
+                  <>
+                    <span className="font-bold text-[#2D362E]">{selectedAgentEmails.length}</span> agent(s) targeted
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-2.5 flex-wrap">

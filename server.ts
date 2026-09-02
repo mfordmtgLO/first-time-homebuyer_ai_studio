@@ -3,15 +3,181 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import { loadKnowledgeBase, searchKnowledge, addDocumentToKnowledge } from "./vantageKnowledge.js";
 
 async function startServer() {
+  loadKnowledgeBase();
+
   const app = express();
   const PORT = 3000;
 
   app.use(express.json({ limit: "10mb" }));
 
+  const SYSTEM_PROMPT = `You are VANTAGE, the elite 24/7 Mortgage & Real Estate Financing AI Assistant. You serve as an intelligent guide for Loan Officers navigating the mortgage process.
+
+Core Guidelines:
+1. Underwriting Accuracy: Always reference Fannie Mae, Freddie Mac, FHA, VA, USDA, or Non-QM underwriting standards when calculating income, down payments, or discussing guidelines.
+2. Structure & Strategy: Proactively suggest specific compensating factors, structure tweaks (e.g., 2-1 buydown, down payment assistance, FHA vs Conventional 97).
+3. Compliance & Privacy: Emphasize compliance and ensure safe document discussion.
+4. Spatial Analytics: You understand LMI (Low-to-Moderate Income) Census Tracts, down payment assistance programs, and geographically targeted zero-down loan programs.
+5. Expert Escalation: For highly complex structuring, final commitments, or nuanced scenarios, ALWAYS advise the user to consult Mike Ford, their local professional and experienced Oregon mortgage loan officer.
+
+Format your responses with clean Markdown, bold highlights, bullet points, and distinct visual blocks.`;
+
+  function getActiveAIProvider() {
+    if (process.env.DEEPSEEK_API_KEY) return 'deepseek';
+    if (process.env.GEMINI_API_KEY) return 'gemini';
+    return 'none';
+  }
+
+  // Knowledge Base Ingestion Endpoint
+  app.post('/api/knowledge/ingest', async (req, res) => {
+    try {
+      const { text, fileName, fileBase64, mimeType } = req.body;
+      const ai = getGeminiClient();
+      if (!ai) return res.status(500).json({ error: 'No AI key configured for embeddings.' });
+      
+      let docText = text;
+
+      // If a file was uploaded as base64, extract text with Gemini first
+      if (fileBase64 && mimeType) {
+        try {
+          const response = await ai.models.generateContent({
+            model: 'gemini-3.7-flash',
+            contents: [
+              {
+                inlineData: { data: fileBase64, mimeType }
+              },
+              "Please extract all text and structured data from this document accurately so it can be added to a knowledge base."
+            ]
+          });
+          docText = response.text || docText;
+        } catch (extErr) {
+          console.error("Failed to extract text via Gemini:", extErr);
+          if (!docText) throw new Error("Could not extract text and no fallback text provided.");
+        }
+      }
+
+      if (!docText) {
+        return res.status(400).json({ error: 'No text provided or extracted.' });
+      }
+
+      const doc = await addDocumentToKnowledge(docText, { fileName }, ai);
+      res.json({ success: true, message: `Successfully ingested ${fileName} into Vantage Knowledge Base.`, docId: doc.id, extractedTextPreview: docText.substring(0, 200) });
+    } catch (error: any) {
+      console.error("Knowledge ingestion error:", error);
+      res.status(500).json({ error: 'Knowledge ingestion failed' });
+    }
+  });
+
+  // Standard Chat Endpoint (Vantage AI)
+  app.post('/api/chat', async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      const provider = getActiveAIProvider();
+      
+      if (provider === 'none') return res.status(500).json({ error: 'No AI Provider configured' });
+
+      // Search Knowledge Base (RAG)
+      let augmentedPrompt = prompt;
+      try {
+        const aiForEmbeddings = getGeminiClient();
+        if (aiForEmbeddings) {
+          const relevantDocs = await searchKnowledge(prompt, aiForEmbeddings);
+          const strongDocs = relevantDocs.filter(d => d.score > 0.50); // Threshold
+          
+          if (strongDocs.length > 0) {
+            let contextStr = "\n\n[RELEVANT MIKE FORD OREGON KNOWLEDGE BASE & CASE STUDIES]:\n";
+            contextStr += strongDocs.map((d, i) => `--- Reference ${i+1} (${d.metadata?.fileName || 'Historical Data'}) ---\n${d.text}`).join("\n\n");
+            contextStr += "\n\nINSTRUCTION: Use the above case studies and guidelines to enhance your answer. If they don't cover everything, rely on your broad elite mortgage AI expertise to provide a complete, robust response. Do not limit yourself strictly to the context if general knowledge adds value.";
+            
+            augmentedPrompt = prompt + contextStr;
+          }
+        }
+      } catch (e) {
+        console.error("RAG Search failed, proceeding without context", e);
+      }
+
+      if (provider === 'deepseek') {
+        const response = await fetch('https://api.deepseek.com/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: augmentedPrompt }
+            ],
+            temperature: 0.3
+          })
+        });
+        const data = await response.json();
+        return res.json({ response: data.choices?.[0]?.message?.content || '' });
+      } else {
+        const ai = getGeminiClient();
+        const response = await ai!.models.generateContent({
+          model: 'gemini-3.7-flash',
+          contents: augmentedPrompt,
+          config: { 
+            systemInstruction: SYSTEM_PROMPT, 
+            temperature: 0.3,
+            tools: [{ googleSearch: {} }]
+          }
+        });
+        return res.json({ response: response.text });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Document Analysis Endpoint
+  // Document Analysis Endpoint with RAG Context
+  app.post('/api/analyze-doc', async (req, res) => {
+    try {
+      const { documentText, documentType, fileName } = req.body;
+      const provider = getActiveAIProvider();
+      if (provider === 'none') return res.status(500).json({ error: 'No AI key configured.' });
+
+      let augmentedPrompt = `Analyze this mortgage document (${fileName || documentType}):\n"""${documentText}"""\nProvide a structured Underwriting Analysis including Income Extraction, Risk Flags, and Action Items.`;
+
+      const ai = getGeminiClient();
+      
+      // Inject RAG context based on the document text
+      try {
+        if (ai) {
+          // Use a snippet of the document to find related guidelines in our Knowledge Base
+          const queryText = (documentText || "").substring(0, 1000);
+          const relevantDocs = await searchKnowledge(queryText, ai);
+          const strongDocs = relevantDocs.filter(d => d.score > 0.50);
+          
+          if (strongDocs.length > 0) {
+            let contextStr = "\n\n[RELEVANT MIKE FORD OREGON KNOWLEDGE BASE & CASE STUDIES]:\n";
+            contextStr += strongDocs.map((d, i) => `--- Reference ${i+1} (${d.metadata?.fileName || 'Historical Data'}) ---\n${d.text}`).join("\n\n");
+            contextStr += "\n\nINSTRUCTION: Cross-reference the uploaded document against the above local underwriting guidelines and case studies. Identify if the document meets our specific overlays or requires additional structuring.";
+            
+            augmentedPrompt += contextStr;
+          }
+        }
+      } catch (e) {
+        console.error("RAG Search failed for analyze-doc, proceeding without context", e);
+      }
+
+      if (ai) {
+          const response = await ai.models.generateContent({
+              model: 'gemini-3.7-flash',
+              contents: augmentedPrompt,
+              config: { systemInstruction: SYSTEM_PROMPT, temperature: 0.4 }
+          });
+          return res.json({ analysis: response.text });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: 'Document analysis failed' });
+    }
+  });
+
   // Shared Gemini client utility with telemetry header
-  const getGeminiClient = () => {
+  function getGeminiClient() {
     return new GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY,
       httpOptions: {
@@ -20,7 +186,7 @@ async function startServer() {
         },
       },
     });
-  };
+  }
 
   // Resilient Gemini generator with modern model fallback per AI Studio Guidelines
   const generateWithModelFallback = async (params: {

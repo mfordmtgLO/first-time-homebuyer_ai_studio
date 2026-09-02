@@ -189,7 +189,8 @@ export interface DocumentItem {
   driveFileId?: string;
   driveMimeType?: string;
   driveWebViewLink?: string;
-  importedFrom?: 'google_drive' | 'google_docs' | 'upload' | 'sample';
+  importedFrom?: 'google_drive' | 'google_docs' | 'firebase' | 'upload' | 'sample';
+  ragProcessed?: boolean;
   importedAt?: string;
   fileSizeFormatted?: string;
 }

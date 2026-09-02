@@ -3588,7 +3588,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             onUpdateLeadNotes={(leadId, text) => {
               const currentLeads = guidesState.leads || [];
               const updated = currentLeads.map(l => l.id === leadId ? { ...l, notes: (l.notes ? l.notes + "\n\n" : "") + text.trim() } : l);
-              setGuidesState({ ...guidesState, leads: updated });
+              onUpdateGuidesState({ ...guidesState, leads: updated });
             }}
             onOpenScenarioWorkbench={(leadId) => {
               setScenarioWorkbenchLeadId(leadId);

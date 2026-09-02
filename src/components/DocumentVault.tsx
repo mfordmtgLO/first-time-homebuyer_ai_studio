@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import { DocumentItem } from "../types";
 import { GoogleDriveDocImporterModal } from "./GoogleDriveDocImporterModal";
+import { storage } from "../firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useRef } from "react";
 import { DocumentQuickPreviewModal } from "./DocumentQuickPreviewModal";
 
 interface DocumentVaultProps {
@@ -33,6 +36,68 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("All");
   const [previewingDoc, setPreviewingDoc] = useState<DocumentItem | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const firebaseUploadRef = useRef<HTMLInputElement>(null);
+
+  const handleFirebaseUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      // 1. Convert to Base64 for Knowledge Ingest
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onload = (ev) => {
+          const result = ev.target?.result as string;
+          resolve(result.split(",")[1]); // just the base64 part
+        };
+      });
+      reader.readAsDataURL(file);
+      const base64Data = await base64Promise;
+
+      // 2. Upload to Firebase Storage
+      const storageRef = ref(storage, `documents/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      // 3. Ingest into RAG (Vector DB)
+      const ingestRes = await fetch("/api/knowledge/ingest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileBase64: base64Data,
+          mimeType: file.type || "application/octet-stream"
+        })
+      });
+      if (!ingestRes.ok) {
+        console.warn("Failed to ingest document into AI Vector DB");
+      }
+
+      // 4. Add to DocumentVault list
+      const newDoc: DocumentItem = {
+        id: `fb-${Date.now()}`,
+        title: file.name,
+        category: "Property & Contract", // default
+        required: false,
+        status: "ready",
+        description: `Uploaded via Firebase Storage (${file.type})`,
+        acceptedFormats: "PDF, TXT",
+        fileUrl: downloadUrl,
+        importedFrom: "firebase"
+      };
+
+      setDocuments(prev => [newDoc, ...prev]);
+
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Failed to upload document.");
+    } finally {
+      setIsUploading(false);
+      if (firebaseUploadRef.current) firebaseUploadRef.current.value = "";
+    }
+  };
 
   const toggleDocStatus = (id: string) => {
     setDocuments(prev =>
@@ -106,6 +171,25 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+            
+            {/* Firebase Upload Trigger */}
+            <input
+              type="file"
+              ref={firebaseUploadRef}
+              onChange={handleFirebaseUpload}
+              accept=".pdf,.txt,.csv,.docx"
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => firebaseUploadRef.current?.click()}
+              disabled={isUploading}
+              className="px-4 py-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <UploadCloud className="w-4 h-4 text-emerald-700" />
+              <span>{isUploading ? "Uploading..." : "Upload File & AI Context"}</span>
+            </button>
+
             {/* Import from Google Drive / Docs Trigger */}
             <button
               type="button"
@@ -162,7 +246,7 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
         {filteredDocs.map((doc) => {
           const isReady = doc.status === "ready";
           const isSubmitted = doc.status === "submitted";
-          const isImportedFromDrive = doc.importedFrom === "google_drive" || doc.importedFrom === "google_docs";
+          const isImportedFromDrive = doc.importedFrom === "google_drive" || doc.importedFrom === "google_docs" || doc.importedFrom === "firebase";
 
           return (
             <div
@@ -184,7 +268,7 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
                     {isImportedFromDrive && (
                       <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1">
                         <FolderPlus className="w-2.5 h-2.5" />
-                        {doc.importedFrom === "google_docs" ? "Google Doc" : "Google Drive"}
+                        {doc.importedFrom === "firebase" ? "RAG AI Database" : doc.importedFrom === "google_docs" ? "Google Doc" : "Google Drive"}
                       </span>
                     )}
                   </div>

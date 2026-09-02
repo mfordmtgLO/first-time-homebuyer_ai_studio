@@ -28,6 +28,7 @@ import { FinancialProfile, PropertyListing, RoadmapMilestone, DocumentItem, Loan
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 import { hasAuthenticPropertyPhoto, getZillowUrl } from "../utils/overlayClassification";
 import { SavingsGoalTracker } from "./SavingsGoalTracker";
+import { RAGDocumentsWidget } from "./RAGDocumentsWidget";
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 import { RealTimeMortgageRateTracker } from "./RealTimeMortgageRateTracker";
 import { HomebuyingPlanPrintModal } from "./HomebuyingPlanPrintModal";
@@ -40,6 +41,7 @@ interface DashboardOverviewProps {
   properties: PropertyListing[];
   milestones: RoadmapMilestone[];
   documents: DocumentItem[];
+  setDocuments?: React.Dispatch<React.SetStateAction<DocumentItem[]>>;
   onNavigate: (tab: string, mode?: "website" | "dashboard") => void;
   onOpenNewPropertyModal: () => void;
   loanOfficer?: LoanOfficerProfile;
@@ -57,6 +59,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   properties,
   milestones,
   documents,
+  setDocuments,
   onNavigate,
   onOpenNewPropertyModal,
   loanOfficer,
@@ -505,6 +508,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
       </div>
+
+      <RAGDocumentsWidget documents={documents} setDocuments={setDocuments} />
 
       {/* Guided 4-Step Flow: Proceed to Step 4 Navigation Card */}
       <div className="bg-gradient-to-br from-[#2D362E] to-[#1E251F] text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-[#4A5D4E]/40 relative overflow-hidden">

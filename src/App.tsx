@@ -580,6 +580,7 @@ export default function App() {
                     profile={profile}
                     properties={properties}
                     documents={documents}
+                    setDocuments={setDocuments}
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
                     isCoBranded={guidesState.isCoBranded}
@@ -598,6 +599,7 @@ export default function App() {
                     properties={properties}
                     milestones={milestones}
                     documents={documents}
+                    setDocuments={setDocuments}
                     onNavigate={handleNavigate}
                     onOpenNewPropertyModal={() => setShowNewPropertyModal(true)}
                     loanOfficer={guidesState.loanOfficer}
@@ -616,6 +618,7 @@ export default function App() {
                     properties={properties}
                     milestones={milestones}
                     documents={documents}
+                    setDocuments={setDocuments}
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
                     isCoBranded={guidesState.isCoBranded}
@@ -631,6 +634,7 @@ export default function App() {
                     profile={profile}
                     milestones={milestones}
                     documents={documents}
+                    setDocuments={setDocuments}
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
                     onOpenScorecard={(prop) => setScorecardProperty(prop)}

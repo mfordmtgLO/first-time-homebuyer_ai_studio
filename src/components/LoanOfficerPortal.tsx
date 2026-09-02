@@ -2781,7 +2781,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                         <div className="text-[11px] text-[#606C5D] space-y-0.5">
                                           <div className="flex items-center gap-1">
                                             <Mail className="w-3 h-3 text-[#9A9488]" />
-                                            <a href={`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(lead.email)}`} target="_blank" rel="noreferrer" className="hover:text-[#4A5D4E] hover:underline">{lead.email}</a>
+                                            <a href={`mailto:${lead.email}`} className="hover:text-[#4A5D4E] hover:underline">{lead.email}</a>
                                           </div>
                                           <div className="flex items-center gap-1">
                                             <Phone className="w-3 h-3 text-[#9A9488]" />
@@ -4069,8 +4069,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           <span>{lo.phone}</span>
                         </a>
                         <a 
-                          href={`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(lo.email)}`}
-                          target="_blank" rel="noreferrer"
+                          href={`mailto:${lo.email}`}
                           className="inline-flex items-center gap-1 text-[#4A5D4E] hover:text-[#2D362E] font-medium bg-[#FAF9F5] px-2 py-0.5 rounded-lg border border-[#EAE7E0] truncate max-w-[170px]"
                         >
                           <Mail className="w-3 h-3 text-[#4A5D4E] shrink-0" />

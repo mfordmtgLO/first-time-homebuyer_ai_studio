@@ -1076,7 +1076,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                             <a href={`tel:${listing.listingAgent.phone}`} className="text-blue-600 hover:underline">{listing.listingAgent.phone}</a>
                           )}
                           {listing.listingAgent?.email && (
-                            <a href={`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(listing.listingAgent.email)}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline max-w-[120px] truncate">{listing.listingAgent.email}</a>
+                            <a href={`mailto:${listing.listingAgent.email}`} className="text-blue-600 hover:underline max-w-[120px] truncate">{listing.listingAgent.email}</a>
                           )}
                         </div>
                         {listing.listingOffice?.name && (

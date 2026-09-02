@@ -22,7 +22,7 @@ import {
   MessageSquare,
   FileCheck,
   Building,
-  UserCheck, Paperclip, Database
+  UserCheck, Paperclip, Database, Mail
 } from "lucide-react";
 import { LoanOfficerProfile, CapturedLead, FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
@@ -316,6 +316,16 @@ How can I assist your pipeline today? You can select any active borrower from yo
     }
   };
 
+  const handleDraftEmail = (text: string) => {
+    let emailTo = "";
+    if (activeLead && activeLead.email) {
+      emailTo = activeLead.email;
+    }
+    const subject = activeLead ? `Follow-up regarding your home loan` : `Mortgage scenario update`;
+    const mailtoUrl = `mailto:${emailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+    window.location.href = mailtoUrl;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -574,6 +584,15 @@ How can I assist your pipeline today? You can select any active borrower from yo
                           <span>{savedId === msg.id ? "Saved to CRM Notes" : `Save to ${activeLead.fullName.split(" ")[0]}'s CRM Notes`}</span>
                         </button>
                       )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleDraftEmail(msg.text)}
+                        className="inline-flex items-center gap-1 text-[#C18C5D] hover:underline font-semibold cursor-pointer ml-2"
+                      >
+                        <Mail className="w-3 h-3" />
+                        <span>Open Draft Email</span>
+                      </button>
                     </div>
                   )}
 

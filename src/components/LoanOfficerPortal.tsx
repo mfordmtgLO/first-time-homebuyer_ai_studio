@@ -3959,7 +3959,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                   e.stopPropagation();
                                   const currentStatus = lo.teamStarStatus || 'red';
                                   const nextStatus = currentStatus === 'red' ? 'blue' : currentStatus === 'blue' ? 'green' : 'red';
-                                  const updatedLos = guidesState.loanOfficers.map(l => l.id === lo.id ? { ...l, teamStarStatus: nextStatus } : l);
+                                  const updatedLos = guidesState.loanOfficers.map(l => l.id === lo.id ? { ...l, teamStarStatus: nextStatus as "red" | "blue" | "green" } : l);
                                   onUpdateGuidesState({ ...guidesState, loanOfficers: updatedLos });
                                 }}
                                 className="focus:outline-none hover:scale-110 transition-transform"
@@ -3977,7 +3977,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                   e.stopPropagation();
                                   const currentStatus = lo.teamStarStatus || 'red';
                                   const nextStatus = currentStatus === 'red' ? 'blue' : currentStatus === 'blue' ? 'green' : 'red';
-                                  const updatedLos = guidesState.loanOfficers.map(l => l.id === lo.id ? { ...l, teamStarStatus: nextStatus } : l);
+                                  const updatedLos = guidesState.loanOfficers.map(l => l.id === lo.id ? { ...l, teamStarStatus: nextStatus as "red" | "blue" | "green" } : l);
                                   onUpdateGuidesState({ ...guidesState, loanOfficers: updatedLos });
                                 }}
                                 className="focus:outline-none hover:scale-110 transition-transform"

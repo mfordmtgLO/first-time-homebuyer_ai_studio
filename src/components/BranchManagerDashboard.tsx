@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ProfessionalGuidesState } from "../types";
 import { 
   Users, TrendingUp, PieChart, BarChart3, Clock, Calendar, 
   Search, Filter, ChevronDown, Award, Target, Activity, ShieldCheck
@@ -24,15 +25,35 @@ const sourceData = [
   { name: 'Paid Ads', value: 10, color: '#2D362E' },
 ];
 
-const teamData = [
-  { id: 1, name: "Sarah Jenkins", activeLeads: 45, closedYTD: 28, avgDaysToClose: 24, brainUsage: 92, pairs: 12 },
-  { id: 2, name: "Marcus Reed", activeLeads: 32, closedYTD: 19, avgDaysToClose: 28, brainUsage: 65, pairs: 5 },
-  { id: 3, name: "Elena Rodriguez", activeLeads: 68, closedYTD: 41, avgDaysToClose: 21, brainUsage: 98, pairs: 18 },
-  { id: 4, name: "David Chen", activeLeads: 24, closedYTD: 12, avgDaysToClose: 31, brainUsage: 40, pairs: 3 },
-];
 
-export const BranchManagerDashboard: React.FC = () => {
+
+interface BranchManagerDashboardProps {
+  guidesState: ProfessionalGuidesState;
+  onUpdateGuidesState: (newState: ProfessionalGuidesState | ((prev: ProfessionalGuidesState) => ProfessionalGuidesState)) => void;
+}
+
+export const BranchManagerDashboard: React.FC<BranchManagerDashboardProps> = ({ guidesState, onUpdateGuidesState }) => {
   const [dateRange, setDateRange] = useState("YTD");
+
+  const teamData = guidesState.loanOfficers
+    .filter(lo => lo.id !== guidesState.adminLoanOfficerId)
+    .map(lo => {
+      const pairsCount = guidesState.pairings.filter(p => p.loId === lo.id).length;
+      // Generate deterministic pseudo-random metrics based on LO id
+      const idNum = lo.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      
+      return {
+        id: lo.id,
+        name: lo.name,
+        activeLeads: (idNum % 50) + 10,
+        closedYTD: (idNum % 30) + 5,
+        avgDaysToClose: (idNum % 15) + 18,
+        brainUsage: (idNum % 60) + 40,
+        pairs: pairsCount || (idNum % 5) + 1,
+        realId: lo.id
+      };
+    });
+
 
   return (
     <div className="space-y-6">
@@ -174,7 +195,14 @@ export const BranchManagerDashboard: React.FC = () => {
         </div>
         
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          {teamData.length === 0 ? (
+          <div className="p-12 text-center text-[#606C5D]">
+            <Users className="w-12 h-12 mx-auto mb-4 opacity-20" />
+            <h3 className="text-lg font-bold text-[#2D362E] mb-2">No Team Members Found</h3>
+            <p className="text-sm max-w-md mx-auto">You haven't added any downstream loan officers yet. Go to the main dashboard to add new loan officers to your branch.</p>
+          </div>
+        ) : (
+        <table className="w-full text-sm text-left">
             <thead className="text-xs text-[#606C5D] uppercase bg-[#F9F8F4] border-b border-[#EAE7E0]">
               <tr>
                 <th className="px-6 py-4 font-semibold">Loan Officer</th>
@@ -217,7 +245,9 @@ export const BranchManagerDashboard: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 font-medium text-[#606C5D]">{lo.pairs}</td>
                   <td className="px-6 py-4 text-right">
-                    <button className="text-xs bg-white border border-[#EAE7E0] hover:border-[#4A5D4E] text-[#4A5D4E] px-3 py-1.5 rounded-lg font-semibold transition-colors shadow-sm">
+                    <button 
+                      onClick={() => onUpdateGuidesState(prev => ({ ...prev, currentUserId: lo.realId }))}
+                      className="text-xs bg-white border border-[#EAE7E0] hover:border-[#4A5D4E] text-[#4A5D4E] px-3 py-1.5 rounded-lg font-semibold transition-colors shadow-sm">
                       Shadow Dashboard
                     </button>
                   </td>
@@ -225,6 +255,7 @@ export const BranchManagerDashboard: React.FC = () => {
               ))}
             </tbody>
           </table>
+        )}
         </div>
       </div>
     </div>

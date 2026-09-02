@@ -5375,7 +5375,10 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         )}
 
         {activeTab === "branch_admin_metrics" && (
-          <BranchManagerDashboard />
+          <BranchManagerDashboard 
+            guidesState={guidesState}
+            onUpdateGuidesState={onUpdateGuidesState}
+          />
         )}
 
         {activeTab === "growth_dashboard" && (

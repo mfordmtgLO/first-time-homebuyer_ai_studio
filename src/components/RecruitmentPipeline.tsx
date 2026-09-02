@@ -247,12 +247,12 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
       </div>
 
       {/* Kanban Board */}
-      <div className="flex gap-4 overflow-x-auto pb-6 items-start">
+      <div className="flex gap-4 overflow-x-auto pb-6 items-start dashboard-horizontal-scrollbar">
         {['Not Contacted', 'In Outreach', 'Interested', 'Meeting Scheduled', 'Declined'].map(status => {
           const columnLos = recruitmentLos.filter(lo => (lo.recruitmentStatus || 'Not Contacted') === status);
           
           return (
-            <div key={status} className="w-[340px] shrink-0 bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-4 flex flex-col max-h-[75vh]">
+            <div key={status} className="flex-1 min-w-[240px] max-w-[340px] shrink-0 bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-4 flex flex-col max-h-[75vh]">
               <div className="flex items-center justify-between mb-4 shrink-0">
                 <h4 className="font-bold text-sm text-[#2D362E]">{status}</h4>
                 <span className="text-[10px] font-bold bg-[#EAE7E0] text-[#606C5D] px-2 py-0.5 rounded-full">

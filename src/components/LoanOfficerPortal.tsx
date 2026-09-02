@@ -1356,7 +1356,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
       {/* Top Navigation Bar */}
       <header className="bg-white border-b border-[#EAE7E0] sticky top-0 z-40 px-4 sm:px-8 py-3 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Brand & Logged-In User Badge */}
           <div className="flex items-center gap-3.5 flex-wrap">
             <div className="w-10 h-10 rounded-2xl bg-[#4A5D4E] text-white flex items-center justify-center font-serif font-bold text-lg shadow-sm shrink-0">
@@ -1954,7 +1954,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       </header>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-6">
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-6 space-y-6">
         {/* Admin Managing Downstream LO Alert Banner */}
         {isAdminUser && currentLo.id !== loggedInUser.id && (
           <div className="bg-amber-50/90 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in">

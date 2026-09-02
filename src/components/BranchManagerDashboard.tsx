@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { 
   Users, TrendingUp, PieChart, BarChart3, Clock, Calendar, 
-  Search, Filter, ChevronDown, Award, Target, Activity 
+  Search, Filter, ChevronDown, Award, Target, Activity, ShieldCheck
 } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 

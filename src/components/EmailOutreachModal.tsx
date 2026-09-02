@@ -862,12 +862,12 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       handleDownloadSelectedFlyers();
     }
 
-    // mailto URL protocol with pre-encoded subject line and body
-    let mailtoLink = `mailto:${to}?subject=${encodedSubject}`;
-    if (cc) mailtoLink += `&cc=${cc}`;
-    mailtoLink += `&body=${encodedBody}`;
+    // Use Office 365 Deeplink to preserve HTML email signatures
+    let outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}&subject=${encodedSubject}`;
+    if (cc) outlookUrl += `&cc=${encodeURIComponent(cc)}`;
+    outlookUrl += `&body=${encodedBody}`;
     
-    window.location.href = mailtoLink;
+    window.open(outlookUrl, '_blank');
   };
 
   const handleDownloadAttachment = () => {
@@ -1771,7 +1771,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
             <div className="flex items-center gap-2 text-xs text-[#0078D4] bg-blue-50/80 border border-blue-200/60 p-2.5 rounded-xl">
               <Info className="w-4 h-4 shrink-0 text-[#0078D4]" />
               <span>
-                <strong>Outlook Integration:</strong> Clicking <strong>Launch in Outlook</strong> uses pre-encoded <code className="bg-white/80 px-1 py-0.5 rounded border border-blue-200 font-mono text-[11px]">mailto:</code> parameters. Download the property datasheet below to attach directly to your draft.
+                <strong>Outlook Integration:</strong> Clicking <strong>Launch in Outlook</strong> uses Office 365 Direct Compose. This guarantees your rich HTML email signature (headshot, links) stays perfectly intact unlike standard mailto links.
               </span>
             </div>
 

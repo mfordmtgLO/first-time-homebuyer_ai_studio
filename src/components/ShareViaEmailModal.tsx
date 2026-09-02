@@ -243,8 +243,9 @@ export const ShareViaEmailModal: React.FC<ShareViaEmailModalProps> = ({
 
   const handleOpenMailClient = () => {
     const { subject, body } = generatePlainTextDossier();
-    const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoUrl;
+    // Use Office 365 Deeplink to preserve HTML email signatures
+    const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(recipientEmail)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(outlookUrl, "_blank");
   };
 
   const handleDownloadHtml = () => {

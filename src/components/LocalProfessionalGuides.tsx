@@ -263,7 +263,8 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
                 <span className="font-semibold">{loanOfficer.phone}</span>
               </a>
               <a 
-                href={`mailto:${loanOfficer.email}?subject=First-Time%20Homebuyer%20Inquiry%20from%20Roadmap`}
+                href={`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(loanOfficer.email)}&subject=First-Time%20Homebuyer%20Inquiry%20from%20Roadmap`}
+                target="_blank" rel="noreferrer"
                 className="flex items-center gap-1.5 p-2 bg-white rounded-lg border border-[#EAE7E0] hover:border-[#4A5D4E] transition-colors truncate"
               >
                 <Mail className="w-3.5 h-3.5 text-[#C18C5D] shrink-0" />
@@ -361,7 +362,8 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
                   <span className="font-semibold">{activeAgent.phone}</span>
                 </a>
                 <a 
-                  href={`mailto:${activeAgent.email}?subject=Home%20Tour%20Inquiry%20from%20Roadmap`}
+                  href={`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(activeAgent.email)}&subject=Home%20Tour%20Inquiry%20from%20Roadmap`}
+                  target="_blank" rel="noreferrer"
                   className="flex items-center gap-1.5 p-2 bg-white rounded-lg border border-[#EAE7E0] hover:border-[#C18C5D] transition-colors truncate"
                 >
                   <Mail className="w-3.5 h-3.5 text-[#4A5D4E] shrink-0" />

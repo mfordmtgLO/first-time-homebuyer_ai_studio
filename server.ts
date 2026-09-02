@@ -13,6 +13,53 @@ async function startServer() {
 
   app.use(express.json({ limit: "10mb" }));
 
+  // In-memory queue for 3rd party webhook leads
+  let webhookLeadsQueue: any[] = [];
+
+  // API Endpoint for 3rd-Party Platforms to POST leads
+  app.post('/api/webhook/lead', (req, res) => {
+    try {
+      const apiKey = req.headers['x-api-key'] || req.headers['authorization'];
+      // Basic security check (Optional: In production, validate against an env var)
+      if (process.env.WEBHOOK_API_KEY && apiKey !== process.env.WEBHOOK_API_KEY && apiKey !== `Bearer ${process.env.WEBHOOK_API_KEY}`) {
+        return res.status(401).json({ error: "Unauthorized. Invalid API Key." });
+      }
+
+      const lead = req.body;
+      if (!lead.fullName || !lead.email || !lead.phone) {
+        return res.status(400).json({ error: "Missing required fields: fullName, email, phone" });
+      }
+
+      const newLead = {
+        id: `lead-webhook-${Date.now()}`,
+        preferredContactTime: "As soon as possible",
+        timeline: "ASAP",
+        targetPriceRange: "TBD",
+        targetMonthlyBudget: "TBD",
+        downPaymentSavings: "TBD",
+        grantInterest: false,
+        creditScoreTier: "Unknown",
+        preferredLocations: "TBD",
+        propertyType: "Single Family",
+        leadSource: lead.source || "3rd Party Ad Campaign",
+        assignedLoId: "mike-ford",
+        ...lead, // Overwrite defaults with any provided fields
+        createdAt: new Date().toISOString()
+      };
+
+      webhookLeadsQueue.push(newLead);
+      return res.status(200).json({ success: true, message: "Lead successfully ingested.", leadId: newLead.id });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Internal endpoint for the React frontend to poll and clear the queue
+  app.get('/api/webhook/leads/poll', (req, res) => {
+    res.json({ leads: webhookLeadsQueue });
+    webhookLeadsQueue = []; // clear after fetching
+  });
+
   const SYSTEM_PROMPT = `You are VANTAGE, the elite 24/7 Mortgage & Real Estate Financing AI Assistant. You serve as an intelligent guide for Loan Officers navigating the mortgage process.
 
 Core Guidelines:

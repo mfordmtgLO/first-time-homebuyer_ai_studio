@@ -322,8 +322,10 @@ How can I assist your pipeline today? You can select any active borrower from yo
       emailTo = activeLead.email;
     }
     const subject = activeLead ? `Follow-up regarding your home loan` : `Mortgage scenario update`;
-    const mailtoUrl = `mailto:${emailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-    window.location.href = mailtoUrl;
+    
+    // Use Office 365 Deeplink to preserve HTML email signatures
+    const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(emailTo)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+    window.open(outlookUrl, "_blank");
   };
 
   return (

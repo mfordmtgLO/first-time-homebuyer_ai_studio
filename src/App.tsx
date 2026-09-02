@@ -266,6 +266,33 @@ export default function App() {
     setDoc(doc(db, "guides_state", "singleton"), newState).catch(console.error);
   };
 
+  // Poll for 3rd Party Webhook Leads
+  useEffect(() => {
+    const pollWebhookLeads = async () => {
+      try {
+        const res = await fetch("/api/webhook/leads/poll");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.leads && data.leads.length > 0) {
+            setGuidesState(prev => {
+              const updatedLeads = [...data.leads, ...(prev.leads || [])];
+              const newState = { ...prev, leads: updatedLeads };
+              // Auto-sync new webhooks to Firebase
+              setDoc(doc(db, "guides_state", "singleton"), newState).catch(console.error);
+              return newState;
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to poll webhook leads", err);
+      }
+    };
+    
+    // Poll every 15 seconds
+    const intervalId = setInterval(pollWebhookLeads, 15000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   // LO Hub & Modals State
   const [showLoPortal, setShowLoPortal] = useState<boolean>(false);
   const [scorecardProperty, setScorecardProperty] = useState<PropertyListing | null>(null);

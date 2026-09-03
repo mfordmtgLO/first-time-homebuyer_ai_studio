@@ -94,6 +94,7 @@ export interface PropertyListing {
   propertyType: 'Single Family' | 'Townhouse' | 'Condo' | 'Multi-Family' | 'Manufactured' | 'Mobile' | 'Land' | 'Other';
   imageUrl: string;
   galleryUrls?: string[];
+  images?: string[];
   status: 'saved' | 'touring' | 'offered' | 'under_contract' | 'passed';
   notes: string;
   tourDate?: string;

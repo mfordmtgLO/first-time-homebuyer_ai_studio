@@ -311,7 +311,7 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
 
   return (
     <aside 
-      className={`sticky top-[65px] h-[calc(100vh-65px)] shrink-0 flex flex-col bg-[#FDFBF7] border-r border-[#EAE7E0] transition-all duration-300 z-30 select-none ${
+      className={`h-full overflow-y-auto shrink-0 flex flex-col bg-[#FDFBF7] border-r border-[#EAE7E0] transition-all duration-300 z-30 select-none ${
         isCollapsed ? "w-[68px]" : "w-64 lg:w-72"
       }`}
       aria-label="Loan Officer Portal Navigation"

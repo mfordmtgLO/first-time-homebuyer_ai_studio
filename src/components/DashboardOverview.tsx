@@ -316,11 +316,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 className="group cursor-pointer bg-white hover:bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] hover:border-[#DEDAD2] p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all shadow-sm"
               >
                 {hasAuthenticPropertyPhoto(property) ? (
-                  <img
-                    src={property.imageUrl}
-                    alt={property.title}
-                    className="w-full sm:w-24 h-20 object-cover rounded-xl shrink-0"
-                  />
+                  <img src={property.images?.length ? property.images[0] : property.imageUrl} alt={property.title} className="w-full sm:w-24 h-20 object-cover rounded-xl shrink-0" />
                 ) : (
                   <div className="w-full sm:w-20 h-16 bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl flex flex-col items-center justify-center text-[#4A5D4E] shrink-0 p-2 text-center group-hover:border-[#4A5D4E]/40 transition-colors">
                     <Building className="w-5 h-5 mb-1 text-[#4A5D4E]" />

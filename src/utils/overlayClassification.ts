@@ -11,10 +11,12 @@ import {
  * rather than a generic stock photo placeholder.
  */
 export function hasAuthenticPropertyPhoto(listing?: PropertyListing | null): boolean {
-  if (!listing || !listing.imageUrl) return false;
+  if (!listing) return false;
+  if (listing.images && listing.images.length > 0) return true;
+  if (!listing.imageUrl) return false;
   const url = String(listing.imageUrl).trim().toLowerCase();
   if (!url) return false;
-  if (url.includes("unsplash.com") || url.includes("placeholder") || url.includes("images.unsplash")) {
+  if (url.includes("unsplash.com") || url.includes("placeholder") || url.includes("images.unsplash") || url.includes("picsum.photos")) {
     return false;
   }
   return true;

@@ -1459,7 +1459,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     : `${origin}/?lo=${currentLoSlug}&agent=${activeAgentSlug}`;
 
   return (
-    <div className="min-h-screen bg-[#F7F6F2] text-[#2D362E] pb-24">
+    <div className="flex-1 w-full bg-[#F7F6F2] text-[#2D362E] flex flex-col min-h-0">
       {/* Toast Notification */}
       {successToast && (
         <div className="fixed bottom-6 right-6 z-50 bg-[#2D362E] text-white px-5 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-bottom-5">
@@ -1469,7 +1469,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       )}
 
       {/* Top Navigation Bar */}
-      <header className="bg-white border-b border-[#EAE7E0] sticky top-0 z-40 px-4 sm:px-8 py-3 shadow-2xs">
+      <header className="bg-white border-b border-[#EAE7E0] shrink-0 z-40 px-4 sm:px-8 py-3 shadow-2xs">
         <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Brand & Logged-In User Badge */}
           <div className="flex items-center gap-3.5 flex-wrap">
@@ -2104,7 +2104,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       </header>
 
       {/* Portal Layout: Left Collapsible Sidebar with Sticky AI Daily Rhythm + Main Workspace */}
-      <div className="flex flex-1 min-h-[calc(100vh-65px)]">
+      <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
         <LoanOfficerSidebar
           activeTab={activeTab}
@@ -2128,7 +2128,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 min-w-0 overflow-y-auto">
+        <div className="flex-1 min-w-0 overflow-y-auto pb-24">
           <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-6 space-y-6">
         {/* Admin Managing Downstream LO Alert Banner */}
         {isAdminUser && currentLo.id !== loggedInUser.id && (

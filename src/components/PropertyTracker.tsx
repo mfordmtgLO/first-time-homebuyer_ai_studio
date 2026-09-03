@@ -625,11 +625,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                 {hasPhoto ? (
                   /* Real Photo Header (Only rendered when authentic photo exists) */
                   <div className="relative h-48 w-full overflow-hidden bg-[#F1EFE9]">
-                    <img
-                      src={property.imageUrl}
-                      alt={property.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
+                    <img src={property.images?.length ? property.images[0] : property.imageUrl} alt={property.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
 
                     {/* Status badge */}

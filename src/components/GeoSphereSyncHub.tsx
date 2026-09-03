@@ -49,6 +49,7 @@ import {
 } from "../utils/overlayClassification";
 import { getPropertyOhcsPriceLimit, OREGON_COUNTY_PRICE_LIMITS, normalizeOregonCounty } from "../utils/ohcsPurchaseLimits";
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
+import { launchLocalOutlookDraft } from "../utils/outlookEmailService";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -1076,7 +1077,25 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                             <a href={`tel:${listing.listingAgent.phone}`} className="text-blue-600 hover:underline">{listing.listingAgent.phone}</a>
                           )}
                           {listing.listingAgent?.email && (
-                            <a href={`mailto:${listing.listingAgent.email}`} className="text-blue-600 hover:underline max-w-[120px] truncate">{listing.listingAgent.email}</a>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const activeLo = guidesState.loanOfficers.find(l => l.isTeamMember || l.isAdmin) || guidesState.loanOfficers[0];
+                                launchLocalOutlookDraft({
+                                  to: listing.listingAgent?.email || '',
+                                  subject: `Buyer Financing Inquiry: ${listing.address}`,
+                                  body: `Hi ${listing.listingAgent.name ? listing.listingAgent.name.split(' ')[0] : 'there'},\n\nI am reaching out regarding your listing at ${listing.address} listed at ${formatUSD(listing.price)}.\n\nWe have pre-qualified buyers actively touring homes in this corridor and wanted to check on current offer activity and share our special financing flyer and buydown incentives.\n\nBest regards,`,
+                                  loanOfficer: activeLo,
+                                  templateName: "Listing Agent Property Connect",
+                                  onTriggerToast
+                                });
+                              }}
+                              className="text-[#0078D4] hover:underline max-w-[130px] truncate cursor-pointer text-left font-medium"
+                              title="Draft email in local installed Outlook with work signature"
+                            >
+                              {listing.listingAgent.email}
+                            </button>
                           )}
                         </div>
                         {listing.listingOffice?.name && (

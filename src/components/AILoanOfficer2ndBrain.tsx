@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { LoanOfficerProfile, CapturedLead, FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
+import { launchLocalOutlookDraft } from "../utils/outlookEmailService";
 
 interface AILoanOfficer2ndBrainProps {
   currentLo: LoanOfficerProfile;
@@ -323,8 +324,14 @@ How can I assist your pipeline today? You can select any active borrower from yo
     }
     const subject = activeLead ? `Follow-up regarding your home loan` : `Mortgage scenario update`;
     
-    const mailtoUrl = `mailto:${emailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-    window.location.href = mailtoUrl;
+    launchLocalOutlookDraft({
+      to: emailTo,
+      subject,
+      body: text,
+      loanOfficer: currentLo,
+      lead: activeLead || undefined,
+      templateName: "AI 2nd Brain Copilot Dispatch"
+    });
   };
 
   const handleDeleteMessage = (msgId: string) => {

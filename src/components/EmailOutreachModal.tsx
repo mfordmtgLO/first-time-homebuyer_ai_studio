@@ -9,6 +9,7 @@ import {
 import { PropertyListing, EmailTemplate, RealEstateAgentProfile, CapturedLead, LoanOfficerProfile, EmailHistoryItem } from '../types';
 import { INITIAL_AGENT_ROSTER, INITIAL_LEADS, INITIAL_TEAM_LOAN_OFFICERS } from '../data/initialData';
 import { OutreachHistoryBadge } from './OutreachHistoryBadge';
+import { launchLocalOutlookDraft, appendWorkEmailSignature, getWorkEmailSignature } from '../utils/outlookEmailService';
 
 interface EmailOutreachModalProps {
   isOpen: boolean;
@@ -670,6 +671,26 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   const generateBodyContent = (isHtml: boolean = false) => {
     let text = editBody;
     
+    // Resolve Loan Officer details
+    const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
+    const loName = activeLo?.name || 'Mike Ford';
+    const rawNmls = activeLo?.nmlsId ? activeLo.nmlsId.replace(/[^0-9]/g, '') : '288455';
+    const loNmls = rawNmls || '288455';
+
+    // Replace lead or agent placeholders
+    if (recipientTab === 'website_leads' && selectedLeadId) {
+      const targetLead = leads.find(l => l.id === selectedLeadId);
+      if (targetLead) {
+        text = text.replace(/\[LeadName\]/g, targetLead.fullName || 'Homebuyer');
+        const budgetDisplay = (targetLead as any).targetPrice 
+          ? `$${Number((targetLead as any).targetPrice).toLocaleString()}` 
+          : (targetLead.targetPriceRange || '$450,000');
+        text = text.replace(/\[TargetBudget\]/g, budgetDisplay);
+        text = text.replace(/\[City\]/g, targetLead.taggedCityArea || 'Salem, OR');
+        text = text.replace(/\[PreferredTime\]/g, 'this afternoon or tomorrow morning');
+      }
+    }
+
     if (selectedAgentEmails.length === 1) {
       const agent = agentProperties.find(a => a.email === selectedAgentEmails[0]);
       if (agent) {
@@ -685,15 +706,15 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       text = text.replace(/\[City\]/g, 'our target area');
     }
 
-    text = text.replace(/\[MyName\]/g, 'Mike Ford (Senior Loan Officer)');
+    text = text.replace(/\[LoName\]/g, loName);
+    text = text.replace(/\[LoNMLS\]/g, loNmls);
+    text = text.replace(/\[MyName\]/g, `${loName} (Senior Loan Officer, NMLS #${loNmls})`);
 
     const targetProperties: PropertyListing[] = [];
     selectedAgentEmails.forEach(email => {
       const agent = agentProperties.find(a => a.email === email);
       if (agent) targetProperties.push(...agent.properties);
     });
-
-    if (targetProperties.length === 0) return text;
 
     const selectedFlyers = flyers.filter(f => selectedFlyerIds.includes(f.id));
 
@@ -731,6 +752,12 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         htmlOutput += `</ul></div>`;
       }
 
+      // Append authentic work email signature formatted for HTML
+      const signatureText = getWorkEmailSignature(activeLo);
+      htmlOutput += `<br/><br/><div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5; font-size: 12px; border-top: 1px solid #ddd; padding-top: 12px; margin-top: 20px;">`;
+      htmlOutput += signatureText.replace(/\n/g, '<br/>');
+      htmlOutput += `</div>`;
+
       return htmlOutput;
     } else {
       let textOutput = text;
@@ -755,6 +782,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
           textOutput += `   • Description: ${f.description}\n\n`;
         });
       }
+
+      // Append authentic work email signature
+      textOutput = appendWorkEmailSignature(textOutput, activeLo);
 
       return textOutput;
     }
@@ -946,14 +976,19 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       });
     }
 
-    onTriggerToast?.(`📧 Outreach email launched in Outlook for ${to}`);
+    const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
 
-    // mailto URL protocol with pre-encoded subject line and body
-    let mailtoLink = `mailto:${to}?subject=${encodedSubject}`;
-    if (cc) mailtoLink += `&cc=${cc}`;
-    mailtoLink += `&body=${encodedBody}`;
-    
-    window.location.href = mailtoLink;
+    launchLocalOutlookDraft({
+      to,
+      cc,
+      subject: subjectText,
+      body: plainBody,
+      loanOfficer: activeLo,
+      lead: recipientTab === 'website_leads' && selectedLeadId ? leads.find(l => l.id === selectedLeadId) : undefined,
+      templateName: resolvedTemplateName,
+      flyerNames: selectedFlyerIds.map(fid => flyers.find(f => f.id === fid)?.name).filter(Boolean) as string[],
+      onTriggerToast
+    });
   };
 
   const handleDownloadAttachment = () => {
@@ -1863,10 +1898,10 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
           {/* Bottom Action Footer */}
           <div className="p-5 bg-[#FAF9F5] border-t border-[#EAE7E0] flex flex-col gap-3">
             {/* Outlook Tip Callout */}
-            <div className="flex items-center gap-2 text-xs text-[#0078D4] bg-blue-50/80 border border-blue-200/60 p-2.5 rounded-xl">
+            <div className="flex items-center gap-2 text-xs text-[#0078D4] bg-blue-50/90 border border-blue-200 p-2.5 rounded-xl">
               <Info className="w-4 h-4 shrink-0 text-[#0078D4]" />
               <span>
-                <strong>Outlook Integration:</strong> Clicking <strong>Launch in Outlook</strong> uses pre-encoded <code className="bg-white/80 px-1 py-0.5 rounded border border-blue-200 font-mono text-[11px]">mailto:</code> parameters. Download the property datasheet below to attach directly to your draft.
+                <strong>Local Outlook Integration:</strong> Your official work email signature (Cornerstone First Mortgage • Mike Ford • NMLS #288455 • Direct Line & Equal Housing Notice) is automatically included in this draft. Clicking <strong>Launch in Outlook</strong> will open your installed Outlook client with the complete message and signature.
               </span>
             </div>
 

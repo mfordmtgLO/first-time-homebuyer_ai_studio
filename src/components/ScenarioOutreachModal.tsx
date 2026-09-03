@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { SavedScenario, CapturedLead, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
+import { launchLocalOutlookDraft, appendWorkEmailSignature } from "../utils/outlookEmailService";
 
 interface ScenarioOutreachModalProps {
   isOpen: boolean;
@@ -48,10 +49,14 @@ export const ScenarioOutreachModal: React.FC<ScenarioOutreachModalProps> = ({
 
   // Editable draft states
   const [borrowerEmailSubject, setBorrowerEmailSubject] = useState(scenario.draftBorrowerEmailSubject);
-  const [borrowerEmailBody, setBorrowerEmailBody] = useState(scenario.draftBorrowerEmailBody);
+  const [borrowerEmailBody, setBorrowerEmailBody] = useState(() => 
+    appendWorkEmailSignature(scenario.draftBorrowerEmailBody, loanOfficer)
+  );
   const [borrowerSmsText, setBorrowerSmsText] = useState(scenario.draftBorrowerSmsText);
   const [realtorEmailSubject, setRealtorEmailSubject] = useState(scenario.draftRealtorEmailSubject);
-  const [realtorEmailBody, setRealtorEmailBody] = useState(scenario.draftRealtorEmailBody);
+  const [realtorEmailBody, setRealtorEmailBody] = useState(() => 
+    appendWorkEmailSignature(scenario.draftRealtorEmailBody, loanOfficer)
+  );
 
   const [isSending, setIsSending] = useState(false);
   const [sentSuccessMsg, setSentSuccessMsg] = useState<string | null>(null);
@@ -70,10 +75,19 @@ export const ScenarioOutreachModal: React.FC<ScenarioOutreachModalProps> = ({
 
     try {
       if (activeChannel === "borrower_email") {
+        launchLocalOutlookDraft({
+          to: lead.email,
+          subject: borrowerEmailSubject,
+          body: borrowerEmailBody,
+          loanOfficer,
+          lead,
+          agent,
+          templateName: "Scenario Lead Outreach"
+        });
         if (onSendEmail) {
           onSendEmail(lead.email, borrowerEmailSubject, borrowerEmailBody);
         }
-        setSentSuccessMsg(`✓ Pre-filled scenario email dispatched to ${lead.email}`);
+        setSentSuccessMsg(`✓ Pre-filled scenario email launched in Outlook with work email signature for ${lead.email}`);
       } else if (activeChannel === "borrower_sms") {
         if (onSendSms) {
           onSendSms(lead.phone, borrowerSmsText);
@@ -81,10 +95,19 @@ export const ScenarioOutreachModal: React.FC<ScenarioOutreachModalProps> = ({
         setSentSuccessMsg(`✓ Pre-filled scenario SMS dispatched to ${lead.phone}`);
       } else if (activeChannel === "realtor_email") {
         const realtorEmail = agent?.email || "sarah.jenkins@cascadevalleyre.com";
+        launchLocalOutlookDraft({
+          to: realtorEmail,
+          subject: realtorEmailSubject,
+          body: realtorEmailBody,
+          loanOfficer,
+          lead,
+          agent,
+          templateName: "Realtor Scenario Update"
+        });
         if (onSendEmail) {
           onSendEmail(realtorEmail, realtorEmailSubject, realtorEmailBody);
         }
-        setSentSuccessMsg(`✓ Co-brand realtor update email dispatched to ${realtorEmail}`);
+        setSentSuccessMsg(`✓ Co-brand realtor update email launched in Outlook with work email signature for ${realtorEmail}`);
       }
     } finally {
       setIsSending(false);
@@ -346,10 +369,23 @@ export const ScenarioOutreachModal: React.FC<ScenarioOutreachModalProps> = ({
               type="button"
               onClick={handleQuickSend}
               disabled={isSending}
-              className="px-5 py-2 text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#38463B] rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
+              className={`px-5 py-2 text-xs font-bold text-white rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+                activeChannel.includes("email") 
+                  ? "bg-[#0078D4] hover:bg-[#005A9E]" 
+                  : "bg-[#4A5D4E] hover:bg-[#38463B]"
+              }`}
             >
-              <Send className="w-3.5 h-3.5" />
-              <span>{isSending ? "Sending..." : "Quick Dispatch Now"}</span>
+              {activeChannel.includes("email") ? (
+                <>
+                  <Mail className="w-3.5 h-3.5 text-white" />
+                  <span>{isSending ? "Opening Outlook..." : "Draft in Outlook (Work Signature)"}</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSending ? "Sending SMS..." : "Quick Dispatch SMS"}</span>
+                </>
+              )}
             </button>
           </div>
         </div>

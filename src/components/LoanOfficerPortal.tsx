@@ -130,6 +130,7 @@ import { GoogleWorkspaceHub } from "./GoogleWorkspaceHub";
 import { GoogleWorkspaceModal } from "./GoogleWorkspaceModal";
 import { WorkspaceStatusWidget } from "./WorkspaceStatusWidget";
 import { googleWorkspace, GoogleWorkspaceUser } from "../services/googleWorkspaceService";
+import { launchLocalOutlookDraft, appendWorkEmailSignature } from "../utils/outlookEmailService";
 
 interface LoanOfficerPortalProps {
   guidesState: ProfessionalGuidesState;
@@ -543,7 +544,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const [showRecruitingCampaignModal, setShowRecruitingCampaignModal] = useState<boolean>(false);
   const [loSearchQuery, setLoSearchQuery] = useState<string>("");
   const [generatingOutreachFor, setGeneratingOutreachFor] = useState<string | null>(null);
-  const [generatedOutreachContent, setGeneratedOutreachContent] = useState<{name: string, content: string} | null>(null);
+  const [generatedOutreachContent, setGeneratedOutreachContent] = useState<{name: string, email?: string, content: string} | null>(null);
   const [loRegionSearch, setLoRegionSearch] = useState<string>("");
   const [loCompanyFilter, setLoCompanyFilter] = useState<string>("all");
   const [loBranchFilter, setLoBranchFilter] = useState<string>("all");
@@ -649,7 +650,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       
       if (res.ok) {
         const data = await res.json();
-        setGeneratedOutreachContent({ name: lo.name, content: data.emailBody });
+        const fullBody = appendWorkEmailSignature(data.emailBody, loggedInUser || currentLo);
+        setGeneratedOutreachContent({ name: lo.name, email: lo.email, content: fullBody });
         triggerToast(`✅ Draft generated for ${lo.name}!`);
       } else {
         triggerToast("Failed to generate outreach draft.");
@@ -3063,7 +3065,23 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                         <div className="text-[11px] text-[#606C5D] space-y-0.5">
                                           <div className="flex items-center gap-1">
                                             <Mail className="w-3 h-3 text-[#9A9488]" />
-                                            <a href={`mailto:${lead.email}`} className="hover:text-[#4A5D4E] hover:underline">{lead.email}</a>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                launchLocalOutlookDraft({
+                                                  to: lead.email,
+                                                  subject: `Mortgage Consultation - ${lead.name}`,
+                                                  body: `Hi ${lead.name.split(' ')[0]},\n\nThank you for connecting regarding your home financing inquiry. I am reviewing your profile and would love to connect for a quick discovery call to explore your best loan and program options.\n\nBest regards,`,
+                                                  loanOfficer: loggedInUser || currentLo,
+                                                  templateName: "Quick Lead Connect",
+                                                  onTriggerToast: triggerToast
+                                                });
+                                              }}
+                                              className="hover:text-[#0078D4] hover:underline cursor-pointer text-left truncate max-w-[150px]"
+                                              title="Draft email in local installed Outlook with work signature"
+                                            >
+                                              {lead.email}
+                                            </button>
                                           </div>
                                           <div className="flex items-center gap-1">
                                             <Phone className="w-3 h-3 text-[#9A9488]" />
@@ -4288,13 +4306,24 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           <Phone className="w-3 h-3 text-[#4A5D4E]" />
                           <span>{lo.phone}</span>
                         </a>
-                        <a 
-                          href={`mailto:${lo.email}`}
-                          className="inline-flex items-center gap-1 text-[#4A5D4E] hover:text-[#2D362E] font-medium bg-[#FAF9F5] px-2 py-0.5 rounded-lg border border-[#EAE7E0] truncate max-w-[170px]"
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            launchLocalOutlookDraft({
+                              to: lo.email,
+                              subject: `Connecting regarding Branch Operations & Production`,
+                              body: `Hi ${lo.name.split(' ')[0]},\n\nReaching out regarding branch production and team pipeline updates.\n\nBest regards,`,
+                              loanOfficer: loggedInUser || currentLo,
+                              templateName: "LO Colleague Connect",
+                              onTriggerToast: triggerToast
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 text-[#4A5D4E] hover:text-[#0078D4] font-medium bg-[#FAF9F5] px-2 py-0.5 rounded-lg border border-[#EAE7E0] truncate max-w-[170px] cursor-pointer"
+                          title="Draft email in local installed Outlook with work signature"
                         >
                           <Mail className="w-3 h-3 text-[#4A5D4E] shrink-0" />
                           <span className="truncate">{lo.email}</span>
-                        </a>
+                        </button>
                         {lo.websiteUrl && (
                           <a 
                             href={lo.websiteUrl}
@@ -7204,10 +7233,27 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               </div>
             </div>
             
-            <div className="flex justify-end pt-3">
+            <div className="flex justify-end items-center gap-2 pt-3">
+              <button
+                onClick={() => {
+                  launchLocalOutlookDraft({
+                    to: generatedOutreachContent.email || '',
+                    subject: `Connecting with ${generatedOutreachContent.name}`,
+                    body: generatedOutreachContent.content,
+                    loanOfficer: loggedInUser || currentLo,
+                    templateName: "LO Outreach AI Draft",
+                    onTriggerToast: triggerToast
+                  });
+                }}
+                className="py-2 px-4 bg-[#0078D4] hover:bg-[#005A9E] text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                title="Draft in local installed Outlook with your work email signature"
+              >
+                <Mail className="w-3.5 h-3.5 text-white" />
+                <span>Draft in Outlook</span>
+              </button>
               <button
                 onClick={() => setGeneratedOutreachContent(null)}
-                className="py-2 px-6 bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#606C5D] font-bold rounded-xl text-xs transition-colors"
+                className="py-2 px-5 bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#606C5D] font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Close
               </button>

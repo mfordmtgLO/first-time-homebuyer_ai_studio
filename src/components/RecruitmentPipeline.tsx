@@ -15,6 +15,7 @@ import {
   syncAgentWithRealTrends, 
   syncLoanOfficerWithRealTrends 
 } from "../services/realTrendsService";
+import { launchLocalOutlookDraft, appendWorkEmailSignature } from "../utils/outlookEmailService";
 
 interface RecruitmentPipelineProps {
   guidesState: ProfessionalGuidesState;
@@ -368,7 +369,8 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
     applyTemplate(REALTOR_TEMPLATES.email[0], agent.name, agent.brokerage);
   };
 
-  const applyTemplate = (template: any, nameStr?: string, compStr?: string) => {
+  const applyTemplate = (template: any, nameStr?: string, compStr?: string, forceType?: 'email' | 'sms') => {
+    const currentType = forceType || outreachType;
     const targetName = nameStr || activeOutreachCandidate?.name || "Partner";
     const firstName = targetName.split(' ')[0];
     const comp = compStr || activeOutreachCandidate?.company || "your brokerage";
@@ -376,7 +378,10 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
     if (template.subject) {
       setDraftSubject(template.subject.replace('{name}', firstName).replace('{company}', comp));
     }
-    setDraftBody(template.body.replace(/{name}/g, firstName).replace(/{company}/g, comp));
+    const rawBody = template.body.replace(/{name}/g, firstName).replace(/{company}/g, comp);
+    const activeLo = guidesState.loanOfficers.find(l => l.isTeamMember || l.isAdmin) || guidesState.loanOfficers[0];
+    const formattedBody = currentType === 'email' ? appendWorkEmailSignature(rawBody, activeLo) : rawBody;
+    setDraftBody(formattedBody);
   };
 
   const sendOutreach = () => {
@@ -468,15 +473,22 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
     }
     
     if (outreachType === 'email') {
-      const mailto = `mailto:${activeOutreachCandidate.email}?subject=${encodeURIComponent(draftSubject)}&body=${encodeURIComponent(draftBody)}`;
-      window.open(mailto, '_top');
+      const activeLo = guidesState.loanOfficers.find(l => l.isTeamMember || l.isAdmin) || guidesState.loanOfficers[0];
+      launchLocalOutlookDraft({
+        to: activeOutreachCandidate.email,
+        subject: draftSubject,
+        body: draftBody,
+        loanOfficer: activeLo,
+        templateName: draftSubject || 'Recruiting Outreach',
+        onTriggerToast
+      });
     } else {
       const smsLink = `sms:${activeOutreachCandidate.phone}?&body=${encodeURIComponent(draftBody)}`;
       window.open(smsLink, '_top');
+      onTriggerToast("Outreach logged and SMS text dispatched.");
     }
     
     setActiveOutreachCandidate(null);
-    onTriggerToast("Outreach logged and native communication dispatched.");
   };
 
   const loStatuses = ['Not Contacted', 'In Outreach', 'Interested', 'Meeting Scheduled', 'Declined', 'Hired'];
@@ -1230,21 +1242,21 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
                   onClick={() => {
                     setOutreachType('email');
                     const tmpl = activeOutreachCandidate.type === "lo" ? TEMPLATES.email[0] : REALTOR_TEMPLATES.email[0];
-                    applyTemplate(tmpl);
+                    applyTemplate(tmpl, undefined, undefined, 'email');
                   }}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors ${
-                    outreachType === 'email' ? 'bg-[#4A5D4E] text-white shadow-xs' : 'bg-white text-[#606C5D] border border-[#EAE7E0]'
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+                    outreachType === 'email' ? 'bg-[#0078D4] text-white shadow-xs' : 'bg-white text-[#606C5D] border border-[#EAE7E0]'
                   }`}
                 >
-                  <Mail className="w-3.5 h-3.5" /> Email Outreach
+                  <Mail className="w-3.5 h-3.5" /> Outlook Email Outreach
                 </button>
                 <button
                   onClick={() => {
                     setOutreachType('sms');
                     const tmpl = activeOutreachCandidate.type === "lo" ? TEMPLATES.sms[0] : REALTOR_TEMPLATES.sms[0];
-                    applyTemplate(tmpl);
+                    applyTemplate(tmpl, undefined, undefined, 'sms');
                   }}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors ${
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
                     outreachType === 'sms' ? 'bg-[#4A5D4E] text-white shadow-xs' : 'bg-white text-[#606C5D] border border-[#EAE7E0]'
                   }`}
                 >
@@ -1257,7 +1269,7 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
                   <button
                     key={template.id}
                     onClick={() => applyTemplate(template)}
-                    className="p-2 text-left bg-white border border-[#EAE7E0] rounded-xl hover:border-purple-600 transition-colors"
+                    className="p-2 text-left bg-white border border-[#EAE7E0] rounded-xl hover:border-blue-400 transition-colors cursor-pointer"
                   >
                     <p className="text-[11px] font-bold text-[#2D362E] truncate">{template.name}</p>
                   </button>
@@ -1274,16 +1286,21 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
                     type="text"
                     value={draftSubject}
                     onChange={(e) => setDraftSubject(e.target.value)}
-                    className="w-full bg-white border border-[#D5DDD6] rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-600"
+                    className="w-full bg-white border border-[#D5DDD6] rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               )}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#2D362E]">Message Content</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#2D362E]">Message Content</label>
+                  {outreachType === 'email' && (
+                    <span className="text-[10px] text-blue-600 font-medium">✓ Official Work Email Signature automatically included</span>
+                  )}
+                </div>
                 <textarea 
                   value={draftBody}
                   onChange={(e) => setDraftBody(e.target.value)}
-                  className="w-full bg-white border border-[#D5DDD6] rounded-xl px-3.5 py-2.5 text-xs min-h-[140px] focus:outline-none focus:ring-2 focus:ring-purple-600 resize-none"
+                  className="w-full bg-white border border-[#D5DDD6] rounded-xl px-3.5 py-2.5 text-xs min-h-[140px] focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>
             </div>
@@ -1291,16 +1308,18 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
             <div className="flex justify-end gap-3 pt-3 border-t border-[#EAE7E0]">
               <button 
                 onClick={() => setActiveOutreachCandidate(null)}
-                className="px-4 py-2 text-xs font-bold text-[#606C5D] hover:bg-gray-50 rounded-xl transition-colors"
+                className="px-4 py-2 text-xs font-bold text-[#606C5D] hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button 
                 onClick={sendOutreach}
-                className="px-5 py-2 bg-[#4A5D4E] hover:bg-[#3A4A3D] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 transition-all"
+                className={`px-5 py-2 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 transition-all cursor-pointer ${
+                  outreachType === 'email' ? 'bg-[#0078D4] hover:bg-[#005A9E]' : 'bg-[#4A5D4E] hover:bg-[#3A4A3D]'
+                }`}
               >
-                <Send className="w-3.5 h-3.5" />
-                Dispatch & Log Outreach
+                {outreachType === 'email' ? <Mail className="w-3.5 h-3.5 text-white" /> : <Send className="w-3.5 h-3.5" />}
+                {outreachType === 'email' ? 'Draft in Outlook (Work Signature)' : 'Dispatch & Log SMS'}
               </button>
             </div>
           </div>

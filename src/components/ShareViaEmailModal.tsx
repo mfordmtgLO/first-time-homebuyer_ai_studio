@@ -37,6 +37,7 @@ import {
   MilestoneNotificationHistoryItem
 } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
+import { launchLocalOutlookDraft, appendWorkEmailSignature } from "../utils/outlookEmailService";
 import { 
   getMilestoneAlertSettings, 
   saveMilestoneAlertSettings, 
@@ -227,7 +228,8 @@ export const ShareViaEmailModal: React.FC<ShareViaEmailModalProps> = ({
 
     body += `==================================================\n`;
     body += `Shared via First-Time Homebuyer Roadmap & Loan Officer Hub\n`;
-    return { subject, body };
+    const fullBodyWithSig = appendWorkEmailSignature(body, loanOfficer);
+    return { subject, body: fullBodyWithSig };
   };
 
   const handleCopyClipboard = async () => {
@@ -243,8 +245,14 @@ export const ShareViaEmailModal: React.FC<ShareViaEmailModalProps> = ({
 
   const handleOpenMailClient = () => {
     const { subject, body } = generatePlainTextDossier();
-    const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoUrl;
+    launchLocalOutlookDraft({
+      to: recipientEmail,
+      subject,
+      body,
+      loanOfficer,
+      agent: activeAgent,
+      templateName: "Homebuyer Milestone Dossier"
+    });
   };
 
   const handleDownloadHtml = () => {
@@ -812,10 +820,11 @@ export const ShareViaEmailModal: React.FC<ShareViaEmailModalProps> = ({
                 <button
                   type="button"
                   onClick={handleOpenMailClient}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-[#A7D1B4] text-[#4A5D4E] hover:bg-stone-50 font-semibold text-xs transition-colors cursor-pointer shadow-2xs"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-[#0078D4]/40 text-[#0078D4] hover:bg-blue-50 font-semibold text-xs transition-colors cursor-pointer shadow-2xs"
+                  title="Draft in local installed Outlook with your work email signature"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Open in Email App</span>
+                  <Mail className="w-3.5 h-3.5 text-[#0078D4]" />
+                  <span>Draft in Outlook</span>
                 </button>
                 <button
                   type="button"
@@ -1068,11 +1077,11 @@ export const ShareViaEmailModal: React.FC<ShareViaEmailModalProps> = ({
                   <button
                     type="button"
                     onClick={handleOpenMailClient}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-[#EAE7E0] hover:bg-stone-50 text-[#606C5D] hover:text-[#2D362E] font-semibold text-xs transition-colors cursor-pointer"
-                    title="Open mail client with pre-filled dossier"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-[#0078D4]/40 bg-blue-50/50 hover:bg-blue-50 text-[#0078D4] font-semibold text-xs transition-colors cursor-pointer"
+                    title="Open installed Outlook with pre-filled dossier and your work email signature"
                   >
-                    <ExternalLink className="w-3.5 h-3.5 text-[#4A5D4E]" />
-                    <span>Open in Email App</span>
+                    <Mail className="w-3.5 h-3.5 text-[#0078D4]" />
+                    <span>Draft in Outlook</span>
                   </button>
                 </div>
 

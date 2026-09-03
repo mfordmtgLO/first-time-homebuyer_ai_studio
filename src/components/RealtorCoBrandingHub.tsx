@@ -31,6 +31,7 @@ import {
 } from "../types";
 import { formatUSD, calculateMonthlyPI } from "../utils/mortgageMath";
 import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
+import { launchLocalOutlookDraft, appendWorkEmailSignature } from "../utils/outlookEmailService";
 
 interface RealtorCoBrandingHubProps {
   guidesState: ProfessionalGuidesState;
@@ -715,10 +716,8 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
             const smsLink = `sms:?&body=${encodeURIComponent(smsBody)}`;
             
             const emailSubject = `Co-Branded Homebuyer Portal & 2-1 Buydown Flyer Kit for ${selectedAgent?.name}`;
-            const emailBody = `Hi ${selectedAgent?.name?.split(" ")[0]},\n\nI wanted to share a new marketing technology asset I created for our partnership: a dedicated co-branded digital portal that features both of our headshots, contact information, and interactive loan tools for your buyer clients.\n\nHere is your portal link: ${coBrandedUrl}\n\nTop features ready to use:\n1. Live 2-1 Seller Rate Buydown Engine (shows buyers how to save $350-$500/mo without price cuts)\n2. Oregon Bond & Flex DPA 3.5% Grant Finders\n3. Co-branded Open House flyer generator with instant QR codes\n\nLet's connect this week to launch our next co-branded open house campaign.\n\nBest,\n${currentLo.name}\n${currentLo.company} (NMLS #${currentLo.nmlsNumber})`;
-            
-            // Note: encodeURIComponent is used for mailto links
-            const mailtoLink = `mailto:${selectedAgent?.email || ''}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+            const emailBody = `Hi ${selectedAgent?.name?.split(" ")[0]},\n\nI wanted to share a new marketing technology asset I created for our partnership: a dedicated co-branded digital portal that features both of our headshots, contact information, and interactive loan tools for your buyer clients.\n\nHere is your portal link: ${coBrandedUrl}\n\nTop features ready to use:\n1. Live 2-1 Seller Rate Buydown Engine (shows buyers how to save $350-$500/mo without price cuts)\n2. Oregon Bond & Flex DPA 3.5% Grant Finders\n3. Co-branded Open House flyer generator with instant QR codes\n\nLet's connect this week to launch our next co-branded open house campaign.`;
+            const fullEmailBodyWithSig = appendWorkEmailSignature(emailBody, currentLo);
 
             return (
               <>
@@ -762,28 +761,38 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => copyToClipboard(`Subject: ${emailSubject}\n\n${emailBody}`, "email_invite")}
+                        onClick={() => copyToClipboard(`Subject: ${emailSubject}\n\n${fullEmailBodyWithSig}`, "email_invite")}
                         className="text-xs font-bold text-[#4A5D4E] hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         {copiedKey === "email_invite" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                         <span>{copiedKey === "email_invite" ? "Copied" : "Copy"}</span>
                       </button>
-                      <a
-                        href={mailtoLink}
-                        target="_top"
-                        onClick={() => logAgentOutreach('email', 'Co-Brand Partner Invite', emailSubject)}
-                        className="text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#3A4A3D] px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          launchLocalOutlookDraft({
+                            to: selectedAgent?.email || '',
+                            subject: emailSubject,
+                            body: fullEmailBodyWithSig,
+                            loanOfficer: currentLo,
+                            agent: selectedAgent,
+                            templateName: "Co-Brand Partner Invite"
+                          });
+                          logAgentOutreach('email', 'Co-Brand Partner Invite', emailSubject);
+                        }}
+                        className="text-xs font-bold text-white bg-[#0078D4] hover:bg-[#005A9E] px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                        title="Draft email in local installed Outlook with your work email signature"
                       >
                         <Mail className="w-3.5 h-3.5" />
-                        Draft Email
-                      </a>
+                        Draft in Outlook
+                      </button>
                     </div>
                   </div>
 
                   <div className="p-4 bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] text-xs text-[#2D362E] font-sans leading-relaxed whitespace-pre-wrap">
                     <span className="font-bold text-[#4A5D4E]">Subject:</span> {emailSubject}
                     <br/><br/>
-                    {emailBody}
+                    {fullEmailBodyWithSig}
                   </div>
                 </div>
               </>

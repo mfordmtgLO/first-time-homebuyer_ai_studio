@@ -32,6 +32,7 @@ import {
   LoanOfficerProfile, 
   RealEstateAgentProfile 
 } from "../types";
+import { launchLocalOutlookDraft, appendWorkEmailSignature } from "../utils/outlookEmailService";
 import { 
   calculateMortgageBreakdown, 
   calculateMonthlyPI, 
@@ -493,17 +494,33 @@ export const LoanOfficerScenarioWorkbench: React.FC<LoanOfficerScenarioWorkbench
                 <button
                   type="button"
                   onClick={() => {
-                    if (onOpenEmailOutreach) {
-                      onOpenEmailOutreach(selectedLead.id, liveDrafts.draftBorrowerEmailSubject, liveDrafts.draftBorrowerEmailBody);
-                    } else {
-                      handleCopy(liveDrafts.draftBorrowerEmailBody, "borrower-email");
-                    }
+                    launchLocalOutlookDraft({
+                      to: selectedLead.email,
+                      subject: liveDrafts.draftBorrowerEmailSubject,
+                      body: liveDrafts.draftBorrowerEmailBody,
+                      loanOfficer,
+                      lead: selectedLead,
+                      agent: assignedAgent,
+                      templateName: "Scenario Lead Outreach",
+                      onTriggerToast
+                    });
                   }}
-                  className="flex-1 py-1.5 bg-white text-[#2D362E] hover:bg-white/90 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                  className="flex-1 py-1.5 bg-[#0078D4] hover:bg-[#005A9E] text-white font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                  title="Draft in local installed Outlook with your work email signature"
                 >
-                  <Send className="w-3 h-3 text-[#4A5D4E]" />
-                  <span>Open Email Hub</span>
+                  <Mail className="w-3 h-3 text-white" />
+                  <span>Draft in Outlook</span>
                 </button>
+                {onOpenEmailOutreach && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenEmailOutreach(selectedLead.id, liveDrafts.draftBorrowerEmailSubject, liveDrafts.draftBorrowerEmailBody)}
+                    title="Open Email Template Builder"
+                    className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors"
+                  >
+                    <Send className="w-3.5 h-3.5 text-amber-300" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleCopy(liveDrafts.draftBorrowerEmailBody, "borrower-email")}
@@ -577,17 +594,34 @@ export const LoanOfficerScenarioWorkbench: React.FC<LoanOfficerScenarioWorkbench
                 <button
                   type="button"
                   onClick={() => {
-                    if (onOpenEmailOutreach) {
-                      onOpenEmailOutreach(selectedLead.id, liveDrafts.draftRealtorEmailSubject, liveDrafts.draftRealtorEmailBody);
-                    } else {
-                      handleCopy(liveDrafts.draftRealtorEmailBody, "realtor-email");
-                    }
+                    const agentEmail = assignedAgent?.email || "sarah.jenkins@cascadevalleyre.com";
+                    launchLocalOutlookDraft({
+                      to: agentEmail,
+                      subject: liveDrafts.draftRealtorEmailSubject,
+                      body: liveDrafts.draftRealtorEmailBody,
+                      loanOfficer,
+                      lead: selectedLead,
+                      agent: assignedAgent,
+                      templateName: "Realtor Scenario Update",
+                      onTriggerToast
+                    });
                   }}
-                  className="flex-1 py-1.5 bg-[#C18C5D] hover:bg-[#A87448] text-white font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                  className="flex-1 py-1.5 bg-[#0078D4] hover:bg-[#005A9E] text-white font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                  title="Draft in local installed Outlook with your work email signature"
                 >
-                  <Send className="w-3 h-3 text-white" />
-                  <span>Notify Agent</span>
+                  <Mail className="w-3 h-3 text-white" />
+                  <span>Draft in Outlook</span>
                 </button>
+                {onOpenEmailOutreach && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenEmailOutreach(selectedLead.id, liveDrafts.draftRealtorEmailSubject, liveDrafts.draftRealtorEmailBody)}
+                    title="Open Email Template Builder"
+                    className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors"
+                  >
+                    <Send className="w-3.5 h-3.5 text-amber-300" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleCopy(liveDrafts.draftRealtorEmailBody, "realtor-email")}

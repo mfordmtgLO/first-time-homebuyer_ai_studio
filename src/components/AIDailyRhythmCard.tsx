@@ -85,7 +85,11 @@ export const AIDailyRhythmCard: React.FC<AIDailyRhythmCardProps> = ({
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         try {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved) as DailyTaskItem[];
+          if (!isAdminUser) {
+            return parsed.filter(t => t.category !== "recruitment" && t.category !== "admin");
+          }
+          return parsed;
         } catch {
           // fallback
         }

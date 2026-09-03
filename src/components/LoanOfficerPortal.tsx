@@ -114,6 +114,8 @@ import { LoOutreachModal } from "./LoOutreachModal";
 import { RecruitingCampaignModal } from "./RecruitingCampaignModal";
 import { GrantFinder } from "./GrantFinder";
 import { LoanOfficerScenarioWorkbench } from "./LoanOfficerScenarioWorkbench";
+import { MasterLeadJourneyTab } from "./MasterLeadJourneyTab";
+import { JourneyPhaseLabel } from "./JourneyPhaseLabel";
 import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 import { TopBusinessPartnersCard } from "./TopBusinessPartnersCard";
 import { SystemPitchDeck } from "./SystemPitchDeck";
@@ -240,7 +242,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           pairingsCount: guidesState.pairings?.length || 0,
           recentTouchesCount: (guidesState.leads || []).reduce((acc, l) => acc + (l.emailHistory?.length || 0) + (l.outreachLogs?.length || 0), 0)
         },
-        isAdmin: isAdminUser
+        isAdmin: Boolean(currentLo.isAdmin || currentLo.id === guidesState.adminLoanOfficerId)
       };
 
       const res = await fetch("/api/gemini/lo-daily-review", {
@@ -1600,25 +1602,6 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               <span>Quick AI Review</span>
             </button>
 
-            {/* Sidebar Toggle Button */}
-            <button
-              onClick={() => {
-                setIsSidebarCollapsed(prev => {
-                  const next = !prev;
-                  if (typeof window !== "undefined") {
-                    localStorage.setItem("lo_sidebar_collapsed", String(next));
-                  }
-                  return next;
-                });
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF9F5] border border-[#DCD7CD] hover:bg-[#F1EFE9] text-xs font-bold text-[#2D362E] transition-colors shadow-2xs cursor-pointer"
-              title="Toggle Left Navigation Sidebar (Cmd+B)"
-            >
-              <PanelLeft className="w-4 h-4 text-[#4A5D4E]" />
-              <span className="hidden sm:inline">{isSidebarCollapsed ? "Expand Sidebar" : "Sidebar"}</span>
-              <span className="text-[10px] text-[#9A9488] bg-white border border-[#EAE7E0] px-1 rounded-xs">⌘B</span>
-            </button>
-
             {/* Top Tabs Toggle Button */}
             <button
               onClick={() => {
@@ -2174,6 +2157,25 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             </button>
           </div>
         )}
+
+        {/* Tab: Master Lead Journey */}
+        {activeTab === "master_lead_journey" && (
+          <div className="space-y-6">
+            <MasterLeadJourneyTab 
+              leads={guidesState.leads || []}
+              loanOfficer={currentLo}
+              onUpdateLead={(updatedLead) => {
+                const currentLeads = guidesState.leads || [];
+                const updated = currentLeads.map(l => l.id === updatedLead.id ? updatedLead : l);
+                onUpdateGuidesState({
+                  ...guidesState,
+                  leads: updated
+                });
+              }}
+            />
+          </div>
+        )}
+
         {/* Tab 0: Leads & Inquiries CRM */}
         {activeTab === "leads" && (
           <div className="space-y-6">
@@ -2659,22 +2661,29 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     </select>
                   </div>
 
-                  {/* Status Filter */}
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <span className="text-[#606C5D] font-semibold">Status:</span>
-                    <select
-                      value={leadStatusFilter}
-                      onChange={(e) => setLeadStatusFilter(e.target.value)}
-                      className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-2.5 py-1.5 text-xs font-semibold text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="new">🔵 New (Uncontacted)</option>
-                      <option value="contacted">🟡 Contacted</option>
-                      <option value="pre_approved">🟢 Pre-Approved</option>
-                      <option value="in_escrow">🟣 In Escrow</option>
-                      <option value="closed">🏁 Closed</option>
-                      <option value="archived">⚪ Archived</option>
-                    </select>
+                  {/* Status Filter Chips */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-[#606C5D] font-semibold mr-1">Journey:</span>
+                    {[
+                      { id: 'all', label: 'All', icon: '' },
+                      { id: 'new', label: 'New', icon: '🔵' },
+                      { id: 'contacted', label: 'Contacted', icon: '🟡' },
+                      { id: 'pre_approved', label: 'Qualified', icon: '🟢' },
+                      { id: 'closed', label: 'Closed', icon: '🏁' }
+                    ].map(status => (
+                      <button
+                        key={status.id}
+                        onClick={() => setLeadStatusFilter(status.id)}
+                        className={`px-3 py-1.5 rounded-full font-bold flex items-center gap-1 transition-all border ${
+                          leadStatusFilter === status.id 
+                            ? 'bg-[#4A5D4E] text-white border-[#4A5D4E] shadow-xs' 
+                            : 'bg-white text-[#606C5D] border-[#EAE7E0] hover:bg-[#FAF9F5]'
+                        }`}
+                      >
+                        {status.icon && <span>{status.icon}</span>}
+                        {status.label}
+                      </button>
+                    ))}
                   </div>
 
                   {/* Date Range Filter */}
@@ -2789,7 +2798,12 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   (lead.sourcePropertyAddress && lead.sourcePropertyAddress.toLowerCase().includes(leadSearchQuery.toLowerCase())) ||
                   (lead.leadSource && lead.leadSource.toLowerCase().includes(leadSearchQuery.toLowerCase()));
                 
-                const matchStatus = leadStatusFilter === "all" || lead.status === leadStatusFilter;
+                let matchStatus = leadStatusFilter === "all" || lead.status === leadStatusFilter;
+                if (leadStatusFilter === "pre_approved") {
+                  matchStatus = lead.status === "pre_approved" || lead.status === "in_escrow";
+                } else if (leadStatusFilter === "closed") {
+                  matchStatus = lead.status === "closed" || lead.status === "archived";
+                }
                 const matchLo = leadLoFilter === "all" || lead.assignedLoId === leadLoFilter;
 
                 let matchSource = true;
@@ -2942,13 +2956,39 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                             </span>
                             Leads Selected
                           </span>
-                          <button
-                            onClick={() => setShowBulkSmsModal(true)}
-                            className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 transition-colors cursor-pointer"
-                          >
-                            <MessageSquare className="w-4 h-4" />
-                            <span>Bulk SMS Template</span>
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <select
+                              onChange={(e) => {
+                                if (!e.target.value) return;
+                                const currentLeads = guidesState.leads || [];
+                                const newStatus = e.target.value as any;
+                                const updated = currentLeads.map(l => 
+                                  selectedLeadIds.has(l.id) ? { ...l, status: newStatus } : l
+                                );
+                                onUpdateGuidesState({
+                                  ...guidesState,
+                                  leads: updated
+                                });
+                                setSelectedLeadIds(new Set());
+                                triggerToast(`Moved ${selectedLeadIds.size} leads to ${e.target.value}`);
+                              }}
+                              className="bg-white border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl px-3 py-2 cursor-pointer outline-none focus:border-emerald-500"
+                              value=""
+                            >
+                              <option value="" disabled>Move to Journey Phase...</option>
+                              <option value="new">Move to New</option>
+                              <option value="contacted">Move to Contacted</option>
+                              <option value="pre_approved">Move to Qualified</option>
+                              <option value="closed">Move to Closed</option>
+                            </select>
+                            <button
+                              onClick={() => setShowBulkSmsModal(true)}
+                              className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 transition-colors cursor-pointer"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                              <span>Bulk SMS Template</span>
+                            </button>
+                          </div>
                         </div>
                       )}
                       <div className={`overflow-x-auto ${selectedLeadIds.size > 0 ? "mt-12" : ""}`}>
@@ -3008,6 +3048,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                       <div className="space-y-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                           <span className="font-bold text-sm text-[#2D362E]">{lead.fullName}</span>
+                                          <JourneyPhaseLabel status={lead.status} />
                                           <OutreachHistoryBadge lead={lead} compact={true} />
                                           {lead.intentScore === "hot" && (
                                             <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
@@ -3284,28 +3325,27 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
                                   {/* Status & Actions */}
                                   <td className="py-4 px-4 align-top space-y-2">
-                                    <select
-                                      value={lead.status}
-                                      onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value as CapturedLead['status'])}
-                                      className={`w-full px-2.5 py-1 rounded-xl text-[11px] font-bold border focus:outline-none transition-colors ${
-                                        lead.status === "new"
-                                          ? "bg-blue-50 text-blue-700 border-blue-200"
-                                          : lead.status === "pre_approved"
-                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                            : lead.status === "contacted"
-                                              ? "bg-amber-50 text-amber-700 border-amber-200"
-                                              : lead.status === "in_escrow"
-                                                ? "bg-purple-50 text-purple-700 border-purple-200"
+                                    <div className="flex flex-col gap-1">
+                                      <span className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Journey Phase</span>
+                                      <select
+                                        value={lead.status === "in_escrow" ? "pre_approved" : lead.status === "archived" ? "closed" : lead.status}
+                                        onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value as CapturedLead['status'])}
+                                        className={`w-full px-2.5 py-1.5 rounded-xl text-[11px] font-bold border focus:outline-none transition-colors ${
+                                          lead.status === "new"
+                                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                                            : lead.status === "pre_approved" || lead.status === "in_escrow"
+                                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                              : lead.status === "contacted"
+                                                ? "bg-amber-50 text-amber-700 border-amber-200"
                                                 : "bg-gray-100 text-gray-700 border-gray-200"
-                                      }`}
-                                    >
-                                      <option value="new">🔵 New / Uncontacted</option>
-                                      <option value="contacted">🟡 Contacted</option>
-                                      <option value="pre_approved">🟢 Pre-Approved</option>
-                                      <option value="in_escrow">🟣 In Escrow</option>
-                                      <option value="closed">🏁 Closed</option>
-                                      <option value="archived">⚪ Archived</option>
-                                    </select>
+                                        }`}
+                                      >
+                                        <option value="new">🔵 New</option>
+                                        <option value="contacted">🟡 Contacted</option>
+                                        <option value="pre_approved">🟢 Qualified</option>
+                                        <option value="closed">🏁 Closed</option>
+                                      </select>
+                                    </div>
 
                                     {/* Per-Lead Nurture Toggle & Schedule Badge */}
                                     <div className="flex items-center gap-1.5 pt-1">
@@ -3423,6 +3463,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                 <div>
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h4 className="font-bold text-base text-[#2D362E]">{lead.fullName}</h4>
+                                    <JourneyPhaseLabel status={lead.status} />
                                     <OutreachHistoryBadge lead={lead} compact={true} />
                                     {lead.intentScore === "hot" && (
                                       <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">

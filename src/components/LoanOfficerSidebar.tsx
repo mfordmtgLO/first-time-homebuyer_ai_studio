@@ -27,13 +27,16 @@ import {
   Zap,
   Building,
   CheckCircle2,
-  Calendar
+  Calendar,
+  PanelLeftClose,
+  PanelRightClose
 } from "lucide-react";
 import { AIDailyRhythmCard } from "./AIDailyRhythmCard";
 import { LoanOfficerProfile, ProfessionalGuidesState } from "../types";
 
 export type TabId = 
   | "leads" 
+  | "master_lead_journey"
   | "google_workspace" 
   | "ai_2nd_brain" 
   | "tax_schedule_c" 
@@ -119,6 +122,11 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
           icon: <Inbox className="w-4 h-4" />,
           badge: `${guidesState.leads?.length || 0}`,
           badgeColor: "bg-[#4A5D4E]/15 text-[#2D362E]"
+        },
+        {
+          id: "master_lead_journey",
+          label: "Master Lead Journey",
+          icon: <Layers className="w-4 h-4" />
         },
         {
           id: "google_workspace",
@@ -305,13 +313,31 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
       }`}
       aria-label="Loan Officer Portal Navigation"
     >
+      {/* 0. SIDEBAR HEADER WITH TOGGLE */}
+      <div className={`p-2 border-b border-[#EAE7E0]/80 bg-[#FDFBF7] flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+        {!isCollapsed && (
+          <span className="text-[10px] font-bold tracking-wider uppercase text-[#4A5D4E] px-2 py-0.5 rounded-full bg-[#F1EFE9] border border-[#EAE7E0] self-start">
+            Dashboard
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="p-1 rounded-lg bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+          title={isCollapsed ? "Expand Sidebar (Cmd+B)" : "Collapse Sidebar (Cmd+B)"}
+        >
+          {isCollapsed ? <PanelRightClose className="w-4 h-4 text-[#4A5D4E]" /> : <PanelLeftClose className="w-4 h-4 text-[#4A5D4E]" />}
+          {!isCollapsed && <span className="text-[10px] text-[#606C5D]">Collapse</span>}
+        </button>
+      </div>
+
       {/* 1. STICKY TOP: AI DAILY RHYTHM CARD ("Focus & Flow" Instructor) */}
       <AIDailyRhythmCard
         key={currentLo.id}
         isSidebarCollapsed={isCollapsed}
         currentLo={currentLo}
         leads={guidesState.leads || []}
-        isAdminUser={isAdminUser}
+        isAdminUser={Boolean(currentLo.isAdmin || currentLo.id === guidesState.adminLoanOfficerId)}
         onOpenDailyReview={onOpenDailyReview}
         onSelectTab={onSelectTab}
       />
@@ -421,42 +447,22 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
         })}
       </div>
 
-      {/* 3. BOTTOM FOOTER BAR: COLLAPSE TOGGLE & USER PROFILE */}
-      <div className="p-2.5 border-t border-[#EAE7E0] bg-white flex items-center justify-between gap-2">
-        {!isCollapsed ? (
-          <>
-            <div className="flex items-center gap-2 min-w-0">
-              <img
-                src={currentLo.avatarUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256"}
-                alt={currentLo.name}
-                className="w-7 h-7 rounded-xl object-cover border border-[#EAE7E0] shrink-0"
-              />
-              <div className="min-w-0">
-                <p className="font-bold text-xs text-[#2D362E] truncate">
-                  {currentLo.name}
-                </p>
-                <p className="text-[10px] text-[#7D8877] truncate">
-                  {isAdminUser ? "Branch Manager" : "Loan Officer"}
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={onToggleCollapse}
-              title="Collapse Sidebar (Cmd+B)"
-              className="w-7 h-7 rounded-lg bg-[#F4F1EA] hover:bg-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] flex items-center justify-center transition-colors cursor-pointer shrink-0"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={onToggleCollapse}
-            title="Expand Sidebar (Cmd+B)"
-            className="w-full py-1.5 rounded-lg bg-[#F4F1EA] hover:bg-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
+      {/* 3. BOTTOM FOOTER BAR: USER PROFILE */}
+      <div className={`p-2.5 border-t border-[#EAE7E0] bg-white flex items-center ${isCollapsed ? "justify-center" : "gap-2"}`}>
+        <img
+          src={currentLo.avatarUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256"}
+          alt={currentLo.name}
+          className="w-7 h-7 rounded-xl object-cover border border-[#EAE7E0] shrink-0"
+        />
+        {!isCollapsed && (
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-xs text-[#2D362E] truncate">
+              {currentLo.name}
+            </p>
+            <p className="text-[10px] text-[#7D8877] truncate">
+              {isAdminUser ? "Branch Manager" : "Loan Officer"}
+            </p>
+          </div>
         )}
       </div>
     </aside>

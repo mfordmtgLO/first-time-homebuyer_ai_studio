@@ -23,6 +23,8 @@ import {
   ChevronUp,
   Share2
 } from "lucide-react";
+import { JourneyPhaseLabel } from "./JourneyPhaseLabel";
+
 import { CapturedLead, PropertyListing, LoanOfficerProfile } from "../types";
 
 interface DailyMorningBriefingProps {
@@ -284,8 +286,9 @@ export const DailyMorningBriefing: React.FC<DailyMorningBriefingProps> = ({
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="font-bold text-xs text-white flex items-center gap-1.5">
+                          <div className="font-bold text-xs text-white flex items-center gap-1.5 flex-wrap">
                             <span>{lead.fullName}</span>
+                            <JourneyPhaseLabel status={lead.status} />
                             {lead.intentScore === "hot" && (
                               <span className="text-[9px] bg-amber-500 text-amber-950 px-1.5 py-0.2 rounded font-extrabold uppercase">
                                 HOT

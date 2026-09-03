@@ -69,8 +69,14 @@ import {
   Calculator,
   BookmarkPlus,
   Brain,
-  Percent
-, Star } from "lucide-react";
+  Percent,
+  Star,
+  PanelLeft,
+  SlidersHorizontal,
+  Printer
+} from "lucide-react";
+import { LoanOfficerSidebar, TabId } from "./LoanOfficerSidebar";
+import { AIDailyReviewModal, DailyReviewData } from "./AIDailyReviewModal";
 import { 
   LoanOfficerProfile, 
   RealEstateAgentProfile, 
@@ -109,6 +115,7 @@ import { RecruitingCampaignModal } from "./RecruitingCampaignModal";
 import { GrantFinder } from "./GrantFinder";
 import { LoanOfficerScenarioWorkbench } from "./LoanOfficerScenarioWorkbench";
 import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
+import { TopBusinessPartnersCard } from "./TopBusinessPartnersCard";
 import { SystemPitchDeck } from "./SystemPitchDeck";
 import { BranchManagerDashboard } from "./BranchManagerDashboard";
 import { GrowthDashboard } from "./GrowthDashboard";
@@ -148,11 +155,114 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   });
 
   // Current user / viewing context
-  const [activeTab, setActiveTab] = useState<"leads" | "google_workspace" | "ai_2nd_brain" | "tax_schedule_c" | "buydown_2_1" | "realtor_cobranding" | "scenario_workbench" | "sms_compliance" | "sms_templates" | "team_distribution" | "recruitment_pipeline" | "pairings" | "realtor_roster" | "dpa_grants" | "ai_partner_campaign" | "geosphere_sync" | "my_profile" | "social_push" | "ad_campaigns" | "system_pitch_deck" | "branch_admin_metrics" | "growth_dashboard">("leads");
+  const [activeTab, setActiveTab] = useState<TabId>("leads");
   const [scenarioWorkbenchLeadId, setScenarioWorkbenchLeadId] = useState<string | undefined>(undefined);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [viewingHistoryLo, setViewingHistoryLo] = useState<string | null>(null);
+
+  // Left Sidebar & Daily Rhythm State
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("lo_sidebar_collapsed") === "true";
+    }
+    return false;
+  });
+
+  const [showHorizontalNav, setShowHorizontalNav] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("lo_show_horizontal_nav") === "true";
+    }
+    return false;
+  });
+
+  const [dailyReviewModalOpen, setDailyReviewModalOpen] = useState<boolean>(false);
+  const [dailyReviewLoading, setDailyReviewLoading] = useState<boolean>(false);
+  const [dailyReviewData, setDailyReviewData] = useState<DailyReviewData | null>(null);
+
+  // Keyboard shortcut: Cmd+B / Ctrl+B to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        setIsSidebarCollapsed(prev => {
+          const next = !prev;
+          if (typeof window !== "undefined") {
+            localStorage.setItem("lo_sidebar_collapsed", String(next));
+          }
+          return next;
+        });
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Fetch or trigger Quick AI Review
+  const fetchDailyReview = async () => {
+    setDailyReviewLoading(true);
+    try {
+      const now = new Date();
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+      let phase = "morning";
+      if (hour >= 11 && (hour < 14 || (hour === 14 && minute < 30))) phase = "midday";
+      else if (hour >= 14 && (hour < 16 || (hour === 16 && minute < 30))) phase = "afternoon";
+      else if (hour >= 16) phase = "end_of_day";
+
+      const timeString = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+      const todayStr = now.toISOString().split("T")[0];
+      let completedTasks: string[] = [];
+      let pendingTasks: string[] = [];
+      try {
+        const savedTasks = localStorage.getItem(`lo_daily_tasks_${todayStr}`);
+        if (savedTasks) {
+          const parsed = JSON.parse(savedTasks);
+          completedTasks = parsed.filter((t: any) => t.completed).map((t: any) => t.title);
+          pendingTasks = parsed.filter((t: any) => !t.completed).map((t: any) => t.title);
+        }
+      } catch {
+        // ignore
+      }
+
+      const payload = {
+        loProfile: currentLo,
+        timePhase: phase,
+        currentTimeString: timeString,
+        completedTasks,
+        pendingTasks,
+        stats: {
+          leadsCount: guidesState.leads?.length || 0,
+          hotLeadsCount: (guidesState.leads || []).filter(l => l.intentScore === "hot").length,
+          candidatesCount: 12,
+          pairingsCount: guidesState.pairings?.length || 0,
+          recentTouchesCount: (guidesState.leads || []).reduce((acc, l) => acc + (l.emailHistory?.length || 0) + (l.outreachLogs?.length || 0), 0)
+        },
+        isAdmin: isAdminUser
+      };
+
+      const res = await fetch("/api/gemini/lo-daily-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (data?.data) {
+        setDailyReviewData(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to load daily review:", err);
+    } finally {
+      setDailyReviewLoading(false);
+    }
+  };
+
+  const handleOpenDailyReview = async () => {
+    setDailyReviewModalOpen(true);
+    await fetchDailyReview();
+  };
 
   // Google Workspace Integration State
   const [workspaceUser, setWorkspaceUser] = useState<GoogleWorkspaceUser | null>(() => googleWorkspace.getUser());
@@ -1479,6 +1589,57 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               <span>Twilio SMS API</span>
             </button>
 
+            {/* Quick AI Review Button */}
+            <button
+              onClick={handleOpenDailyReview}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#2D362E] via-[#4A5D4E] to-[#C18C5D] hover:opacity-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
+              title="Run Real-Time AI Review & Daily Rhythm Check"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#E7C19D] group-hover:scale-110 transition-transform" />
+              <span>Quick AI Review</span>
+            </button>
+
+            {/* Sidebar Toggle Button */}
+            <button
+              onClick={() => {
+                setIsSidebarCollapsed(prev => {
+                  const next = !prev;
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("lo_sidebar_collapsed", String(next));
+                  }
+                  return next;
+                });
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF9F5] border border-[#DCD7CD] hover:bg-[#F1EFE9] text-xs font-bold text-[#2D362E] transition-colors shadow-2xs cursor-pointer"
+              title="Toggle Left Navigation Sidebar (Cmd+B)"
+            >
+              <PanelLeft className="w-4 h-4 text-[#4A5D4E]" />
+              <span className="hidden sm:inline">{isSidebarCollapsed ? "Expand Sidebar" : "Sidebar"}</span>
+              <span className="text-[10px] text-[#9A9488] bg-white border border-[#EAE7E0] px-1 rounded-xs">⌘B</span>
+            </button>
+
+            {/* Top Tabs Toggle Button */}
+            <button
+              onClick={() => {
+                setShowHorizontalNav(prev => {
+                  const next = !prev;
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("lo_show_horizontal_nav", String(next));
+                  }
+                  return next;
+                });
+              }}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                showHorizontalNav 
+                  ? "bg-[#4A5D4E]/15 text-[#2D362E] border border-[#4A5D4E]/30" 
+                  : "text-[#7D8877] hover:bg-[#FAF9F5] border border-transparent hover:border-[#EAE7E0]"
+              }`}
+              title="Toggle Horizontal Tabs Row"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Top Tabs</span>
+            </button>
+
             {/* Preview Public Site Button */}
             <button
               onClick={onViewPublicSite}
@@ -1509,8 +1670,9 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           </div>
         </div>
 
-        {/* Sticky Navigation Tabs Bar with Horizontal Scrollbar & Quick Navigation Arrows */}
-        <div className="mt-3 pt-3 border-t border-[#EAE7E0] relative flex items-center gap-1.5 group">
+        {/* Optional Sticky Navigation Tabs Bar with Horizontal Scrollbar & Quick Navigation Arrows */}
+        {showHorizontalNav && (
+        <div className="mt-3 pt-3 border-t border-[#EAE7E0] relative flex items-center gap-1.5 group animate-in fade-in">
           {/* Left Scroll Navigation Button */}
           <button
             type="button"
@@ -1952,10 +2114,35 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+        )}
       </header>
 
-      {/* Main Container */}
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-6 space-y-6">
+      {/* Portal Layout: Left Collapsible Sidebar with Sticky AI Daily Rhythm + Main Workspace */}
+      <div className="flex flex-1 min-h-[calc(100vh-65px)]">
+        {/* Left Sidebar */}
+        <LoanOfficerSidebar
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => {
+            setIsSidebarCollapsed(prev => {
+              const next = !prev;
+              if (typeof window !== "undefined") {
+                localStorage.setItem("lo_sidebar_collapsed", String(next));
+              }
+              return next;
+            });
+          }}
+          currentLo={currentLo}
+          guidesState={guidesState}
+          isAdminUser={isAdminUser}
+          onOpenDailyReview={handleOpenDailyReview}
+          workspaceConnected={Boolean(workspaceUser)}
+        />
+
+        {/* Main Content Area */}
+        <div className="flex-1 min-w-0 overflow-y-auto">
+          <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-6 space-y-6">
         {/* Admin Managing Downstream LO Alert Banner */}
         {isAdminUser && currentLo.id !== loggedInUser.id && (
           <div className="bg-amber-50/90 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in">
@@ -2071,7 +2258,13 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   <BarChart3 className="w-4 h-4 text-emerald-300" />
                   <span>Source Quality Report</span>
                 </button>
-
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2.5 bg-[#2D362E] hover:bg-[#1E241F] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                >
+                  <Printer className="w-4 h-4 text-[#E7C19D]" />
+                  <span>Export PDF</span>
+                </button>
                 <button
                   onClick={handleExportLeadsCSV}
                   className="px-4 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
@@ -4000,9 +4193,10 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           className="w-16 h-16 rounded-2xl border-2 border-white shadow-md shrink-0"
                         />
                         <div className="space-y-0.5">
-                          <h4 className="font-serif font-bold text-base text-[#2D362E] flex items-center gap-1.5">
+                          <h4 className="font-serif font-bold text-base text-[#2D362E] flex items-center gap-1.5 flex-wrap">
                             <span>{lo.name}</span>
                             <ShieldCheck className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                            <OutreachHistoryBadge lo={lo} compact={true} />
                           </h4>
                           <p className="text-xs font-semibold text-[#4A5D4E]">{lo.title}</p>
                           <p className="text-[11px] text-[#9A9488]">{lo.nmlsId} • {lo.branch || lo.company}</p>
@@ -4116,6 +4310,14 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                             </button>
                         </div>
                       )}
+
+                      {/* Top 3 Business Partners (Buyside Agents) */}
+                      <TopBusinessPartnersCard
+                        role="lo"
+                        profile={lo}
+                        partners={lo.topPartners12Mo}
+                        compact={false}
+                      />
 
                       <div className="space-y-1.5 pt-2 border-t border-[#EAE7E0] text-xs">
                         <div className="flex items-center justify-between text-[#606C5D]">
@@ -4818,10 +5020,13 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                             )}
                           </div>
                           <div className="space-y-1 min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-1">
-                              <h4 className="font-serif font-bold text-base text-[#2D362E] truncate">
-                                {agent.name}
-                              </h4>
+                            <div className="flex items-center justify-between gap-1 flex-wrap">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <h4 className="font-serif font-bold text-base text-[#2D362E] truncate">
+                                  {agent.name}
+                                </h4>
+                                <OutreachHistoryBadge agent={agent} compact={true} />
+                              </div>
                               {agentType === 'buyer_agent' ? (
                                 <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full shrink-0">
                                   🟢 Buyer Agent
@@ -4882,6 +5087,14 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                             <span className="truncate">{agent.email}</span>
                           </div>
                         </div>
+
+                        {/* Top 3 Business Partners (Loan Officers) */}
+                        <TopBusinessPartnersCard
+                          role="agent"
+                          profile={agent}
+                          partners={agent.topPartners12Mo}
+                          compact={false}
+                        />
                       </div>
 
                       <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
@@ -5324,7 +5537,9 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           <GrowthDashboard guidesState={guidesState} />
         )}
 
-      </main>
+          </main>
+        </div>
+      </div>
 
       {/* Add / Edit Loan Officer Modal */}
       {(showAddLoModal || editingLo) && (
@@ -7164,6 +7379,28 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           }}
         />
       )}
+
+      {/* Quick AI Review & Focus/Flow Instructor Modal */}
+      <AIDailyReviewModal
+        isOpen={dailyReviewModalOpen}
+        onClose={() => setDailyReviewModalOpen(false)}
+        reviewData={dailyReviewData}
+        isLoading={dailyReviewLoading}
+        onRefreshReview={fetchDailyReview}
+        onNavigateTab={(tabId) => {
+          setActiveTab(tabId);
+          setDailyReviewModalOpen(false);
+        }}
+        timePhase={(() => {
+          const hour = new Date().getHours();
+          const minute = new Date().getMinutes();
+          if (hour < 11) return "morning";
+          if (hour < 14 || (hour === 14 && minute < 30)) return "midday";
+          if (hour < 16 || (hour === 16 && minute < 30)) return "afternoon";
+          return "end_of_day";
+        })()}
+        currentTimeString={new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+      />
     </div>
   );
 };

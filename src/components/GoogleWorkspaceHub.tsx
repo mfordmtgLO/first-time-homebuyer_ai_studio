@@ -973,8 +973,10 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
 
             <div className="p-3.5 bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-[#2D362E]">{targetBorrowerName || activeLead?.fullName || "Selected Lead"}</span>
-                <OutreachHistoryBadge logs={activeLead?.outreachLogs} />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-xs text-[#2D362E]">{targetBorrowerName || activeLead?.fullName || "Selected Lead"}</span>
+                  {activeLead && <OutreachHistoryBadge lead={activeLead} compact={true} />}
+                </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 uppercase">
                   {activeLead?.status || "active"}
                 </span>

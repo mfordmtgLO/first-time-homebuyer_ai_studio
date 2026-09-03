@@ -869,6 +869,40 @@ export const DEFAULT_LOAN_OFFICER: LoanOfficerProfile = {
   licenseStates: ["Oregon", "Washington", "California", "Idaho"],
   licenseVerificationYear: 2026,
   licenseLastVerifiedDate: "2026-01-10",
+  production12MoVolume: 48500000,
+  production12MoUnits: 86,
+  topPartners12Mo: [
+    {
+      partnerId: "agent-sarah-jenkins",
+      partnerName: "Sarah Jenkins",
+      partnerCompanyOrBrokerage: "Cascade Valley Real Estate",
+      partnerRole: "agent",
+      closedUnits12Mo: 16,
+      closedVolume12Mo: 8450000,
+      partnerNmlsOrLicense: "OR Lic #201208941",
+      buysideSharePct: 82
+    },
+    {
+      partnerId: "agent-marcus-vance",
+      partnerName: "Marcus Vance",
+      partnerCompanyOrBrokerage: "Willamette Heritage Realty",
+      partnerRole: "agent",
+      closedUnits12Mo: 12,
+      closedVolume12Mo: 6200000,
+      partnerNmlsOrLicense: "OR Lic #200804192",
+      buysideSharePct: 76
+    },
+    {
+      partnerId: "agent-elena-rostova",
+      partnerName: "Elena Rostova",
+      partnerCompanyOrBrokerage: "Urban Nest Properties",
+      partnerRole: "agent",
+      closedUnits12Mo: 10,
+      closedVolume12Mo: 4850000,
+      partnerNmlsOrLicense: "OR Lic #201509332",
+      buysideSharePct: 80
+    }
+  ],
   isAdmin: true,
   password: "admin123",
   customSlug: "mike-ford",
@@ -909,6 +943,40 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     licenseStates: ["Oregon", "Washington", "California", "Idaho", "Arizona"],
     licenseVerificationYear: 2026,
     licenseLastVerifiedDate: "2026-01-15",
+    production12MoVolume: 32400000,
+    production12MoUnits: 64,
+    topPartners12Mo: [
+      {
+        partnerId: "agent-sarah-jenkins",
+        partnerName: "Sarah Jenkins",
+        partnerCompanyOrBrokerage: "Cascade Valley Real Estate",
+        partnerRole: "agent",
+        closedUnits12Mo: 11,
+        closedVolume12Mo: 5600000,
+        partnerNmlsOrLicense: "OR Lic #201208941",
+        buysideSharePct: 78
+      },
+      {
+        partnerId: "agent-tyler-brooks",
+        partnerName: "Tyler Brooks",
+        partnerCompanyOrBrokerage: "Pacific Crest Real Estate",
+        partnerRole: "agent",
+        closedUnits12Mo: 9,
+        closedVolume12Mo: 4650000,
+        partnerNmlsOrLicense: "OR Lic #202108194",
+        buysideSharePct: 72
+      },
+      {
+        partnerId: "agent-marcus-vance",
+        partnerName: "Marcus Vance",
+        partnerCompanyOrBrokerage: "Willamette Heritage Realty",
+        partnerRole: "agent",
+        closedUnits12Mo: 8,
+        closedVolume12Mo: 3950000,
+        partnerNmlsOrLicense: "OR Lic #200804192",
+        buysideSharePct: 70
+      }
+    ],
     isAdmin: false,
     password: "pass123",
     parentManagerId: "lo-mike-ford",
@@ -942,6 +1010,40 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     licenseStates: ["Oregon", "Washington"],
     licenseVerificationYear: 2026,
     licenseLastVerifiedDate: "2026-01-16",
+    production12MoVolume: 29800000,
+    production12MoUnits: 58,
+    topPartners12Mo: [
+      {
+        partnerId: "agent-elena-rostova",
+        partnerName: "Elena Rostova",
+        partnerCompanyOrBrokerage: "Urban Nest Properties",
+        partnerRole: "agent",
+        closedUnits12Mo: 11,
+        closedVolume12Mo: 5250000,
+        partnerNmlsOrLicense: "OR Lic #201509332",
+        buysideSharePct: 85
+      },
+      {
+        partnerId: "agent-tyler-brooks",
+        partnerName: "Tyler Brooks",
+        partnerCompanyOrBrokerage: "Pacific Crest Real Estate",
+        partnerRole: "agent",
+        closedUnits12Mo: 9,
+        closedVolume12Mo: 4400000,
+        partnerNmlsOrLicense: "OR Lic #202108194",
+        buysideSharePct: 74
+      },
+      {
+        partnerId: "agent-sarah-jenkins",
+        partnerName: "Sarah Jenkins",
+        partnerCompanyOrBrokerage: "Cascade Valley Real Estate",
+        partnerRole: "agent",
+        closedUnits12Mo: 7,
+        closedVolume12Mo: 3650000,
+        partnerNmlsOrLicense: "OR Lic #201208941",
+        buysideSharePct: 70
+      }
+    ],
     isAdmin: false,
     password: "pass123",
     parentManagerId: "lo-mike-ford",
@@ -975,6 +1077,39 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     licenseStates: ["Oregon", "Washington", "California"],
     licenseVerificationYear: 2026,
     licenseLastVerifiedDate: "2026-01-18",
+    production12MoVolume: 36200000,
+    production12MoUnits: 71,
+    topPartners12Mo: [
+      {
+        partnerId: "agent-marcus-vance",
+        partnerName: "Marcus Vance",
+        partnerCompanyOrBrokerage: "Willamette Heritage Realty",
+        partnerRole: "agent",
+        closedUnits12Mo: 14,
+        closedVolume12Mo: 7150000,
+        partnerNmlsOrLicense: "OR Lic #200804192",
+        buysideSharePct: 76
+      },
+      {
+        partnerName: "Carey Hughes",
+        partnerCompanyOrBrokerage: "Keller Williams Sunset Corridor",
+        partnerRole: "agent",
+        closedUnits12Mo: 10,
+        closedVolume12Mo: 5300000,
+        partnerNmlsOrLicense: "OR Lic #201103829",
+        buysideSharePct: 80
+      },
+      {
+        partnerId: "agent-tyler-brooks",
+        partnerName: "Tyler Brooks",
+        partnerCompanyOrBrokerage: "Pacific Crest Real Estate",
+        partnerRole: "agent",
+        closedUnits12Mo: 8,
+        closedVolume12Mo: 4100000,
+        partnerNmlsOrLicense: "OR Lic #202108194",
+        buysideSharePct: 68
+      }
+    ],
     isAdmin: false,
     password: "pass123",
     parentManagerId: "lo-mike-ford",
@@ -1008,6 +1143,39 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     licenseStates: ["Oregon", "Washington", "Hawaii"],
     licenseVerificationYear: 2026,
     licenseLastVerifiedDate: "2026-01-20",
+    production12MoVolume: 26500000,
+    production12MoUnits: 52,
+    topPartners12Mo: [
+      {
+        partnerId: "agent-elena-rostova",
+        partnerName: "Elena Rostova",
+        partnerCompanyOrBrokerage: "Urban Nest Properties",
+        partnerRole: "agent",
+        closedUnits12Mo: 12,
+        closedVolume12Mo: 5850000,
+        partnerNmlsOrLicense: "OR Lic #201509332",
+        buysideSharePct: 88
+      },
+      {
+        partnerId: "agent-sarah-jenkins",
+        partnerName: "Sarah Jenkins",
+        partnerCompanyOrBrokerage: "Cascade Valley Real Estate",
+        partnerRole: "agent",
+        closedUnits12Mo: 8,
+        closedVolume12Mo: 4100000,
+        partnerNmlsOrLicense: "OR Lic #201208941",
+        buysideSharePct: 75
+      },
+      {
+        partnerName: "Kevin O'Neill",
+        partnerCompanyOrBrokerage: "Compass Lake Oswego",
+        partnerRole: "agent",
+        closedUnits12Mo: 6,
+        closedVolume12Mo: 3200000,
+        partnerNmlsOrLicense: "OR Lic #200904812",
+        buysideSharePct: 70
+      }
+    ],
     isAdmin: false,
     password: "pass123",
     parentManagerId: "lo-mike-ford",
@@ -1041,6 +1209,39 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     licenseStates: ["Oregon", "Washington"],
     licenseVerificationYear: 2026,
     licenseLastVerifiedDate: "2026-01-22",
+    production12MoVolume: 24800000,
+    production12MoUnits: 49,
+    topPartners12Mo: [
+      {
+        partnerId: "agent-elena-rostova",
+        partnerName: "Elena Rostova",
+        partnerCompanyOrBrokerage: "Urban Nest Properties",
+        partnerRole: "agent",
+        closedUnits12Mo: 10,
+        closedVolume12Mo: 4900000,
+        partnerNmlsOrLicense: "OR Lic #201509332",
+        buysideSharePct: 82
+      },
+      {
+        partnerId: "agent-marcus-vance",
+        partnerName: "Marcus Vance",
+        partnerCompanyOrBrokerage: "Willamette Heritage Realty",
+        partnerRole: "agent",
+        closedUnits12Mo: 8,
+        closedVolume12Mo: 4050000,
+        partnerNmlsOrLicense: "OR Lic #200804192",
+        buysideSharePct: 74
+      },
+      {
+        partnerName: "Marc Gallagher",
+        partnerCompanyOrBrokerage: "RE/MAX Equity Group",
+        partnerRole: "agent",
+        closedUnits12Mo: 6,
+        closedVolume12Mo: 3100000,
+        partnerNmlsOrLicense: "OR Lic #201309112",
+        buysideSharePct: 70
+      }
+    ],
     isAdmin: false,
     password: "pass123",
     parentManagerId: "lo-mike-ford",
@@ -1074,6 +1275,39 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     licenseStates: ["Oregon", "Washington"],
     licenseVerificationYear: 2026,
     licenseLastVerifiedDate: "2026-01-24",
+    production12MoVolume: 31000000,
+    production12MoUnits: 61,
+    topPartners12Mo: [
+      {
+        partnerId: "agent-tyler-brooks",
+        partnerName: "Tyler Brooks",
+        partnerCompanyOrBrokerage: "Pacific Crest Real Estate",
+        partnerRole: "agent",
+        closedUnits12Mo: 12,
+        closedVolume12Mo: 6350000,
+        partnerNmlsOrLicense: "OR Lic #202108194",
+        buysideSharePct: 78
+      },
+      {
+        partnerId: "agent-sarah-jenkins",
+        partnerName: "Sarah Jenkins",
+        partnerCompanyOrBrokerage: "Cascade Valley Real Estate",
+        partnerRole: "agent",
+        closedUnits12Mo: 9,
+        closedVolume12Mo: 4600000,
+        partnerNmlsOrLicense: "OR Lic #201208941",
+        buysideSharePct: 72
+      },
+      {
+        partnerName: "Carey Hughes",
+        partnerCompanyOrBrokerage: "Keller Williams Sunset Corridor",
+        partnerRole: "agent",
+        closedUnits12Mo: 7,
+        closedVolume12Mo: 3750000,
+        partnerNmlsOrLicense: "OR Lic #201103829",
+        buysideSharePct: 75
+      }
+    ],
     isAdmin: false,
     password: "pass123",
     parentManagerId: "lo-mike-ford",
@@ -1107,6 +1341,39 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
     licenseStates: ["Oregon", "Washington", "Florida", "Texas"],
     licenseVerificationYear: 2026,
     licenseLastVerifiedDate: "2026-01-25",
+    production12MoVolume: 22500000,
+    production12MoUnits: 44,
+    topPartners12Mo: [
+      {
+        partnerId: "agent-tyler-brooks",
+        partnerName: "Tyler Brooks",
+        partnerCompanyOrBrokerage: "Pacific Crest Real Estate",
+        partnerRole: "agent",
+        closedUnits12Mo: 10,
+        closedVolume12Mo: 5150000,
+        partnerNmlsOrLicense: "OR Lic #202108194",
+        buysideSharePct: 75
+      },
+      {
+        partnerId: "agent-marcus-vance",
+        partnerName: "Marcus Vance",
+        partnerCompanyOrBrokerage: "Willamette Heritage Realty",
+        partnerRole: "agent",
+        closedUnits12Mo: 7,
+        closedVolume12Mo: 3550000,
+        partnerNmlsOrLicense: "OR Lic #200804192",
+        buysideSharePct: 70
+      },
+      {
+        partnerName: "Kate Bergsgaard",
+        partnerCompanyOrBrokerage: "Windermere Realty Trust",
+        partnerRole: "agent",
+        closedUnits12Mo: 6,
+        closedVolume12Mo: 3100000,
+        partnerNmlsOrLicense: "OR Lic #201402941",
+        buysideSharePct: 80
+      }
+    ],
     isAdmin: false,
     password: "pass123",
     parentManagerId: "lo-mike-ford",
@@ -1132,6 +1399,13 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     headshotUrl: "",
     agentType: "buyer_agent",
     experienceYears: 12,
+    production12MoVolume: 24800000,
+    production12MoUnits: 42,
+    buysideVolume12Mo: 18600000,
+    buysideUnits12Mo: 31,
+    listingVolume12Mo: 6200000,
+    listingUnits12Mo: 11,
+    buysideSharePct: 74,
     activeListingsCount: 8,
     rating: 4.9,
     bio: "Sarah is passionate about guiding first-time buyers through neighborhood selection, realistic tour inspections, and aggressive offer structuring to capture maximum seller closing credits.",
@@ -1151,6 +1425,38 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     realTrendsVolume: 24800000,
     realTrendsYear: 2025,
     realTrendsCategory: "Individual Agent - Volume",
+    topPartners12Mo: [
+      {
+        partnerId: "lo-mike-ford",
+        partnerName: "Mike Ford",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 16,
+        closedVolume12Mo: 8450000,
+        partnerNmlsOrLicense: "NMLS #288455",
+        buysideSharePct: 100
+      },
+      {
+        partnerId: "lo-lonn-kilstrom",
+        partnerName: "Lonn Kilstrom",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 11,
+        closedVolume12Mo: 5600000,
+        partnerNmlsOrLicense: "NMLS #117954",
+        buysideSharePct: 100
+      },
+      {
+        partnerId: "lo-derek-richards",
+        partnerName: "Derek Richards",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 9,
+        closedVolume12Mo: 4600000,
+        partnerNmlsOrLicense: "NMLS #590516",
+        buysideSharePct: 100
+      }
+    ],
     emailHistory: [
       {
         id: "aeh-sarah-1",
@@ -1186,6 +1492,13 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     headshotUrl: "",
     agentType: "buyer_agent",
     experienceYears: 16,
+    production12MoVolume: 29500000,
+    production12MoUnits: 58,
+    buysideVolume12Mo: 21800000,
+    buysideUnits12Mo: 43,
+    listingVolume12Mo: 7700000,
+    listingUnits12Mo: 15,
+    buysideSharePct: 74,
     activeListingsCount: 14,
     rating: 5.0,
     bio: "Marcus has closed over 350+ transactions for first-time buyers in Clackamas, Oregon City, and Gresham, combining deep neighborhood knowledge with razor-sharp contract terms.",
@@ -1205,6 +1518,38 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     realTrendsVolume: 29500000,
     realTrendsYear: 2025,
     realTrendsCategory: "Individual Agent - Sides",
+    topPartners12Mo: [
+      {
+        partnerId: "lo-mark-saftich",
+        partnerName: "Mark Saftich",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 14,
+        closedVolume12Mo: 7150000,
+        partnerNmlsOrLicense: "NMLS #115868",
+        buysideSharePct: 100
+      },
+      {
+        partnerId: "lo-mike-ford",
+        partnerName: "Mike Ford",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 12,
+        closedVolume12Mo: 6200000,
+        partnerNmlsOrLicense: "NMLS #288455",
+        buysideSharePct: 100
+      },
+      {
+        partnerId: "lo-christopher-vargas",
+        partnerName: "Christopher Vargas",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 8,
+        closedVolume12Mo: 4050000,
+        partnerNmlsOrLicense: "NMLS #2592558",
+        buysideSharePct: 100
+      }
+    ],
     emailHistory: [
       {
         id: "aeh-marcus-1",
@@ -1240,6 +1585,13 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     headshotUrl: "",
     agentType: "dual_agent",
     experienceYears: 9,
+    production12MoVolume: 16400000,
+    production12MoUnits: 28,
+    buysideVolume12Mo: 10500000,
+    buysideUnits12Mo: 18,
+    listingVolume12Mo: 5900000,
+    listingUnits12Mo: 10,
+    buysideSharePct: 64,
     activeListingsCount: 11,
     rating: 4.8,
     bio: "Elena specializes in vintage character homes, cosmetic fixers with instant sweat equity potential, and townhomes for young professionals and growing families.",
@@ -1252,7 +1604,62 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     marketAreas: ["East Portland", "Southeast Portland", "Milwaukie", "St. Johns"],
     websiteUrl: "https://urbannestpdx.com",
     assignedLoIds: ["lo-darryl-symonds", "lo-mike-ford", "lo-christopher-vargas"],
-    customSlug: "elena-rostova"
+    customSlug: "elena-rostova",
+    topPartners12Mo: [
+      {
+        partnerId: "lo-darryl-symonds",
+        partnerName: "Darryl Symonds",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 12,
+        closedVolume12Mo: 5850000,
+        partnerNmlsOrLicense: "NMLS #70035",
+        buysideSharePct: 100
+      },
+      {
+        partnerId: "lo-alan-burkhart",
+        partnerName: "Alan Burkhart",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 11,
+        closedVolume12Mo: 5250000,
+        partnerNmlsOrLicense: "NMLS #312229",
+        buysideSharePct: 100
+      },
+      {
+        partnerId: "lo-mike-ford",
+        partnerName: "Mike Ford",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 10,
+        closedVolume12Mo: 4850000,
+        partnerNmlsOrLicense: "NMLS #288455",
+        buysideSharePct: 100
+      }
+    ],
+    emailHistory: [
+      {
+        id: "aeh-elena-1",
+        timestamp: "2026-08-25T11:15:00Z",
+        templateType: "First-Time Buyer Grant Opportunity",
+        subject: "Exclusive $12,500 Down Payment Grant for Southeast PDX Buyers",
+        channel: "gmail",
+        recipientEmail: "elena@urbannestpdx.com",
+        recipientName: "Elena Rostova",
+        status: "opened",
+        notes: "Shared Oregon down payment assistance matrix and co-branded flyer."
+      }
+    ],
+    outreachLogs: [
+      {
+        id: "a-ol-elena-1",
+        timestamp: "2026-08-25T11:15:00Z",
+        channel: "email",
+        templateName: "First-Time Buyer Grant Opportunity",
+        subject: "Exclusive $12,500 Down Payment Grant for Southeast PDX Buyers",
+        recipientName: "Elena Rostova"
+      }
+    ]
   },
   {
     id: "agent-tyler-brooks",
@@ -1277,7 +1684,69 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     marketAreas: ["Beaverton", "Hillsboro", "Bethany", "Sherwood"],
     websiteUrl: "https://pacificcrestre.com",
     assignedLoIds: ["lo-derek-richards", "lo-emanuel-etuks"],
-    customSlug: "tyler-brooks"
+    customSlug: "tyler-brooks",
+    production12MoVolume: 26500000,
+    production12MoUnits: 46,
+    buysideVolume12Mo: 17800000,
+    buysideUnits12Mo: 30,
+    listingVolume12Mo: 8700000,
+    listingUnits12Mo: 16,
+    buysideSharePct: 67,
+    topPartners12Mo: [
+      {
+        partnerId: "lo-derek-richards",
+        partnerName: "Derek Richards",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 12,
+        closedVolume12Mo: 6350000,
+        partnerNmlsOrLicense: "NMLS #590516",
+        buysideSharePct: 100
+      },
+      {
+        partnerId: "lo-emanuel-etuks",
+        partnerName: "Emanuel Etuks",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 10,
+        closedVolume12Mo: 5150000,
+        partnerNmlsOrLicense: "NMLS #2514299",
+        buysideSharePct: 100
+      },
+      {
+        partnerId: "lo-lonn-kilstrom",
+        partnerName: "Lonn Kilstrom",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 9,
+        closedVolume12Mo: 4650000,
+        partnerNmlsOrLicense: "NMLS #117954",
+        buysideSharePct: 100
+      }
+    ],
+    emailHistory: [
+      {
+        id: "aeh-tyler-1",
+        timestamp: "2026-08-28T09:40:00Z",
+        templateType: "New Construction Extended Rate Lock",
+        subject: "360-Day Builder Rate Lock Program for Washington County Buyers",
+        channel: "outlook",
+        recipientEmail: "tyler@pacificcrestre.com",
+        recipientName: "Tyler Brooks",
+        status: "delivered",
+        notes: "Sent extended lock breakdown for Bethany townhome buyers."
+      }
+    ],
+    outreachLogs: [
+      {
+        id: "a-ol-tyler-1",
+        timestamp: "2026-08-28T09:40:00Z",
+        channel: "email",
+        templateName: "New Construction Extended Rate Lock",
+        subject: "360-Day Builder Rate Lock Program for Washington County Buyers",
+        recipientName: "Tyler Brooks"
+      }
+    ]
   }
 ];
 

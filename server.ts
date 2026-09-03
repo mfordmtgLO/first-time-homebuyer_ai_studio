@@ -4,6 +4,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { loadKnowledgeBase, searchKnowledge, addDocumentToKnowledge } from "./vantageKnowledge.js";
+import { searchLiveRegistry } from "./liveWebSearch.js";
 
 async function startServer() {
   loadKnowledgeBase();
@@ -376,6 +377,98 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
 *Command Center synced with active pipeline.*`;
   };
 
+  // Helper: Resilient LO Daily Rhythm & AI Review Fallback
+  const getDailyReviewFallback = (payload: any) => {
+    const phase = payload?.timePhase || "morning";
+    const name = payload?.loProfile?.name || "Mike Ford";
+    const isAdmin = Boolean(payload?.isAdmin);
+    const completed = payload?.completedTasks?.length || 0;
+    const pending = payload?.pendingTasks?.length || 0;
+    const total = completed + pending;
+    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const timeStr = payload?.currentTimeString || "Active Shift";
+
+    if (phase === "morning") {
+      return {
+        headline: `Morning Pipeline Kickoff (${timeStr})`,
+        motivationalBadge: "High-Energy Launch — First touches set the day's pace!",
+        whatDoneSummary: completed > 0 
+          ? `Off to an active start with ${completed} priority action${completed > 1 ? 's' : ''} already handled.` 
+          : `Morning pipeline queued with ${total || 5} operational touchpoints ready for rapid execution.`,
+        topPriorities: [
+          "Reach out to high-intent buyer inquiries in CRM before 10:30 AM.",
+          "Check rate-lock expirations and underwriting conditions across active files.",
+          isAdmin 
+            ? "Review candidate recruiting pipeline & schedule branch intro syncs." 
+            : "Verify borrower scenario drafts on Scenario Workbench for weekend home tours."
+        ],
+        coachingQuote: "Speed-to-lead in the first 2 hours of the day drives 70% of downstream borrower conversions.",
+        nextActionRecommendation: {
+          tabId: "leads",
+          actionTitle: "Review Hot Inquiries in CRM",
+          actionReason: "3 buyer leads are waiting on pre-approval qualification checks."
+        }
+      };
+    } else if (phase === "midday") {
+      return {
+        headline: `Midday Partner & Production Pulse (${timeStr})`,
+        motivationalBadge: pct >= 50 ? "Ahead of schedule — fantastic mid-day pace!" : "Solid momentum — keep this rhythm rolling!",
+        whatDoneSummary: `Midday status: ${completed} of ${total} daily priorities knocked out (${pct}% completion rate). Pipeline touches logged.`,
+        topPriorities: [
+          "Connect with top Realtor partners (Sarah Jenkins & Marcus Vance) on active buyer pre-approvals.",
+          "Run 2-1 buydown cost analysis on listing properties with recent price adjustments.",
+          isAdmin
+            ? "Review team loan distribution and route newly arrived portal inquiries."
+            : "Finalize AUS documentation checklist for underwriting submission."
+        ],
+        coachingQuote: "Midday partner touchpoints solidify agent trust and keep your pre-approvals top-of-mind.",
+        nextActionRecommendation: {
+          tabId: "realtor_cobranding",
+          actionTitle: "Dispatch Open House Co-Marketing Asset",
+          actionReason: "Realtors finalize weekend open house marketing between 11 AM and 2 PM."
+        }
+      };
+    } else if (phase === "afternoon") {
+      return {
+        headline: `Afternoon Momentum & Team Check (${timeStr})`,
+        motivationalBadge: pct >= 60 ? "Crushing your afternoon targets — finish strong!" : "Afternoon sprint — knock out remaining items!",
+        whatDoneSummary: `Afternoon check: ${completed} items cleared. Core afternoon focus is on clearing underwriting conditions and partner alignment.`,
+        topPriorities: [
+          "Clear remaining pending conditions for files currently under active underwriting review.",
+          "Review DPA & State Grant eligibility matrix for pending affordable loan applicants.",
+          isAdmin
+            ? "Check candidate recruiting pipeline: move interviewed LO candidates to Next Round."
+            : "Send evening pre-approval verification letters to active home shoppers."
+        ],
+        coachingQuote: "The 3:30 PM push is where top producers separate themselves from average loan originators.",
+        nextActionRecommendation: {
+          tabId: isAdmin ? "recruitment_pipeline" : "scenario_workbench",
+          actionTitle: isAdmin ? "Review High-Volume Recruits" : "Generate Comparison PDF",
+          actionReason: isAdmin ? "Recruiting candidates review afternoon messages after market close." : "Buyers need pre-approval letters before evening property showings."
+        }
+      };
+    } else {
+      return {
+        headline: `End-of-Day Review & Wrap-Up (${timeStr})`,
+        motivationalBadge: pct >= 75 ? "Outstanding day! Daily goals crushed." : "Great effort today — strong foundation for tomorrow!",
+        whatDoneSummary: `Final EOD tally: ${completed} of ${total} items completed (${pct}% achievement). Inquiries and tasks logged.`,
+        topPriorities: [
+          "Verify all outbound SMS & email communications are compliant and logged in the CRM audit trail.",
+          "Set tomorrow morning's top 3 priority focus areas in Google Workspace.",
+          isAdmin
+            ? "Review branch daily funded volume pacing and team quota metrics."
+            : "Send wrap-up summary note to Realtor partners on active buyer status."
+        ],
+        coachingQuote: "A deliberate 10-minute end-of-day wrap-up guarantees effortless momentum tomorrow morning.",
+        nextActionRecommendation: {
+          tabId: "growth_dashboard",
+          actionTitle: "Review Branch & LO Production Trajectory",
+          actionReason: "Close out the day with clarity on your 30-day funded volume goals."
+        }
+      };
+    }
+  };
+
   // API Route: Health Check
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -635,6 +728,62 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
       console.log("LO 2nd Brain API notice (using underwriter fallback):", "API Limitation handled.");
       res.json({
         reply: getLO2ndBrainFallback(message, loProfile, activeLead, scenarioContext, mode),
+        isFallback: true,
+        quotaDepleted: isQuotaOrDepleted(error)
+      });
+    }
+  });
+
+  // API Route: AI Daily Rhythm & Quick AI Review
+  app.post("/api/gemini/lo-daily-review", async (req, res) => {
+    const payload = req.body || {};
+    const { loProfile, timePhase, currentTimeString, completedTasks, pendingTasks, stats, isAdmin } = payload;
+
+    try {
+      const prompt = `You are the executive AI Production Coach & Focus/Flow Instructor for mortgage loan officer ${loProfile?.name || "Mike Ford"}.
+Time Phase: ${timePhase || "morning"}
+Current Time: ${currentTimeString || "10:00 AM"}
+Role: ${isAdmin ? "Branch Manager & Producing Loan Officer" : "Producing Loan Officer"}
+Completed Tasks Today (${completedTasks?.length || 0}): ${(completedTasks || []).join("; ") || "None yet"}
+Remaining Pending Tasks (${pendingTasks?.length || 0}): ${(pendingTasks || []).join("; ") || "General daily queue"}
+Pipeline Stats: ${stats?.leadsCount || 0} active leads (${stats?.hotLeadsCount || 0} hot), ${stats?.candidatesCount || 0} recruitment candidates, ${stats?.recentTouchesCount || 0} recent communication touches.
+
+Provide an immediate, inspiring, and actionable Daily Review in valid JSON with these exact fields:
+- "headline": Short punchy review headline including time phase and time
+- "motivationalBadge": Brief high-energy cheer (e.g. "Ahead of schedule — fantastic mid-day pace!" or "Crushing your morning kickoff!")
+- "whatDoneSummary": 1-2 sentence objective recap of what has been accomplished so far today across the dashboard
+- "topPriorities": Array of exactly 3 realistic, high-leverage tasks to still accomplish before end of shift (aware of time of day and realistic bandwidth)
+- "coachingQuote": 1 brief, punchy coaching insight
+- "nextActionRecommendation": Object with "tabId" (one of: "leads", "scenario_workbench", "realtor_cobranding", "recruitment_pipeline", "buydown_2_1", "growth_dashboard"), "actionTitle", and "actionReason"`;
+
+      const response = await generateWithModelFallback({
+        preferredModel: "gemini-3.7-flash",
+        contents: prompt,
+        config: {
+          systemInstruction: `You are an elite Mortgage Branch Production Coach. You provide time-aware, realistic daily guidance that keeps loan officers and branch managers focused, motivated, and knocking out their high-priority tasks throughout the day. Always output valid JSON.`,
+          responseMimeType: "application/json",
+          temperature: 0.3,
+        },
+      });
+
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(response.text || "{}");
+      } catch {
+        parsed = getDailyReviewFallback(payload);
+      }
+
+      // Validate parsed format has topPriorities
+      if (!parsed.headline || !Array.isArray(parsed.topPriorities)) {
+        parsed = getDailyReviewFallback(payload);
+      }
+
+      res.json({ success: true, data: parsed });
+    } catch (error: any) {
+      console.log("LO Daily Review notice (using fallback):", "API Limitation handled.");
+      res.json({
+        success: true,
+        data: getDailyReviewFallback(payload),
         isFallback: true,
         quotaDepleted: isQuotaOrDepleted(error)
       });
@@ -1137,6 +1286,35 @@ Choose realistic Unsplash portrait images for headshotUrl.`;
     } catch (error: any) {
       console.error("Realtor lookup error:", error);
       res.status(500).json({ error: error.message || "Failed to generate AI Realtor profiles" });
+    }
+  });
+
+  // API Route: Live Web Search Engine (Google Search Grounded + Live Internet Candidate Extraction)
+  app.post("/api/recruitment/search-registry", async (req, res) => {
+    try {
+      const { query, company, city, county, state, minYears, minUnits, minVolume, minBuysideUnits, minBuysideVolume, type = "lo" } = req.body || {};
+      const searchRes = await searchLiveRegistry({
+        query: query ? String(query).trim() : "",
+        company: company ? String(company).trim() : "",
+        city: city ? String(city).trim() : "",
+        county: county ? String(county).trim() : "",
+        state: state ? String(state).trim() : "OR",
+        minYears: Number(minYears) || 0,
+        minUnits: Number(minUnits) || 0,
+        minVolume: Number(minVolume) || 0,
+        minBuysideUnits: Number(minBuysideUnits) || 0,
+        minBuysideVolume: Number(minBuysideVolume) || 0,
+      }, type === "agent" ? "agent" : "lo");
+
+      res.json({
+        success: true,
+        results: searchRes.results,
+        source: searchRes.source,
+        queryUsed: searchRes.queryUsed
+      });
+    } catch (err: any) {
+      console.error("Recruitment live search error:", err);
+      res.status(500).json({ error: err.message || "Failed to search live registry" });
     }
   });
 

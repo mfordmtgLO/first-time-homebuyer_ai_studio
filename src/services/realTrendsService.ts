@@ -289,92 +289,64 @@ export interface SearchRegistryParams {
   minYears?: number;
   minUnits?: number;
   minVolume?: number;
+  minBuysideUnits?: number;
+  minBuysideVolume?: number;
 }
 
 /**
- * Simulates a global database search (MMI / RealTrends / NMLS) for a new candidate
+ * Live Registry & Public Directory Search
+ * Dispatches to backend Live Search Engine (Google Search Grounded + Real-Time Internet Candidate Extraction)
+ * Pulls real, licensed loan officers and realtors from live public directories and state databases.
  */
 export async function searchNationalRegistry(params: SearchRegistryParams, type: 'lo' | 'agent'): Promise<any[]> {
-  // Simulate network latency
-  await new Promise(res => setTimeout(res, 800));
-
-  const { query = "", company = "", city = "", county = "", state = "", minYears = 0, minUnits = 0, minVolume = 0 } = params;
+  const { 
+    query = "", 
+    company = "", 
+    city = "", 
+    county = "", 
+    state = "", 
+    minYears = 0, 
+    minUnits = 0, 
+    minVolume = 0,
+    minBuysideUnits = 0,
+    minBuysideVolume = 0
+  } = params;
 
   // If no criteria at all, return empty
-  if (!query && !company && !city && !state && !county && minYears === 0 && minUnits === 0 && minVolume === 0) {
-      return [];
+  if (!query && !company && !city && !state && !county && minYears === 0 && minUnits === 0 && minVolume === 0 && minBuysideUnits === 0 && minBuysideVolume === 0) {
+    return [];
   }
 
-  // Generate seed from all params
-  const combinedString = `${query}${company}${city}${county}${state}`.toLowerCase();
-  const baseHash = combinedString.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) || 1234;
+  try {
+    const res = await fetch("/api/recruitment/search-registry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query,
+        company,
+        city,
+        county,
+        state: state || "OR",
+        minYears,
+        minUnits,
+        minVolume,
+        minBuysideUnits,
+        minBuysideVolume,
+        type
+      })
+    });
 
-  const results = [];
-  const numResults = combinedString.length > 0 ? (baseHash % 4) + 2 : 5; // 2 to 5 results
-
-  for (let i = 0; i < numResults; i++) {
-    const hash = baseHash + (i * 997);
-    
-    // Generate metrics that AT LEAST meet the minimums, with some randomness above it
-    const generatedYears = Math.max(minYears, (hash % 20) + 2);
-    const generatedUnits = Math.max(minUnits, (hash % 80) + 10);
-    const generatedVolume = Math.max(minVolume, (((hash % 40) + 5) * 1000000) + 500000);
-    
-    // Names and companies
-    const firstNames = ["Stuart", "Sarah", "Marcus", "Elena", "Tyler", "Jessica", "David", "Michael", "Emma", "James"];
-    const lastNames = ["Sandor", "Jenkins", "Chen", "Rodriguez", "Smith", "Johnson", "Williams", "Brown", "Davis", "Miller"];
-    
-    let firstName = firstNames[hash % firstNames.length];
-    let lastName = lastNames[(hash * 2) % lastNames.length];
-    let fullName = i === 0 && query.trim().split(' ').length > 1 
-        ? query.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-        : `${firstName} ${lastName}`;
-
-    if (type === 'lo') {
-       const companies = ["CrossCountry Mortgage", "Guild Mortgage", "Fairway Independent", "Guaranteed Rate", "Movement Mortgage"];
-       const resolvedCompany = company ? company : companies[hash % companies.length];
-       
-       results.push({
-         id: `lo-search-${Date.now()}-${i}`,
-         name: fullName,
-         company: resolvedCompany,
-         email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${resolvedCompany.split(' ')[0].toLowerCase().replace(/\s+/g, '')}.com`,
-         phone: `(555) ${Math.floor(200 + (hash % 800))}-${Math.floor(1000 + (hash % 9000))}`,
-         nmlsId: `${Math.floor(100000 + (hash % 899999))}`,
-         nmlsNumber: `${Math.floor(100000 + (hash % 899999))}`,
-         production12MoVolume: generatedVolume,
-         production12MoUnits: generatedUnits,
-         yearsExperience: generatedYears,
-         licenseStates: [state || 'OR', 'WA', 'CA'].slice(0, (hash % 3) + 1),
-         recruitmentStatus: 'Not Contacted',
-         enrichmentStatus: 'enriched',
-         realTrendsVerified: generatedUnits >= 20 || generatedVolume >= 15000000,
-         realTrendsRank: (generatedUnits >= 20 || generatedVolume >= 15000000) ? `Scotsman Guide Top Originator #${(hash % 250) + 50}` : null,
-         isTeamMember: false,
-         isAdmin: false
-       });
-    } else {
-       const brokerages = ["Keller Williams", "RE/MAX", "Coldwell Banker", "Compass", "eXp Realty", "Century 21"];
-       const resolvedBrokerage = company ? company : brokerages[hash % brokerages.length];
-       
-       results.push({
-         id: `ag-search-${Date.now()}-${i}`,
-         name: fullName,
-         brokerage: resolvedBrokerage,
-         email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${resolvedBrokerage.split(' ')[0].toLowerCase().replace(/\s+/g, '')}.com`,
-         phone: `(555) ${Math.floor(200 + (hash % 800))}-${Math.floor(1000 + (hash % 9000))}`,
-         licenseNumber: `2012${Math.floor(10000 + (hash % 89999))}`,
-         production12MoVolume: generatedVolume,
-         production12MoUnits: generatedUnits,
-         activeListingsCount: Math.floor(generatedUnits / 4) + 1,
-         experienceYears: generatedYears,
-         recruitmentStatus: 'Not Contacted',
-         realTrendsVerified: generatedUnits >= 20 || generatedVolume >= 15000000,
-         realTrendsRank: (generatedUnits >= 20 || generatedVolume >= 15000000) ? `America's Best #${(hash % 90) + 10} - ${state || 'Oregon'}` : null,
-       });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.results && Array.isArray(data.results)) {
+        return data.results;
+      }
     }
+    console.warn("Live registry search returned non-200 status:", res.status);
+    return [];
+  } catch (err) {
+    console.error("Failed to query live registry search:", err);
+    return [];
   }
-  
-  return results;
 }
 

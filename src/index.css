@@ -57,6 +57,29 @@
   background: #4A5D4E;
 }
 
+/* Dedicated sleek vertical scrollbar for sidebar */
+.dashboard-vertical-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #DEDAD2 #FDFBF7;
+}
+
+.dashboard-vertical-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.dashboard-vertical-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-vertical-scrollbar::-webkit-scrollbar-thumb {
+  background: #DEDAD2;
+  border-radius: 9999px;
+}
+
+.dashboard-vertical-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #C18C5D;
+}
+
 @keyframes gyrate {
   0%, 100% {
     transform: scale(1) rotate(0deg);

@@ -319,7 +319,7 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
               ))}
                         </select>
             <div className="mt-1">
-              <OutreachHistoryBadge logs={selectedAgent?.outreachLogs} />
+              <OutreachHistoryBadge agent={selectedAgent} compact={true} />
             </div>
           </div>
         </div>
@@ -679,7 +679,7 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-bold text-[#2D362E]">{lead.fullName}</span>
-                      <OutreachHistoryBadge logs={lead.outreachLogs} />
+                      <OutreachHistoryBadge lead={lead} compact={true} />
                     </div>
                     <span className="text-[11px] text-[#606C5D]">
                       Price: {lead.targetPriceRange || "$425k"} • FICO: {lead.creditScore || "720"} • {lead.email}

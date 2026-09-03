@@ -22,7 +22,8 @@ import {
   FileText,
   User,
   History,
-  AlertCircle
+  AlertCircle,
+  Printer
 } from "lucide-react";
 import { 
   CapturedLead, 
@@ -361,8 +362,16 @@ export const LoanOfficerScenarioWorkbench: React.FC<LoanOfficerScenarioWorkbench
             </p>
           </div>
 
-          {/* Save Scenario to Lead Button */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          {/* Save Scenario to Lead Button & Export */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              onClick={() => window.print()}
+              className="px-5 py-3 bg-[#2D362E] hover:bg-[#1E241F] text-white font-bold text-xs rounded-2xl shadow-md flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              title="Print to PDF"
+            >
+              <Printer className="w-4 h-4 text-[#E7C19D]" />
+              <span>Export PDF</span>
+            </button>
             <button
               type="button"
               onClick={() => handleSaveScenario()}

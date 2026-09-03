@@ -225,9 +225,25 @@ export interface LoanOfficerAdSettings {
   creditCardConfigured?: boolean;
 }
 
+export interface CoClosedBusinessPartner {
+  partnerId?: string;
+  partnerName: string;
+  partnerCompanyOrBrokerage: string;
+  partnerRole: 'agent' | 'loan_officer';
+  closedUnits12Mo: number;
+  closedVolume12Mo: number; // in dollars e.g. 8450000
+  partnerHeadshotUrl?: string;
+  partnerNmlsOrLicense?: string;
+  partnerEmail?: string;
+  partnerPhone?: string;
+  buysideSharePct?: number;
+  notes?: string;
+}
+
 export interface LoanOfficerProfile {
   enrichmentStatus?: 'none' | 'syncing' | 'enriched';
   topRealtorPartners?: { name: string; volume: number; company: string }[];
+  topPartners12Mo?: CoClosedBusinessPartner[];
   nmlsNumber?: string;
   id: string;
   name: string;
@@ -319,6 +335,11 @@ export interface RealEstateAgentProfile {
   experienceYears?: number;
   production12MoVolume?: number;
   production12MoUnits?: number;
+  buysideVolume12Mo?: number;
+  buysideUnits12Mo?: number;
+  listingVolume12Mo?: number;
+  listingUnits12Mo?: number;
+  buysideSharePct?: number;
   activeListingsCount?: number;
   rating?: number;
   websiteUrl?: string;
@@ -344,6 +365,7 @@ export interface RealEstateAgentProfile {
   realTrendsYear?: number;
   realTrendsCategory?: string;
   emailHistory?: EmailHistoryItem[];
+  topPartners12Mo?: CoClosedBusinessPartner[];
 }
 
 export interface BigPurpleDotConfig {

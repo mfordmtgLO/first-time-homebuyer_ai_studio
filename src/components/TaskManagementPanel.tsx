@@ -24,6 +24,7 @@ import {
   FileText
 } from "lucide-react";
 import { CapturedLead, PropertyListing, RealEstateAgentProfile, CurationTask, LoanOfficerProfile } from "../types";
+import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 
 interface TaskManagementPanelProps {
   leads: CapturedLead[];
@@ -381,9 +382,12 @@ export const TaskManagementPanel: React.FC<TaskManagementPanelProps> = ({
                       )}
                     </div>
 
-                    <h3 className="text-base font-bold font-serif text-[#2D362E] flex items-center gap-2">
-                      <span>Curate Property Packet for {task.leadName}</span>
-                    </h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-base font-bold font-serif text-[#2D362E]">
+                        Curate Property Packet for {task.leadName}
+                      </h3>
+                      {leadObj && <OutreachHistoryBadge lead={leadObj} compact={true} />}
+                    </div>
 
                     <div className="flex items-center gap-4 text-xs text-[#5C6F60] flex-wrap">
                       <span className="flex items-center gap-1">

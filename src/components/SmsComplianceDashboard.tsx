@@ -27,6 +27,7 @@ import {
   Copy
 } from "lucide-react";
 import { CapturedLead, LoanOfficerProfile } from "../types";
+import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 
 interface SmsComplianceDashboardProps {
   leads: CapturedLead[];
@@ -533,8 +534,9 @@ export const SmsComplianceDashboard: React.FC<SmsComplianceDashboardProps> = ({
                       {/* Lead Contact */}
                       <td className="py-4 px-4 align-top">
                         <div className="space-y-0.5">
-                          <div className="font-bold text-[#2D362E] text-xs flex items-center gap-1.5">
+                          <div className="font-bold text-[#2D362E] text-xs flex items-center gap-1.5 flex-wrap">
                             <span>{lead.fullName}</span>
+                            <OutreachHistoryBadge lead={lead} compact={true} />
                           </div>
                           <div className="text-[11px] text-[#606C5D] font-mono flex items-center gap-1">
                             <Phone className="w-3 h-3 text-[#9A9488]" />

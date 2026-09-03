@@ -19,7 +19,8 @@ import {
   Copy,
   Check,
   Users,
-  FileText
+  FileText,
+  Printer
 } from "lucide-react";
 import { ProfessionalGuidesState, CapturedLead } from "../types";
 import { US_STATES } from "./StateLicensingSelector";
@@ -179,6 +180,13 @@ export const GrantFinder: React.FC<GrantFinderProps> = ({ guidesState, onNavigat
           </div>
 
           <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <button
+              onClick={() => window.print()}
+              className="px-4 py-2.5 bg-[#FAF9F5]/10 hover:bg-[#FAF9F5]/20 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 border border-white/20 cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Export PDF</span>
+            </button>
             <button
               onClick={() => copyToClipboard(generateSummaryText(), "full-summary")}
               className="px-4 py-2.5 bg-[#4A5D4E] hover:bg-[#3B4B3E] text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 border border-white/10 cursor-pointer"

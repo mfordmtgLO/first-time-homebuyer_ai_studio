@@ -4,12 +4,13 @@ import {
   Users, Target, Mail, MessageSquare, Plus, ChevronDown, CheckCircle2, 
   Clock, ShieldCheck, TrendingUp, Search, Download, Sparkles, RefreshCw, Star, ArrowRight,
   Database, AlertCircle, FileText, Send, Building, Award, MapPin, X,
-  Zap, Settings, ExternalLink, Radio, Check, Phone, Filter, Globe
+  Zap, Settings, ExternalLink, Radio, Check, Phone, Filter, Globe, Printer
 } from "lucide-react";
 import { HeadshotAvatar } from "./HeadshotAvatar";
 import { BigPurpleDotModal } from "./BigPurpleDotModal";
 import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 import { CandidateSearchModal } from "./CandidateSearchModal";
+import { TopBusinessPartnersCard } from "./TopBusinessPartnersCard";
 import { 
   syncAgentWithRealTrends, 
   syncLoanOfficerWithRealTrends 
@@ -504,19 +505,29 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
                 </div>
               </div>
 
-              {/* Big Purple Dot Quick Status Pill */}
-              <button
-                onClick={() => setShowBpdModal(true)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 border shadow-xs cursor-pointer ${
-                  isBpdConnected 
-                    ? "bg-purple-950/80 text-purple-200 border-purple-400/50 hover:bg-purple-900" 
-                    : "bg-purple-600 hover:bg-purple-500 text-white border-purple-400"
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5 text-purple-300 fill-purple-300" />
-                <span>Big Purple Dot: {isBpdConnected ? (bpdEnv === "production" ? "Live Connected" : "Sandbox Ready") : "Setup Required"}</span>
-                <Settings className="w-3 h-3 text-purple-300 opacity-70" />
-              </button>
+              {/* Big Purple Dot Quick Status Pill & Export */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="px-3.5 py-1.5 bg-[#FAF9F5]/10 hover:bg-[#FAF9F5]/20 text-white text-xs font-bold rounded-full transition-all flex items-center gap-2 border border-white/20 shadow-xs cursor-pointer"
+                  title="Print to PDF"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Export PDF</span>
+                </button>
+                <button
+                  onClick={() => setShowBpdModal(true)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 border shadow-xs cursor-pointer ${
+                    isBpdConnected 
+                      ? "bg-purple-950/80 text-purple-200 border-purple-400/50 hover:bg-purple-900" 
+                      : "bg-purple-600 hover:bg-purple-500 text-white border-purple-400"
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5 text-purple-300 fill-purple-300" />
+                  <span>Big Purple Dot: {isBpdConnected ? (bpdEnv === "production" ? "Live Connected" : "Sandbox Ready") : "Setup Required"}</span>
+                  <Settings className="w-3 h-3 text-purple-300 opacity-70" />
+                </button>
+              </div>
             </div>
 
             {/* Pipeline Category Switcher */}
@@ -907,6 +918,14 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
                         )}
                       </div>
 
+                      {/* Top 3 Business Partners (Buyside Agents) */}
+                      <TopBusinessPartnersCard
+                        role="lo"
+                        profile={lo}
+                        partners={lo.topPartners12Mo}
+                        compact={false}
+                      />
+
                       {/* Actions */}
                       <div className="pt-2 border-t border-[#EAE7E0] space-y-2">
                         <div className="flex gap-2">
@@ -1054,6 +1073,23 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
                         </div>
                       )}
 
+                      {/* 12Mo Buyside Closings Highlight */}
+                      <div className="bg-emerald-50/90 p-2 rounded-xl border border-emerald-200/90 text-left text-xs flex items-center justify-between">
+                        <div>
+                          <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider block">
+                            12Mo Buyside Closings
+                          </span>
+                          <strong className="text-emerald-950 text-xs font-black">
+                            ${((agent.buysideVolume12Mo || (agent.production12MoVolume ? agent.production12MoVolume * 0.7 : 14500000)) / 1000000).toFixed(1)}M
+                            {' • '}
+                            {agent.buysideUnits12Mo || Math.round((agent.production12MoUnits || agent.realTrendsSides || 28) * 0.7)} Buyside Units
+                          </strong>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-800 bg-white/95 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                          {agent.buysideSharePct || 70}% Buyer
+                        </span>
+                      </div>
+
                       {/* Agent Production, Sides & Years Licensed */}
                       <div className="grid grid-cols-3 gap-1.5 text-center text-[10px]">
                         <div className="bg-[#FAF9F5] p-1.5 rounded-xl border border-[#EAE7E0]">
@@ -1080,6 +1116,14 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
                           <span className="font-bold">Areas:</span> {agent.marketAreas.slice(0, 3).join(', ')}
                         </p>
                       )}
+
+                      {/* Top 3 Business Partners (Loan Officers) */}
+                      <TopBusinessPartnersCard
+                        role="agent"
+                        profile={agent}
+                        partners={agent.topPartners12Mo}
+                        compact={false}
+                      />
 
                       {/* Actions */}
                       <div className="pt-2 border-t border-[#EAE7E0] space-y-2">

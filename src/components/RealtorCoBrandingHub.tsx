@@ -30,6 +30,7 @@ import {
   PropertyListing
 } from "../types";
 import { formatUSD, calculateMonthlyPI } from "../utils/mortgageMath";
+import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 
 interface RealtorCoBrandingHubProps {
   guidesState: ProfessionalGuidesState;
@@ -99,6 +100,27 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
     setCopiedKey(key);
     if (onTriggerToast) onTriggerToast("✓ Link copied to clipboard!");
     setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const logAgentOutreach = (channel: 'email' | 'sms', templateName: string, subject?: string) => {
+    if (!selectedAgent) return;
+    const newLog = {
+      id: `agent-outreach-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      channel,
+      templateName,
+      recipientName: selectedAgent.name,
+      subject
+    };
+    const updatedAgents = guidesState.agentRoster.map(a => 
+      a.id === selectedAgent.id 
+        ? { ...a, outreachLogs: [newLog, ...(a.outreachLogs || [])] }
+        : a
+    );
+    onUpdateGuidesState({
+      ...guidesState,
+      agentRoster: updatedAgents
+    });
   };
 
   const handleCreateAgent = (e: React.FormEvent) => {
@@ -295,7 +317,10 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
                   {agent.name} ({agent.brokerage})
                 </option>
               ))}
-            </select>
+                        </select>
+            <div className="mt-1">
+              <OutreachHistoryBadge logs={selectedAgent?.outreachLogs} />
+            </div>
           </div>
         </div>
 
@@ -652,7 +677,10 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
               {partnerLeads.map((lead) => (
                 <div key={lead.id} className="py-3 flex items-center justify-between text-xs">
                   <div className="space-y-0.5">
-                    <span className="font-bold text-[#2D362E] block">{lead.fullName}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-[#2D362E]">{lead.fullName}</span>
+                      <OutreachHistoryBadge logs={lead.outreachLogs} />
+                    </div>
                     <span className="text-[11px] text-[#606C5D]">
                       Price: {lead.targetPriceRange || "$425k"} • FICO: {lead.creditScore || "720"} • {lead.email}
                     </span>
@@ -743,6 +771,7 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
                       <a
                         href={mailtoLink}
                         target="_top"
+                        onClick={() => logAgentOutreach('email', 'Co-Brand Partner Invite', emailSubject)}
                         className="text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#3A4A3D] px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
                       >
                         <Mail className="w-3.5 h-3.5" />

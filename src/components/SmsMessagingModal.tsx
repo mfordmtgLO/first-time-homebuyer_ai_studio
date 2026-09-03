@@ -324,8 +324,19 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
       textNurtureCurrentStep: nextStepNum,
       textNurtureStageText: `${nextStepNum} of 4 automated text nurture sent`,
       lastTextSentAt: new Date().toISOString(),
-      lastTextTemplateName: stepConfig.templateName,
-      textNurtureLogs: [newLog, ...existingLogs]
+      lastTextTemplateName: "Automated Nurture SMS",
+      textNurtureLogs: [newLog, ...existingLogs],
+      outreachLogs: [
+        {
+          id: `auto-sms-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          channel: 'sms',
+          templateName: "Automated Nurture SMS",
+          recipientName: lead.fullName,
+          notes: `Automated Nurture Step ${nextStepNum}`
+        },
+        ...(lead.outreachLogs || [])
+      ]
     });
 
     setSmsHistory(updatedSmsList);

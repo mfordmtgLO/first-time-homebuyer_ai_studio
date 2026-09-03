@@ -108,6 +108,7 @@ import { LoOutreachModal } from "./LoOutreachModal";
 import { RecruitingCampaignModal } from "./RecruitingCampaignModal";
 import { GrantFinder } from "./GrantFinder";
 import { LoanOfficerScenarioWorkbench } from "./LoanOfficerScenarioWorkbench";
+import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 import { SystemPitchDeck } from "./SystemPitchDeck";
 import { BranchManagerDashboard } from "./BranchManagerDashboard";
 import { GrowthDashboard } from "./GrowthDashboard";
@@ -2813,6 +2814,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                       <div className="space-y-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                           <span className="font-bold text-sm text-[#2D362E]">{lead.fullName}</span>
+                                          <OutreachHistoryBadge lead={lead} compact={true} />
                                           {lead.intentScore === "hot" && (
                                             <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
                                               <Flame className="w-2.5 h-2.5 text-orange-600 fill-orange-500" />
@@ -3227,6 +3229,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                 <div>
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h4 className="font-bold text-base text-[#2D362E]">{lead.fullName}</h4>
+                                    <OutreachHistoryBadge lead={lead} compact={true} />
                                     {lead.intentScore === "hot" && (
                                       <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
                                         <Flame className="w-3 h-3 text-orange-600 fill-orange-500" />
@@ -6381,6 +6384,13 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           leads={guidesState.leads || []}
           loanOfficers={guidesState.loanOfficers}
           initialSelectedLeadId={initialOutreachLeadId}
+          onUpdateLead={(updatedLead) => {
+            onUpdateGuidesState({
+              ...guidesState,
+              leads: (guidesState.leads || []).map(l => l.id === updatedLead.id ? updatedLead : l)
+            });
+          }}
+          onTriggerToast={triggerToast}
         />
       )}
 
@@ -7146,6 +7156,12 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           loanOfficer={currentLo}
           defaultTab={googleWorkspaceModalTab}
           onTriggerToast={triggerToast}
+          onUpdateLead={(updatedLead) => {
+            onUpdateGuidesState({
+              ...guidesState,
+              leads: (guidesState.leads || []).map(l => l.id === updatedLead.id ? updatedLead : l)
+            });
+          }}
         />
       )}
     </div>

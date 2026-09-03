@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { ProfessionalGuidesState, LoanOfficerProfile } from "../types";
+import { ProfessionalGuidesState, LoanOfficerProfile, RealEstateAgentProfile, BigPurpleDotConfig } from "../types";
 import { 
   Users, Target, Mail, MessageSquare, Plus, ChevronDown, CheckCircle2, 
   Clock, ShieldCheck, TrendingUp, Search, Download, Sparkles, RefreshCw, Star, ArrowRight,
-  Database, AlertCircle, FileText, Send, Building, Award, MapPin
-, X } from "lucide-react";
+  Database, AlertCircle, FileText, Send, Building, Award, MapPin, X,
+  Zap, Settings, ExternalLink, Radio, Check, Phone, Filter, Globe
+} from "lucide-react";
 import { HeadshotAvatar } from "./HeadshotAvatar";
+import { BigPurpleDotModal } from "./BigPurpleDotModal";
+import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
+import { CandidateSearchModal } from "./CandidateSearchModal";
+import { 
+  syncAgentWithRealTrends, 
+  syncLoanOfficerWithRealTrends 
+} from "../services/realTrendsService";
 
 interface RecruitmentPipelineProps {
   guidesState: ProfessionalGuidesState;
@@ -26,16 +34,160 @@ const TEMPLATES = {
   ]
 };
 
+const REALTOR_TEMPLATES = {
+  email: [
+    { id: 're1', name: 'Co-Branding Portal Invite', subject: 'Custom Co-Branded Mortgage Portal for Your Buyers', body: "Hi {name},\n\nI love your recent listings with {company}. I wanted to share a free co-branded homebuyer financing portal we set up for you.\n\nIt features live USDA zero-down checks, 2-1 temporary buydown calculators, and instant pre-approval workflows with your headshot and branding right alongside mine.\n\nTake a look and let me know your thoughts:\nBest,\nMike Ford | Cornerstone" },
+    { id: 're2', name: 'Listing 2-1 Buydown Strategy', subject: 'Strategy to Move Price-Conscious Buyers on Your Listings', body: "Hi {name},\n\nBuyers are feeling the pinch of interest rates right now. We've been structuring 2-1 seller-paid buydowns that reduce buyer payments by $400+/mo for their first year.\n\nI'd love to generate a custom flyer for one of your current active listings. Open to a quick call?\n\nThanks,\nMike" },
+    { id: 're3', name: 'USDA & DPA Grant Opportunity', subject: 'Grant & Zero-Down Programs for Your First-Time Buyers', body: "Hi {name},\n\nMany first-time buyers think they need 20% down. We have direct access to state DPA grants and USDA 100% financing that cover down payments completely.\n\nLet's connect this week to discuss how we can turn your stalled buyers into closed escrows.\n\nBest,\nMike" }
+  ],
+  sms: [
+    { id: 'rs1', name: 'Quick Co-Brand Intro', body: "Hi {name}, Mike Ford here from Cornerstone Lending. I built a custom co-branded financing app for your buyers with live buydown calculators. Open to a 3-min look?" },
+    { id: 'rs2', name: 'Coffee & Strategy', body: "Hey {name}, loved your recent activity in the market! Would love to buy you coffee this week and show you our Realtor Co-Branding tools. Let me know what day works." },
+    { id: 'rs3', name: 'Open House Flyer Offer', body: "Hi {name}, do you have an open house this weekend? I can generate a customized rate & payment sheet with your branding for the sign-in table. Let me know!" }
+  ]
+};
+
 export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guidesState, onUpdateGuidesState, onTriggerToast }) => {
+  // Category switch: Loan Officer recruits vs Real Estate Agent recruits
+  const [pipelineType, setPipelineType] = useState<"loan_officers" | "real_estate_agents">("loan_officers");
+  
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterEnrichedOnly, setFilterEnrichedOnly] = useState(false);
+  const [filterBpdSyncedOnly, setFilterBpdSyncedOnly] = useState(false);
+  const [filterRealTrendsOnly, setFilterRealTrendsOnly] = useState(false);
+
+  // Sync state
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
-  const [activeOutreachLo, setActiveOutreachLo] = useState<string | null>(null);
+  const [isSyncingBpdAll, setIsSyncingBpdAll] = useState(false);
+  const [bpdSyncProgress, setBpdSyncProgress] = useState(0);
+  const [isSyncingRealTrends, setIsSyncingRealTrends] = useState(false);
+  const [realTrendsSyncProgress, setRealTrendsSyncProgress] = useState(0);
+  const [syncingCandidateId, setSyncingCandidateId] = useState<string | null>(null);
+
+  // Big Purple Dot Modal State
+  const [showBpdModal, setShowBpdModal] = useState(false);
+
+  // Candidate Search Modal State
+  const [showCandidateSearchModal, setShowCandidateSearchModal] = useState(false);
+
+  // Outreach Modal
+  const [activeOutreachCandidate, setActiveOutreachCandidate] = useState<{ id: string; name: string; email: string; phone: string; type: "lo" | "agent"; company?: string } | null>(null);
   const [outreachType, setOutreachType] = useState<'email' | 'sms'>('email');
   const [draftSubject, setDraftSubject] = useState("");
   const [draftBody, setDraftBody] = useState("");
 
   const recruitmentLos = guidesState.loanOfficers.filter(lo => !lo.isTeamMember && !lo.isAdmin);
+  const agentPartners = guidesState.agentRoster;
 
+  // BPD Config state from parent or default
+  const bpdConfig = guidesState.bigPurpleDotConfig;
+  const isBpdConnected = Boolean(bpdConfig?.apiKey || bpdConfig?.connectionStatus === "connected");
+  const bpdEnv = bpdConfig?.environment || "sandbox";
+
+  // Filtered lists
+  const filteredLos = recruitmentLos.filter(lo => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const match = lo.name.toLowerCase().includes(q) || lo.company.toLowerCase().includes(q) || (lo.nmlsNumber && lo.nmlsNumber.includes(q));
+      if (!match) return false;
+    }
+    if (filterEnrichedOnly && lo.enrichmentStatus !== 'enriched') return false;
+    if (filterBpdSyncedOnly && lo.bigPurpleDotStatus !== 'synced') return false;
+    if (filterRealTrendsOnly && !lo.realTrendsVerified) return false;
+    return true;
+  });
+
+  const filteredAgents = agentPartners.filter(ag => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const match = ag.name.toLowerCase().includes(q) || ag.brokerage.toLowerCase().includes(q) || ag.email.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    if (filterBpdSyncedOnly && ag.bigPurpleDotStatus !== 'synced') return false;
+    if (filterRealTrendsOnly && !ag.realTrendsVerified) return false;
+    return true;
+  });
+
+  const handleAddSearchedCandidate = (candidate: any) => {
+    if (pipelineType === "loan_officers") {
+      onUpdateGuidesState(prev => ({
+        ...prev,
+        loanOfficers: [candidate as LoanOfficerProfile, ...prev.loanOfficers]
+      }));
+    } else {
+      onUpdateGuidesState(prev => ({
+        ...prev,
+        agentRoster: [candidate as RealEstateAgentProfile, ...prev.agentRoster]
+      }));
+    }
+  };
+
+  // RealTrends & Scotsman Guide Production Stats Sync Handler
+  const handleSyncRealTrends = async () => {
+    setIsSyncingRealTrends(true);
+    setRealTrendsSyncProgress(20);
+
+    try {
+      if (pipelineType === "loan_officers") {
+        const updatedLos = await Promise.all(
+          guidesState.loanOfficers.map(async lo => {
+            return await syncLoanOfficerWithRealTrends(lo);
+          })
+        );
+        setRealTrendsSyncProgress(85);
+        onUpdateGuidesState(prev => ({ ...prev, loanOfficers: updatedLos }));
+        onTriggerToast(`🏆 Synced Scotsman Guide Top Originators data for ${recruitmentLos.length} LO prospects!`);
+      } else {
+        const updatedAgents = await Promise.all(
+          guidesState.agentRoster.map(async ag => {
+            return await syncAgentWithRealTrends(ag);
+          })
+        );
+        setRealTrendsSyncProgress(85);
+        onUpdateGuidesState(prev => ({ ...prev, agentRoster: updatedAgents }));
+        onTriggerToast(`🏆 Synced RealTrends America's Best rankings for ${agentPartners.length} agent partners!`);
+      }
+    } catch (err: any) {
+      onTriggerToast(`RealTrends sync notice: ${err.message || 'Updated local records'}`);
+    } finally {
+      setRealTrendsSyncProgress(100);
+      setTimeout(() => {
+        setIsSyncingRealTrends(false);
+        setRealTrendsSyncProgress(0);
+      }, 500);
+    }
+  };
+
+  const handleSyncSingleRealTrends = async (candidateId: string, type: 'lo' | 'agent') => {
+    setSyncingCandidateId(candidateId);
+    try {
+      if (type === 'lo') {
+        const target = guidesState.loanOfficers.find(l => l.id === candidateId);
+        if (!target) return;
+        const synced = await syncLoanOfficerWithRealTrends(target);
+        onUpdateGuidesState(prev => ({
+          ...prev,
+          loanOfficers: prev.loanOfficers.map(l => l.id === candidateId ? synced : l)
+        }));
+        onTriggerToast(`🏆 RealTrends Synced: ${synced.name} (${synced.realTrendsRank || 'Top Producer'})`);
+      } else {
+        const target = guidesState.agentRoster.find(a => a.id === candidateId);
+        if (!target) return;
+        const synced = await syncAgentWithRealTrends(target);
+        onUpdateGuidesState(prev => ({
+          ...prev,
+          agentRoster: prev.agentRoster.map(a => a.id === candidateId ? synced : a)
+        }));
+        onTriggerToast(`🏆 RealTrends Synced: ${synced.name} (${synced.realTrendsRank || "America's Best"})`);
+      }
+    } finally {
+      setSyncingCandidateId(null);
+    }
+  };
+
+  // Master MMI / NMLS Data Sync
   const handleSyncAll = () => {
     setIsSyncingAll(true);
     setSyncProgress(0);
@@ -85,7 +237,7 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
         setIsSyncingAll(false);
         onTriggerToast("Master Sync Complete. MMI & NMLS records imported.");
       }
-    }, 600);
+    }, 400);
   };
 
   const handleSyncSingle = (loId: string) => {
@@ -121,272 +273,863 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
         return { ...prev, loanOfficers: updated };
       });
       onTriggerToast(`Synced profile data.`);
-    }, 1500);
+    }, 1200);
   };
 
-  const openOutreach = (lo: LoanOfficerProfile) => {
-    setActiveOutreachLo(lo.id);
+  // Sync Candidate(s) to Big Purple Dot CRM
+  const handleSyncToBigPurpleDot = async (items: Array<LoanOfficerProfile | RealEstateAgentProfile>, type: "loan_officer" | "real_estate_agent") => {
+    setIsSyncingBpdAll(true);
+    setBpdSyncProgress(10);
+    try {
+      const res = await fetch("/api/big-purple-dot/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items, type })
+      });
+      const data = await res.json();
+      setBpdSyncProgress(100);
+
+      if (data.success && Array.isArray(data.candidates)) {
+        const syncedMap = new Map(data.candidates.map((c: any) => [c.id, c]));
+
+        if (type === "loan_officer") {
+          onUpdateGuidesState(prev => ({
+            ...prev,
+            loanOfficers: prev.loanOfficers.map(lo => {
+              const synced = syncedMap.get(lo.id) as any;
+              if (synced) {
+                return {
+                  ...lo,
+                  bigPurpleDotId: synced.bigPurpleDotId,
+                  bigPurpleDotStatus: 'synced',
+                  bigPurpleDotLastSynced: synced.bigPurpleDotLastSynced,
+                  bigPurpleDotNotes: `Mapped to ${synced.mappedBpdStage}`
+                };
+              }
+              return lo;
+            })
+          }));
+        } else {
+          onUpdateGuidesState(prev => ({
+            ...prev,
+            agentRoster: prev.agentRoster.map(ag => {
+              const synced = syncedMap.get(ag.id) as any;
+              if (synced) {
+                return {
+                  ...ag,
+                  bigPurpleDotId: synced.bigPurpleDotId,
+                  bigPurpleDotStatus: 'synced',
+                  bigPurpleDotLastSynced: synced.bigPurpleDotLastSynced,
+                  bigPurpleDotNotes: `Mapped to ${synced.mappedBpdStage}`
+                };
+              }
+              return ag;
+            })
+          }));
+        }
+
+        onTriggerToast(`✅ Successfully synced ${data.syncedCount} candidate(s) to Big Purple Dot CRM!`);
+      } else {
+        onTriggerToast(`Sync response: ${data.message || 'Completed'}`);
+      }
+    } catch (e: any) {
+      onTriggerToast(`Sync error: ${e.message || 'Could not reach server endpoint'}`);
+    } finally {
+      setIsSyncingBpdAll(false);
+      setBpdSyncProgress(0);
+    }
+  };
+
+  // Outreach Handlers
+  const openLoOutreach = (lo: LoanOfficerProfile) => {
+    setActiveOutreachCandidate({
+      id: lo.id,
+      name: lo.name,
+      email: lo.email,
+      phone: lo.phone,
+      type: "lo",
+      company: lo.company
+    });
     setOutreachType('email');
-    applyTemplate(TEMPLATES.email[0], lo);
+    applyTemplate(TEMPLATES.email[0], lo.name, lo.company);
   };
 
-  const applyTemplate = (template: any, lo?: LoanOfficerProfile) => {
-    const targetLo = lo || guidesState.loanOfficers.find(l => l.id === activeOutreachLo);
-    if (!targetLo) return;
-    
-    const name = targetLo.name.split(' ')[0];
-    if (template.subject) setDraftSubject(template.subject.replace('{name}', name));
-    setDraftBody(template.body.replace(/{name}/g, name));
+  const openAgentOutreach = (agent: RealEstateAgentProfile) => {
+    setActiveOutreachCandidate({
+      id: agent.id,
+      name: agent.name,
+      email: agent.email,
+      phone: agent.phone,
+      type: "agent",
+      company: agent.brokerage
+    });
+    setOutreachType('email');
+    applyTemplate(REALTOR_TEMPLATES.email[0], agent.name, agent.brokerage);
+  };
+
+  const applyTemplate = (template: any, nameStr?: string, compStr?: string) => {
+    const targetName = nameStr || activeOutreachCandidate?.name || "Partner";
+    const firstName = targetName.split(' ')[0];
+    const comp = compStr || activeOutreachCandidate?.company || "your brokerage";
+
+    if (template.subject) {
+      setDraftSubject(template.subject.replace('{name}', firstName).replace('{company}', comp));
+    }
+    setDraftBody(template.body.replace(/{name}/g, firstName).replace(/{company}/g, comp));
   };
 
   const sendOutreach = () => {
-    if (!activeOutreachLo) return;
-    onUpdateGuidesState(prev => {
-      const updated = prev.loanOfficers.map(lo => {
-        if (lo.id === activeOutreachLo) {
-          const history = lo.outreachHistory || [];
-          return {
-            ...lo,
-            recruitmentStatus: (lo.recruitmentStatus === 'Not Contacted' ? 'In Outreach' : lo.recruitmentStatus) as any,
-            outreachHistory: [
-              ...history,
-              {
-                id: `out-${Date.now()}`,
-                date: new Date().toISOString(),
-                type: outreachType,
-                subject: outreachType === 'email' ? draftSubject : undefined,
-                content: draftBody
-              }
-            ]
-          };
-        }
-        return lo;
+    if (!activeOutreachCandidate) return;
+    const timestamp = new Date().toISOString();
+
+    if (activeOutreachCandidate.type === "lo") {
+      onUpdateGuidesState(prev => {
+        const updated = prev.loanOfficers.map(lo => {
+          if (lo.id === activeOutreachCandidate.id) {
+            const history = lo.outreachHistory || [];
+            const emailHist = lo.emailHistory || [];
+            return {
+              ...lo,
+              recruitmentStatus: (lo.recruitmentStatus === 'Not Contacted' ? 'In Outreach' : lo.recruitmentStatus) as any,
+              outreachHistory: [
+                ...history,
+                {
+                  id: `out-${Date.now()}`,
+                  date: timestamp,
+                  type: outreachType,
+                  subject: outreachType === 'email' ? draftSubject : undefined,
+                  content: draftBody
+                }
+              ],
+              emailHistory: [
+                ...emailHist,
+                {
+                  id: `eh-lo-${Date.now()}`,
+                  timestamp,
+                  templateType: draftSubject || (outreachType === 'email' ? 'LO Recruiting Email' : 'LO Recruiting SMS'),
+                  subject: draftSubject,
+                  channel: outreachType === 'email' ? 'outlook' : 'sms',
+                  recipientEmail: lo.email,
+                  recipientName: lo.name,
+                  sentBy: 'Mike Ford | Cornerstone Branch Leadership',
+                  status: 'sent',
+                  notes: draftBody
+                }
+              ]
+            };
+          }
+          return lo;
+        });
+        return { ...prev, loanOfficers: updated };
       });
-      return { ...prev, loanOfficers: updated };
-    });
+    } else {
+      onUpdateGuidesState(prev => {
+        const updated = prev.agentRoster.map(ag => {
+          if (ag.id === activeOutreachCandidate.id) {
+            const emailHist = ag.emailHistory || [];
+            const outreachLogs = ag.outreachLogs || [];
+            return {
+              ...ag,
+              recruitmentStatus: (ag.recruitmentStatus === 'Not Contacted' || !ag.recruitmentStatus ? 'In Outreach' : ag.recruitmentStatus) as any,
+              emailHistory: [
+                ...emailHist,
+                {
+                  id: `aeh-${Date.now()}`,
+                  timestamp,
+                  templateType: draftSubject || (outreachType === 'email' ? 'Realtor Partnership Email' : 'Realtor Co-Brand SMS'),
+                  subject: draftSubject,
+                  channel: outreachType === 'email' ? 'outlook' : 'sms',
+                  recipientEmail: ag.email,
+                  recipientName: ag.name,
+                  sentBy: 'Mike Ford | Cornerstone First Mortgage',
+                  status: 'sent',
+                  notes: draftBody
+                }
+              ],
+              outreachLogs: [
+                ...outreachLogs,
+                {
+                  id: `a-ol-${Date.now()}`,
+                  timestamp,
+                  channel: outreachType === 'email' ? 'email' : 'sms',
+                  templateName: draftSubject || 'Realtor Partnership Outreach',
+                  subject: draftSubject,
+                  recipientName: ag.name,
+                  notes: draftBody
+                }
+              ]
+            };
+          }
+          return ag;
+        });
+        return { ...prev, agentRoster: updated };
+      });
+    }
     
     if (outreachType === 'email') {
-      const lo = guidesState.loanOfficers.find(l => l.id === activeOutreachLo);
-      const mailto = `mailto:${lo?.email}?subject=${encodeURIComponent(draftSubject)}&body=${encodeURIComponent(draftBody)}`;
+      const mailto = `mailto:${activeOutreachCandidate.email}?subject=${encodeURIComponent(draftSubject)}&body=${encodeURIComponent(draftBody)}`;
       window.open(mailto, '_top');
     } else {
-      const lo = guidesState.loanOfficers.find(l => l.id === activeOutreachLo);
-      const smsLink = `sms:${lo?.phone}?&body=${encodeURIComponent(draftBody)}`;
+      const smsLink = `sms:${activeOutreachCandidate.phone}?&body=${encodeURIComponent(draftBody)}`;
       window.open(smsLink, '_top');
     }
     
-    setActiveOutreachLo(null);
-    onTriggerToast("Outreach logged and native app launched.");
+    setActiveOutreachCandidate(null);
+    onTriggerToast("Outreach logged and native communication dispatched.");
   };
+
+  const loStatuses = ['Not Contacted', 'In Outreach', 'Interested', 'Meeting Scheduled', 'Declined', 'Hired'];
+  const agentStatuses = ['Not Contacted', 'In Outreach', 'Interested', 'Meeting Scheduled', 'Partner Active', 'Declined'];
 
   return (
     <div className="space-y-6">
+      
+      {/* Top Banner & Control Center */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Main Header & Sync Actions */}
-        <div className="flex-1 bg-gradient-to-r from-[#2D362E] to-[#4A5D4E] p-6 sm:p-8 rounded-3xl text-white shadow-md relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-2xl font-bold font-display flex items-center gap-2 mb-2">
-              <Target className="w-6 h-6 text-[#E7C19D]" />
-              Recruitment Command Center
-            </h2>
-            <p className="text-emerald-100 opacity-90 max-w-2xl mb-6">
-              Track prospects, analyze production volume, and leverage AI-drafted outreach to grow your branch.
-            </p>
-            
-            <div className="flex flex-wrap items-center gap-4">
+        <div className="flex-1 bg-gradient-to-r from-[#1E293B] via-[#2D362E] to-[#4A5D4E] p-6 sm:p-8 rounded-3xl text-white shadow-md relative overflow-hidden">
+          <div className="relative z-10 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-[#E7C19D]/20 border border-[#E7C19D]/30 flex items-center justify-center">
+                  <Target className="w-5 h-5 text-[#E7C19D]" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold font-display text-white">
+                    Recruitment Command Center
+                  </h2>
+                  <p className="text-xs text-emerald-100 opacity-90">
+                    Dual Pipeline: Recruit Top Producing Loan Officers & High-Volume Real Estate Agent Partners
+                  </p>
+                </div>
+              </div>
+
+              {/* Big Purple Dot Quick Status Pill */}
               <button
-                onClick={handleSyncAll}
-                disabled={isSyncingAll}
-                className="bg-white text-[#2D362E] hover:bg-[#F9F8F4] px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 disabled:opacity-70"
+                onClick={() => setShowBpdModal(true)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 border shadow-xs cursor-pointer ${
+                  isBpdConnected 
+                    ? "bg-purple-950/80 text-purple-200 border-purple-400/50 hover:bg-purple-900" 
+                    : "bg-purple-600 hover:bg-purple-500 text-white border-purple-400"
+                }`}
               >
-                {isSyncingAll ? (
+                <Zap className="w-3.5 h-3.5 text-purple-300 fill-purple-300" />
+                <span>Big Purple Dot: {isBpdConnected ? (bpdEnv === "production" ? "Live Connected" : "Sandbox Ready") : "Setup Required"}</span>
+                <Settings className="w-3 h-3 text-purple-300 opacity-70" />
+              </button>
+            </div>
+
+            {/* Pipeline Category Switcher */}
+            <div className="flex items-center gap-2 pt-2">
+              <div className="bg-black/30 p-1 rounded-2xl flex items-center border border-white/10">
+                <button
+                  onClick={() => setPipelineType("loan_officers")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    pipelineType === "loan_officers"
+                      ? "bg-white text-[#2D362E] shadow-sm"
+                      : "text-white/80 hover:text-white"
+                  }`}
+                >
+                  <Users className="w-4 h-4 text-emerald-700" />
+                  <span>Loan Officer Recruits ({recruitmentLos.length})</span>
+                </button>
+
+                <button
+                  onClick={() => setPipelineType("real_estate_agents")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    pipelineType === "real_estate_agents"
+                      ? "bg-white text-[#2D362E] shadow-sm"
+                      : "text-white/80 hover:text-white"
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <span>Real Estate Agent Partners ({agentPartners.length})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              {pipelineType === "loan_officers" && (
+                <button
+                  onClick={handleSyncAll}
+                  disabled={isSyncingAll}
+                  className="bg-white text-[#2D362E] hover:bg-[#F9F8F4] px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-2 disabled:opacity-70 cursor-pointer"
+                >
+                  {isSyncingAll ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C18C5D]" />
+                      Syncing MMI/NMLS Records ({syncProgress}%)
+                    </>
+                  ) : (
+                    <>
+                      <Database className="w-3.5 h-3.5 text-[#C18C5D]" />
+                      Master Sync MMI/NMLS Data
+                    </>
+                  )}
+                </button>
+              )}
+
+              {/* RealTrends & Scotsman Guide Sync Button */}
+              <button
+                onClick={handleSyncRealTrends}
+                disabled={isSyncingRealTrends}
+                className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-2 disabled:opacity-70 cursor-pointer border border-amber-400/40"
+              >
+                {isSyncingRealTrends ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-[#C18C5D]" />
-                    Syncing MMI/NMLS Records ({syncProgress}%)
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-200" />
+                    Syncing RealTrends & Rankings ({realTrendsSyncProgress}%)
                   </>
                 ) : (
                   <>
-                    <Database className="w-4 h-4 text-[#C18C5D]" />
-                    Master Sync Data (MMI/NMLS)
+                    <Award className="w-3.5 h-3.5 text-amber-200" />
+                    Sync RealTrends / Scotsman Stats
                   </>
                 )}
               </button>
+
+              {/* Push All to Big Purple Dot */}
+              <button
+                onClick={() => {
+                  if (pipelineType === "loan_officers") {
+                    handleSyncToBigPurpleDot(recruitmentLos, "loan_officer");
+                  } else {
+                    handleSyncToBigPurpleDot(agentPartners, "real_estate_agent");
+                  }
+                }}
+                disabled={isSyncingBpdAll}
+                className="bg-purple-700 hover:bg-purple-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-2 disabled:opacity-70 cursor-pointer border border-purple-500/40"
+              >
+                {isSyncingBpdAll ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-200" />
+                    Syncing with Big Purple Dot CRM...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-3.5 h-3.5 text-purple-300" />
+                    Push Pipeline to Big Purple Dot CRM
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => setShowBpdModal(true)}
+                className="bg-black/30 hover:bg-black/40 text-purple-200 border border-purple-400/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Radio className="w-3.5 h-3.5" />
+                API & Webhook Framework
+              </button>
             </div>
           </div>
-          <div className="absolute right-0 top-0 w-64 h-full bg-gradient-to-l from-black/20 to-transparent z-0 pointer-events-none" />
+
+          <div className="absolute right-0 top-0 w-80 h-full bg-gradient-to-l from-purple-900/30 via-black/20 to-transparent z-0 pointer-events-none" />
         </div>
 
-        {/* AI Brain Assist Overview */}
-        <div className="w-full lg:w-80 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm flex flex-col">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-[#C18C5D]" />
-            <h3 className="font-bold text-[#2D362E]">AI Daily Assist</h3>
+        {/* AI Daily Assist Overview */}
+        <div className="w-full lg:w-80 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#C18C5D]" />
+                <h3 className="font-bold text-sm text-[#2D362E]">Recruiting AI Daily Assist</h3>
+              </div>
+              <span className="text-[10px] font-bold bg-amber-50 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200">
+                Action Items
+              </span>
+            </div>
+
+            <div className="bg-[#FAF9F5] rounded-2xl p-3.5 border border-[#EAE7E0] space-y-3">
+              {pipelineType === "loan_officers" ? (
+                <ul className="space-y-2.5">
+                  {recruitmentLos.filter(l => l.recruitmentStatus === 'Not Contacted').slice(0, 2).map(lo => (
+                    <li key={lo.id} className="flex items-start gap-2 text-xs">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-[#2D362E]">{lo.name}</p>
+                        <p className="text-[10px] text-[#606C5D]">High producer • {lo.company}</p>
+                      </div>
+                    </li>
+                  ))}
+                  <li className="flex items-start gap-2 text-xs">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
+                    <div>
+                      <p className="font-semibold text-[#2D362E]">Big Purple Dot Webhook Active</p>
+                      <p className="text-[10px] text-[#606C5D]">Automated SMS drip trigger armed</p>
+                    </div>
+                  </li>
+                </ul>
+              ) : (
+                <ul className="space-y-2.5">
+                  {agentPartners.filter(a => !a.recruitmentStatus || a.recruitmentStatus === 'Not Contacted').slice(0, 2).map(ag => (
+                    <li key={ag.id} className="flex items-start gap-2 text-xs">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-[#2D362E]">Invite {ag.name}</p>
+                        <p className="text-[10px] text-[#606C5D]">{ag.brokerage} • Co-brand portal</p>
+                      </div>
+                    </li>
+                  ))}
+                  <li className="flex items-start gap-2 text-xs">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
+                    <div>
+                      <p className="font-semibold text-[#2D362E]">BPD Partner Tag: ACTIVE</p>
+                      <p className="text-[10px] text-[#606C5D]">Auto-syncs new Realtor recruits</p>
+                    </div>
+                  </li>
+                </ul>
+              )}
+            </div>
           </div>
-          <div className="flex-1 bg-[#F9F8F4] rounded-2xl p-4 border border-[#EAE7E0]">
-            <p className="text-xs font-bold text-[#4A5D4E] uppercase tracking-wider mb-3">High Priority Actions</p>
-            <ul className="space-y-3">
-              {recruitmentLos.filter(l => l.recruitmentStatus === 'Not Contacted').slice(0, 2).map(lo => (
-                <li key={lo.id} className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                  <div>
-                    <p className="text-xs font-semibold text-[#2D362E]">Draft intro to {lo.name}</p>
-                    <p className="text-[10px] text-[#606C5D]">High volume producer</p>
-                  </div>
-                </li>
-              ))}
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-semibold text-[#2D362E]">Follow up with Lonn Kilstrom</p>
-                  <p className="text-[10px] text-[#606C5D]">Meeting was 3 days ago</p>
-                </div>
-              </li>
-            </ul>
+
+          <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between text-[11px] text-[#606C5D]">
+            <span>Integration Mode:</span>
+            <strong className="text-purple-800 font-bold uppercase">{bpdEnv}</strong>
           </div>
+        </div>
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#EAE7E0] flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          <div className="relative w-full sm:w-72">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#9A9488]" />
+            <input
+              type="text"
+              placeholder={pipelineType === "loan_officers" ? "Search LO name, company, NMLS..." : "Search agent name, brokerage..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#EAE7E0] rounded-xl focus:outline-none focus:border-[#4A5D4E] shadow-2xs"
+            />
+          </div>
+
+          {pipelineType === "loan_officers" && (
+            <button
+              onClick={() => setFilterEnrichedOnly(!filterEnrichedOnly)}
+              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 border ${
+                filterEnrichedOnly 
+                  ? "bg-emerald-700 text-white border-emerald-800" 
+                  : "bg-white text-[#606C5D] border-[#EAE7E0] hover:bg-gray-50"
+              }`}
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              <span>MMI Enriched Only</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setFilterRealTrendsOnly(!filterRealTrendsOnly)}
+            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 border ${
+              filterRealTrendsOnly 
+                ? "bg-amber-600 text-white border-amber-700 shadow-xs" 
+                : "bg-white text-amber-900 border-amber-200 hover:bg-amber-50"
+            }`}
+          >
+            <Award className="w-3 h-3 text-amber-600" />
+            <span>RealTrends Verified</span>
+          </button>
+
+          <button
+            onClick={() => setFilterBpdSyncedOnly(!filterBpdSyncedOnly)}
+            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 border ${
+              filterBpdSyncedOnly 
+                ? "bg-purple-800 text-white border-purple-900" 
+                : "bg-white text-purple-900 border-purple-200 hover:bg-purple-50"
+            }`}
+          >
+            <Zap className="w-3 h-3 text-purple-500" />
+            <span>Big Purple Dot Synced</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-xs text-[#606C5D] font-medium hidden md:block">
+            Showing <strong>{pipelineType === "loan_officers" ? filteredLos.length : filteredAgents.length}</strong> {pipelineType === "loan_officers" ? "LO Prospects" : "Agent Partners"}
+          </div>
+          <button
+            onClick={() => setShowCandidateSearchModal(true)}
+            className="shrink-0 bg-[#2D362E] hover:bg-[#1A201B] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 border border-[#1A201B]"
+          >
+            <Globe className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Search National Registry</span>
+          </button>
         </div>
       </div>
 
       {/* Kanban Board */}
       <div className="flex gap-4 overflow-x-auto pb-6 items-start dashboard-horizontal-scrollbar">
-        {['Not Contacted', 'In Outreach', 'Interested', 'Meeting Scheduled', 'Declined'].map(status => {
-          const columnLos = recruitmentLos.filter(lo => (lo.recruitmentStatus || 'Not Contacted') === status);
+        {(pipelineType === "loan_officers" ? loStatuses : agentStatuses).map(status => {
+          const columnItems = pipelineType === "loan_officers" 
+            ? filteredLos.filter(lo => (lo.recruitmentStatus || 'Not Contacted') === status)
+            : filteredAgents.filter(ag => (ag.recruitmentStatus || 'Not Contacted') === status);
           
           return (
-            <div key={status} className="flex-1 min-w-[240px] max-w-[340px] shrink-0 bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-4 flex flex-col max-h-[75vh]">
-              <div className="flex items-center justify-between mb-4 shrink-0">
-                <h4 className="font-bold text-sm text-[#2D362E]">{status}</h4>
+            <div key={status} className="flex-1 min-w-[280px] max-w-[350px] shrink-0 bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-4 flex flex-col max-h-[78vh]">
+              
+              {/* Column Header */}
+              <div className="flex items-center justify-between mb-3 shrink-0 pb-2 border-b border-[#EAE7E0]">
+                <h4 className="font-bold text-sm text-[#2D362E] flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${
+                    status === 'Not Contacted' ? 'bg-gray-400' :
+                    status === 'In Outreach' ? 'bg-blue-500' :
+                    status === 'Interested' ? 'bg-amber-500' :
+                    status === 'Meeting Scheduled' ? 'bg-purple-500' :
+                    status === 'Hired' || status === 'Partner Active' ? 'bg-emerald-500' : 'bg-rose-500'
+                  }`} />
+                  {status}
+                </h4>
                 <span className="text-[10px] font-bold bg-[#EAE7E0] text-[#606C5D] px-2 py-0.5 rounded-full">
-                  {columnLos.length}
+                  {columnItems.length}
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-4 pr-2 pb-4">
-                {columnLos.map(lo => (
-                  <div key={lo.id} className="bg-white rounded-2xl border border-[#EAE7E0] p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-                    {/* Header */}
-                    <div className="flex items-start gap-3 mb-3">
-                      <HeadshotAvatar
-                        src={lo.headshotUrl}
-                        name={lo.name}
-                        title={lo.title}
-                        className="w-12 h-12 rounded-xl border border-gray-200 shrink-0"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <h5 className="font-bold text-[#2D362E] truncate">{lo.name}</h5>
-                        <p className="text-xs text-[#606C5D] truncate">{lo.company}</p>
-                        
-                        {lo.enrichmentStatus === 'enriched' && (
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" /> Enriched
-                            </span>
-                            {lo.nmlsNumber && <span className="text-[10px] text-[#9A9488]">NMLS: {lo.nmlsNumber}</span>}
+              {/* Cards Container */}
+              <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 pb-4">
+                
+                {/* LO Cards */}
+                {pipelineType === "loan_officers" && (columnItems as LoanOfficerProfile[]).map(lo => {
+                  const isBpdSynced = lo.bigPurpleDotStatus === 'synced';
+                  return (
+                    <div key={lo.id} className="bg-white rounded-2xl border border-[#EAE7E0] p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden space-y-3">
+                      
+                      {/* Header */}
+                      <div className="flex items-start gap-3">
+                        <HeadshotAvatar
+                          src={lo.headshotUrl}
+                          name={lo.name}
+                          title={lo.title}
+                          className="w-12 h-12 rounded-xl border border-gray-200 shrink-0"
+                        />
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h5 className="font-bold text-[#2D362E] text-sm truncate">{lo.name}</h5>
+                            <OutreachHistoryBadge lo={lo} compact={true} />
                           </div>
-                        )}
-                        {lo.enrichmentStatus === 'syncing' && (
-                          <div className="flex items-center gap-1 mt-1 text-[10px] text-amber-600 font-medium">
-                            <RefreshCw className="w-3 h-3 animate-spin" /> Syncing records...
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                          <p className="text-xs text-[#606C5D] truncate">{lo.company}</p>
+                          
+                          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                            {lo.enrichmentStatus === 'enriched' ? (
+                              <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100 flex items-center gap-0.5">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> MMI
+                              </span>
+                            ) : (
+                              <button 
+                                onClick={() => handleSyncSingle(lo.id)}
+                                disabled={lo.enrichmentStatus === 'syncing'}
+                                className="text-[9px] text-[#4A5D4E] hover:underline flex items-center gap-0.5"
+                              >
+                                <Database className="w-2.5 h-2.5" /> Sync MMI
+                              </button>
+                            )}
 
-                    {/* Rich Data (if enriched) */}
-                    {lo.enrichmentStatus === 'enriched' && (
-                      <div className="space-y-3 mb-4">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-[#F9F8F4] p-2 rounded-xl border border-[#EAE7E0]">
-                            <p className="text-[9px] font-bold text-[#9A9488] uppercase mb-0.5">12Mo Volume</p>
-                            <p className="text-xs font-bold text-[#2D362E]">${(lo.production12MoVolume! / 1000000).toFixed(1)}M</p>
-                          </div>
-                          <div className="bg-[#F9F8F4] p-2 rounded-xl border border-[#EAE7E0]">
-                            <p className="text-[9px] font-bold text-[#9A9488] uppercase mb-0.5">12Mo Units</p>
-                            <p className="text-xs font-bold text-[#2D362E]">{lo.production12MoUnits}</p>
+                            {/* RealTrends / Scotsman Guide Verified Status */}
+                            {lo.realTrendsVerified ? (
+                              <span className="text-[9px] font-bold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 flex items-center gap-1" title={lo.realTrendsRank || "Scotsman Guide Top Originator"}>
+                                <Award className="w-2.5 h-2.5 text-amber-600" />
+                                <span>Scotsman Top Producer</span>
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleSyncSingleRealTrends(lo.id, 'lo')}
+                                disabled={syncingCandidateId === lo.id}
+                                className="text-[9px] text-amber-800 hover:text-amber-900 font-medium flex items-center gap-0.5 bg-amber-50/70 hover:bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200 transition-colors"
+                                title="Sync Scotsman Guide & RealTrends Rankings"
+                              >
+                                {syncingCandidateId === lo.id ? (
+                                  <RefreshCw className="w-2.5 h-2.5 animate-spin text-amber-600" />
+                                ) : (
+                                  <Award className="w-2.5 h-2.5 text-amber-600" />
+                                )}
+                                <span>+ Scotsman Sync</span>
+                              </button>
+                            )}
+
+                            {/* Big Purple Dot Status Badge */}
+                            {isBpdSynced ? (
+                              <span className="text-[9px] font-bold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200 flex items-center gap-1" title={`BPD ID: ${lo.bigPurpleDotId}`}>
+                                <Zap className="w-2.5 h-2.5 text-purple-600 fill-purple-600" />
+                                {lo.bigPurpleDotId || "BPD Synced"}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleSyncToBigPurpleDot([lo], "loan_officer")}
+                                className="text-[9px] text-purple-700 hover:text-purple-900 font-bold flex items-center gap-0.5 bg-purple-50/70 hover:bg-purple-100 px-1.5 py-0.2 rounded border border-purple-200 transition-colors"
+                                title="Push profile to Big Purple Dot CRM"
+                              >
+                                <Zap className="w-2.5 h-2.5" /> + BPD Sync
+                              </button>
+                            )}
                           </div>
                         </div>
-                        
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-1 text-[10px] text-[#606C5D]">
-                            <MapPin className="w-3 h-3 text-[#C18C5D]" /> 
-                            <span className="font-medium">Licensed:</span> {lo.licenseStates?.join(', ')}
+                      </div>
+
+                      {/* RealTrends / Scotsman Guide Callout Banner if Ranked */}
+                      {lo.realTrendsRank && (
+                        <div className="bg-gradient-to-r from-amber-50/90 to-orange-50/60 p-2 rounded-xl border border-amber-200/80 text-left text-xs flex items-start gap-2">
+                          <div className="w-5 h-5 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
+                            <Award className="w-3 h-3 text-amber-700" />
                           </div>
-                          <div className="flex items-center gap-1 text-[10px] text-[#606C5D]">
-                            <Award className="w-3 h-3 text-[#C18C5D]" />
-                            <span className="font-medium">Experience:</span> {lo.yearsExperience} Years
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-[11px] leading-snug text-amber-950">{lo.realTrendsRank}</p>
+                            <p className="text-[10px] text-amber-800/90 font-medium">
+                              Scotsman Guide • {lo.yearsExperience || 14} yrs licensed in {lo.licenseStates?.join(', ') || 'OR'}
+                            </p>
                           </div>
                         </div>
+                      )}
 
-                        {lo.topRealtorPartners && lo.topRealtorPartners.length > 0 && (
-                          <div className="pt-2 border-t border-[#EAE7E0]">
-                            <p className="text-[10px] font-bold text-[#2D362E] mb-1.5">Top Linked Realtors</p>
-                            <div className="space-y-1">
-                              {lo.topRealtorPartners.slice(0, 2).map((partner, idx) => (
-                                <div key={idx} className="flex justify-between items-center text-[10px]">
-                                  <span className="text-[#606C5D] truncate flex-1 pr-2">{partner.name}</span>
-                                  <span className="font-bold text-[#4A5D4E] shrink-0">${(partner.volume / 1000000).toFixed(1)}M</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
+                      {/* Production Data & Experience */}
+                      <div className="grid grid-cols-3 gap-1.5 text-center">
+                        <div className="bg-[#FAF9F5] p-1.5 rounded-xl border border-[#EAE7E0]">
+                          <p className="text-[8px] font-bold text-[#9A9488] uppercase">12Mo Vol</p>
+                          <p className="text-xs font-bold text-[#2D362E]">
+                            ${((lo.production12MoVolume || 0) / 1000000).toFixed(1)}M
+                          </p>
+                        </div>
+                        <div className="bg-[#FAF9F5] p-1.5 rounded-xl border border-[#EAE7E0]">
+                          <p className="text-[8px] font-bold text-[#9A9488] uppercase">12Mo Units</p>
+                          <p className="text-xs font-bold text-[#2D362E]">{lo.production12MoUnits || 0}</p>
+                        </div>
+                        <div className="bg-[#FAF9F5] p-1.5 rounded-xl border border-[#EAE7E0]">
+                          <p className="text-[8px] font-bold text-[#9A9488] uppercase">Experience</p>
+                          <p className="text-xs font-bold text-[#2D362E]">{lo.yearsExperience || 14} Yrs</p>
+                        </div>
+                      </div>
+
+                      {/* License & NMLS */}
+                      <div className="text-[10px] text-[#606C5D] space-y-1">
+                        {lo.nmlsNumber && (
+                          <p><span className="font-bold">NMLS:</span> {lo.nmlsNumber}</p>
+                        )}
+                        {lo.licenseStates && lo.licenseStates.length > 0 && (
+                          <p><span className="font-bold">Licensed:</span> {lo.licenseStates.join(', ')}</p>
                         )}
                       </div>
-                    )}
 
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2">
-                      <div className="flex gap-2">
-                        {lo.enrichmentStatus !== 'enriched' && (
+                      {/* Actions */}
+                      <div className="pt-2 border-t border-[#EAE7E0] space-y-2">
+                        <div className="flex gap-2">
                           <button 
-                            onClick={() => handleSyncSingle(lo.id)}
-                            disabled={lo.enrichmentStatus === 'syncing'}
-                            className="flex-1 bg-white border border-[#D5DDD6] hover:bg-[#F9F8F4] text-[#4A5D4E] py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                            onClick={() => openLoOutreach(lo)}
+                            className="flex-1 bg-[#4A5D4E] hover:bg-[#3A4A3D] text-white py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
                           >
-                            <Database className="w-3.5 h-3.5" />
-                            Sync Profile
+                            <Send className="w-3 h-3" />
+                            Outreach
+                          </button>
+
+                          <button
+                            onClick={() => handleSyncToBigPurpleDot([lo], "loan_officer")}
+                            className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                            title="Sync to Big Purple Dot CRM"
+                          >
+                            <Zap className="w-3 h-3 text-purple-600" />
+                            BPD
+                          </button>
+                        </div>
+
+                        {/* Stage Dropdown */}
+                        <select
+                          value={lo.recruitmentStatus || 'Not Contacted'}
+                          onChange={(e) => {
+                            const newStatus = e.target.value as any;
+                            const updatedLos = guidesState.loanOfficers.map(l => 
+                              l.id === lo.id ? { ...l, recruitmentStatus: newStatus } : l
+                            );
+                            onUpdateGuidesState({ ...guidesState, loanOfficers: updatedLos });
+                            onTriggerToast(`Updated status for ${lo.name} to ${newStatus}`);
+                            
+                            // Auto-sync if enabled
+                            if (bpdConfig?.autoSyncRecruits) {
+                              handleSyncToBigPurpleDot([{ ...lo, recruitmentStatus: newStatus }], "loan_officer");
+                            }
+                          }}
+                          className="w-full bg-[#FAF9F5] border border-[#EAE7E0] text-[#606C5D] text-xs font-medium rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-purple-600"
+                        >
+                          {loStatuses.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+
+                        {/* Move to team if hired */}
+                        {lo.recruitmentStatus === 'Hired' && (
+                          <button
+                            onClick={() => {
+                              const updatedLos = guidesState.loanOfficers.map(l => 
+                                l.id === lo.id ? { ...l, isTeamMember: true, teamStarStatus: 'red' as const } : l
+                              );
+                              onUpdateGuidesState({ ...guidesState, loanOfficers: updatedLos });
+                              onTriggerToast(`🎉 ${lo.name} successfully joined the branch team!`);
+                            }}
+                            className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <Users className="w-3.5 h-3.5" />
+                            Transfer to Active Team
                           </button>
                         )}
-                        <button 
-                          onClick={() => openOutreach(lo)}
-                          className="flex-1 bg-[#4A5D4E] hover:bg-[#3A4A3D] text-white py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                          Outreach
-                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Real Estate Agent Cards */}
+                {pipelineType === "real_estate_agents" && (columnItems as RealEstateAgentProfile[]).map(agent => {
+                  const isBpdSynced = agent.bigPurpleDotStatus === 'synced';
+                  return (
+                    <div key={agent.id} className="bg-white rounded-2xl border border-[#EAE7E0] p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden space-y-3">
+                      
+                      {/* Header */}
+                      <div className="flex items-start gap-3">
+                        <HeadshotAvatar
+                          src={agent.headshotUrl}
+                          name={agent.name}
+                          title={agent.title}
+                          className="w-12 h-12 rounded-xl border border-gray-200 shrink-0"
+                        />
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h5 className="font-bold text-[#2D362E] text-sm truncate">{agent.name}</h5>
+                            <OutreachHistoryBadge agent={agent} compact={true} />
+                          </div>
+                          <p className="text-xs text-[#606C5D] truncate">{agent.brokerage}</p>
+                          
+                          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                            <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-100">
+                              ⭐ {agent.rating || 4.9}
+                            </span>
+
+                            {/* RealTrends Verified Status */}
+                            {agent.realTrendsVerified ? (
+                              <span className="text-[9px] font-bold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 flex items-center gap-1" title={agent.realTrendsRank || "RealTrends America's Best"}>
+                                <Award className="w-2.5 h-2.5 text-amber-600" />
+                                <span>RealTrends Ranked</span>
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleSyncSingleRealTrends(agent.id, 'agent')}
+                                disabled={syncingCandidateId === agent.id}
+                                className="text-[9px] text-amber-800 hover:text-amber-900 font-medium flex items-center gap-0.5 bg-amber-50/70 hover:bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200 transition-colors"
+                                title="Sync RealTrends America's Best Stats"
+                              >
+                                {syncingCandidateId === agent.id ? (
+                                  <RefreshCw className="w-2.5 h-2.5 animate-spin text-amber-600" />
+                                ) : (
+                                  <Award className="w-2.5 h-2.5 text-amber-600" />
+                                )}
+                                <span>+ RealTrends</span>
+                              </button>
+                            )}
+                            
+                            {/* Big Purple Dot Status Badge */}
+                            {isBpdSynced ? (
+                              <span className="text-[9px] font-bold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200 flex items-center gap-1" title={`BPD ID: ${agent.bigPurpleDotId}`}>
+                                <Zap className="w-2.5 h-2.5 text-purple-600 fill-purple-600" />
+                                {agent.bigPurpleDotId || "BPD Synced"}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleSyncToBigPurpleDot([agent], "real_estate_agent")}
+                                className="text-[9px] text-purple-700 hover:text-purple-900 font-bold flex items-center gap-0.5 bg-purple-50/70 hover:bg-purple-100 px-1.5 py-0.2 rounded border border-purple-200 transition-colors"
+                                title="Push partner to Big Purple Dot CRM"
+                              >
+                                <Zap className="w-2.5 h-2.5" /> + BPD Sync
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
-                      <select
-                        value={lo.recruitmentStatus || 'Not Contacted'}
-                        onChange={(e) => {
-                          const updatedLos = guidesState.loanOfficers.map(l => 
-                            l.id === lo.id ? { ...l, recruitmentStatus: e.target.value as any } : l
-                          );
-                          onUpdateGuidesState({ ...guidesState, loanOfficers: updatedLos });
-                        }}
-                        className="w-full bg-[#F9F8F4] border border-[#EAE7E0] text-[#606C5D] text-xs font-medium rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-[#C18C5D]"
-                      >
-                        {['Not Contacted', 'In Outreach', 'Interested', 'Meeting Scheduled', 'Declined'].map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                      
-                      <button
-                        onClick={() => {
-                          const updatedLos = guidesState.loanOfficers.map(l => 
-                            l.id === lo.id ? { ...l, isTeamMember: false, recruitmentStatus: 'Hired' as any, teamStarStatus: 'red' as const } : l
-                          );
-                          onUpdateGuidesState({ ...guidesState, loanOfficers: updatedLos });
-                          onTriggerToast(`${lo.name} moved to Team LO Roster`);
-                        }}
-                        className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 mt-1"
-                      >
-                        <Users className="w-3.5 h-3.5" />
-                        Hire & Move to Team
-                      </button>
+                      {/* RealTrends America's Best Callout Banner if Ranked */}
+                      {agent.realTrendsRank && (
+                        <div className="bg-gradient-to-r from-amber-50/90 to-orange-50/60 p-2 rounded-xl border border-amber-200/80 text-left text-xs flex items-start gap-2">
+                          <div className="w-5 h-5 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
+                            <Award className="w-3 h-3 text-amber-700" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-[11px] leading-snug text-amber-950">{agent.realTrendsRank}</p>
+                            <p className="text-[10px] text-amber-800/90 font-medium">
+                              America's Best • {agent.experienceYears || 8} yrs licensed • {agent.brokerage}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Agent Production, Sides & Years Licensed */}
+                      <div className="grid grid-cols-3 gap-1.5 text-center text-[10px]">
+                        <div className="bg-[#FAF9F5] p-1.5 rounded-xl border border-[#EAE7E0]">
+                          <span className="text-[#9A9488] block text-[8px] uppercase font-bold">12Mo Vol</span>
+                          <strong className="text-[#2D362E]">
+                            {agent.production12MoVolume 
+                              ? `$${((agent.production12MoVolume) / 1000000).toFixed(1)}M` 
+                              : `${agent.activeListingsCount || 6} Listings`}
+                          </strong>
+                        </div>
+                        <div className="bg-[#FAF9F5] p-1.5 rounded-xl border border-[#EAE7E0]">
+                          <span className="text-[#9A9488] block text-[8px] uppercase font-bold">12Mo Sides</span>
+                          <strong className="text-[#2D362E]">{agent.realTrendsSides || agent.production12MoUnits || 28} Sides</strong>
+                        </div>
+                        <div className="bg-[#FAF9F5] p-1.5 rounded-xl border border-[#EAE7E0]">
+                          <span className="text-[#9A9488] block text-[8px] uppercase font-bold">Licensed</span>
+                          <strong className="text-[#2D362E]">{agent.experienceYears || 8} Yrs</strong>
+                        </div>
+                      </div>
+
+                      {/* Market Areas */}
+                      {agent.marketAreas && agent.marketAreas.length > 0 && (
+                        <p className="text-[10px] text-[#606C5D] truncate">
+                          <span className="font-bold">Areas:</span> {agent.marketAreas.slice(0, 3).join(', ')}
+                        </p>
+                      )}
+
+                      {/* Actions */}
+                      <div className="pt-2 border-t border-[#EAE7E0] space-y-2">
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => openAgentOutreach(agent)}
+                            className="flex-1 bg-gradient-to-r from-[#C18C5D] to-[#9E6D43] hover:opacity-95 text-white py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <Send className="w-3 h-3" />
+                            Co-Brand Invite
+                          </button>
+
+                          <button
+                            onClick={() => handleSyncToBigPurpleDot([agent], "real_estate_agent")}
+                            className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                            title="Sync to Big Purple Dot CRM"
+                          >
+                            <Zap className="w-3 h-3 text-purple-600" />
+                            BPD
+                          </button>
+                        </div>
+
+                        {/* Stage Dropdown */}
+                        <select
+                          value={agent.recruitmentStatus || 'Not Contacted'}
+                          onChange={(e) => {
+                            const newStatus = e.target.value as any;
+                            const updatedAgents = guidesState.agentRoster.map(a => 
+                              a.id === agent.id ? { ...a, recruitmentStatus: newStatus } : a
+                            );
+                            onUpdateGuidesState({ ...guidesState, agentRoster: updatedAgents });
+                            onTriggerToast(`Updated status for ${agent.name} to ${newStatus}`);
+
+                            // Auto-sync if enabled
+                            if (bpdConfig?.autoSyncRecruits) {
+                              handleSyncToBigPurpleDot([{ ...agent, recruitmentStatus: newStatus }], "real_estate_agent");
+                            }
+                          }}
+                          className="w-full bg-[#FAF9F5] border border-[#EAE7E0] text-[#606C5D] text-xs font-medium rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-purple-600"
+                        >
+                          {agentStatuses.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                
-                {columnLos.length === 0 && (
+                  );
+                })}
+
+                {columnItems.length === 0 && (
                   <div className="text-center p-6 border-2 border-dashed border-[#EAE7E0] rounded-2xl text-[#9A9488] text-xs">
                     No prospects in this stage.
                   </div>
@@ -397,19 +1140,21 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
         })}
       </div>
 
-      {/* Outreach / Draft Modal */}
-      {activeOutreachLo && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-6">
+      {/* Outreach Composer Modal */}
+      {activeOutreachCandidate && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-[#EAE7E0] space-y-5">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
               <div>
-                <h3 className="font-serif font-bold text-2xl text-[#2D362E]">Draft Outreach</h3>
-                <p className="text-sm text-[#606C5D]">
-                  To: <span className="font-bold text-[#2D362E]">{guidesState.loanOfficers.find(l => l.id === activeOutreachLo)?.name}</span>
+                <h3 className="font-serif font-bold text-xl text-[#2D362E]">
+                  {activeOutreachCandidate.type === "lo" ? "Loan Officer Recruiting Outreach" : "Realtor Partner Co-Branding Invite"}
+                </h3>
+                <p className="text-xs text-[#606C5D] mt-0.5">
+                  Recipient: <strong className="text-[#2D362E]">{activeOutreachCandidate.name}</strong> ({activeOutreachCandidate.company})
                 </p>
               </div>
               <button 
-                onClick={() => setActiveOutreachLo(null)}
+                onClick={() => setActiveOutreachCandidate(null)}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
@@ -417,85 +1162,111 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
             </div>
 
             {/* Template Selector */}
-            <div className="bg-[#F9F8F4] p-4 rounded-2xl border border-[#EAE7E0] mb-6">
-              <div className="flex gap-2 mb-4">
+            <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#EAE7E0] space-y-3">
+              <div className="flex gap-2">
                 <button
                   onClick={() => {
                     setOutreachType('email');
-                    applyTemplate(TEMPLATES.email[0]);
+                    const tmpl = activeOutreachCandidate.type === "lo" ? TEMPLATES.email[0] : REALTOR_TEMPLATES.email[0];
+                    applyTemplate(tmpl);
                   }}
-                  className={`flex-1 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
-                    outreachType === 'email' ? 'bg-[#4A5D4E] text-white shadow-sm' : 'bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-gray-50'
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors ${
+                    outreachType === 'email' ? 'bg-[#4A5D4E] text-white shadow-xs' : 'bg-white text-[#606C5D] border border-[#EAE7E0]'
                   }`}
                 >
-                  <Mail className="w-4 h-4" /> Email Templates
+                  <Mail className="w-3.5 h-3.5" /> Email Outreach
                 </button>
                 <button
                   onClick={() => {
                     setOutreachType('sms');
-                    applyTemplate(TEMPLATES.sms[0]);
+                    const tmpl = activeOutreachCandidate.type === "lo" ? TEMPLATES.sms[0] : REALTOR_TEMPLATES.sms[0];
+                    applyTemplate(tmpl);
                   }}
-                  className={`flex-1 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
-                    outreachType === 'sms' ? 'bg-[#4A5D4E] text-white shadow-sm' : 'bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-gray-50'
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors ${
+                    outreachType === 'sms' ? 'bg-[#4A5D4E] text-white shadow-xs' : 'bg-white text-[#606C5D] border border-[#EAE7E0]'
                   }`}
                 >
-                  <MessageSquare className="w-4 h-4" /> SMS Templates
+                  <MessageSquare className="w-3.5 h-3.5" /> SMS Text Outreach
                 </button>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
-                {TEMPLATES[outreachType].map(template => (
+                {(activeOutreachCandidate.type === "lo" ? TEMPLATES[outreachType] : REALTOR_TEMPLATES[outreachType]).map(template => (
                   <button
                     key={template.id}
                     onClick={() => applyTemplate(template)}
-                    className="p-2 text-left bg-white border border-[#EAE7E0] rounded-xl hover:border-[#C18C5D] transition-colors group"
+                    className="p-2 text-left bg-white border border-[#EAE7E0] rounded-xl hover:border-purple-600 transition-colors"
                   >
-                    <p className="text-[11px] font-bold text-[#2D362E] truncate group-hover:text-[#C18C5D]">{template.name}</p>
+                    <p className="text-[11px] font-bold text-[#2D362E] truncate">{template.name}</p>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Composer */}
-            <div className="space-y-4">
+            {/* Composer Fields */}
+            <div className="space-y-3">
               {outreachType === 'email' && (
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D362E]">Subject Line</label>
                   <input 
                     type="text"
                     value={draftSubject}
                     onChange={(e) => setDraftSubject(e.target.value)}
-                    className="w-full bg-white border border-[#D5DDD6] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C18C5D]"
+                    className="w-full bg-white border border-[#D5DDD6] rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-600"
                   />
                 </div>
               )}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#2D362E]">Message Body</label>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#2D362E]">Message Content</label>
                 <textarea 
                   value={draftBody}
                   onChange={(e) => setDraftBody(e.target.value)}
-                  className="w-full bg-white border border-[#D5DDD6] rounded-xl px-4 py-3 text-sm min-h-[160px] focus:outline-none focus:ring-2 focus:ring-[#C18C5D] resize-none"
+                  className="w-full bg-white border border-[#D5DDD6] rounded-xl px-3.5 py-2.5 text-xs min-h-[140px] focus:outline-none focus:ring-2 focus:ring-purple-600 resize-none"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
+            <div className="flex justify-end gap-3 pt-3 border-t border-[#EAE7E0]">
               <button 
-                onClick={() => setActiveOutreachLo(null)}
-                className="px-5 py-2.5 text-sm font-bold text-[#606C5D] hover:bg-gray-50 rounded-xl transition-colors"
+                onClick={() => setActiveOutreachCandidate(null)}
+                className="px-4 py-2 text-xs font-bold text-[#606C5D] hover:bg-gray-50 rounded-xl transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={sendOutreach}
-                className="px-6 py-2.5 bg-[#4A5D4E] hover:bg-[#3A4A3D] text-white text-sm font-bold rounded-xl shadow-sm flex items-center gap-2 transition-all"
+                className="px-5 py-2 bg-[#4A5D4E] hover:bg-[#3A4A3D] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 transition-all"
               >
-                <Send className="w-4 h-4" />
-                Launch App & Log Outreach
+                <Send className="w-3.5 h-3.5" />
+                Dispatch & Log Outreach
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Big Purple Dot Modal */}
+      <BigPurpleDotModal
+        isOpen={showBpdModal}
+        onClose={() => setShowBpdModal(false)}
+        config={guidesState.bigPurpleDotConfig}
+        onUpdateConfig={(newConfig) => {
+          onUpdateGuidesState(prev => ({
+            ...prev,
+            bigPurpleDotConfig: newConfig
+          }));
+        }}
+        onTriggerToast={onTriggerToast}
+      />
+
+      {/* Candidate Search Modal */}
+      {showCandidateSearchModal && (
+        <CandidateSearchModal
+          onClose={() => setShowCandidateSearchModal(false)}
+          type={pipelineType === "loan_officers" ? "lo" : "agent"}
+          onAddCandidate={handleAddSearchedCandidate}
+          onTriggerToast={onTriggerToast}
+        />
       )}
     </div>
   );

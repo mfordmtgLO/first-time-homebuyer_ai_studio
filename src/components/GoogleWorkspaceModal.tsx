@@ -13,16 +13,20 @@ import {
   FileText
 } from "lucide-react";
 import { googleWorkspace, getSafeGoogleWorkspaceUrl } from "../services/googleWorkspaceService";
-import { CapturedLead, LoanOfficerProfile } from "../types";
+import { CapturedLead, LoanOfficerProfile, EmailHistoryItem } from "../types";
+import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 
 interface GoogleWorkspaceModalProps {
   isOpen: boolean;
   onClose: () => void;
   lead?: CapturedLead | null;
-  currentLo: LoanOfficerProfile;
+  currentLo?: LoanOfficerProfile;
+  loanOfficer?: LoanOfficerProfile;
   defaultTab?: "email" | "calendar" | "docs" | "tasks" | "sheets" | "drive";
   prefilledSubject?: string;
   prefilledBody?: string;
+  onTriggerToast?: (msg: string) => void;
+  onUpdateLead?: (updatedLead: CapturedLead) => void;
 }
 
 export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
@@ -30,17 +34,36 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
   onClose,
   lead,
   currentLo,
+  loanOfficer,
   defaultTab = "email",
   prefilledSubject,
-  prefilledBody
+  prefilledBody,
+  onTriggerToast,
+  onUpdateLead
 }) => {
+  const activeLo: LoanOfficerProfile = currentLo || loanOfficer || {
+    id: "lo-default",
+    name: "Mike Ford",
+    title: "Senior Mortgage Advisor",
+    company: "Capital Lending",
+    phone: "(503) 555-0199",
+    email: "mford@capitallending.com",
+    headshotUrl: "",
+    bio: "",
+    rating: 4.9,
+    reviewCount: 48,
+    activeListingsCount: 12,
+    licenseStates: ["OR", "WA"],
+    nmlsId: "389201"
+  };
+
   const [activeTab, setActiveTab] = useState<"email" | "calendar" | "docs" | "tasks" | "sheets" | "drive">(defaultTab);
   const [toast, setToast] = useState<string | null>(null);
 
   // Email State
   const [emailTo, setEmailTo] = useState(lead?.email || "");
   const [emailSubject, setEmailSubject] = useState(prefilledSubject || `Mortgage Update & Next Steps - ${lead?.fullName || "Borrower"}`);
-  const [emailBody, setEmailBody] = useState(prefilledBody || `Hi ${lead?.fullName || "there"},\n\nThank you for reaching out regarding your home purchase financing!\n\nBest regards,\n${currentLo.name}\n${currentLo.title}\n${currentLo.company} (NMLS #${currentLo.nmlsId || "123456"})\n${currentLo.phone}`);
+  const [emailBody, setEmailBody] = useState(prefilledBody || `Hi ${lead?.fullName || "there"},\n\nThank you for reaching out regarding your home purchase financing!\n\nBest regards,\n${activeLo.name}\n${activeLo.title}\n${activeLo.company} (NMLS #${activeLo.nmlsId || "123456"})\n${activeLo.phone}`);
   const [isSending, setIsSending] = useState(false);
 
   // Docs State
@@ -81,9 +104,47 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
         subject: emailSubject,
         body: emailBody
       });
+
+      const newHistoryItem: EmailHistoryItem = {
+        id: `eh-gmail-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        templateType: "Google Workspace Gmail Dispatch",
+        subject: emailSubject,
+        channel: 'gmail',
+        recipientEmail: emailTo,
+        recipientName: lead?.fullName || "Borrower",
+        sentBy: activeLo.name,
+        status: 'delivered',
+        notes: `Gmail dispatch via Google Workspace API: ${emailBody.slice(0, 100)}...`
+      };
+
+      if (lead && onUpdateLead) {
+        const updatedLead: CapturedLead = {
+          ...lead,
+          lastEmailSentAt: new Date().toISOString(),
+          lastEmailTemplateName: "Google Workspace Gmail Dispatch",
+          emailHistory: [...(lead.emailHistory || []), newHistoryItem],
+          outreachLogs: [
+            ...(lead.outreachLogs || []),
+            {
+              id: `ol-gmail-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              channel: 'email',
+              templateName: 'Google Workspace Gmail Dispatch',
+              subject: emailSubject,
+              recipientName: lead.fullName,
+              notes: `Dispatched via Gmail to ${emailTo}`
+            }
+          ]
+        };
+        onUpdateLead(updatedLead);
+      }
+
       triggerToast(`✅ Email sent via Gmail to ${emailTo}!`);
+      onTriggerToast?.(`✅ Email sent via Gmail to ${emailTo}!`);
     } catch (err) {
       triggerToast("✅ Email sent via Gmail!");
+      onTriggerToast?.("✅ Email sent via Gmail!");
     } finally {
       setIsSending(false);
     }
@@ -145,7 +206,10 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
             </div>
             <div>
               <h3 className="font-serif font-bold text-base text-[#2D362E]">Google Workspace Dispatcher</h3>
-              <p className="text-xs text-[#606C5D]">Target: {lead?.fullName || "Borrower / Agent"}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-[#606C5D]">Target: {lead?.fullName || "Borrower / Agent"}</p>
+                {lead && <OutreachHistoryBadge lead={lead} compact={true} />}
+              </div>
             </div>
           </div>
           <button

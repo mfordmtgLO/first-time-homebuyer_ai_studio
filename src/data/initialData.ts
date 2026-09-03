@@ -1144,7 +1144,36 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     marketAreas: ["Portland Metro", "Beaverton", "Tigard", "Lake Oswego", "Hillsboro"],
     websiteUrl: "https://cascadevalleyre.com",
     assignedLoIds: ["lo-mike-ford", "lo-lonn-kilstrom"],
-    customSlug: "sarah-jenkins"
+    customSlug: "sarah-jenkins",
+    realTrendsVerified: true,
+    realTrendsRank: "America's Best #14 - Oregon Individuals by Volume",
+    realTrendsSides: 42,
+    realTrendsVolume: 24800000,
+    realTrendsYear: 2025,
+    realTrendsCategory: "Individual Agent - Volume",
+    emailHistory: [
+      {
+        id: "aeh-sarah-1",
+        timestamp: "2026-08-20T10:00:00Z",
+        templateType: "Co-Branded Mortgage Portal Invite",
+        subject: "Custom Co-Branded Mortgage Portal for Your Buyers",
+        channel: "portal_email",
+        recipientEmail: "sarah.jenkins@cascadevalleyre.com",
+        recipientName: "Sarah Jenkins",
+        status: "opened",
+        notes: "Sarah reviewed co-branded flyer with live buydown widget."
+      }
+    ],
+    outreachLogs: [
+      {
+        id: "a-ol-sarah-1",
+        timestamp: "2026-08-20T10:00:00Z",
+        channel: "email",
+        templateName: "Co-Branded Mortgage Portal Invite",
+        subject: "Custom Co-Branded Mortgage Portal for Your Buyers",
+        recipientName: "Sarah Jenkins"
+      }
+    ]
   },
   {
     id: "agent-marcus-vance",
@@ -1169,7 +1198,36 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
     marketAreas: ["Oregon City", "Clackamas", "Gresham", "Happy Valley", "Milwaukie"],
     websiteUrl: "https://willametteheritage.com",
     assignedLoIds: ["lo-mike-ford", "lo-alan-burkhart", "lo-mark-saftich"],
-    customSlug: "marcus-vance"
+    customSlug: "marcus-vance",
+    realTrendsVerified: true,
+    realTrendsRank: "America's Best #22 - Oregon Individuals by Sides",
+    realTrendsSides: 58,
+    realTrendsVolume: 29500000,
+    realTrendsYear: 2025,
+    realTrendsCategory: "Individual Agent - Sides",
+    emailHistory: [
+      {
+        id: "aeh-marcus-1",
+        timestamp: "2026-08-22T14:30:00Z",
+        templateType: "Listing 2-1 Buydown Strategy",
+        subject: "Strategy to Move Price-Conscious Buyers on Your Listings",
+        channel: "gmail",
+        recipientEmail: "marcus@willametteheritage.com",
+        recipientName: "Marcus Vance",
+        status: "opened",
+        notes: "Shared 2-1 rate buydown seller flyer for Marcus's Clackamas listing."
+      }
+    ],
+    outreachLogs: [
+      {
+        id: "a-ol-marcus-1",
+        timestamp: "2026-08-22T14:30:00Z",
+        channel: "email",
+        templateName: "Listing 2-1 Buydown Strategy",
+        subject: "Strategy to Move Price-Conscious Buyers on Your Listings",
+        recipientName: "Marcus Vance"
+      }
+    ]
   },
   {
     id: "agent-elena-rostova",
@@ -1534,6 +1592,70 @@ export const INITIAL_LEADS: import("../types").CapturedLead[] = [
         sentAt: "2026-08-27T16:15:00Z",
         status: "sent"
       }
+    ],
+    emailHistory: [
+      {
+        id: "eh-101-1",
+        timestamp: "2026-08-24T07:00:00Z",
+        templateType: "Welcome & OHCS Down Payment Grant Guide",
+        subject: "Welcome Tyler & Emily - Your First-Time Homebuyer Roadmap!",
+        channel: "portal_email",
+        recipientEmail: "tyler.richardson89@gmail.com",
+        recipientName: "Tyler & Emily Richardson",
+        sentBy: "Mike Ford",
+        status: "opened",
+        notes: "Client opened email and reviewed $15k DPA grant rules."
+      },
+      {
+        id: "eh-101-2",
+        timestamp: "2026-08-27T16:15:00Z",
+        templateType: "Flex DPA 3.5% & Rate Buydown Strategy Sheet",
+        subject: "Tyler & Emily: How 2-1 Rate Buydowns Save $340/mo",
+        channel: "portal_email",
+        recipientEmail: "tyler.richardson89@gmail.com",
+        recipientName: "Tyler & Emily Richardson",
+        sentBy: "Mike Ford",
+        status: "sent",
+        notes: "Dispatched from portal with attached 2-1 buydown payment breakdown."
+      },
+      {
+        id: "eh-101-3",
+        timestamp: "2026-08-29T11:20:00Z",
+        templateType: "Google Workspace Pre-Approval & Meet Consultation",
+        subject: "Mortgage Strategy Consultation - Tyler & Emily Richardson",
+        channel: "gmail",
+        recipientEmail: "tyler.richardson89@gmail.com",
+        recipientName: "Tyler & Emily Richardson",
+        sentBy: "Mike Ford",
+        status: "delivered",
+        notes: "Direct Gmail dispatch via Google Workspace with Calendar invitation."
+      }
+    ],
+    outreachLogs: [
+      {
+        id: "ol-101-1",
+        timestamp: "2026-08-24T07:00:00Z",
+        channel: "email",
+        templateName: "Welcome & OHCS Down Payment Grant Guide",
+        subject: "Welcome Tyler & Emily - Your First-Time Homebuyer Roadmap!",
+        recipientName: "Tyler & Emily Richardson"
+      },
+      {
+        id: "ol-101-2",
+        timestamp: "2026-08-27T16:15:00Z",
+        channel: "email",
+        templateName: "Flex DPA 3.5% & Rate Buydown Strategy Sheet",
+        subject: "Tyler & Emily: How 2-1 Rate Buydowns Save $340/mo",
+        recipientName: "Tyler & Emily Richardson"
+      },
+      {
+        id: "ol-101-3",
+        timestamp: "2026-08-29T11:20:00Z",
+        channel: "email",
+        templateName: "Google Workspace Consultation Email",
+        subject: "Mortgage Strategy Consultation - Tyler & Emily Richardson",
+        recipientName: "Tyler & Emily Richardson"
+      }
     ]
   },
   {
@@ -1590,6 +1712,50 @@ export const INITIAL_LEADS: import("../types").CapturedLead[] = [
         emailSubject: "Brandon & Chloe: 100% Zero Down USDA Homes in Albany & Linn County",
         sentAt: "2026-08-25T14:30:00Z",
         status: "opened"
+      }
+    ],
+    emailHistory: [
+      {
+        id: "eh-104-1",
+        timestamp: "2026-08-25T14:30:00Z",
+        templateType: "USDA 100% Zero-Down Rural Eligibility Guide",
+        subject: "Brandon & Chloe: 100% Zero Down USDA Homes in Albany & Linn County",
+        channel: "portal_email",
+        recipientEmail: "bvance.oregon@gmail.com",
+        recipientName: "Brandon & Chloe Vance",
+        sentBy: "Mike Ford",
+        status: "opened",
+        notes: "Portal email dispatch with Albany USDA geographic tract guide."
+      },
+      {
+        id: "eh-104-2",
+        timestamp: "2026-08-28T10:15:00Z",
+        templateType: "Property Financing Datasheet (Outlook Outreach)",
+        subject: "Albany USDA Zero-Down Homes & Rate Matrix",
+        channel: "outlook",
+        recipientEmail: "bvance.oregon@gmail.com",
+        recipientName: "Brandon & Chloe Vance",
+        sentBy: "Mike Ford",
+        status: "sent",
+        notes: "Pre-encoded Outlook email dispatch with attached Linn County property flyers."
+      }
+    ],
+    outreachLogs: [
+      {
+        id: "ol-104-1",
+        timestamp: "2026-08-25T14:30:00Z",
+        channel: "email",
+        templateName: "USDA 100% Zero-Down Rural Eligibility Guide",
+        subject: "Brandon & Chloe: 100% Zero Down USDA Homes in Albany & Linn County",
+        recipientName: "Brandon & Chloe Vance"
+      },
+      {
+        id: "ol-104-2",
+        timestamp: "2026-08-28T10:15:00Z",
+        channel: "email",
+        templateName: "Outlook Property Financing Datasheet",
+        subject: "Albany USDA Zero-Down Homes & Rate Matrix",
+        recipientName: "Brandon & Chloe Vance"
       }
     ]
   },
@@ -1656,6 +1822,67 @@ export const INITIAL_LEADS: import("../types").CapturedLead[] = [
         sentAt: "2026-08-27T09:45:00Z",
         status: "sent"
       }
+    ],
+    emailHistory: [
+      {
+        id: "eh-102-1",
+        timestamp: "2026-08-23T18:30:00Z",
+        templateType: "Oregon Bond Residential Loan & DPA Overview",
+        subject: "Marcus - Your Oregon Down Payment Assistance Plan",
+        channel: "portal_email",
+        recipientEmail: "marcus.holloway@outlook.com",
+        recipientName: "Marcus Holloway",
+        sentBy: "Jessica Taylor",
+        status: "opened"
+      },
+      {
+        id: "eh-102-2",
+        timestamp: "2026-08-25T10:00:00Z",
+        templateType: "Gresham & Clackamas Starter Home Tour Scorecard",
+        subject: "Marcus: 3 Starter Homes under $400k with Low Down Options",
+        channel: "portal_email",
+        recipientEmail: "marcus.holloway@outlook.com",
+        recipientName: "Marcus Holloway",
+        sentBy: "Jessica Taylor",
+        status: "opened"
+      },
+      {
+        id: "eh-102-3",
+        timestamp: "2026-08-27T09:45:00Z",
+        templateType: "Credit Score & Debt-to-Income Optimization Guide",
+        subject: "Marcus: Simple Credit Hacks for Lower Mortgage Rates",
+        channel: "portal_email",
+        recipientEmail: "marcus.holloway@outlook.com",
+        recipientName: "Marcus Holloway",
+        sentBy: "Jessica Taylor",
+        status: "sent"
+      }
+    ],
+    outreachLogs: [
+      {
+        id: "ol-102-1",
+        timestamp: "2026-08-23T18:30:00Z",
+        channel: "email",
+        templateName: "Oregon Bond Residential Loan & DPA Overview",
+        subject: "Marcus - Your Oregon Down Payment Assistance Plan",
+        recipientName: "Marcus Holloway"
+      },
+      {
+        id: "ol-102-2",
+        timestamp: "2026-08-25T10:00:00Z",
+        channel: "email",
+        templateName: "Gresham & Clackamas Starter Home Tour Scorecard",
+        subject: "Marcus: 3 Starter Homes under $400k with Low Down Options",
+        recipientName: "Marcus Holloway"
+      },
+      {
+        id: "ol-102-3",
+        timestamp: "2026-08-27T09:45:00Z",
+        channel: "email",
+        templateName: "Credit Score & Debt-to-Income Optimization Guide",
+        subject: "Marcus: Simple Credit Hacks for Lower Mortgage Rates",
+        recipientName: "Marcus Holloway"
+      }
     ]
   },
   {
@@ -1711,6 +1938,30 @@ export const INITIAL_LEADS: import("../types").CapturedLead[] = [
         emailSubject: "Jessica & David: Redmond & Bend Zero-Down Home Search",
         sentAt: "2026-08-26T10:30:00Z",
         status: "opened"
+      }
+    ],
+    emailHistory: [
+      {
+        id: "eh-105-1",
+        timestamp: "2026-08-26T10:30:00Z",
+        templateType: "Central Oregon Homebuyer Welcome & DPA Map",
+        subject: "Jessica & David: Redmond & Bend Zero-Down Home Search",
+        channel: "portal_email",
+        recipientEmail: "dmiller.pdx@yahoo.com",
+        recipientName: "Jessica & David Miller",
+        sentBy: "Mike Ford",
+        status: "opened",
+        notes: "Dispatched initial welcome and zero-down USDA Redmond tract overview."
+      }
+    ],
+    outreachLogs: [
+      {
+        id: "ol-105-1",
+        timestamp: "2026-08-26T10:30:00Z",
+        channel: "email",
+        templateName: "Central Oregon Homebuyer Welcome & DPA Map",
+        subject: "Jessica & David: Redmond & Bend Zero-Down Home Search",
+        recipientName: "Jessica & David Miller"
       }
     ]
   },
@@ -1780,6 +2031,87 @@ export const INITIAL_LEADS: import("../types").CapturedLead[] = [
         emailSubject: "Samantha: Clear to Close & Escrow Final Steps",
         sentAt: "2026-08-26T15:20:00Z",
         status: "opened"
+      }
+    ],
+    emailHistory: [
+      {
+        id: "eh-103-1",
+        timestamp: "2026-08-22T14:15:00Z",
+        templateType: "Welcome & Pre-Approval FastTrack",
+        subject: "Samantha: Lake Oswego Homebuyer Pre-Approval Confirmation",
+        channel: "portal_email",
+        recipientEmail: "samantha.wei@designgroup.org",
+        recipientName: "Samantha Wei",
+        sentBy: "Mike Ford",
+        status: "opened"
+      },
+      {
+        id: "eh-103-2",
+        timestamp: "2026-08-24T09:00:00Z",
+        templateType: "Touring & Home Inspection Red Flag Matrix",
+        subject: "Samantha: Key Inspection Points for Townhomes",
+        channel: "portal_email",
+        recipientEmail: "samantha.wei@designgroup.org",
+        recipientName: "Samantha Wei",
+        sentBy: "Mike Ford",
+        status: "opened"
+      },
+      {
+        id: "eh-103-3",
+        timestamp: "2026-08-25T11:30:00Z",
+        templateType: "Google Workspace Pre-Approval Document Sync",
+        subject: "Samantha: Underwriting Verification Next Steps",
+        channel: "gmail",
+        recipientEmail: "samantha.wei@designgroup.org",
+        recipientName: "Samantha Wei",
+        sentBy: "Mike Ford",
+        status: "opened",
+        notes: "Shared underwriting needs list via Google Drive & Gmail."
+      },
+      {
+        id: "eh-103-4",
+        timestamp: "2026-08-26T15:20:00Z",
+        templateType: "Escrow Milestone & Closing Preparation Checklist",
+        subject: "Samantha: Clear to Close & Escrow Final Steps",
+        channel: "portal_email",
+        recipientEmail: "samantha.wei@designgroup.org",
+        recipientName: "Samantha Wei",
+        sentBy: "Mike Ford",
+        status: "opened"
+      }
+    ],
+    outreachLogs: [
+      {
+        id: "ol-103-1",
+        timestamp: "2026-08-22T14:15:00Z",
+        channel: "email",
+        templateName: "Welcome & Pre-Approval FastTrack",
+        subject: "Samantha: Lake Oswego Homebuyer Pre-Approval Confirmation",
+        recipientName: "Samantha Wei"
+      },
+      {
+        id: "ol-103-2",
+        timestamp: "2026-08-24T09:00:00Z",
+        channel: "email",
+        templateName: "Touring & Home Inspection Red Flag Matrix",
+        subject: "Samantha: Key Inspection Points for Townhomes",
+        recipientName: "Samantha Wei"
+      },
+      {
+        id: "ol-103-3",
+        timestamp: "2026-08-25T11:30:00Z",
+        channel: "email",
+        templateName: "Google Workspace Underwriting Sync",
+        subject: "Samantha: Underwriting Verification Next Steps",
+        recipientName: "Samantha Wei"
+      },
+      {
+        id: "ol-103-4",
+        timestamp: "2026-08-26T15:20:00Z",
+        channel: "email",
+        templateName: "Escrow Milestone & Closing Checklist",
+        subject: "Samantha: Clear to Close & Escrow Final Steps",
+        recipientName: "Samantha Wei"
       }
     ]
   }

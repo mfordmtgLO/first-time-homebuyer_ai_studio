@@ -42,6 +42,8 @@ import {
   RealEstateAgentProfile 
 } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
+import { OutreachLog } from "../types";
+import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 
 interface GoogleWorkspaceHubProps {
   currentLo: LoanOfficerProfile;
@@ -162,6 +164,7 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
   // Gmail State
   const [emailTo, setEmailTo] = useState(activeLead?.email || "");
   const [emailSubject, setEmailSubject] = useState("Your Homebuyer Roadmap & Loan Pre-Approval Next Steps");
+  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<string>("custom_outreach");
   const [emailBody, setEmailBody] = useState(`Hi ${activeLead?.fullName || "there"},\n\nIt was great speaking with you regarding your home financing goals! Here is a summary of our next steps:\n\n1. Complete your digital loan application\n2. Gather 2 recent paystubs, 2 years W-2s, and 2 bank statements\n3. Review our curated Down Payment Assistance grant programs\n\nFeel free to reply directly to this email or book time on my calendar.\n\nBest regards,\n${currentLo.name}\n${currentLo.title}\n${currentLo.company} (NMLS #${currentLo.nmlsId || "123456"})\n${currentLo.phone}`);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
@@ -275,7 +278,7 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
   };
 
   // 2. Gmail Handlers
-  const handleSendGmail = async (e: React.FormEvent) => {
+    const handleSendGmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!workspaceUser) {
       triggerToast("Please connect Google Workspace first.");
@@ -294,6 +297,44 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
         body: emailBody
       });
       triggerToast(`📧 Gmail sent successfully to ${emailTo}!`);
+      
+      // Log Outreach
+      const newLog: OutreachLog = {
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        channel: 'email',
+        templateName: selectedEmailTemplate,
+        subject: emailSubject,
+        recipientName: emailTo
+      };
+
+      const updatedLeads = (guidesState.leads || []).map(l => {
+        if (l.id === activeLead?.id) {
+          return {
+            ...l,
+            outreachLogs: [newLog, ...(l.outreachLogs || [])]
+          };
+        }
+        return l;
+      });
+
+      const updatedAgents = guidesState.agentRoster.map(a => {
+        // If email matches agent or it's a realtor template assigned to this lead's agent
+        if (a.email === emailTo || (selectedEmailTemplate === 'realtor_intro' && a.id === activeLead?.assignedAgentId)) {
+          return {
+            ...a,
+            outreachLogs: [newLog, ...(a.outreachLogs || [])]
+          };
+        }
+        return a;
+      });
+
+      onUpdateGuidesState({
+        ...guidesState,
+        leads: updatedLeads,
+        agentRoster: updatedAgents
+      });
+
     } catch (err) {
       console.error(err);
       triggerToast("Gmail dispatch completed.");
@@ -302,7 +343,8 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
     }
   };
 
-  const applyEmailTemplate = (templateKey: "needs_list" | "buydown" | "pre_approved" | "realtor_intro") => {
+    const applyEmailTemplate = (templateKey: "needs_list" | "buydown" | "pre_approved" | "realtor_intro") => {
+    setSelectedEmailTemplate(templateKey);
     const leadName = targetBorrowerName || activeLead?.fullName || "Homebuyer";
     if (templateKey === "needs_list") {
       setEmailTo(activeLead?.email || "buyer@gmail.com");
@@ -932,6 +974,7 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
             <div className="p-3.5 bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-xs text-[#2D362E]">{targetBorrowerName || activeLead?.fullName || "Selected Lead"}</span>
+                <OutreachHistoryBadge logs={activeLead?.outreachLogs} />
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 uppercase">
                   {activeLead?.status || "active"}
                 </span>

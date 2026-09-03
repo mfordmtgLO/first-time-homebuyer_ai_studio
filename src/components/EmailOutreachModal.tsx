@@ -6,8 +6,9 @@ import {
   FileCheck, FilePlus, Image as ImageIcon, Eye, Filter, Upload, ChevronDown, ChevronUp,
   UserCheck, Building, MapPin, PhoneCall, Award
 } from 'lucide-react';
-import { PropertyListing, EmailTemplate, RealEstateAgentProfile, CapturedLead, LoanOfficerProfile } from '../types';
+import { PropertyListing, EmailTemplate, RealEstateAgentProfile, CapturedLead, LoanOfficerProfile, EmailHistoryItem } from '../types';
 import { INITIAL_AGENT_ROSTER, INITIAL_LEADS, INITIAL_TEAM_LOAN_OFFICERS } from '../data/initialData';
+import { OutreachHistoryBadge } from './OutreachHistoryBadge';
 
 interface EmailOutreachModalProps {
   isOpen: boolean;
@@ -17,6 +18,9 @@ interface EmailOutreachModalProps {
   leads?: CapturedLead[];
   loanOfficers?: LoanOfficerProfile[];
   initialSelectedLeadId?: string;
+  onLogOutreach?: (leadId: string, item: EmailHistoryItem) => void;
+  onUpdateLead?: (updatedLead: CapturedLead) => void;
+  onTriggerToast?: (msg: string) => void;
 }
 
 export interface MarketingFlyer {
@@ -257,7 +261,10 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   agentRoster,
   leads = INITIAL_LEADS,
   loanOfficers = INITIAL_TEAM_LOAN_OFFICERS,
-  initialSelectedLeadId
+  initialSelectedLeadId,
+  onLogOutreach,
+  onUpdateLead,
+  onTriggerToast
 }) => {
   const [templates, setTemplates] = useState<EmailTemplate[]>(() => {
     try {
@@ -862,6 +869,85 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       handleDownloadSelectedFlyers();
     }
 
+    // Log to emailHistory and outreach tracking
+    const activeTmpl = templates.find(t => t.id === activeTemplateId);
+    const resolvedTemplateName = activeTmpl?.title || activeTmpl?.name || editTitle || 'Outlook Outreach';
+
+    if (recipientTab === 'website_leads' && selectedLeadId) {
+      const lead = leads.find(l => l.id === selectedLeadId);
+      if (lead) {
+        const newHistoryItem: EmailHistoryItem = {
+          id: `eh-outlook-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          templateType: resolvedTemplateName,
+          subject: subjectText,
+          channel: 'outlook',
+          recipientEmail: to,
+          recipientName: lead.fullName,
+          sentBy: 'Mike Ford (Senior Mortgage Specialist)',
+          status: 'sent',
+          notes: `Outlook dispatch with ${selectedFlyerIds.length} attached flyer(s).`,
+          flyerNames: selectedFlyerIds.map(fid => flyers.find(f => f.id === fid)?.name).filter(Boolean) as string[]
+        };
+
+        if (onUpdateLead) {
+          const updatedLead: CapturedLead = {
+            ...lead,
+            lastEmailSentAt: new Date().toISOString(),
+            lastEmailTemplateName: resolvedTemplateName,
+            emailHistory: [...(lead.emailHistory || []), newHistoryItem],
+            outreachLogs: [
+              ...(lead.outreachLogs || []),
+              {
+                id: `ol-outlook-${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                channel: 'email',
+                templateName: resolvedTemplateName,
+                subject: subjectText,
+                recipientName: lead.fullName,
+                notes: `Dispatched via Outlook to ${to}`
+              }
+            ]
+          };
+          onUpdateLead(updatedLead);
+        }
+        onLogOutreach?.(lead.id, newHistoryItem);
+      }
+    } else if (agentRoster && selectedAgentEmails.length > 0) {
+      selectedAgentEmails.forEach(email => {
+        const ag = agentRoster.find(a => a.email === email);
+        if (ag) {
+          const newAgItem: EmailHistoryItem = {
+            id: `eh-ag-outlook-${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            templateType: resolvedTemplateName,
+            subject: subjectText,
+            channel: 'outlook',
+            recipientEmail: email,
+            recipientName: ag.name,
+            sentBy: 'Mike Ford (Senior Mortgage Specialist)',
+            status: 'sent',
+            notes: `Outlook agent partner dispatch.`
+          };
+          ag.emailHistory = [...(ag.emailHistory || []), newAgItem];
+          ag.outreachLogs = [
+            ...(ag.outreachLogs || []),
+            {
+              id: `ol-ag-outlook-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              channel: 'email',
+              templateName: resolvedTemplateName,
+              subject: subjectText,
+              recipientName: ag.name,
+              notes: `Dispatched via Outlook to ${email}`
+            }
+          ];
+        }
+      });
+    }
+
+    onTriggerToast?.(`📧 Outreach email launched in Outlook for ${to}`);
+
     // mailto URL protocol with pre-encoded subject line and body
     let mailtoLink = `mailto:${to}?subject=${encodedSubject}`;
     if (cc) mailtoLink += `&cc=${cc}`;
@@ -1094,8 +1180,11 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <span className="font-bold text-xs text-[#2D362E]">{lead.fullName}</span>
-                          <span className="text-[9px] font-bold bg-[#C18C5D]/15 text-[#C18C5D] px-1.5 py-0.5 rounded-md">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-bold text-xs text-[#2D362E] truncate">{lead.fullName}</span>
+                            <OutreachHistoryBadge lead={lead} compact={true} />
+                          </div>
+                          <span className="text-[9px] font-bold bg-[#C18C5D]/15 text-[#C18C5D] px-1.5 py-0.5 rounded-md shrink-0">
                             {lead.status || 'New Lead'}
                           </span>
                         </div>
@@ -1148,7 +1237,10 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1">
-                            <span className="font-semibold text-[#2D362E] truncate">{agent.name}</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-semibold text-[#2D362E] truncate">{agent.name}</span>
+                              <OutreachHistoryBadge agent={agent} compact={true} />
+                            </div>
                             <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full shrink-0">
                               Buyer Agent
                             </span>
@@ -1179,7 +1271,10 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1">
-                            <span className="font-semibold text-[#2D362E] truncate">{agent.agentName}</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-semibold text-[#2D362E] truncate">{agent.agentName}</span>
+                              <OutreachHistoryBadge agent={effectiveAgentRoster.find(a => a.email === agent.email || a.name === agent.agentName)} compact={true} />
+                            </div>
                             <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full shrink-0">
                               Listing Agent ({agent.properties.length} homes)
                             </span>

@@ -267,6 +267,40 @@ export interface LoanOfficerProfile {
   passwordResetPin?: string;
   lastLogin?: string;
   adSettings?: LoanOfficerAdSettings;
+  bigPurpleDotId?: string;
+  bigPurpleDotStatus?: 'synced' | 'pending' | 'error' | 'not_synced';
+  bigPurpleDotLastSynced?: string;
+  bigPurpleDotNotes?: string;
+  realTrendsVerified?: boolean;
+  realTrendsRank?: string;
+  realTrendsVolume?: number;
+  realTrendsUnits?: number;
+  realTrendsYear?: number;
+  emailHistory?: EmailHistoryItem[];
+}
+
+export interface EmailHistoryItem {
+  id: string;
+  timestamp: string;
+  templateType: string;
+  subject?: string;
+  channel?: 'portal_email' | 'gmail' | 'outlook' | 'nurture_auto' | 'custom' | 'sms';
+  recipientEmail?: string;
+  recipientName?: string;
+  sentBy?: string;
+  status?: 'sent' | 'delivered' | 'opened' | 'drafted';
+  notes?: string;
+  flyerNames?: string[];
+}
+
+export interface OutreachLog {
+  id: string;
+  timestamp: string;
+  channel: 'email' | 'sms' | 'system';
+  templateName: string;
+  subject?: string;
+  recipientName: string;
+  notes?: string;
 }
 
 export interface RealEstateAgentProfile {
@@ -297,6 +331,50 @@ export interface RealEstateAgentProfile {
   assignedLoIds?: string[];
   customSlug?: string;
   aiGenerated?: boolean;
+  outreachLogs?: OutreachLog[];
+  recruitmentStatus?: 'Not Contacted' | 'In Outreach' | 'Interested' | 'Meeting Scheduled' | 'Partner Active' | 'Declined';
+  bigPurpleDotId?: string;
+  bigPurpleDotStatus?: 'synced' | 'pending' | 'error' | 'not_synced';
+  bigPurpleDotLastSynced?: string;
+  bigPurpleDotNotes?: string;
+  realTrendsVerified?: boolean;
+  realTrendsRank?: string;
+  realTrendsSides?: number;
+  realTrendsVolume?: number;
+  realTrendsYear?: number;
+  realTrendsCategory?: string;
+  emailHistory?: EmailHistoryItem[];
+}
+
+export interface BigPurpleDotConfig {
+  apiKey: string;
+  apiSecret: string;
+  subdomain: string;
+  accountEmail: string;
+  webhookSecret: string;
+  environment: 'sandbox' | 'production';
+  autoSyncRecruits: boolean;
+  syncLoanOfficers: boolean;
+  syncRealEstateAgents: boolean;
+  syncDirection: 'bi_directional' | 'push_only' | 'pull_only';
+  lastSyncedAt?: string;
+  connectionStatus: 'not_configured' | 'connected' | 'error' | 'testing';
+  lastStatusMessage?: string;
+  loStageMapping?: Record<string, string>;
+  agentStageMapping?: Record<string, string>;
+  webhookEventsSubscribed?: string[];
+}
+
+export interface BigPurpleDotWebhookEvent {
+  id: string;
+  timestamp: string;
+  event: string;
+  status: 'received' | 'processed' | 'failed';
+  candidateName?: string;
+  candidateType?: 'loan_officer' | 'real_estate_agent' | 'lead';
+  source?: string;
+  payloadSummary?: string;
+  details?: any;
 }
 
 export interface LOPairing {
@@ -442,6 +520,8 @@ export interface CapturedLead {
   lastTextTemplateName?: string;
   smsMessages?: { id: string; direction: 'inbound' | 'outbound'; text: string; timestamp: string; attachmentUrl?: string; attachmentType?: 'flyer' | 'property_list' | 'link'; attachmentTitle?: string; status?: 'delivered' | 'sent' | 'read' }[];
   textNurtureLogs?: { id: string; stepNumber: number; templateName: string; messageText: string; sentAt: string; status: 'delivered' | 'scheduled' | 'sent' }[];
+  outreachLogs?: OutreachLog[];
+  emailHistory?: EmailHistoryItem[];
 }
 
 export interface RecruitingCampaignStep {
@@ -484,6 +564,8 @@ export interface ProfessionalGuidesState {
   leads?: CapturedLead[];
   syncedProperties?: PropertyListing[];
   smsTemplates?: SmsTemplate[];
+  bigPurpleDotConfig?: BigPurpleDotConfig;
+  bigPurpleDotEvents?: BigPurpleDotWebhookEvent[];
 }
 
 export interface ChatMessage {

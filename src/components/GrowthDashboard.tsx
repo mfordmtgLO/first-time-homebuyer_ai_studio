@@ -82,7 +82,7 @@ export const GrowthDashboard: React.FC<GrowthDashboardProps> = ({ guidesState })
       return acc;
     }, {} as Record<string, { name: string, leads: number, closed: number, monthIdx: number }>);
     
-    return Object.values(grouped).sort((a, b) => a.monthIdx - b.monthIdx);
+    return (Object.values(grouped) as { name: string, leads: number, closed: number, monthIdx: number }[]).sort((a, b) => a.monthIdx - b.monthIdx);
   }, [filteredLeads]);
 
   // Calculate Source Distribution

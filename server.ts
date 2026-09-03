@@ -55,7 +55,7 @@ async function startServer() {
   });
 
   // Internal endpoint for the React frontend to poll and clear the queue
-  app.get('/api/webhook/leads/poll', (req, res) => {
+  app.get('/api/data/sync/poll', (req, res) => {
     res.json({ leads: webhookLeadsQueue });
     webhookLeadsQueue = []; // clear after fetching
   });

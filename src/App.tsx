@@ -260,17 +260,25 @@ export default function App() {
     return unsub;
   }, []);
 
-  const handleUpdateGuidesState = (newState: ProfessionalGuidesState) => {
-    setGuidesState(newState);
-    // Push updates to Firebase cloud so all visitors see the updated headshot and details instantly!
-    setDoc(doc(db, "guides_state", "singleton"), newState).catch(console.error);
+  const handleUpdateGuidesState = (newState: ProfessionalGuidesState | ((prev: ProfessionalGuidesState) => ProfessionalGuidesState)) => {
+    if (typeof newState === 'function') {
+      setGuidesState(prev => {
+        const computedState = newState(prev);
+        setDoc(doc(db, "guides_state", "singleton"), computedState).catch(console.error);
+        return computedState;
+      });
+    } else {
+      setGuidesState(newState);
+      // Push updates to Firebase cloud so all visitors see the updated headshot and details instantly!
+      setDoc(doc(db, "guides_state", "singleton"), newState).catch(console.error);
+    }
   };
 
   // Poll for 3rd Party Webhook Leads
   useEffect(() => {
     const pollWebhookLeads = async () => {
       try {
-        const res = await fetch("/api/webhook/leads/poll");
+        const res = await fetch("/api/data/sync/poll");
         if (res.ok) {
           const data = await res.json();
           if (data.leads && data.leads.length > 0) {

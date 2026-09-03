@@ -651,45 +651,63 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
               </span>
             </div>
 
-            <div className="bg-[#FAF9F5] rounded-2xl p-3.5 border border-[#EAE7E0] space-y-3">
+            <div className="bg-[#FAF9F5] rounded-2xl p-2 border border-[#EAE7E0] space-y-1">
               {pipelineType === "loan_officers" ? (
-                <ul className="space-y-2.5">
+                <div className="space-y-1">
                   {recruitmentLos.filter(l => l.recruitmentStatus === 'Not Contacted').slice(0, 2).map(lo => (
-                    <li key={lo.id} className="flex items-start gap-2 text-xs">
+                    <button 
+                      key={lo.id}
+                      onClick={() => openLoOutreach(lo)}
+                      className="w-full text-left flex items-start gap-2 text-xs p-2 rounded-xl hover:bg-white border border-transparent hover:border-[#EAE7E0] transition-colors cursor-pointer group shadow-none hover:shadow-xs"
+                    >
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                      <div>
-                        <p className="font-semibold text-[#2D362E]">{lo.name}</p>
-                        <p className="text-[10px] text-[#606C5D]">High producer • {lo.company}</p>
+                      <div className="flex-1">
+                        <p className="font-semibold text-[#2D362E] group-hover:text-[#C18C5D] transition-colors">Draft Outreach: {lo.name}</p>
+                        <p className="text-[10px] text-[#606C5D] truncate max-w-[180px]">High producer • {lo.company}</p>
                       </div>
-                    </li>
+                      <Mail className="w-3.5 h-3.5 text-[#C18C5D] opacity-40 group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" />
+                    </button>
                   ))}
-                  <li className="flex items-start gap-2 text-xs">
+                  <button 
+                    onClick={() => setShowBpdModal(true)}
+                    className="w-full text-left flex items-start gap-2 text-xs p-2 rounded-xl hover:bg-white border border-transparent hover:border-[#EAE7E0] transition-colors cursor-pointer group shadow-none hover:shadow-xs"
+                  >
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
-                    <div>
-                      <p className="font-semibold text-[#2D362E]">Big Purple Dot Webhook Active</p>
-                      <p className="text-[10px] text-[#606C5D]">Automated SMS drip trigger armed</p>
+                    <div className="flex-1">
+                      <p className="font-semibold text-[#2D362E] group-hover:text-purple-700 transition-colors">Review Integration</p>
+                      <p className="text-[10px] text-[#606C5D]">Big Purple Dot Sync Settings</p>
                     </div>
-                  </li>
-                </ul>
+                    <Settings className="w-3.5 h-3.5 text-purple-500 opacity-40 group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" />
+                  </button>
+                </div>
               ) : (
-                <ul className="space-y-2.5">
+                <div className="space-y-1">
                   {agentPartners.filter(a => !a.recruitmentStatus || a.recruitmentStatus === 'Not Contacted').slice(0, 2).map(ag => (
-                    <li key={ag.id} className="flex items-start gap-2 text-xs">
+                    <button 
+                      key={ag.id}
+                      onClick={() => openAgentOutreach(ag)}
+                      className="w-full text-left flex items-start gap-2 text-xs p-2 rounded-xl hover:bg-white border border-transparent hover:border-[#EAE7E0] transition-colors cursor-pointer group shadow-none hover:shadow-xs"
+                    >
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                      <div>
-                        <p className="font-semibold text-[#2D362E]">Invite {ag.name}</p>
-                        <p className="text-[10px] text-[#606C5D]">{ag.brokerage} • Co-brand portal</p>
+                      <div className="flex-1">
+                        <p className="font-semibold text-[#2D362E] group-hover:text-[#4A5D4E] transition-colors">Invite {ag.name}</p>
+                        <p className="text-[10px] text-[#606C5D] truncate max-w-[180px]">{ag.brokerage} • Co-brand portal</p>
                       </div>
-                    </li>
+                      <Mail className="w-3.5 h-3.5 text-[#4A5D4E] opacity-40 group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" />
+                    </button>
                   ))}
-                  <li className="flex items-start gap-2 text-xs">
+                  <button 
+                    onClick={() => setShowBpdModal(true)}
+                    className="w-full text-left flex items-start gap-2 text-xs p-2 rounded-xl hover:bg-white border border-transparent hover:border-[#EAE7E0] transition-colors cursor-pointer group shadow-none hover:shadow-xs"
+                  >
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
-                    <div>
-                      <p className="font-semibold text-[#2D362E]">BPD Partner Tag: ACTIVE</p>
+                    <div className="flex-1">
+                      <p className="font-semibold text-[#2D362E] group-hover:text-purple-700 transition-colors">Review Integration</p>
                       <p className="text-[10px] text-[#606C5D]">Auto-syncs new Realtor recruits</p>
                     </div>
-                  </li>
-                </ul>
+                    <Settings className="w-3.5 h-3.5 text-purple-500 opacity-40 group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" />
+                  </button>
+                </div>
               )}
             </div>
           </div>

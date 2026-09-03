@@ -1,3 +1,4 @@
+import { HeadshotAvatar } from "./HeadshotAvatar";
 import React, { useState } from "react";
 import { 
   Inbox, 
@@ -81,6 +82,7 @@ interface LoanOfficerSidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   currentLo: LoanOfficerProfile;
+  loggedInUser: LoanOfficerProfile;
   guidesState: ProfessionalGuidesState;
   isAdminUser: boolean;
   onOpenDailyReview: () => void;
@@ -93,6 +95,7 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
   isCollapsed,
   onToggleCollapse,
   currentLo,
+  loggedInUser,
   guidesState,
   isAdminUser,
   onOpenDailyReview,
@@ -308,7 +311,7 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
 
   return (
     <aside 
-      className={`relative shrink-0 flex flex-col bg-[#FDFBF7] border-r border-[#EAE7E0] transition-all duration-300 z-30 select-none ${
+      className={`sticky top-[65px] h-[calc(100vh-65px)] shrink-0 flex flex-col bg-[#FDFBF7] border-r border-[#EAE7E0] transition-all duration-300 z-30 select-none ${
         isCollapsed ? "w-[68px]" : "w-64 lg:w-72"
       }`}
       aria-label="Loan Officer Portal Navigation"
@@ -449,15 +452,15 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
 
       {/* 3. BOTTOM FOOTER BAR: USER PROFILE */}
       <div className={`p-2.5 border-t border-[#EAE7E0] bg-white flex items-center ${isCollapsed ? "justify-center" : "gap-2"}`}>
-        <img
-          src={currentLo.avatarUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256"}
-          alt={currentLo.name}
-          className="w-7 h-7 rounded-xl object-cover border border-[#EAE7E0] shrink-0"
+        <HeadshotAvatar
+          src={loggedInUser?.headshotUrl || (loggedInUser as any)?.avatarUrl || currentLo.headshotUrl || (currentLo as any)?.avatarUrl}
+          name={loggedInUser?.name || currentLo.name || "Loan Officer"}
+          className="w-7 h-7 rounded-xl shadow-sm shrink-0"
         />
         {!isCollapsed && (
           <div className="min-w-0 flex-1">
             <p className="font-bold text-xs text-[#2D362E] truncate">
-              {currentLo.name}
+              {loggedInUser?.name || currentLo.name}
             </p>
             <p className="text-[10px] text-[#7D8877] truncate">
               {isAdminUser ? "Branch Manager" : "Loan Officer"}

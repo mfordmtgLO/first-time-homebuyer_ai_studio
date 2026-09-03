@@ -1473,9 +1473,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Brand & Logged-In User Badge */}
           <div className="flex items-center gap-3.5 flex-wrap">
-            <div className="w-10 h-10 rounded-2xl bg-[#4A5D4E] text-white flex items-center justify-center font-serif font-bold text-lg shadow-sm shrink-0">
-              M
-            </div>
+            <HeadshotAvatar
+              src={loggedInUser?.headshotUrl || (loggedInUser as any)?.avatarUrl || currentLo?.headshotUrl || (currentLo as any)?.avatarUrl}
+              name={loggedInUser?.name || currentLo?.name || "Mike Ford"}
+              className="w-10 h-10 rounded-2xl border border-[#EAE7E0] shadow-sm shrink-0"
+            />
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-serif font-bold text-base sm:text-lg text-[#2D362E]">
@@ -2118,6 +2120,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             });
           }}
           currentLo={currentLo}
+          loggedInUser={loggedInUser}
           guidesState={guidesState}
           isAdminUser={isAdminUser}
           onOpenDailyReview={handleOpenDailyReview}

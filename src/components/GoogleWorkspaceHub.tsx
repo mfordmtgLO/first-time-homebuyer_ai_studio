@@ -44,24 +44,42 @@ import {
 import { formatUSD } from "../utils/mortgageMath";
 import { OutreachLog } from "../types";
 import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
+import { HeadshotAvatar } from "./HeadshotAvatar";
 
 interface GoogleWorkspaceHubProps {
   currentLo: LoanOfficerProfile;
+  loggedInUser?: LoanOfficerProfile;
   guidesState: ProfessionalGuidesState;
   onUpdateGuidesState: (newState: ProfessionalGuidesState) => void;
   selectedLeadId?: string;
+  onTriggerToast?: (msg: string) => void;
 }
 
 export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
   currentLo,
+  loggedInUser,
   guidesState,
   onUpdateGuidesState,
-  selectedLeadId
+  selectedLeadId,
+  onTriggerToast
 }) => {
   const [workspaceUser, setWorkspaceUser] = useState<GoogleWorkspaceUser | null>(googleWorkspace.getUser());
   const [isConnecting, setIsConnecting] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<"overview" | "calendar" | "gmail" | "docs" | "sheets" | "tasks" | "drive" | "contacts">("overview");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const activeUser = loggedInUser || currentLo;
+
+  const isUnsplashStockPhoto = (url?: string) => {
+    if (!url) return false;
+    return url.includes("unsplash.com") || url.includes("images.unsplash") || url.includes("placeholder") || url.includes("photo-1560250097") || url.includes("photo-1534528741775");
+  };
+
+  const resolvedHeadshot = (
+    activeUser?.headshotUrl ||
+    (activeUser as any)?.avatarUrl ||
+    (workspaceUser?.picture && !isUnsplashStockPhoto(workspaceUser.picture) ? workspaceUser.picture : "/mike-ford-headshot.jpg")
+  );
 
   // Manual Token / Client ID Input
   const [manualTokenInput, setManualTokenInput] = useState("");
@@ -205,8 +223,8 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
     } catch (err: any) {
       console.error("Workspace connection error:", err);
       // If popup was blocked or demo environment, fallback to quick active session
-      googleWorkspace.setAccessToken("workspace_active_" + Date.now(), 86400, "fordmj@gmail.com", currentLo.name);
-      triggerToast(`✅ Google Workspace activated for ${currentLo.name}!`);
+      googleWorkspace.setAccessToken("workspace_active_" + Date.now(), 86400, "fordmj@gmail.com", activeUser.name, resolvedHeadshot);
+      triggerToast(`✅ Google Workspace activated for ${activeUser.name}!`);
     } finally {
       setIsConnecting(false);
     }
@@ -215,7 +233,7 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
   const handleApplyManualToken = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualTokenInput.trim()) return;
-    googleWorkspace.setAccessToken(manualTokenInput.trim(), 86400, "fordmj@gmail.com", currentLo.name);
+    googleWorkspace.setAccessToken(manualTokenInput.trim(), 86400, "fordmj@gmail.com", activeUser.name, resolvedHeadshot);
     setShowManualInput(false);
     setManualTokenInput("");
     triggerToast(`✅ Google Workspace credentials applied!`);
@@ -810,14 +828,14 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
             {workspaceUser ? (
               <div className="p-4 bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] space-y-3">
                 <div className="flex items-center gap-3">
-                  <img
-                    src={workspaceUser.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"}
-                    alt={workspaceUser.name}
+                  <HeadshotAvatar
+                    src={resolvedHeadshot}
+                    name={activeUser?.name || workspaceUser.name || "Mike Ford"}
                     className="w-11 h-11 rounded-2xl object-cover border border-[#DCD7CD]"
                   />
                   <div>
-                    <span className="font-bold text-xs text-[#2D362E] block">{workspaceUser.name}</span>
-                    <span className="text-[11px] text-[#606C5D] block">{workspaceUser.email}</span>
+                    <span className="font-bold text-xs text-[#2D362E] block">{workspaceUser.name || activeUser?.name}</span>
+                    <span className="text-[11px] text-[#606C5D] block">{workspaceUser.email || activeUser?.email}</span>
                     <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       <span>Authorized for Google Docs & Suite</span>

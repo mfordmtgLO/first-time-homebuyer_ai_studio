@@ -537,9 +537,9 @@ export default function App() {
       )}
 
       {/* Scrollable Content Area (Flex 1) */}
-      <div className={`flex-1 w-full ${showLoPortal ? 'flex flex-col overflow-hidden relative' : 'overflow-y-auto overflow-x-hidden flex flex-col relative scroll-smooth'}`}>
+      <div className="flex-1 w-full overflow-y-auto overflow-x-hidden flex flex-col relative scroll-smooth">
         {/* Main Layout Wrapper */}
-      <div className={showLoPortal ? "flex-1 w-full flex flex-col" : "flex-1 w-full max-w-[1700px] mx-auto flex transition-all duration-300"}>
+      <div className={showLoPortal ? "flex-1 w-full" : "flex-1 w-full max-w-[1700px] mx-auto flex transition-all duration-300"}>
         {/* Desktop Only: Left Sidebar for Step Navigation & Tools Hub */}
         {!showLoPortal && (
           <aside 
@@ -570,7 +570,7 @@ export default function App() {
         )}
 
         {/* Main Content Area: Expands & shrinks dynamically to match sidebar state */}
-        <main className={showLoPortal ? "flex-1 w-full p-0 m-0 flex flex-col min-h-0" : "flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 pb-8 transition-all duration-300 ease-in-out"}>
+        <main className={showLoPortal ? "flex-1 w-full p-0 m-0" : "flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 pb-8 transition-all duration-300 ease-in-out"}>
           {/* LOAN OFFICER PORTAL VIEW */}
           {showLoPortal ? (
           <LoanOfficerPortal

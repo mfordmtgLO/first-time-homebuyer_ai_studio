@@ -1,9 +1,27 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/components/LoanOfficerSidebar.tsx', 'utf8');
+let content = fs.readFileSync('src/App.tsx', 'utf8');
 
-code = code.replace(
-  /className=\{\`sticky top-\[65px\] h-\[calc\(100vh-65px\)\] shrink-0 flex flex-col bg-\[#FDFBF7\] border-r border-\[#EAE7E0\] transition-all duration-300 z-30 select-none \$\{/,
-  'className={`h-full overflow-y-auto shrink-0 flex flex-col bg-[#FDFBF7] border-r border-[#EAE7E0] transition-all duration-300 z-30 select-none ${'
-);
+const sidebarTarget = `          <aside 
+            className="hidden lg:block w-72 shrink-0 py-8 pr-8"
+            style={{ 
+              position: 'sticky', 
+              top: \`\${headerHeight}px\`, 
+              height: \`calc(100vh - \${headerHeight}px)\` 
+            }}
+          >`;
 
-fs.writeFileSync('src/components/LoanOfficerSidebar.tsx', code);
+const sidebarReplace = `          <aside 
+            className="hidden lg:block w-72 shrink-0 py-8 pr-8"
+            style={{ 
+              position: 'sticky', 
+              top: '0px', 
+              height: '100%',
+              maxHeight: '100%' 
+            }}
+          >`;
+
+if (content.includes(sidebarTarget)) {
+  content = content.replace(sidebarTarget, sidebarReplace);
+}
+
+fs.writeFileSync('src/App.tsx', content);

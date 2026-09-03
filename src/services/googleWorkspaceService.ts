@@ -161,6 +161,13 @@ class GoogleWorkspaceService {
       if (stored) {
         const parsed = JSON.parse(stored) as GoogleWorkspaceUser;
         if (parsed.expiresAt > Date.now()) {
+          // If stored picture is a legacy stock photo, sanitize with genuine profile headshot
+          if (parsed.picture && (parsed.picture.includes("unsplash.com") || parsed.picture.includes("photo-1560250097") || parsed.picture.includes("photo-1534528741775"))) {
+            parsed.picture = "/mike-ford-headshot.jpg";
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+            } catch {}
+          }
           this.user = parsed;
         } else {
           // Token expired
@@ -202,9 +209,9 @@ class GoogleWorkspaceService {
     const newUser: GoogleWorkspaceUser = {
       accessToken,
       expiresAt: Date.now() + (expiresInSeconds * 1000),
-      email: email || "loanofficer@workspace.google.com",
-      name: name || "Mortgage Advisor",
-      picture: picture || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256",
+      email: email || "fordmj@gmail.com",
+      name: name || "Mike Ford",
+      picture: picture || "/mike-ford-headshot.jpg",
       scopes: ALL_WORKSPACE_SCOPES
     };
 
@@ -216,7 +223,7 @@ class GoogleWorkspaceService {
           ...newUser,
           email: info.email || newUser.email,
           name: info.name || newUser.name,
-          picture: info.picture || newUser.picture
+          picture: info.picture && !info.picture.includes("unsplash.com") ? info.picture : newUser.picture
         });
       }
     }).catch(() => {});
@@ -250,8 +257,8 @@ class GoogleWorkspaceService {
           accessToken: "mock_workspace_token_" + Date.now(),
           expiresAt: Date.now() + 3600 * 1000 * 24, // 24 hours
           email: "fordmj@gmail.com",
-          name: "Mike Ford (Workspace Active)",
-          picture: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
+          name: "Mike Ford",
+          picture: "/mike-ford-headshot.jpg",
           scopes: ALL_WORKSPACE_SCOPES
         };
         this.saveToStorage(mockUser);
@@ -275,7 +282,7 @@ class GoogleWorkspaceService {
                 expiresAt: Date.now() + expiresIn * 1000,
                 email: profile?.email || "fordmj@gmail.com",
                 name: profile?.name || "Mike Ford",
-                picture: profile?.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
+                picture: profile?.picture && !profile.picture.includes("unsplash.com") ? profile.picture : "/mike-ford-headshot.jpg",
                 scopes: ALL_WORKSPACE_SCOPES
               };
               this.saveToStorage(userObj);

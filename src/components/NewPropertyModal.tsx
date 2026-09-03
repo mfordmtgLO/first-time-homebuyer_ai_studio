@@ -31,7 +31,7 @@ export const NewPropertyModal: React.FC<NewPropertyModalProps> = ({
   
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
+      const filesArray = Array.from(e.target.files) as File[];
       const newImages: string[] = [];
       filesArray.forEach(file => {
         const reader = new FileReader();

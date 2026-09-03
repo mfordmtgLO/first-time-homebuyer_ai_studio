@@ -529,7 +529,7 @@ export const GrowthDashboard: React.FC<GrowthDashboardProps> = ({ guidesState })
               className="flex items-center gap-2 bg-[#C18C5D] hover:bg-[#A8794D] text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
             >
               {isGeneratingPDF ? <Activity className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              {isGeneratingPDF ? "Generating..." : "Download PDF Report"}
+              {isGeneratingPDF ? "Generating..." : "Save PDF"}
             </button>
           </div>
         </div>

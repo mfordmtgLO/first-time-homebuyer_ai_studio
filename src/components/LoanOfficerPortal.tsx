@@ -216,7 +216,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       let completedTasks: string[] = [];
       let pendingTasks: string[] = [];
       try {
-        const savedTasks = localStorage.getItem(`lo_daily_tasks_${todayStr}`);
+        const storageKey = `lo_daily_tasks_${currentLo.id}_${todayStr}`;
+        const savedTasks = localStorage.getItem(storageKey);
         if (savedTasks) {
           const parsed = JSON.parse(savedTasks);
           completedTasks = parsed.filter((t: any) => t.completed).map((t: any) => t.title);

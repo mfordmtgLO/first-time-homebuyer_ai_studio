@@ -741,6 +741,7 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
 
     try {
       const prompt = `You are the executive AI Production Coach & Focus/Flow Instructor for mortgage loan officer ${loProfile?.name || "Mike Ford"}.
+
 Time Phase: ${timePhase || "morning"}
 Current Time: ${currentTimeString || "10:00 AM"}
 Role: ${isAdmin ? "Branch Manager & Producing Loan Officer" : "Producing Loan Officer"}
@@ -752,9 +753,9 @@ Provide an immediate, inspiring, and actionable Daily Review in valid JSON with 
 - "headline": Short punchy review headline including time phase and time
 - "motivationalBadge": Brief high-energy cheer (e.g. "Ahead of schedule — fantastic mid-day pace!" or "Crushing your morning kickoff!")
 - "whatDoneSummary": 1-2 sentence objective recap of what has been accomplished so far today across the dashboard
-- "topPriorities": Array of exactly 3 realistic, high-leverage tasks to still accomplish before end of shift (aware of time of day and realistic bandwidth)
+- "topPriorities": Array of exactly 3 realistic, high-leverage tasks to still accomplish before end of shift (aware of time of day and realistic bandwidth). ${isAdmin ? 'As a Branch Manager, you may include loan officer recruiting and team management tasks.' : 'CRITICAL: You are a Producing Loan Officer, NOT a manager. You MUST NOT include any loan officer recruiting, candidate follow-up, or team management tasks in your priorities.'}
 - "coachingQuote": 1 brief, punchy coaching insight
-- "nextActionRecommendation": Object with "tabId" (one of: "leads", "scenario_workbench", "realtor_cobranding", "recruitment_pipeline", "buydown_2_1", "growth_dashboard"), "actionTitle", and "actionReason"`;
+- "nextActionRecommendation": Object with "tabId" (one of: "leads", "scenario_workbench", "realtor_cobranding"${isAdmin ? ', "recruitment_pipeline", "growth_dashboard"' : ''}, "buydown_2_1"), "actionTitle", and "actionReason"`;
 
       const response = await generateWithModelFallback({
         preferredModel: "gemini-3.7-flash",

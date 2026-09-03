@@ -180,7 +180,7 @@ ${currentLo?.name || "Mike Ford"} | ${currentLo?.company || "Mortgage Advisory G
               className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print Client Presentation</span>
+              <span>Save PDF</span>
             </button>
 
             <button

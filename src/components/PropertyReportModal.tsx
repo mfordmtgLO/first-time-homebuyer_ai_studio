@@ -109,7 +109,7 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
       pdf.save(`FirstHome-Property-Tour-Report-${new Date().toISOString().split("T")[0]}.pdf`);
     } catch (err) {
       console.error("Failed to generate PDF", err);
-      alert("An error occurred while generating the PDF. Please try printing to PDF using the Print button.");
+      alert("An error occurred while generating the PDF. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -208,7 +208,7 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
             <div>
               <h3 className="font-bold text-base text-white">Property & Tour Scorecard PDF Report</h3>
               <p className="text-xs text-white/80">
-                Print or download a formatted property audit report ({properties.length} {properties.length === 1 ? 'property' : 'properties'})
+                Save a formatted property audit report ({properties.length} {properties.length === 1 ? 'property' : 'properties'})
               </p>
             </div>
           </div>
@@ -223,20 +223,12 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
               <span className="hidden sm:inline">CSV</span>
             </button>
             <button
-              onClick={handlePrint}
-              className="px-3.5 py-1.5 bg-[#C18C5D] hover:bg-[#A87447] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-sm"
-              title="Print document or save as vector PDF"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print / Save PDF</span>
-            </button>
-            <button
               onClick={handleDownloadPDF}
               disabled={isExporting}
               className="px-3.5 py-1.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
             >
               <FileDown className="w-3.5 h-3.5" />
-              <span>{isExporting ? "Exporting..." : "Download .PDF"}</span>
+              <span>{isExporting ? "Exporting..." : "Save PDF"}</span>
             </button>
             <button
               onClick={onClose}
@@ -597,23 +589,16 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
         {/* Modal Footer Controls */}
         <div className="bg-white p-4 border-t border-[#EAE7E0] flex items-center justify-between shrink-0 no-print">
           <span className="text-xs text-[#606C5D]">
-            {properties.length} {properties.length === 1 ? 'property' : 'properties'} ready for print or PDF download
+            {properties.length} {properties.length === 1 ? 'property' : 'properties'} ready for PDF download
           </span>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrint}
-              className="px-4 py-2 bg-[#C18C5D] hover:bg-[#A87447] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-sm"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print / Save PDF</span>
-            </button>
             <button
               onClick={handleDownloadPDF}
               disabled={isExporting}
               className="px-4 py-2 bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
             >
               <FileDown className="w-4 h-4" />
-              <span>{isExporting ? "Exporting..." : "Download .PDF"}</span>
+              <span>{isExporting ? "Exporting..." : "Save PDF"}</span>
             </button>
           </div>
         </div>

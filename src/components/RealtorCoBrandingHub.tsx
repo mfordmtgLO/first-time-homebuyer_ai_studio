@@ -487,7 +487,7 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
                 className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>Print PDF</span>
+                <span>Save PDF</span>
               </button>
             </div>
 

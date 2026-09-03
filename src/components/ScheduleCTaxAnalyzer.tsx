@@ -228,7 +228,7 @@ export const ScheduleCTaxAnalyzer: React.FC<ScheduleCTaxAnalyzerProps> = ({
               className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer shadow-xs"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print Form 1084 Worksheet</span>
+              <span>Save PDF</span>
             </button>
           </div>
         </div>

@@ -384,10 +384,10 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             <button
               onClick={() => setShowPdfReportModal(true)}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#4A5D4E] text-white hover:bg-[#38463B] font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105"
-              title="Generate printable PDF property audit & tour scorecard report"
+              title="Save printable PDF property audit & tour scorecard report"
             >
               <FileDown className="w-4 h-4 text-emerald-300" />
-              <span>Generate PDF Report {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
+              <span>Save PDF {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
             </button>
             {compareIds.length > 1 && (
               <button
@@ -589,10 +589,10 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               <button
                 onClick={() => setShowPdfReportModal(true)}
                 className="flex items-center gap-1.5 px-3 py-1 bg-[#4A5D4E] text-white hover:bg-[#38463B] font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer"
-                title="Generate PDF report for selected properties"
+                title="Save PDF report for selected properties"
               >
                 <FileDown className="w-3.5 h-3.5 text-emerald-300" />
-                <span>Generate PDF Report ({selectedPropertyIds.length})</span>
+                <span>Save PDF ({selectedPropertyIds.length})</span>
               </button>
               <button
                 onClick={handleExportCSV}

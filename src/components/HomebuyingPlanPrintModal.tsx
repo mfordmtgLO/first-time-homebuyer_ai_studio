@@ -182,10 +182,10 @@ export const HomebuyingPlanPrintModal: React.FC<HomebuyingPlanPrintModalProps> =
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-bold font-serif text-[#2D362E]">
-                Print Homebuying Plan & Property Notes
+                Save Homebuying Plan & Property Notes
               </h2>
               <p className="text-xs text-[#606C5D]">
-                Generate a clean, high-contrast printable document or PDF dossier.
+                Generate a clean, high-contrast PDF document.
               </p>
             </div>
           </div>
@@ -199,15 +199,6 @@ export const HomebuyingPlanPrintModal: React.FC<HomebuyingPlanPrintModalProps> =
             >
               <Mail className="w-4 h-4 text-[#4A5D4E]" />
               <span>Email Plan</span>
-            </button>
-
-            <button
-              onClick={handlePrint}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer"
-              title="Open browser print dialog (works with Print to PDF or direct paper print)"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print Plan & Notes</span>
             </button>
 
             <button

@@ -123,10 +123,10 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
             <button
               onClick={() => setIsPrintModalOpen(true)}
               className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#4A5D4E] hover:bg-[#38463B] px-3.5 py-1.5 rounded-lg shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
-              title="Print your customized Homebuying Plan, Milestones & Property Notes"
+              title="Save your customized Homebuying Plan, Milestones & Property Notes as PDF"
             >
               <Printer className="w-3.5 h-3.5 text-[#D4A373]" />
-              <span>Print Plan & Notes</span>
+              <span>Save PDF</span>
             </button>
             <button
               onClick={() => onNavigate("dashboard", "dashboard")}

@@ -307,6 +307,7 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
     >
       {/* 1. STICKY TOP: AI DAILY RHYTHM CARD ("Focus & Flow" Instructor) */}
       <AIDailyRhythmCard
+        key={currentLo.id}
         isSidebarCollapsed={isCollapsed}
         currentLo={currentLo}
         leads={guidesState.leads || []}

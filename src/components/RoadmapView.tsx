@@ -251,10 +251,10 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
             <button
               onClick={() => setIsPrintModalOpen(true)}
               className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs shadow-xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
-              title="Print your customized Homebuying Plan, Milestones & Property Field Notes"
+              title="Save your customized Homebuying Plan, Milestones & Property Field Notes as PDF"
             >
               <Printer className="w-4 h-4 text-[#D4A373]" />
-              <span>Print Plan & Notes</span>
+              <span>Save PDF</span>
             </button>
 
             {/* Overall Readiness Pill */}

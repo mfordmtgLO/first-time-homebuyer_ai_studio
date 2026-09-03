@@ -77,11 +77,12 @@ export const AIDailyRhythmCard: React.FC<AIDailyRhythmCardProps> = ({
 
   const timePhase = getTimePhase();
   const todayStr = currentTime.toISOString().split("T")[0];
+  const storageKey = `lo_daily_tasks_${currentLo.id}_${todayStr}`;
 
   // Daily Tasks State with LocalStorage Persistence
   const [tasks, setTasks] = useState<DailyTaskItem[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(`lo_daily_tasks_${todayStr}`);
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         try {
           return JSON.parse(saved);
@@ -154,9 +155,9 @@ export const AIDailyRhythmCard: React.FC<AIDailyRhythmCardProps> = ({
   // Persist tasks
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem(`lo_daily_tasks_${todayStr}`, JSON.stringify(tasks));
+      localStorage.setItem(storageKey, JSON.stringify(tasks));
     }
-  }, [tasks, todayStr]);
+  }, [tasks, storageKey]);
 
   const toggleTask = (id: string) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));

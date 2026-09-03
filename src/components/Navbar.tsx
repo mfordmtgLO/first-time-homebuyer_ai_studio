@@ -184,7 +184,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="w-full bg-white/95 backdrop-blur-md border-b border-[#EAE7E0] text-[#2D362E]">
       {/* Top micro-banner for dashboard users / public roadmap orientation for website visitors */}
-      <div className="bg-[#F1EFE9] px-3 sm:px-6 py-1.5 text-xs text-[#606C5D] border-b border-[#EAE7E0] relative z-50">
+      <div className="hidden md:block bg-[#F1EFE9] px-3 sm:px-6 py-1.5 text-xs text-[#606C5D] border-b border-[#EAE7E0] relative z-50">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           
           {/* Left section: Arrow Trend + Horizon Selection + 1-Year Benchmark Match */}
@@ -439,11 +439,11 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Main Header Brand & Value Proposition Line (Moved to its own dedicated centered row) */}
-      <div className="border-b border-[#EAE7E0] bg-[#FAF9F5]/70 py-3 sm:py-4 px-3 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col items-center text-center relative">
+      <div className="border-b border-[#EAE7E0] bg-[#FAF9F5]/70 py-2.5 md:py-4 px-3 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col items-start md:items-center text-left md:text-center relative">
           
           {/* Top Pill / Trust Hook for Renters */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAE7E0]/80 border border-[#DCD7CD] text-[11px] sm:text-xs font-bold text-[#4A5D4E] mb-1.5 shadow-2xs">
+          <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAE7E0]/80 border border-[#DCD7CD] text-[11px] sm:text-xs font-bold text-[#4A5D4E] mb-1.5 shadow-2xs">
             <Sparkles className="w-3.5 h-3.5 text-[#C18C5D] animate-pulse" />
             <span className="font-extrabold uppercase tracking-wider text-[#C18C5D]">Stop Paying Rent</span>
             <span className="text-[#606C5D]">•</span>
@@ -460,25 +460,26 @@ export const Navbar: React.FC<NavbarProps> = ({
               setMobileMenuOpen(false);
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
-            className="group inline-flex items-center justify-center gap-2.5 sm:gap-3 cursor-pointer focus:outline-none transition-transform hover:scale-[1.01]"
+            className="group inline-flex items-center justify-start md:justify-center gap-2 md:gap-3 cursor-pointer focus:outline-none transition-transform hover:scale-[1.01]"
             title="Return to First-Time Homebuyer Roadmap Overview"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#4A5D4E] rounded-2xl flex items-center justify-center text-white font-bold shadow-sm group-hover:bg-[#38463B] transition-colors shrink-0">
-              <Compass className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:rotate-45 transition-transform duration-300" />
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-[#4A5D4E] rounded-2xl flex items-center justify-center text-white font-bold shadow-sm group-hover:bg-[#38463B] transition-colors shrink-0">
+              <Compass className="w-4 h-4 md:w-6 md:h-6 text-white group-hover:rotate-45 transition-transform duration-300" />
             </div>
-
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-black tracking-tight text-[#2D362E] drop-shadow-2xs">
-              First-Time Homebuyer <span className="text-[#4A5D4E] font-serif">Roadmap</span>
+            <h1 className="text-xl md:text-3xl lg:text-4xl font-serif font-black tracking-tight text-[#2D362E] drop-shadow-2xs text-left md:text-center leading-tight">
+              First-Time <span className="hidden sm:inline">Homebuyer</span><br className="sm:hidden" />
+              <span className="sm:hidden text-[#4A5D4E] font-serif"> Homebuyer Roadmap</span>
+              <span className="hidden sm:inline text-[#4A5D4E] font-serif">Roadmap</span>
             </h1>
           </button>
 
           {/* Renter Conversion Subtitle: Clear Purpose & Actionable Excitement */}
-          <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm md:text-base text-[#606C5D] max-w-3xl font-medium leading-relaxed px-2">
+          <p className="mt-1.5 hidden md:block text-xs sm:text-sm md:text-base text-[#606C5D] max-w-3xl font-medium leading-relaxed px-2">
             Calculate your true buying power, check verified Down Payment Assistance (DPA), and model prequal scenarios across <strong className="text-[#2D362E] font-bold">Steps 1–4</strong> with zero guesswork.
           </p>
 
           {/* Quick Renter Trust Chips */}
-          <div className="mt-2 hidden sm:flex items-center justify-center gap-3 sm:gap-5 text-[11px] font-semibold text-[#606C5D]">
+          <div className="mt-2 hidden md:flex items-center justify-center gap-3 sm:gap-5 text-[11px] font-semibold text-[#606C5D]">
             <span className="flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
               100% Free & Transparent

@@ -12,7 +12,7 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: "10mb" }));
+  app.use(express.json({ limit: "50mb" }));
 
   // In-memory queue for 3rd party webhook leads
   let webhookLeadsQueue: any[] = [];
@@ -69,6 +69,7 @@ Core Guidelines:
 3. Compliance & Privacy: Emphasize compliance and ensure safe document discussion.
 4. Spatial Analytics: You understand LMI (Low-to-Moderate Income) Census Tracts, down payment assistance programs, and geographically targeted zero-down loan programs.
 5. Expert Escalation: For highly complex structuring, final commitments, or nuanced scenarios, ALWAYS advise the user to consult Mike Ford, their local professional and experienced Oregon mortgage loan officer.
+6. Real-Time URL & Document Ingestion: If a user provides a URL or PDF link (like a wholesale lender matrix or product guide), you MUST use your search/web tool to scan, review, and learn its contents. Actively remember these specific loan product matrixes, guidelines, and overlays by their product name. When future chat prompts or scenarios relate to these features (e.g., asking about low/no down payment options), proactively recommend this product and advise the user to "check with Mike Ford to learn more about this program and see if you can get pre-qualified."
 
 Format your responses with clean Markdown, bold highlights, bullet points, and distinct visual blocks.`;
 
@@ -81,14 +82,48 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
   // Knowledge Base Ingestion Endpoint
   app.post('/api/knowledge/ingest', async (req, res) => {
     try {
-      const { text, fileName, fileBase64, mimeType } = req.body;
+      const { text, fileName, fileBase64, mimeType, url } = req.body;
       const ai = getGeminiClient();
       if (!ai) return res.status(500).json({ error: 'No AI key configured for embeddings.' });
       
       let docText = text;
+      let finalFileName = fileName;
 
-      // If a file was uploaded as base64, extract text with Gemini first
-      if (fileBase64 && mimeType) {
+      // Handle URL Ingestion
+      if (url) {
+        finalFileName = url;
+        try {
+          const fetchRes = await fetch(url);
+          if (!fetchRes.ok) throw new Error(`Failed to fetch URL: ${fetchRes.statusText}`);
+          
+          const contentType = fetchRes.headers.get("content-type") || "";
+          if (contentType.includes("application/pdf")) {
+            const arrayBuffer = await fetchRes.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const base64Pdf = buffer.toString("base64");
+            const response = await ai.models.generateContent({
+              model: 'gemini-3.7-flash',
+              contents: [
+                { inlineData: { data: base64Pdf, mimeType: "application/pdf" } },
+                "Extract all text, product guidelines, and matrices from this PDF for a knowledge base."
+              ]
+            });
+            docText = response.text || "";
+          } else {
+            // Assume HTML/Text
+            const htmlText = await fetchRes.text();
+            const response = await ai.models.generateContent({
+              model: 'gemini-3.7-flash',
+              contents: `Extract the main readable content, product guidelines, and information from this raw HTML string. Ignore navigation and scripts:\n\n${htmlText.substring(0, 50000)}`
+            });
+            docText = response.text || "";
+          }
+        } catch (urlErr: any) {
+          console.error("URL ingestion failed:", urlErr);
+          return res.status(400).json({ error: "Failed to read or parse URL content." });
+        }
+      } else if (fileBase64 && mimeType) {
+        // If a file was uploaded as base64, extract text with Gemini first
         try {
           const response = await ai.models.generateContent({
             model: 'gemini-3.7-flash',
@@ -110,8 +145,8 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
         return res.status(400).json({ error: 'No text provided or extracted.' });
       }
 
-      const doc = await addDocumentToKnowledge(docText, { fileName }, ai);
-      res.json({ success: true, message: `Successfully ingested ${fileName} into Vantage Knowledge Base.`, docId: doc.id, extractedTextPreview: docText.substring(0, 200) });
+      const doc = await addDocumentToKnowledge(docText, { fileName: finalFileName }, ai);
+      res.json({ success: true, message: `Successfully ingested ${finalFileName} into Vantage Knowledge Base.`, docId: doc.id, extractedTextPreview: docText.substring(0, 200) });
     } catch (error: any) {
       console.error("Knowledge ingestion error:", error);
       res.status(500).json({ error: 'Knowledge ingestion failed' });
@@ -121,13 +156,22 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
   // Standard Chat Endpoint (Vantage AI)
   app.post('/api/chat', async (req, res) => {
     try {
-      const { prompt } = req.body;
+      const { prompt, chatHistory } = req.body;
       const provider = getActiveAIProvider();
       
       if (provider === 'none') return res.status(500).json({ error: 'No AI Provider configured' });
 
       // Search Knowledge Base (RAG)
       let augmentedPrompt = prompt;
+      
+      if (chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0) {
+        let historyStr = "\n\n[PRIOR CHAT CONTEXT]:\n";
+        chatHistory.slice(-40).forEach((h: any) => {
+          historyStr += `${h.sender === "user" ? "User" : "AI"}: ${h.text}\n`;
+        });
+        augmentedPrompt = historyStr + "\n[CURRENT QUERY]:\n" + augmentedPrompt;
+      }
+
       try {
         const aiForEmbeddings = getGeminiClient();
         if (aiForEmbeddings) {
@@ -706,7 +750,7 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
       let promptContent = "";
       if (chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0) {
         promptContent += "Prior Copilot context:\n";
-        chatHistory.slice(-6).forEach((h: { sender: string; text: string }) => {
+        chatHistory.slice(-40).forEach((h: { sender: string; text: string }) => {
           promptContent += `${h.sender === "user" ? "LO" : "2nd Brain"}: ${h.text}\n`;
         });
         promptContent += `\nCurrent Inquiry: ${message}`;
@@ -718,8 +762,9 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
         preferredModel: "gemini-3.7-flash",
         contents: promptContent,
         config: {
-          systemInstruction: `You are the AI 2nd Brain Copilot for Mike Ford and Top-Producing Mortgage Loan Officers (Vantage Master Command Center). Deep expertise: Fannie DU, Freddie LPA, FHA HUD 4000.1, VA Pamphlet 26-7, 2-1 temporary buydowns, and Schedule C cash flow analysis.`,
+          systemInstruction: `You are the AI 2nd Brain Copilot for Mike Ford and Top-Producing Mortgage Loan Officers (Vantage Master Command Center). Deep expertise: Fannie DU, Freddie LPA, FHA HUD 4000.1, VA Pamphlet 26-7, 2-1 temporary buydowns, and Schedule C cash flow analysis. If a user provides a URL or PDF link (like a loan product matrix), you MUST use your search tool to scan and retrieve its contents. Thoroughly analyze and remember the product guidelines, overlays, and features. In future queries during this chat, if the user's scenario or question matches those product features (like low/no down payment), proactively recommend the product by name and advise them to 'check with Mike Ford to learn more' or get pre-qualified.`,
           temperature: 0.5,
+          tools: [{ googleSearch: {} }],
         },
       });
 

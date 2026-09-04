@@ -22,7 +22,14 @@ import {
   MessageSquare,
   FileCheck,
   Building,
-  UserCheck, Paperclip, Database, Mail, MinusCircle, Trash2
+  UserCheck, 
+  Paperclip, 
+  Database, 
+  Mail, 
+  MinusCircle, 
+  Trash2,
+  ExternalLink,
+  X
 } from "lucide-react";
 import { LoanOfficerProfile, CapturedLead, FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
@@ -63,7 +70,61 @@ export const AILoanOfficer2ndBrain: React.FC<AILoanOfficer2ndBrainProps> = ({
   const [savedId, setSavedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const trainInputRef = useRef<HTMLInputElement>(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
 
+  // Handle URL Ingestion
+  const handleUrlIngestion = async () => {
+    if (!urlInput.trim()) return;
+    
+    const submittedUrl = urlInput.trim();
+    setShowUrlInput(false);
+    setUrlInput("");
+    setLoading(true);
+
+    const userMsg: BrainMessage = {
+      id: `user-${Date.now()}`,
+      sender: "user",
+      text: `*Initiated Long-Term Memory Ingestion for URL:* ${submittedUrl}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      category: "guidelines"
+    };
+    setMessages(prev => [...prev, userMsg]);
+
+    try {
+      const res = await fetch("/api/knowledge/ingest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: submittedUrl })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to ingest URL");
+      }
+      
+      const botMsg: BrainMessage = {
+        id: `copilot-train-${Date.now()}`,
+        sender: "copilot",
+        text: `**Successfully memorized URL!**\n\nI have permanently added \`${submittedUrl}\` to my Vector Database memory. I will actively cross-reference its guidelines and loan products in all future conversations.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        category: "guidelines"
+      };
+      setMessages(prev => [...prev, botMsg]);
+    } catch (error: any) {
+      console.error("URL Training error:", error);
+      const botMsg: BrainMessage = {
+        id: `copilot-train-error-${Date.now()}`,
+        sender: "copilot",
+        text: `**Error:** Failed to ingest URL. The server may have blocked the request or the document was unreachable.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        category: "guidelines"
+      };
+      setMessages(prev => [...prev, botMsg]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const activeLead = leads.find(l => l.id === selectedLeadIdState);
 
@@ -258,7 +319,10 @@ How can I assist your pipeline today? You can select any active borrower from yo
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: fullPrompt })
+        body: JSON.stringify({ 
+          prompt: fullPrompt,
+          chatHistory: messages.slice(-40)
+        })
       });
       
       const data = await res.json();
@@ -685,6 +749,32 @@ How can I assist your pipeline today? You can select any active borrower from yo
 
           {/* Input Box */}
           <div className="p-4 border-t border-[#EAE7E0] bg-[#FDFCF9]">
+            {showUrlInput && (
+              <div className="flex gap-2 mb-3 bg-white p-2 rounded-xl border border-emerald-200 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                <input
+                  type="url"
+                  placeholder="Paste permanent URL to ingest (e.g. lakeviewcorrespondent.com/pdf)"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 px-2 text-xs text-stone-700"
+                />
+                <button
+                  type="button"
+                  onClick={handleUrlIngestion}
+                  disabled={!urlInput.trim() || loading}
+                  className="px-3 py-1.5 bg-emerald-700 text-white text-xs font-bold rounded-lg hover:bg-emerald-800 disabled:opacity-50"
+                >
+                  Ingest URL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowUrlInput(false)}
+                  className="px-2 py-1.5 text-stone-400 hover:text-stone-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -719,6 +809,15 @@ How can I assist your pipeline today? You can select any active borrower from yo
                 accept=".txt,.csv,.json,.pdf"
                 className="hidden"
               />
+              <button
+                type="button"
+                onClick={() => setShowUrlInput(!showUrlInput)}
+                disabled={loading}
+                title="Add Permanent URL to Memory"
+                className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </button>
               <button
                 type="button"
                 onClick={() => trainInputRef.current?.click()}

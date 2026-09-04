@@ -91,7 +91,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => 
             targetPrice: profile.targetPrice,
             location: profile.state
           },
-          chatHistory: messages.slice(-4)
+          chatHistory: messages.slice(-40)
         }),
       });
 

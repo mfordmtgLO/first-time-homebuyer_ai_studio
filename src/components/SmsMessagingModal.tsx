@@ -41,7 +41,7 @@ export const FLYER_ATTACHMENTS = [
     id: "flyer-ohcs-dpa",
     title: "OHCS $10,000 Down Payment Grant Overview Flyer",
     type: "flyer" as const,
-    url: "/flyers/ohcs-dpa-grant-guide.pdf",
+    url: "https://www.oregon.gov/ohcs/homeownership/pages/first-time-homebuyer.aspx",
     previewText: "Attached: Oregon OHCS Down Payment Assistance Grant Guide (Up to $10,000 towards down payment)."
   },
   {
@@ -115,25 +115,25 @@ export const TEXT_NURTURE_STEPS = [
     stepNumber: 1,
     timing: "Day 1 (Immediate Intake)",
     templateName: "Welcome & OHCS $10k Grant Calculator Link",
-    messageText: "Welcome {{firstName}}! Thanks for chatting with {{loName}}. Here is your interactive Oregon Down Payment Assistance calculator & grant roadmap: https://oregonhomeloans.com/dpa-calc"
+    messageText: "Welcome {{firstName}}! Thanks for chatting with {{loName}}. Here is your interactive Oregon Down Payment Assistance calculator & grant roadmap: https://example.com/dpa-calc"
   },
   {
     stepNumber: 2,
     timing: "Day 3 (Follow Up)",
     templateName: "Curated Low/No Down Property List Link",
-    messageText: "Hi {{firstName}}! We compiled a custom list of {{location}} homes with $0 down USDA and 3.5% DPA financing options: https://oregonhomeloans.com/listings/curated"
+    messageText: "Hi {{firstName}}! We compiled a custom list of {{location}} homes with $0 down USDA and 3.5% DPA financing options: https://example.com/listings/curated"
   },
   {
     stepNumber: 3,
     timing: "Day 7 (Strategy)",
     templateName: "2-1 Temporary Rate Buydown Savings Breakdown",
-    messageText: "Hi {{firstName}}! Want to lower your monthly payment by $300+/mo in Year 1? Learn how seller-funded rate buydowns work here: https://oregonhomeloans.com/rate-buydown"
+    messageText: "Hi {{firstName}}! Want to lower your monthly payment by $300+/mo in Year 1? Learn how seller-funded rate buydowns work here: https://example.com/rate-buydown"
   },
   {
     stepNumber: 4,
     timing: "Day 14 (Check-in)",
     templateName: "Pre-Approval FastTrack & LO Strategy Call",
-    messageText: "Hi {{firstName}}! Ready to start touring homes in {{location}}? Let's get your official Pre-Approval letter issued. Reply back or book 10 mins with {{loName}}: https://oregonhomeloans.com/book"
+    messageText: "Hi {{firstName}}! Ready to start touring homes in {{location}}? Let's get your official Pre-Approval letter issued. Reply back or book 10 mins with {{loName}}: https://calendly.com/mikefordlo"
   }
 ];
 
@@ -157,6 +157,7 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
   const [showTemplateMenu, setShowTemplateMenu] = useState<boolean>(false);
   const [showTwilioSettings, setShowTwilioSettings] = useState<boolean>(false);
   const [twilioDispatchStatus, setTwilioDispatchStatus] = useState<string | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<{ url: string; title: string; type: string } | null>(null);
 
   const firstName = lead.fullName ? lead.fullName.split(" ")[0] : "there";
   const loName = loanOfficer.name.split(" ")[0];
@@ -496,10 +497,15 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
                       {/* Attachment Card if present */}
                       {msg.attachmentTitle && (
                         <div
-                          className={`p-2.5 rounded-xl text-xs border flex items-center gap-2 mt-2 ${
+                          onClick={() => setPreviewAttachment({
+                            url: msg.attachmentUrl || "",
+                            title: msg.attachmentTitle || "",
+                            type: msg.attachmentType || "flyer"
+                          })}
+                          className={`p-2.5 rounded-xl text-xs border flex items-center gap-2 mt-2 cursor-pointer transition-colors ${
                             isOutbound
-                              ? "bg-white/10 border-white/20 text-white"
-                              : "bg-[#FAF9F5] border-[#EAE7E0] text-[#2D362E]"
+                              ? "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                              : "bg-[#FAF9F5] border-[#EAE7E0] text-[#2D362E] hover:bg-[#EAE7E0]"
                           }`}
                         >
                           {msg.attachmentType === "flyer" ? (
@@ -519,6 +525,7 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
                             href={msg.attachmentUrl}
                             target="_blank"
                             rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors shrink-0"
                             title="Open Link"
                           >
@@ -540,7 +547,21 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
 
             {/* Selected Attachment Banner */}
             {(selectedFlyerId || selectedListId) && (
-              <div className="bg-emerald-50 border-t border-emerald-200 p-2.5 px-4 flex items-center justify-between text-xs text-emerald-900 shrink-0">
+              <div 
+                className="bg-emerald-50 border-t border-emerald-200 p-2.5 px-4 flex items-center justify-between text-xs text-emerald-900 shrink-0 cursor-pointer hover:bg-emerald-100 transition-colors"
+                onClick={() => {
+                  const flyer = FLYER_ATTACHMENTS.find(f => f.id === selectedFlyerId);
+                  const pList = PROPERTY_LIST_ATTACHMENTS.find(p => p.id === selectedListId);
+                  const target = flyer || pList;
+                  if (target) {
+                    setPreviewAttachment({
+                      url: target.url,
+                      title: target.title,
+                      type: target.type
+                    });
+                  }
+                }}
+              >
                 <div className="flex items-center gap-2 truncate pr-2">
                   <Paperclip className="w-4 h-4 text-emerald-700 shrink-0" />
                   <span className="font-bold">Attached:</span>
@@ -551,7 +572,8 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
                   </span>
                 </div>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setSelectedFlyerId("");
                     setSelectedListId("");
                   }}
@@ -858,6 +880,89 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
         isOpen={showTwilioSettings}
         onClose={() => setShowTwilioSettings(false)}
       />
+
+      {/* Document/Flyer Preview Modal */}
+      {previewAttachment && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-4xl h-[85vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-stone-200 bg-stone-50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
+                  {previewAttachment.type === "flyer" ? <FileText className="w-5 h-5" /> : <Home className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="font-bold text-stone-800 text-sm">{previewAttachment.title}</h3>
+                  <p className="text-xs text-stone-500 font-mono">{previewAttachment.url}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewAttachment.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg flex items-center gap-1 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" /> Open in New Tab
+                </a>
+                <button
+                  onClick={() => setPreviewAttachment(null)}
+                  className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 bg-stone-200 p-6 overflow-y-auto flex justify-center">
+              {/* Fake PDF viewer rendering since we don't have real PDFs */}
+              <div className="w-full max-w-2xl bg-white shadow-xl min-h-[800px] p-8 md:p-12 border border-stone-300">
+                {previewAttachment.type === "flyer" ? (
+                  <div className="space-y-6">
+                    <div className="h-48 bg-emerald-900 rounded-xl flex items-center justify-center text-white p-8 text-center relative overflow-hidden">
+                      <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+                      <h1 className="text-3xl font-serif font-bold relative z-10">{previewAttachment.title}</h1>
+                    </div>
+                    <div className="flex gap-6">
+                      <div className="flex-1 space-y-4">
+                        <div className="h-6 w-3/4 bg-stone-200 rounded"></div>
+                        <div className="h-4 w-full bg-stone-100 rounded"></div>
+                        <div className="h-4 w-full bg-stone-100 rounded"></div>
+                        <div className="h-4 w-5/6 bg-stone-100 rounded"></div>
+                        <br/>
+                        <div className="h-6 w-1/2 bg-stone-200 rounded"></div>
+                        <div className="h-4 w-full bg-stone-100 rounded"></div>
+                        <div className="h-4 w-4/5 bg-stone-100 rounded"></div>
+                      </div>
+                      <div className="w-1/3 bg-stone-50 border border-stone-100 p-4 rounded-xl space-y-3">
+                         <div className="h-24 bg-stone-200 rounded-lg mb-4"></div>
+                         <div className="h-3 w-full bg-stone-200 rounded"></div>
+                         <div className="h-3 w-4/5 bg-stone-200 rounded"></div>
+                         <div className="h-3 w-full bg-stone-200 rounded"></div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="border-b pb-4">
+                      <h1 className="text-2xl font-bold text-stone-800">{previewAttachment.title}</h1>
+                      <p className="text-stone-500 mt-2">Curated property list automatically generated for this lead.</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      {[1,2,3,4].map(i => (
+                        <div key={i} className="border border-stone-200 rounded-xl p-3 space-y-2">
+                          <div className="h-32 bg-stone-100 rounded-lg"></div>
+                          <div className="h-4 w-2/3 bg-stone-200 rounded"></div>
+                          <div className="h-3 w-1/2 bg-stone-100 rounded"></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

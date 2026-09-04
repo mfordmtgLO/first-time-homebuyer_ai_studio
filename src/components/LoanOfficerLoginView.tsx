@@ -77,6 +77,11 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
       setErrorMessage("Incorrect password. If you forgot your password, ask Branch Manager (Mike Ford) to authorize a password reset.");
       return;
     }
+    
+    if (matchedLo.accountRestricted) {
+      setErrorMessage("Account temporarily restricted. Please contact your Branch Manager (Mike Ford) to unlock.");
+      return;
+    }
 
     // Success: authenticate
     onAuthenticate(matchedLo.id);
@@ -186,6 +191,11 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
   };
 
   const handleOneClickLogin = (lo: LoanOfficerProfile) => {
+    if (lo.accountRestricted) {
+      setErrorMessage("Account temporarily restricted. Please contact your Branch Manager (Mike Ford) to unlock.");
+      setActiveTab("signin");
+      return;
+    }
     onAuthenticate(lo.id);
   };
 

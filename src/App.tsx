@@ -71,6 +71,42 @@ export default function App() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [userRole, setUserRole] = useState<"admin" | "lo" | null>(null);
 
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const role = await checkAndProvisionUser(user);
+          setUserRole(role as "admin" | "lo");
+        } catch (e) {
+          console.error(e);
+          setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
+      setIsAuthChecking(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen bg-[#F9F8F4] flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <ShieldCheck className="w-12 h-12 text-[#4A5D4E] mb-4 opacity-50" />
+          <p className="text-[#606C5D] font-mono text-xs uppercase tracking-widest">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // DEVELOPMENT LOCK: Require authentication for the entire application
+  if (!userRole) {
+    return <LoginScreen onLogin={(role) => setUserRole(role as "admin" | "lo")} />;
+  }
+
+
   // Global State
   const [profile, setProfile] = useState<FinancialProfile>(INITIAL_PROFILE);
   const [properties, setProperties] = useState<PropertyListing[]>(() => {

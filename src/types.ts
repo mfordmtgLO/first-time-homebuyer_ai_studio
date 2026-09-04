@@ -242,6 +242,8 @@ export interface CoClosedBusinessPartner {
 }
 
 export interface LoanOfficerProfile {
+  accountRestricted?: boolean;
+  accountRestrictedAt?: string;
   enrichmentStatus?: 'none' | 'syncing' | 'enriched';
   topRealtorPartners?: { name: string; volume: number; company: string }[];
   topPartners12Mo?: CoClosedBusinessPartner[];

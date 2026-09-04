@@ -62,6 +62,7 @@ async function startServer() {
   loadKnowledgeBase();
 
   const app = express();
+  app.set("trust proxy", 1);
   const PORT = 3000;
 
   // Enterprise Security Headers (Disable CSP to allow Vite/React inline scripts in dev/prod)

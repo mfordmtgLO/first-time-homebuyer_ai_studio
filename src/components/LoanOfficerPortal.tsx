@@ -4378,7 +4378,13 @@ Best regards,`,
                         <div className="space-y-0.5">
                           <h4 className="font-serif font-bold text-base text-[#2D362E] flex items-center gap-1.5 flex-wrap">
                             <span>{lo.name}</span>
-                            <ShieldCheck className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                            {lo.accountRestricted ? (
+                              <div title="Account Temporarily Restricted" className="flex items-center justify-center w-5 h-5 rounded-full bg-rose-100 text-rose-700">
+                                <Lock className="w-3 h-3" />
+                              </div>
+                            ) : (
+                              <ShieldCheck className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                            )}
                             <OutreachHistoryBadge lo={lo} compact={true} />
                           </h4>
                           <p className="text-xs font-semibold text-[#4A5D4E]">{lo.title}</p>
@@ -6041,6 +6047,46 @@ Mike Ford`;
                         }`}
                       >
                         {editingLo.passwordResetAuthorized ? "Revoke Reset Authorization" : "Authorize LO Password Reset"}
+                      </button>
+                    </div>
+                  )}
+                  {editingLo && !editingLo.isAdmin && (
+                    <div className="pt-2 border-t border-[#EAE7E0] flex items-center justify-between gap-3 flex-wrap mt-3">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-bold text-[#2D362E] block">
+                          Temporary Account Restriction
+                        </span>
+                        <p className="text-[10px] text-[#606C5D]">
+                          {editingLo.accountRestricted
+                            ? `⛔ Account currently restricted (since ${editingLo.accountRestrictedAt ? new Date(editingLo.accountRestrictedAt).toLocaleDateString() : 'recently'}). LO cannot log in.`
+                            : "✅ Account is active. LO can log in normally."
+                          }
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (editingLo.accountRestricted) {
+                            setEditingLo({
+                              ...editingLo,
+                              accountRestricted: false,
+                              accountRestrictedAt: undefined
+                            });
+                          } else {
+                            setEditingLo({
+                              ...editingLo,
+                              accountRestricted: true,
+                              accountRestrictedAt: new Date().toISOString()
+                            });
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                          editingLo.accountRestricted
+                            ? "bg-[#4A5D4E] hover:bg-[#38463B] text-white shadow-2xs"
+                            : "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                        }`}
+                      >
+                        {editingLo.accountRestricted ? "Remove Restriction" : "Restrict Access"}
                       </button>
                     </div>
                   )}

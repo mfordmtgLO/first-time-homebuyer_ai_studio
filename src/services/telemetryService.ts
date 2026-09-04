@@ -146,8 +146,9 @@ class TelemetryService {
   }
 
   private setupFetchInterceptor() {
-    const originalFetch = window.fetch;
-    window.fetch = async (...args): Promise<Response> => {
+    try {
+      const originalFetch = window.fetch;
+      window.fetch = async (...args): Promise<Response> => {
       const url = typeof args[0] === "string" ? args[0] : args[0] instanceof Request ? args[0].url : String(args[0]);
       const options = args[1] || {};
       const method = options.method || "GET";
@@ -188,6 +189,9 @@ class TelemetryService {
         throw err;
       }
     };
+    } catch (e) {
+      console.warn("Telemetry: Could not intercept window.fetch", e);
+    }
   }
 }
 

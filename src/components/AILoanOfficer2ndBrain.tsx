@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { auth } from "../firebase";
 import { 
   Brain, 
   Sparkles, 
@@ -92,9 +93,13 @@ export const AILoanOfficer2ndBrain: React.FC<AILoanOfficer2ndBrainProps> = ({
     setMessages(prev => [...prev, userMsg]);
 
     try {
+      const token = await auth.currentUser?.getIdToken();
       const res = await fetch("/api/knowledge/ingest", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` })
+        },
         body: JSON.stringify({ url: submittedUrl })
       });
       const data = await res.json();
@@ -195,9 +200,13 @@ How can I assist your pipeline today? You can select any active borrower from yo
       const mimeType = file.type || "application/octet-stream";
 
       try {
+        const token = await auth.currentUser?.getIdToken();
         const res = await fetch("/api/knowledge/ingest", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            ...(token && { "Authorization": `Bearer ${token}` })
+          },
           body: JSON.stringify({
             fileBase64: base64Data,
             mimeType: mimeType,

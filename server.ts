@@ -1,4 +1,7 @@
 import express from "express";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import crypto from "crypto";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
@@ -6,11 +9,73 @@ import { GoogleGenAI } from "@google/genai";
 import { loadKnowledgeBase, searchKnowledge, addDocumentToKnowledge } from "./vantageKnowledge.js";
 import { searchLiveRegistry } from "./liveWebSearch.js";
 
+// Enterprise Encryption Vault setup
+// In production this must be set in the .env file.
+const MASTER_ENCRYPTION_KEY = process.env.MASTER_ENCRYPTION_KEY || "a2b4c6d8e0f2a4b6c8d0e2f4a6b8c0d2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4";
+
+function encryptVault(text: string): string {
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(MASTER_ENCRYPTION_KEY, "hex"), iv);
+  let encrypted = cipher.update(text, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return iv.toString("hex") + ":" + encrypted;
+}
+
+function decryptVault(text: string): string {
+  const textParts = text.split(":");
+  const iv = Buffer.from(textParts.shift()!, "hex");
+  const encryptedText = Buffer.from(textParts.join(":"), "hex");
+  const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(MASTER_ENCRYPTION_KEY, "hex"), iv);
+  let decrypted = decipher.update(encryptedText);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  return decrypted.toString();
+}
+
+import { getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+
+// Initialize Firebase Admin for JWT Verification (Zero-Trust API Architecture)
+if (!getApps().length) {
+  initializeApp({
+    projectId: process.env.FIREBASE_PROJECT_ID || "astral-web-439103-g7",
+  });
+}
+
+// Enterprise Authentication Middleware
+const authenticateUser = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: Missing or invalid Authorization header' });
+  }
+  const token = authHeader.split('Bearer ')[1];
+  try {
+    const decodedToken = await getAuth().verifyIdToken(token);
+    (req as any).user = decodedToken;
+    next();
+  } catch (error) {
+    console.error('JWT Verification Error:', error);
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+};
+
 async function startServer() {
   loadKnowledgeBase();
 
   const app = express();
   const PORT = 3000;
+
+  // Enterprise Security Headers (Disable CSP to allow Vite/React inline scripts in dev/prod)
+  app.use(helmet({ contentSecurityPolicy: false }));
+
+  // Global API Rate Limiting to prevent DoS and API abuse
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per window
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests from this IP, please try again after 15 minutes" },
+  });
+  app.use("/api/", apiLimiter);
 
   app.use(express.json({ limit: "100mb" }));
 
@@ -80,7 +145,7 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
   }
 
   // Knowledge Base Ingestion Endpoint
-  app.post('/api/knowledge/ingest', async (req, res) => {
+  app.post('/api/knowledge/ingest', authenticateUser, async (req, res) => {
     try {
       const { text, fileName, fileBase64, mimeType, url } = req.body;
       const ai = getGeminiClient();
@@ -93,7 +158,21 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
       if (url) {
         finalFileName = url;
         try {
-          const fetchRes = await fetch(url);
+          // Enterprise SSRF Protection: Validate protocol and block private/metadata IPs
+          const parsedUrl = new URL(url);
+          if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+            throw new Error("Invalid URL protocol. Only HTTP and HTTPS are allowed.");
+          }
+          const hostname = parsedUrl.hostname;
+          const isLocalhost = hostname === "localhost" || hostname.endsWith(".localhost") || hostname === "127.0.0.1" || hostname === "::1";
+          const isPrivateIp = /^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\.|^192\.168\.|^169\.254\./.test(hostname);
+          
+          if (isLocalhost || isPrivateIp) {
+            throw new Error("Access to local or private network infrastructure is strictly prohibited (SSRF Protection).");
+          }
+
+          // Fetch with strict 8-second timeout
+          const fetchRes = await fetch(url, { signal: AbortSignal.timeout(8000) });
           if (!fetchRes.ok) throw new Error(`Failed to fetch URL: ${fetchRes.statusText}`);
           
           const contentType = fetchRes.headers.get("content-type") || "";
@@ -2448,19 +2527,30 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
   });
 
   // API Route: Twilio SMS Carrier Integration Proxy
-  app.post("/api/twilio/send-sms", async (req, res) => {
+  app.post("/api/twilio/send-sms", authenticateUser, async (req, res) => {
     try {
-      const { to, message, accountSid, authToken, fromNumber, attachmentUrl } = req.body;
+      const { to, message, accountSid, authToken, fromNumber, attachmentUrl, encryptedVault } = req.body;
 
-      // Use credentials passed in request body or environment variables
-      const sid = accountSid || process.env.TWILIO_ACCOUNT_SID;
-      const token = authToken || process.env.TWILIO_AUTH_TOKEN;
-      const from = fromNumber || process.env.TWILIO_PHONE_NUMBER;
+      let sid = accountSid || process.env.TWILIO_ACCOUNT_SID;
+      let token = authToken || process.env.TWILIO_AUTH_TOKEN;
+      let from = fromNumber || process.env.TWILIO_PHONE_NUMBER;
+
+      // Enterprise BYOK Vault Decryption
+      if (encryptedVault) {
+        try {
+          const decrypted = JSON.parse(decryptVault(encryptedVault));
+          sid = decrypted.accountSid || sid;
+          token = decrypted.authToken || token;
+          from = decrypted.phoneNumber || from;
+        } catch (decryptErr) {
+          return res.status(401).json({ success: false, error: "Invalid or corrupted Twilio Vault encryption payload." });
+        }
+      }
 
       if (!sid || !token || !from) {
         return res.status(400).json({
           success: false,
-          error: "Twilio credentials missing. Please enter your Twilio Account SID, Auth Token, and Sender Phone Number in dashboard settings.",
+          error: "Twilio credentials missing. Please configure your Twilio Vault in dashboard settings.",
           isConfigured: false
         });
       }
@@ -2516,6 +2606,23 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     } catch (error: any) {
       console.error("Twilio SMS send error:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to dispatch SMS via Twilio" });
+    }
+  });
+
+  // API Route: Encrypt Twilio Vault
+  app.post("/api/twilio/vault/encrypt", authenticateUser, (req, res) => {
+    try {
+      const { accountSid, authToken, phoneNumber } = req.body;
+      if (!accountSid || !authToken) {
+        return res.status(400).json({ error: "accountSid and authToken are required" });
+      }
+      
+      const payload = JSON.stringify({ accountSid, authToken, phoneNumber });
+      const encryptedVault = encryptVault(payload);
+      
+      res.json({ success: true, encryptedVault });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to encrypt Twilio vault" });
     }
   });
 
@@ -2915,6 +3022,24 @@ Ensure all information is educational, accurate, and professional.`;
       details: { from: "+15035550188", bpdId: "BPD-AG-4412" }
     }
   ];
+
+  // API Route: Encrypt Integrations Vault (Big Purple Dot, Meta, Google Ads)
+  app.post("/api/integrations/vault/encrypt", authenticateUser, (req, res) => {
+    try {
+      const { payload } = req.body;
+      if (!payload || typeof payload !== "object") {
+        return res.status(400).json({ error: "payload object is required" });
+      }
+      
+      const payloadString = JSON.stringify(payload);
+      const encryptedVault = encryptVault(payloadString);
+      
+      res.json({ success: true, encryptedVault });
+    } catch (error: any) {
+      console.error("Integrations Vault encryption error:", error);
+      res.status(500).json({ success: false, error: "Failed to encrypt integrations vault" });
+    }
+  });
 
   // GET /api/big-purple-dot/config - returns current config with masked secrets
   app.get("/api/big-purple-dot/config", (_req, res) => {

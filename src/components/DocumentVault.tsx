@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { DocumentItem } from "../types";
 import { GoogleDriveDocImporterModal } from "./GoogleDriveDocImporterModal";
-import { storage } from "../firebase";
+import { storage, auth } from "../firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRef } from "react";
 import { DocumentQuickPreviewModal } from "./DocumentQuickPreviewModal";
@@ -62,9 +62,13 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
       const downloadUrl = await getDownloadURL(storageRef);
 
       // 3. Ingest into RAG (Vector DB)
+      const token = await auth.currentUser?.getIdToken();
       const ingestRes = await fetch("/api/knowledge/ingest", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` })
+        },
         body: JSON.stringify({
           fileName: file.name,
           fileBase64: base64Data,

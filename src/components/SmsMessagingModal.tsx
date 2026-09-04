@@ -24,6 +24,8 @@ import {
 import { CapturedLead, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing, SmsTemplate } from "../types";
 import { DEFAULT_SMS_TEMPLATES } from "../data/smsTemplates";
 import { TwilioSettingsModal, getSavedTwilioConfig } from "./TwilioSettingsModal";
+import { auth, db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 interface SmsMessagingModalProps {
   isOpen: boolean;
@@ -247,32 +249,53 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
     });
 
     // Attempt Twilio Carrier API dispatch if credentials saved
-    const twilioCfg = getSavedTwilioConfig();
-    if (twilioCfg.accountSid && twilioCfg.authToken && twilioCfg.phoneNumber) {
-      try {
-        const res = await fetch("/api/twilio/send-sms", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: lead.phone,
-            message: currentMsgText,
-            accountSid: twilioCfg.accountSid,
-            authToken: twilioCfg.authToken,
-            fromNumber: twilioCfg.phoneNumber,
-            attachmentUrl: attachedItem.attachmentUrl
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          setTwilioDispatchStatus(`📡 Live Twilio SMS sent to ${lead.phone} (SID: ${data.messageSid.slice(0, 8)}...)`);
-        } else {
-          setTwilioDispatchStatus(`⚠️ Twilio notice: ${data.error}`);
+    try {
+      let reqBody: any = {
+        to: lead.phone,
+        message: currentMsgText,
+        attachmentUrl: attachedItem.attachmentUrl
+      };
+
+      if (auth.currentUser) {
+        // Attempt to fetch vault and pass cipher string to server
+        const docRef = doc(db, "twilio_vault", auth.currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().encryptedVault) {
+          reqBody.encryptedVault = docSnap.data().encryptedVault;
         }
-      } catch (e: any) {
-        console.error("Twilio send error:", e);
       }
-      setTimeout(() => setTwilioDispatchStatus(null), 6000);
+
+      // Fallback if they haven't saved to vault but are trying to test raw inputs
+      if (!reqBody.encryptedVault) {
+        const twilioCfg = getSavedTwilioConfig();
+        if (!twilioCfg.accountSid || !twilioCfg.authToken || !twilioCfg.phoneNumber) {
+          return; // No config available
+        }
+        reqBody.accountSid = twilioCfg.accountSid;
+        reqBody.authToken = twilioCfg.authToken;
+        reqBody.fromNumber = twilioCfg.phoneNumber;
+      }
+
+      const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+      const res = await fetch("/api/twilio/send-sms", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` })
+        },
+        body: JSON.stringify(reqBody)
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        setTwilioDispatchStatus(`📡 Live Twilio SMS sent to ${lead.phone} (SID: ${data.messageSid.slice(0, 8)}...)`);
+      } else {
+        setTwilioDispatchStatus(`⚠️ Twilio notice: ${data.error}`);
+      }
+    } catch (e: any) {
+      console.error("Twilio send error:", e);
     }
+    setTimeout(() => setTwilioDispatchStatus(null), 6000);
   };
 
 

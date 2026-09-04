@@ -44,6 +44,8 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
   const [selectedTemplate, setSelectedTemplate] = useState<string>("grants_calculator");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasVault, setHasVault] = useState(false);
 
   // Editable credentials state
   const [adSettings, setAdSettings] = useState<LoanOfficerAdSettings>(() => {
@@ -65,11 +67,41 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
     setTimeout(() => setCopiedField(null), 2500);
   };
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchIntegrationsVault().then(res => {
+      if (res.hasVault) {
+        setHasVault(true);
+        setAdSettings(prev => ({
+          ...prev,
+          metaAdAccountId: "••••••••••••",
+          googleCustomerId: "••••-••••-••••"
+        }));
+      }
+    });
+  }, []);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateAdSettings(adSettings);
-    setSaveMessage("Ad Platform credentials and budget settings saved successfully!");
-    setTimeout(() => setSaveMessage(null), 3000);
+    setIsSaving(true);
+    try {
+      if (adSettings.metaAdAccountId && !adSettings.metaAdAccountId.includes("••••")) {
+        await saveToIntegrationsVault({
+          metaAdAccountId: adSettings.metaAdAccountId,
+          metaPixelId: adSettings.metaPixelId,
+          googleCustomerId: adSettings.googleCustomerId,
+          dailyBudgetUSD: adSettings.dailyBudgetUSD
+        });
+        setHasVault(true);
+      }
+      onUpdateAdSettings(adSettings);
+      setSaveMessage("Vault encrypted & credentials saved successfully!");
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to securely encrypt Ad credentials.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Meta Campaign Spec
@@ -245,6 +277,7 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
             </div>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
               {adSettings.metaAdAccountId ? "Account Linked" : "Setup Required"}
+              {hasVault && <Lock className="w-3 h-3 ml-1 inline text-blue-800" />}
             </span>
           </div>
 

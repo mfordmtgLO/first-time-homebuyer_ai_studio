@@ -163,9 +163,25 @@
         "isArchived",
         "ownerId"
       ]
+    },
+    "TwilioVault": {
+      "title": "TwilioVault",
+      "description": "Secure storage for encrypted Twilio credentials",
+      "type": "object",
+      "properties": {
+        "encryptedVault": { "type": "string", "maxLength": 2048 },
+        "enableLiveCarrierSms": { "type": "boolean" },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["encryptedVault", "enableLiveCarrierSms", "ownerId", "updatedAt"]
     }
   },
   "firestore": {
+    "twilio_vault/{userId}": {
+      "schema": { "$ref": "#/entities/TwilioVault" },
+      "description": "Encrypted Twilio credentials for a user"
+    },
     "guides_state/{docId}": {
       "schema": "GuidesState",
       "description": "Global state singleton"

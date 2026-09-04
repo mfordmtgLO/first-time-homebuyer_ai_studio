@@ -5,6 +5,7 @@ import {
   Eye, EyeOff, Check, ArrowRight, Zap, Database, Terminal, FileCode, Users
 } from "lucide-react";
 import { BigPurpleDotConfig, BigPurpleDotWebhookEvent } from "../types";
+import { fetchIntegrationsVault, saveToIntegrationsVault } from "../utils/vault";
 
 interface BigPurpleDotModalProps {
   isOpen: boolean;
@@ -22,6 +23,8 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
   onTriggerToast
 }) => {
   const [activeTab, setActiveTab] = useState<"credentials" | "webhooks" | "mapping" | "golive">("credentials");
+  const [hasVault, setHasVault] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Form State
   const [subdomain, setSubdomain] = useState(config?.subdomain || "cornerstone");
@@ -61,7 +64,7 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  
 
   // Webhook Events Log
   const [webhookEvents, setWebhookEvents] = useState<BigPurpleDotWebhookEvent[]>([]);
@@ -190,33 +193,32 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
         connectionStatus: apiKey ? "connected" : "not_configured"
       };
 
-      const res = await fetch("/api/big-purple-dot/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (data.success) {
-        onUpdateConfig({
-          apiKey,
-          apiSecret,
-          subdomain,
-          accountEmail,
-          webhookSecret,
-          environment,
-          autoSyncRecruits,
-          syncLoanOfficers,
-          syncRealEstateAgents,
-          syncDirection: "bi_directional",
-          lastSyncedAt: new Date().toISOString(),
-          connectionStatus: apiKey ? "connected" : "not_configured",
-          loStageMapping,
-          agentStageMapping
-        });
-        onTriggerToast("Big Purple Dot credentials & webhook configuration securely saved!");
+      if (apiKey && !apiKey.includes("••••")) {
+        await saveToIntegrationsVault(payload);
+        setHasVault(true);
       }
-    } catch (e) {
-      onTriggerToast("Error saving Big Purple Dot configuration.");
+
+      onUpdateConfig({
+        ...config,
+        apiKey,
+        apiSecret,
+        subdomain,
+        accountEmail,
+        webhookSecret,
+        environment,
+        autoSyncRecruits,
+        syncLoanOfficers,
+        syncRealEstateAgents,
+        syncDirection: "bi_directional",
+        lastSyncedAt: new Date().toISOString(),
+        connectionStatus: apiKey ? "connected" : "not_configured",
+        loStageMapping,
+        agentStageMapping,
+      } as any);
+      onTriggerToast("BPD Integration settings & Vault encrypted successfully!");
+    } catch (e: any) {
+      console.error(e);
+      alert("Failed to securely encrypt BPD Vault");
     } finally {
       setIsSaving(false);
     }

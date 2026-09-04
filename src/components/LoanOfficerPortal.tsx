@@ -2154,8 +2154,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
               }`}
             >
-              <ShieldCheck className="w-4 h-4 text-[#C18C5D]" />
-              <span>Branch Manager Admin</span>
+              <PieChart className="w-4 h-4 text-[#C18C5D]" />
+              <span>Branch Performance & ROI</span>
             </button>
 
             {userRole === "admin" && (
@@ -2169,7 +2169,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 }`}
               >
                 <Building className="w-4 h-4 text-[#C18C5D]" />
-                <span>Branch Whitelist Mgmt</span>
+                <span>Branch Access & Security</span>
               </button>
             )}
 

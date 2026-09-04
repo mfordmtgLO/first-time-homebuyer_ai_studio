@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
-import { Building, UserPlus, Mail, ShieldCheck, Trash2, ShieldAlert } from "lucide-react";
+import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { Building, UserPlus, Mail, ShieldCheck, Trash2, ShieldAlert, Globe, Lock, Fingerprint } from "lucide-react";
+import { MfaSetupModal } from "./MfaSetupModal";
 
 interface WhitelistedUser {
   email: string;
@@ -14,10 +15,39 @@ export const BranchManagement: React.FC = () => {
   const [newEmail, setNewEmail] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [isAppPublic, setIsAppPublic] = useState(false);
+  const [isTogglingPublic, setIsTogglingPublic] = useState(false);
+  const [showMfaModal, setShowMfaModal] = useState(false);
 
   useEffect(() => {
     fetchWhitelistedUsers();
+    
+    const unsubscribe = onSnapshot(doc(db, "app_settings", "global"), (docSnap) => {
+      if (docSnap.exists()) {
+        setIsAppPublic(docSnap.data().isPublic === true);
+      } else {
+        setIsAppPublic(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
+
+
+  const handleTogglePublic = async () => {
+    setIsTogglingPublic(true);
+    try {
+      await setDoc(doc(db, "app_settings", "global"), {
+        isPublic: !isAppPublic,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to toggle public state:", err);
+      alert("Error toggling website visibility: " + err.message);
+    } finally {
+      setIsTogglingPublic(false);
+    }
+  };
 
   const fetchWhitelistedUsers = async () => {
     try {
@@ -80,7 +110,71 @@ export const BranchManagement: React.FC = () => {
         </div>
       </div>
 
+      
+      <div className="bg-white rounded-2xl border border-[#EAE7E0] p-6 shadow-sm mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-start gap-4">
+            <div className={`p-3 rounded-xl ${isAppPublic ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+              {isAppPublic ? <Globe className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#2D362E] mb-1">Website Visibility</h3>
+              <p className="text-sm text-[#606C5D]">
+                {isAppPublic 
+                  ? "Your website is currently fully PUBLIC. Anyone on the internet can view your main consumer site." 
+                  : "Your website is currently locked and PRIVATE. Only authorized users can see it."}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleTogglePublic}
+            disabled={isTogglingPublic}
+            className={`px-6 py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-50 flex items-center gap-2 ${
+              isAppPublic 
+                ? "bg-white border-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300"
+                : "bg-emerald-600 text-white hover:bg-emerald-700"
+            }`}
+          >
+            {isTogglingPublic ? "Updating..." : (isAppPublic ? (
+              <>
+                <Lock className="w-4 h-4" /> Make Private (Lock)
+              </>
+            ) : (
+              <>
+                <Globe className="w-4 h-4" /> Make Public (Unlock)
+              </>
+            ))}
+          </button>
+        </div>
+      </div>
+      
+      
+      <div className="bg-white rounded-2xl border border-[#EAE7E0] p-6 shadow-sm mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+              <Fingerprint className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#2D362E] mb-1">2-Factor Authentication (2FA)</h3>
+              <p className="text-sm text-[#606C5D]">
+                Require a second factor (Text Message or Authenticator App) when logging into your admin account.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowMfaModal(true)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <ShieldCheck className="w-4 h-4" /> Setup 2FA
+          </button>
+        </div>
+      </div>
+      
+      {showMfaModal && <MfaSetupModal onClose={() => setShowMfaModal(false)} />}
+
       {/* Add New User */}
+
       <div className="bg-white rounded-2xl border border-[#EAE7E0] p-6 shadow-sm">
         <h3 className="text-sm font-bold text-[#2D362E] mb-4 flex items-center gap-2">
           <UserPlus className="w-4 h-4 text-[#4A5D4E]" />

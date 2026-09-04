@@ -20,6 +20,12 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     
+    
+    match /app_settings/{docId} {
+      allow read: if true;
+      allow write: if true; // ALlow all for testing
+    }
+
     match /whitelisted_emails/{emailId} {
       allow get: if isSignedIn(); // Allow users to check if their email is whitelisted
       allow read, write: if isAdmin();

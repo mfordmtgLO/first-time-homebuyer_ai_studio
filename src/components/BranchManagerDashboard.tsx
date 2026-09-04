@@ -63,7 +63,7 @@ export const BranchManagerDashboard: React.FC<BranchManagerDashboardProps> = ({ 
           <div>
             <div className="flex items-center gap-2 mb-2">
               <ShieldCheck className="w-6 h-6 text-[#E7C19D]" />
-              <h1 className="text-2xl font-bold font-display">Branch Manager Admin</h1>
+              <h1 className="text-2xl font-bold font-display">Branch Performance & ROI</h1>
             </div>
             <p className="text-emerald-100 opacity-90 max-w-2xl">
               Shadow team dashboards, track 2nd Brain utilization, monitor agent co-brand pairs, and analyze average days-to-close metrics across the branch.

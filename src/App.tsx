@@ -70,10 +70,12 @@ export default function App() {
   // Authentication State
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [userRole, setUserRole] = useState<"admin" | "lo" | null>(null);
+  const [isAppPublic, setIsAppPublic] = useState(false);
+
 
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const role = await checkAndProvisionUser(user);
@@ -87,24 +89,35 @@ export default function App() {
       }
       setIsAuthChecking(false);
     });
-    return () => unsubscribe();
+
+    const unsubscribeSettings = onSnapshot(doc(db, "app_settings", "global"), (docSnap) => {
+      if (docSnap.exists()) {
+        setIsAppPublic(docSnap.data().isPublic === true);
+      } else {
+        setIsAppPublic(false);
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeSettings();
+    };
   }, []);
 
-  if (isAuthChecking) {
-    return (
-      <div className="min-h-screen bg-[#F9F8F4] flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center">
-          <ShieldCheck className="w-12 h-12 text-[#4A5D4E] mb-4 opacity-50" />
-          <p className="text-[#606C5D] font-mono text-xs uppercase tracking-widest">Verifying access...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // DEVELOPMENT LOCK: Require authentication for the entire application
-  if (!userRole) {
-    return <LoginScreen onLogin={(role) => setUserRole(role as "admin" | "lo")} />;
-  }
+  const pathname = typeof window !== "undefined" ? window.location.pathname.toLowerCase() : "";
+  const hash = typeof window !== "undefined" ? window.location.hash.toLowerCase() : "";
+  const search = typeof window !== "undefined" ? window.location.search.toLowerCase() : "";
+  
+  const isPortalAccess = 
+    pathname.includes("/portal") || 
+    pathname.includes("/admin") || 
+    pathname.includes("/login") ||
+    pathname.includes("first-time_homebuyer_portal") ||
+    pathname.includes("first-time-homebuyer-portal") ||
+    hash.includes("portal") || 
+    hash.includes("admin") ||
+    search.includes("portal=lo") ||
+    search.includes("admin=lo");
 
 
   // Global State

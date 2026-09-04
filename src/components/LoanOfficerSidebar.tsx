@@ -242,11 +242,17 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
       icon: <Building className="w-3.5 h-3.5 text-[#C18C5D]" />,
       items: [
         {
-          id: "branch_admin_metrics",
-          label: "Branch Manager Admin",
+          id: "branch_management",
+          label: "Branch Access & Security",
           icon: <ShieldCheck className="w-4 h-4" />,
           badge: "Admin",
           badgeColor: "bg-amber-500 text-white",
+          requiresAdmin: true
+        },
+        {
+          id: "branch_admin_metrics",
+          label: "Branch Performance & ROI",
+          icon: <PieChart className="w-4 h-4" />,
           requiresAdmin: true
         },
         {

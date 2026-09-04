@@ -2,9 +2,17 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { telemetry } from './services/telemetryService';
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+// Initialize real-time telemetry & breadcrumb interception
+telemetry.init();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );
+

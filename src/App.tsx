@@ -5,6 +5,7 @@ import { Compass, ShieldCheck } from "lucide-react";
 import { Navbar } from "./components/Navbar";
 import { StepNavigationBanner } from "./components/StepNavigationBanner";
 import { MobileBottomNav } from "./components/MobileBottomNav";
+import { TelemetryDiagnosticsModal } from "./components/TelemetryDiagnosticsModal";
 import { HeroWebsite } from "./components/HeroWebsite";
 import { InstantAffordabilityCalculator } from "./components/InstantAffordabilityCalculator";
 import { RoadmapView } from "./components/RoadmapView";
@@ -58,6 +59,7 @@ export default function App() {
   const [currentMode, setCurrentMode] = useState<"website" | "dashboard">("website");
   const [activeTab, setActiveTab] = useState<string>("hero");
   const [isLeadBotOpen, setIsLeadBotOpen] = useState<boolean>(false);
+  const [showTelemetryModal, setShowTelemetryModal] = useState<boolean>(false);
   const [leadBotSourceContext, setLeadBotSourceContext] = useState<{ source?: string, intent?: "chat_listings" | "blueprint_download" | "buying_power" } | undefined>(undefined);
 
   // Global State
@@ -814,6 +816,22 @@ export default function App() {
           onOpen={() => setIsLeadBotOpen(true)}
         />
       )}
+
+      {/* Floating Production Telemetry & Diagnostics Button */}
+      <button
+        onClick={() => setShowTelemetryModal(true)}
+        className="fixed bottom-6 right-6 z-40 bg-slate-900 hover:bg-slate-800 text-purple-400 border border-purple-500/30 px-3.5 py-2.5 rounded-xl shadow-2xl flex items-center space-x-2 text-xs font-mono font-medium transition hover:scale-105 active:scale-95"
+        title="Open Production Telemetry & Breadcrumbs Inspector"
+      >
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <span>Telemetry Inspector</span>
+      </button>
+
+      {/* Telemetry Diagnostics Modal */}
+      <TelemetryDiagnosticsModal
+        isOpen={showTelemetryModal}
+        onClose={() => setShowTelemetryModal(false)}
+      />
     </div>
   );
 }

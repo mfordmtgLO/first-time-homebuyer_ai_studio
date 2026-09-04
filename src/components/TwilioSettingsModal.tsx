@@ -60,8 +60,6 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
   onClose,
   onSaveConfig
 }) => {
-  if (!isOpen) return null;
-
   const [config, setConfig] = useState<TwilioConfig>(getSavedTwilioConfig());
   const [showToken, setShowToken] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
@@ -85,6 +83,8 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
       })
       .catch(() => {});
   }, []);
+
+  if (!isOpen) return null;
 
   const handleSave = () => {
     saveTwilioConfigToStorage(config);

@@ -12,7 +12,7 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: "50mb" }));
+  app.use(express.json({ limit: "100mb" }));
 
   // In-memory queue for 3rd party webhook leads
   let webhookLeadsQueue: any[] = [];
@@ -123,7 +123,39 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
           return res.status(400).json({ error: "Failed to read or parse URL content." });
         }
       } else if (fileBase64 && mimeType) {
-        // If a file was uploaded as base64, extract text with Gemini first
+        if (mimeType.startsWith("video/")) {
+          // Respond to client immediately for video to prevent timeouts
+          res.json({
+            success: true,
+            message: `Video ${finalFileName} is being processed in the background. It will take a few minutes to transcribe and add to the knowledge base.`,
+            docId: "processing",
+            extractedTextPreview: "Processing in background..."
+          });
+
+          // Run processing in background
+          setTimeout(async () => {
+            try {
+              console.log(`Starting background processing for video: ${finalFileName}`);
+              const response = await ai.models.generateContent({
+                model: 'gemini-3.7-flash',
+                contents: [
+                  { inlineData: { data: fileBase64, mimeType } },
+                  "Please completely transcribe this video and extract all structured data, underwriting guidelines, and product qualifications accurately so it can be added to a knowledge base."
+                ]
+              });
+              const videoText = response.text || "";
+              if (videoText) {
+                await addDocumentToKnowledge(videoText, { fileName: finalFileName }, ai);
+                console.log(`Successfully completed background processing for video: ${finalFileName}`);
+              }
+            } catch (err) {
+              console.error("Background video processing failed:", err);
+            }
+          }, 0);
+          return; // Exit route early
+        }
+
+        // If a file was uploaded as base64 (non-video), extract text with Gemini first
         try {
           const response = await ai.models.generateContent({
             model: 'gemini-3.7-flash',

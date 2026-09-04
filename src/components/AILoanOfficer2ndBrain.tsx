@@ -171,25 +171,36 @@ How can I assist your pipeline today? You can select any active borrower from yo
     const file = event.target.files?.[0];
     if (!file || loading) return;
 
+    if (file.size > 50 * 1024 * 1024) {
+      alert("file not uploaded, file size upload constrained to 50 MB max");
+      if (trainInputRef.current) trainInputRef.current.value = '';
+      return;
+    }
+
+    const isVideo = file.type.startsWith('video/');
+
+    const userMsg: BrainMessage = {
+      id: `user-train-${Date.now()}`,
+      sender: "user",
+      text: `🧠 Uploading to Knowledge Base: ${file.name}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setMessages(prev => [...prev, userMsg]);
+    setLoading(true);
+
     const reader = new FileReader();
     reader.onload = async (e) => {
-      const text = e.target?.result as string;
-      
-      const userMsg: BrainMessage = {
-        id: `user-train-${Date.now()}`,
-        sender: "user",
-        text: `🧠 Uploading to Knowledge Base: ${file.name}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, userMsg]);
-      setLoading(true);
+      const dataUrl = e.target?.result as string;
+      const base64Data = dataUrl.split(',')[1];
+      const mimeType = file.type || "application/octet-stream";
 
       try {
         const res = await fetch("/api/knowledge/ingest", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            text: text,
+            fileBase64: base64Data,
+            mimeType: mimeType,
             fileName: file.name
           })
         });
@@ -203,7 +214,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
           id: `copilot-train-${Date.now()}`,
           sender: "copilot",
           text: data.success 
-            ? `**Successfully memorized!**\n\nI have added \`${file.name}\` to my Vector Database memory. I will now reference this case study and underwriting logic in future responses to ensure 100% accuracy tailored to your Oregon market.` 
+            ? (isVideo ? `**Video Upload Accepted!**\n\nI am processing \`${file.name}\` in the background. It will take a few minutes to transcribe and learn the product guidelines.` : `**Successfully memorized!**\n\nI have added \`${file.name}\` to my Vector Database memory. I will now reference this case study and underwriting logic in future responses to ensure 100% accuracy tailored to your Oregon market.`)
             : `**Error:** Failed to ingest knowledge.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           category: "guidelines"
@@ -226,7 +237,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
         setLoading(false);
       }
     };
-    reader.readAsText(file);
+    reader.readAsDataURL(file);
     if (trainInputRef.current) trainInputRef.current.value = '';
   };
 
@@ -806,7 +817,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
                 type="file"
                 ref={trainInputRef}
                 onChange={handleTrainUpload}
-                accept=".txt,.csv,.json,.pdf"
+                accept=".txt,.csv,.json,.pdf,video/mp4,video/webm,video/quicktime"
                 className="hidden"
               />
               <button

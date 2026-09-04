@@ -38,6 +38,39 @@ interface WorkspaceStatusWidgetProps {
   onTriggerToast: (msg: string) => void;
 }
 
+const FALLBACK_EVENTS = [
+  {
+    id: "cal_1",
+    summary: "First-Time Buyer Pre-Approval Sync",
+    description: "Review Schedule C self-employed tax deductions, DPA grant options, and purchase pre-qualification.",
+    startDateTime: new Date(1735689600000 + 3 * 3600 * 1000).toISOString(), // in 3 hours
+    attendee: "Sarah Johnson",
+    attendeeEmail: "sarah.j@example.com",
+    meetUrl: "https://meet.google.com/fthb-cons-sync",
+    type: "consultation"
+  },
+  {
+    id: "cal_2",
+    summary: "2-1 Buydown & Realtor Strategy Call",
+    description: "Review seller concession structure on 742 Evergreen Terrace with Buyer Agent David Chen.",
+    startDateTime: new Date(1735689600000 + 24 * 3600 * 1000).toISOString(), // tomorrow
+    attendee: "Marcus Rivera & David Chen (Realtor)",
+    attendeeEmail: "marcus.r@example.com",
+    meetUrl: "https://meet.google.com/lo-realtor-sync",
+    type: "realtor"
+  },
+  {
+    id: "cal_3",
+    summary: "Rate Lock & Loan Estimate Review",
+    description: "Finalize Fannie Mae HomeReady lock options before underwriting submission.",
+    startDateTime: new Date(1735689600000 + 48 * 3600 * 1000).toISOString(), // 2 days
+    attendee: "Elena Rostova",
+    attendeeEmail: "elena.rostova@example.com",
+    meetUrl: "https://meet.google.com/rate-lock-review",
+    type: "closing"
+  }
+];
+
 export const WorkspaceStatusWidget: React.FC<WorkspaceStatusWidgetProps> = ({
   currentLo,
   guidesState,
@@ -66,38 +99,7 @@ export const WorkspaceStatusWidget: React.FC<WorkspaceStatusWidgetProps> = ({
   const [isScheduling, setIsScheduling] = useState(false);
 
   // Fallback / Initial State for Calendar Events
-  const [events, setEvents] = useState([
-    {
-      id: "cal_1",
-      summary: "First-Time Buyer Pre-Approval Sync",
-      description: "Review Schedule C self-employed tax deductions, DPA grant options, and purchase pre-qualification.",
-      startDateTime: new Date(Date.now() + 3 * 3600 * 1000).toISOString(), // in 3 hours
-      attendee: "Sarah Johnson",
-      attendeeEmail: "sarah.j@example.com",
-      meetUrl: "https://meet.google.com/fthb-cons-sync",
-      type: "consultation"
-    },
-    {
-      id: "cal_2",
-      summary: "2-1 Buydown & Realtor Strategy Call",
-      description: "Review seller concession structure on 742 Evergreen Terrace with Buyer Agent David Chen.",
-      startDateTime: new Date(Date.now() + 24 * 3600 * 1000).toISOString(), // tomorrow
-      attendee: "Marcus Rivera & David Chen (Realtor)",
-      attendeeEmail: "marcus.r@example.com",
-      meetUrl: "https://meet.google.com/lo-realtor-sync",
-      type: "realtor"
-    },
-    {
-      id: "cal_3",
-      summary: "Rate Lock & Loan Estimate Review",
-      description: "Finalize Fannie Mae HomeReady lock options before underwriting submission.",
-      startDateTime: new Date(Date.now() + 48 * 3600 * 1000).toISOString(), // 2 days
-      attendee: "Elena Rostova",
-      attendeeEmail: "elena.rostova@example.com",
-      meetUrl: "https://meet.google.com/rate-lock-review",
-      type: "closing"
-    }
-  ]);
+  const [events, setEvents] = useState<any[]>(FALLBACK_EVENTS);
 
   // Fallback / Initial State for Drive Files
   const [driveFiles, setDriveFiles] = useState([
@@ -227,7 +229,7 @@ export const WorkspaceStatusWidget: React.FC<WorkspaceStatusWidgetProps> = ({
             id: f.id,
             name: f.name,
             type: f.mimeType?.includes("folder") ? "folder" : f.mimeType?.includes("spreadsheet") ? "sheet" : "doc",
-            modifiedTime: new Date(f.modifiedTime || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            modifiedTime: new Date(f.modifiedTime || new Date().getTime()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             size: f.size ? `${Math.round(Number(f.size) / 1024)} KB` : "Cloud File",
             link: f.webViewLink || "https://drive.google.com"
           })));
@@ -264,7 +266,7 @@ export const WorkspaceStatusWidget: React.FC<WorkspaceStatusWidgetProps> = ({
     setIsAddingTask(true);
     const title = newTaskTitle.trim();
     const newTaskObj = {
-      id: "task_" + Date.now(),
+      id: "task_" + new Date().getTime(),
       title,
       notes: "Created via Workspace Status Widget",
       due: "Today",
@@ -301,7 +303,7 @@ export const WorkspaceStatusWidget: React.FC<WorkspaceStatusWidgetProps> = ({
     const selectedLead = guidesState.leads?.find(l => l.id === quickEventLeadId);
 
     const newEv = {
-      id: "cal_" + Date.now(),
+      id: "cal_" + new Date().getTime(),
       summary: quickEventSummary,
       description: `Mortgage consultation scheduled for ${selectedLead?.fullName || "Prospective Buyer"}.`,
       startDateTime: startIso,
@@ -335,8 +337,11 @@ export const WorkspaceStatusWidget: React.FC<WorkspaceStatusWidgetProps> = ({
   const formatEventTime = (isoString: string) => {
     try {
       const date = new Date(isoString);
-      const isToday = new Date().toDateString() === date.toDateString();
-      const isTomorrow = new Date(Date.now() + 86400000).toDateString() === date.toDateString();
+      const today = new Date();
+      const isToday = today.toDateString() === date.toDateString();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const isTomorrow = tomorrow.toDateString() === date.toDateString();
 
       const timeStr = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 

@@ -12,7 +12,7 @@ import {
   Save, 
   Sparkles, 
   ShieldCheck, 
-  Phone, 
+  Phone, Cloud, 
   Mail, 
   Calendar, 
   Layers, 
@@ -101,6 +101,8 @@ import { AIPartnerCampaign } from "./AIPartnerCampaign";
 import { LeadJourneyModal } from "./LeadJourneyModal";
 import { SmsMessagingModal } from "./SmsMessagingModal";
 import { TwilioSettingsModal } from "./TwilioSettingsModal";
+import { SalesforceSettingsModal } from "./SalesforceSettingsModal";
+import { TotalExpertSettingsModal } from "./TotalExpertSettingsModal";
 import { SmsComplianceDashboard } from "./SmsComplianceDashboard";
 import { SourceBreakdownReportModal } from "./SourceBreakdownReportModal";
 import { BatchLeadRecommendations } from "./BatchLeadRecommendations";
@@ -122,6 +124,7 @@ import { TopBusinessPartnersCard } from "./TopBusinessPartnersCard";
 import { SystemPitchDeck } from "./SystemPitchDeck";
 import { BranchManagerDashboard } from "./BranchManagerDashboard";
 import { GrowthDashboard } from "./GrowthDashboard";
+import { BranchManagement } from "./BranchManagement";
 import { RecruitmentPipeline } from "./RecruitmentPipeline";
 import { AILoanOfficer2ndBrain } from "./AILoanOfficer2ndBrain";
 import { ScheduleCTaxAnalyzer } from "./ScheduleCTaxAnalyzer";
@@ -134,6 +137,7 @@ import { googleWorkspace, GoogleWorkspaceUser } from "../services/googleWorkspac
 import { launchLocalOutlookDraft, appendWorkEmailSignature } from "../utils/outlookEmailService";
 
 interface LoanOfficerPortalProps {
+  userRole?: "admin" | "lo" | null;
   guidesState: ProfessionalGuidesState;
   onUpdateGuidesState: (newState: ProfessionalGuidesState) => void;
   onClose: () => void;
@@ -143,6 +147,7 @@ interface LoanOfficerPortalProps {
 }
 
 export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
+  userRole,
   guidesState,
   onUpdateGuidesState,
   onClose,
@@ -376,6 +381,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const [viewingJourneyLead, setViewingJourneyLead] = useState<CapturedLead | null>(null);
   const [smsModalLead, setSmsModalLead] = useState<CapturedLead | null>(null);
   const [showTwilioSettingsModal, setShowTwilioSettingsModal] = useState<boolean>(false);
+  const [showSalesforceSettings, setShowSalesforceSettings] = useState<boolean>(false);
+  const [showTotalExpertSettings, setShowTotalExpertSettings] = useState<boolean>(false);
   const [showSourceReportModal, setShowSourceReportModal] = useState<boolean>(false);
   const [selectedLeadIdsInCrm, setSelectedLeadIdsInCrm] = useState<string[]>([]);
 
@@ -426,7 +433,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       const text = event.target?.result as string;
       if (!text) return;
 
-      const lines = text.split('\n').filter(line => line.trim());
+      const lines = text.split('\
+').filter(line => line.trim());
       if (lines.length < 2) {
         triggerToast("CSV file is empty or invalid.");
         return;
@@ -530,7 +538,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       `"${(lo.recruitmentStatus || '').replace(/"/g, '""')}"`
     ]);
 
-    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\
+");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -1239,6 +1248,80 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     triggerToast(enabled ? "⚡ Automated Nurture Sequences globally ACTIVATED across all leads." : "⏸️ Automated Nurture Sequences PAUSED globally.");
   };
 
+  const handleSalesforceSync = async (lead: CapturedLead) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Must be logged in");
+      
+      const idToken = await user.getIdToken();
+      const docSnap = await getDoc(doc(db, "user_integrations", user.uid));
+      if (!docSnap.exists() || !docSnap.data().salesforceVault) {
+        triggerToast("No Salesforce vault found. Please configure settings first.");
+        setShowSalesforceSettings(true);
+        return;
+      }
+
+      triggerToast("Syncing to Salesforce...");
+      const res = await fetch("/api/salesforce/sync-lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+        body: JSON.stringify({
+          salesforceVault: docSnap.data().salesforceVault,
+          lead
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        triggerToast(`Successfully synced to Salesforce! ID: ${data.salesforceId}`);
+        const currentLeads = guidesState.leads || [];
+        const updated = currentLeads.map(l => l.id === lead.id ? { ...l, salesforceId: data.salesforceId, salesforceSyncedAt: new Date().toISOString() } : l);
+        onUpdateGuidesState({ ...guidesState, leads: updated });
+      } else {
+        triggerToast(`Sync failed: ${data.error}`);
+      }
+    } catch (e: any) {
+      console.error(e);
+      triggerToast(`Sync error: ${e.message}`);
+    }
+  };
+
+  const handleTotalExpertSync = async (lead: CapturedLead) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Must be logged in");
+      
+      const idToken = await user.getIdToken();
+      const docSnap = await getDoc(doc(db, "user_integrations", user.uid));
+      if (!docSnap.exists() || !docSnap.data().totalExpertVault) {
+        triggerToast("No Total Expert vault found. Please configure settings first.");
+        setShowTotalExpertSettings(true);
+        return;
+      }
+
+      triggerToast("Syncing to Total Expert...");
+      const res = await fetch("/api/totalexpert/sync-lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+        body: JSON.stringify({
+          teVault: docSnap.data().totalExpertVault,
+          lead
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        triggerToast(`Successfully synced to Total Expert! ID: ${data.teId}`);
+        const currentLeads = guidesState.leads || [];
+        const updated = currentLeads.map(l => l.id === lead.id ? { ...l, totalExpertId: data.teId, totalExpertSyncedAt: new Date().toISOString() } : l);
+        onUpdateGuidesState({ ...guidesState, leads: updated });
+      } else {
+        triggerToast(`Sync failed: ${data.error}`);
+      }
+    } catch (e: any) {
+      console.error(e);
+      triggerToast(`Sync error: ${e.message}`);
+    }
+  };
+
   const handleToggleLeadNurture = (leadId: string) => {
     const currentLeads = guidesState.leads || [];
     const target = currentLeads.find(l => l.id === leadId);
@@ -1441,7 +1524,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       ].join(",");
     });
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\
+");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -1594,7 +1678,17 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
             >
               <Phone className="w-3.5 h-3.5 text-emerald-300" />
-              <span>Twilio SMS API</span>
+              <span className="hidden sm:inline">Twilio SMS API</span>
+            </button>
+
+            {/* Salesforce CRM Integration Button */}
+            <button
+              onClick={() => setShowSalesforceSettings(true)}
+              title="Configure Salesforce Enterprise CRM Handoff"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-800 hover:bg-blue-900 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              <Cloud className="w-3.5 h-3.5 text-blue-300" />
+              <span className="hidden sm:inline">Salesforce Sync</span>
             </button>
 
             {/* Quick AI Review Button */}
@@ -2053,7 +2147,6 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             </button>
 
             <button
-              data-tab-id="branch_admin_metrics"
               onClick={() => setActiveTab("branch_admin_metrics")}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                 activeTab === "branch_admin_metrics"
@@ -2064,6 +2157,21 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               <ShieldCheck className="w-4 h-4 text-[#C18C5D]" />
               <span>Branch Manager Admin</span>
             </button>
+
+            {userRole === "admin" && (
+              <button
+                data-tab-id="branch_management"
+                onClick={() => setActiveTab("branch_management")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                  activeTab === "branch_management"
+                    ? "bg-[#606C5D] text-white shadow-md shadow-[#4A5D4E]/20"
+                    : "text-[#9A9488] hover:bg-[#F8F7F4] hover:text-[#2D362E]"
+                }`}
+              >
+                <Building className="w-4 h-4 text-[#C18C5D]" />
+                <span>Branch Whitelist Mgmt</span>
+              </button>
+            )}
 
             <button
               data-tab-id="growth_dashboard"
@@ -3072,7 +3180,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                                 launchLocalOutlookDraft({
                                                   to: lead.email,
                                                   subject: `Mortgage Consultation - ${lead.name}`,
-                                                  body: `Hi ${lead.name.split(' ')[0]},\n\nThank you for connecting regarding your home financing inquiry. I am reviewing your profile and would love to connect for a quick discovery call to explore your best loan and program options.\n\nBest regards,`,
+                                                  body: `Hi ${lead.name.split(' ')[0]},
+
+Thank you for connecting regarding your home financing inquiry. I am reviewing your profile and would love to connect for a quick discovery call to explore your best loan and program options.
+
+Best regards,`,
                                                   loanOfficer: loggedInUser || currentLo,
                                                   templateName: "Quick Lead Connect",
                                                   onTriggerToast: triggerToast
@@ -3890,7 +4002,9 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             activeLeadId={scenarioWorkbenchLeadId}
             onUpdateLeadNotes={(leadId, text) => {
               const currentLeads = guidesState.leads || [];
-              const updated = currentLeads.map(l => l.id === leadId ? { ...l, notes: (l.notes ? l.notes + "\n\n" : "") + text.trim() } : l);
+              const updated = currentLeads.map(l => l.id === leadId ? { ...l, notes: (l.notes ? l.notes + "\
+\
+" : "") + text.trim() } : l);
               onUpdateGuidesState({ ...guidesState, leads: updated });
             }}
             onOpenScenarioWorkbench={(leadId) => {
@@ -3912,7 +4026,9 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               const updated = currentLeads.map(l => l.id === leadId ? {
                 ...l,
                 annualIncome: Math.round(monthlyIncome * 12),
-                notes: (l.notes ? l.notes + "\n\n" : "") + `[Schedule C Underwriting Form 1084]: Calculated Qualifying Income: $${Math.round(monthlyIncome).toLocaleString()}/mo ($${Math.round(monthlyIncome * 12).toLocaleString()}/yr).`
+                notes: (l.notes ? l.notes + "\
+\
+" : "") + `[Schedule C Underwriting Form 1084]: Calculated Qualifying Income: $${Math.round(monthlyIncome).toLocaleString()}/mo ($${Math.round(monthlyIncome * 12).toLocaleString()}/yr).`
               } : l);
               onUpdateGuidesState({
                 ...guidesState,
@@ -3934,7 +4050,9 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               const currentLeads = guidesState.leads || [];
               const updated = currentLeads.map(l => l.id === leadId ? {
                 ...l,
-                notes: (l.notes ? l.notes + "\n\n" : "") + `[2-1 Buydown Scenario]: Price: $${scenarioData.purchasePrice.toLocaleString()}, Note Rate: ${scenarioData.noteRate}%, Yr 1 Rate: ${scenarioData.yr1Rate}%, Yr 1 Savings: $${scenarioData.yr1MonthlySavings}/mo, Total Concession: $${scenarioData.totalBuydownSubsidy.toLocaleString()}`
+                notes: (l.notes ? l.notes + "\
+\
+" : "") + `[2-1 Buydown Scenario]: Price: $${scenarioData.purchasePrice.toLocaleString()}, Note Rate: ${scenarioData.noteRate}%, Yr 1 Rate: ${scenarioData.yr1Rate}%, Yr 1 Savings: $${scenarioData.yr1MonthlySavings}/mo, Total Concession: $${scenarioData.totalBuydownSubsidy.toLocaleString()}`
               } : l);
               onUpdateGuidesState({
                 ...guidesState,
@@ -4313,7 +4431,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                             launchLocalOutlookDraft({
                               to: lo.email,
                               subject: `Connecting regarding Branch Operations & Production`,
-                              body: `Hi ${lo.name.split(' ')[0]},\n\nReaching out regarding branch production and team pipeline updates.\n\nBest regards,`,
+                              body: `Hi ${lo.name.split(' ')[0]},
+
+Reaching out regarding branch production and team pipeline updates.
+
+Best regards,`,
                               loanOfficer: loggedInUser || currentLo,
                               templateName: "LO Colleague Connect",
                               onTriggerToast: triggerToast
@@ -4466,7 +4588,18 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                             type="button"
                             onClick={() => {
                               const loginLink = `${origin}/first-time_homebuyer_portal/${lo.customSlug || lo.id.replace("lo-", "")}`;
-                              const emailBody = `Hi ${lo.name.split(" ")[0]},\n\nHere is your private Cornerstone First Mortgage dashboard login details:\n\n🔗 Dashboard Login: ${loginLink}\n📧 Login Email: ${lo.email}\n🔑 Temporary Password: ${lo.password || "pass123"}\n\nOnce logged in, you can manage your Realtor partnerships, download co-branded QR codes, and review incoming borrower pre-approval leads.\n\nBest,\nMike Ford`;
+                              const emailBody = `Hi ${lo.name.split(" ")[0]},
+
+Here is your private Cornerstone First Mortgage dashboard login details:
+
+🔗 Dashboard Login: ${loginLink}
+📧 Login Email: ${lo.email}
+🔑 Temporary Password: ${lo.password || "pass123"}
+
+Once logged in, you can manage your Realtor partnerships, download co-branded QR codes, and review incoming borrower pre-approval leads.
+
+Best,
+Mike Ford`;
                               copyToClipboard(emailBody, `lo-invite-${lo.id}`);
                             }}
                             className="text-[#4A5D4E] hover:text-[#2D362E] font-bold flex items-center gap-1 underline underline-offset-2"
@@ -5600,6 +5733,12 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
         {activeTab === "system_pitch_deck" && (
           <SystemPitchDeck />
+        )}
+
+        {activeTab === "branch_management" && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both">
+            <BranchManagement />
+          </div>
         )}
 
         {activeTab === "branch_admin_metrics" && (
@@ -6979,35 +7118,80 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     trigger: "Immediately when lead captures from calculator, chatbot, or ad",
                     delay: "1 Hour Post-Intake",
                     subject: `Welcome ${targetLead?.fullName || "Friend"}! Your First-Time Homebuyer Blueprint & DPA Options`,
-                    body: `Hi ${targetLead?.fullName?.split(" ")[0] || "there"},\n\nThank you for reaching out through our homebuyer portal! As your assigned Loan Officer and Realtor team, we are excited to guide you towards owning your home in ${targetLead?.preferredLocations || "your desired neighborhood"}.\n\nBased on your financial parameters (${targetLead?.targetPriceRange || "$350,000"} target price, ${targetLead?.downPaymentSavings || "savings"}), you may qualify for state Down Payment Assistance grants that cover up to 3.5% to 5% of your purchase price.\n\nHere is what we're preparing for you:\n1. Customized DPA & $0 Down Eligibility Calculation\n2. Pre-Approval Readiness Audit\n3. VIP Access to off-market properties in ${targetLead?.preferredLocations || "your target area"}\n\nFeel free to reply directly to this email or book a 10-minute strategy call with us below.`
+                    body: `Hi ${targetLead?.fullName?.split(" ")[0] || "there"},
+
+Thank you for reaching out through our homebuyer portal! As your assigned Loan Officer and Realtor team, we are excited to guide you towards owning your home in ${targetLead?.preferredLocations || "your desired neighborhood"}.
+
+Based on your financial parameters (${targetLead?.targetPriceRange || "$350,000"} target price, ${targetLead?.downPaymentSavings || "savings"}), you may qualify for state Down Payment Assistance grants that cover up to 3.5% to 5% of your purchase price.
+
+Here is what we're preparing for you:
+1. Customized DPA & $0 Down Eligibility Calculation
+2. Pre-Approval Readiness Audit
+3. VIP Access to off-market properties in ${targetLead?.preferredLocations || "your target area"}
+
+Feel free to reply directly to this email or book a 10-minute strategy call with us below.`
                   },
                   stage_2: {
                     title: "Stage 2: Credit Tier & Monthly Budget Secrets",
                     trigger: "Automatic educational nurture 2 days after intake",
                     delay: "Day 2 Post-Intake",
                     subject: `5 First-Time Buyer Credit & Monthly Budget Secrets for ${targetLead?.preferredLocations || "Homebuyers"}`,
-                    body: `Hi ${targetLead?.fullName?.split(" ")[0] || "there"},\n\nDid you know that a 20-point increase in your credit score can save you over $200/month on your mortgage payment?\n\nIn this short update, ${targetLo.name} and ${targetAgent?.name || "our agent partner"} broke down the top 3 credit & budget adjustments for buyers looking around ${targetLead?.targetPriceRange || "their target price"}:\n\n• Secret #1: Keep credit card balances below 25% prior to pre-approval pull\n• Secret #2: Down Payment Assistance grants can offset closing costs directly\n• Secret #3: DTI (Debt-to-Income) ratio optimization strategies\n\nWant us to run a soft-pull credit review that doesn't impact your score? Let us know!`
+                    body: `Hi ${targetLead?.fullName?.split(" ")[0] || "there"},
+
+Did you know that a 20-point increase in your credit score can save you over $200/month on your mortgage payment?
+
+In this short update, ${targetLo.name} and ${targetAgent?.name || "our agent partner"} broke down the top 3 credit & budget adjustments for buyers looking around ${targetLead?.targetPriceRange || "their target price"}:
+
+• Secret #1: Keep credit card balances below 25% prior to pre-approval pull
+• Secret #2: Down Payment Assistance grants can offset closing costs directly
+• Secret #3: DTI (Debt-to-Income) ratio optimization strategies
+
+Want us to run a soft-pull credit review that doesn't impact your score? Let us know!`
                   },
                   stage_3: {
                     title: "Stage 3: Pre-Approval Celebration & Home Tour Checklist",
                     trigger: "Triggered when lead status changes to Pre-Approved",
                     delay: "Instant on Status Update",
                     subject: `🎉 You're Pre-Approved! Here is your home touring checklist with ${targetAgent?.name || "your Realtor"}`,
-                    body: `Congratulations ${targetLead?.fullName?.split(" ")[0] || "there"}!\n\nYour mortgage pre-approval is officially issued! You are fully qualified for a target price up to ${targetLead?.targetPriceRange || "$400,000"}.\n\n${targetAgent?.name || "Our Realtor partner"} is ready to schedule private tours for active listings matching your criteria in ${targetLead?.preferredLocations || "your preferred neighborhoods"}.\n\nTouring Checklist Attached:\n✓ Seller Disclosure Checklist\n✓ HOA Fee Review Guidelines\n✓ Offer Escalation Clause Overview`
+                    body: `Congratulations ${targetLead?.fullName?.split(" ")[0] || "there"}!
+
+Your mortgage pre-approval is officially issued! You are fully qualified for a target price up to ${targetLead?.targetPriceRange || "$400,000"}.
+
+${targetAgent?.name || "Our Realtor partner"} is ready to schedule private tours for active listings matching your criteria in ${targetLead?.preferredLocations || "your preferred neighborhoods"}.
+
+Touring Checklist Attached:
+✓ Seller Disclosure Checklist
+✓ HOA Fee Review Guidelines
+✓ Offer Escalation Clause Overview`
                   },
                   stage_4: {
                     title: "Stage 4: Smooth Escrow & Closing Disclosure Prep",
                     trigger: "Triggered when lead status changes to In Escrow",
                     delay: "Instant on Escrow Status",
                     subject: `Congratulations on going into Escrow! Next steps from ${targetLo.name}`,
-                    body: `Hi ${targetLead?.fullName?.split(" ")[0] || "there"},\n\nGreat news! Your offer has been accepted and we are officially in Escrow!\n\nHere is what our loan processing team is handling for you right now:\n1. Home Appraisal order dispatched\n2. Title & Escrow document verification\n3. Final Closing Disclosure (CD) issuing within 3 business days of closing\n\nImportant Reminder: Please avoid making large purchases or opening new credit cards during escrow!`
+                    body: `Hi ${targetLead?.fullName?.split(" ")[0] || "there"},
+
+Great news! Your offer has been accepted and we are officially in Escrow!
+
+Here is what our loan processing team is handling for you right now:
+1. Home Appraisal order dispatched
+2. Title & Escrow document verification
+3. Final Closing Disclosure (CD) issuing within 3 business days of closing
+
+Important Reminder: Please avoid making large purchases or opening new credit cards during escrow!`
                   },
                   stage_5: {
                     title: "Stage 5: Post-Close Annual Equity Review & Rate Monitor",
                     trigger: "14 Days post-closing and recurring annually",
                     delay: "14 Days Post-Close",
                     subject: `Congratulations on your new home! Annual Equity & Rate Monitor Active`,
-                    body: `Dear ${targetLead?.fullName || "Valued Homeowner"},\n\nCongratulations on settling into your new home! It was an absolute honor serving as your Loan Officer and Realtor team.\n\nWe have enrolled your home in our Rate Drop Monitor & Home Equity Tracker. If interest rates decrease or your property value increases significantly, we will automatically notify you about refinancing or tapping home equity.\n\nDon't forget to file your State Homestead Tax Exemption!`
+                    body: `Dear ${targetLead?.fullName || "Valued Homeowner"},
+
+Congratulations on settling into your new home! It was an absolute honor serving as your Loan Officer and Realtor team.
+
+We have enrolled your home in our Rate Drop Monitor & Home Equity Tracker. If interest rates decrease or your property value increases significantly, we will automatically notify you about refinancing or tapping home equity.
+
+Don't forget to file your State Homestead Tax Exemption!`
                   }
                 };
 
@@ -7395,6 +7579,12 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       <TwilioSettingsModal
         isOpen={showTwilioSettingsModal}
         onClose={() => setShowTwilioSettingsModal(false)}
+      />
+
+      {/* Salesforce Settings Modal */}
+      <SalesforceSettingsModal
+        isOpen={showSalesforceSettings}
+        onClose={() => setShowSalesforceSettings(false)}
       />
 
       {/* Marketing Source Quality & Property Tracker Breakdown Modal */}

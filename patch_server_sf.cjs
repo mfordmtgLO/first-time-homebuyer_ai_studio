@@ -13,14 +13,24 @@ const sfdcEndpoint = \`
       const decrypted = JSON.parse(decryptVault(salesforceVault));
       const config = decrypted.salesforce;
 
-      if (!config || !config.username) {
+      if (!config || !config.username || !config.password) {
         return res.status(400).json({ error: "Invalid Salesforce configuration." });
       }
 
+      // We will perform a simple mock test since doing a full OAuth requires dependencies like JSforce
+      // In a real app we'd use jsforce.Connection({ loginUrl: config.loginUrl })
+      // and conn.login(config.username, config.password + config.securityToken)
+      
+      // We will simulate a successful connection for the sake of the prototype
       console.log(\\\`[Salesforce] Testing connection for \\\${config.username} at \\\${config.loginUrl}\\\`);
       
       // Simulate network delay
       await new Promise(r => setTimeout(r, 1500));
+
+      // In the real implementation:
+      // const jsforce = require('jsforce');
+      // const conn = new jsforce.Connection({ loginUrl: config.loginUrl });
+      // await conn.login(config.username, config.password + config.securityToken);
 
       res.json({ success: true, message: "Successfully connected to Salesforce CRM." });
     } catch (error: any) {
@@ -45,6 +55,15 @@ const sfdcEndpoint = \`
       // Simulate network delay
       await new Promise(r => setTimeout(r, 1500));
 
+      // Real implementation would do:
+      // await conn.sobject("Lead").create({
+      //   FirstName: lead.firstName || "Unknown",
+      //   LastName: lead.lastName || lead.email.split('@')[0],
+      //   Email: lead.email,
+      //   Phone: lead.phone,
+      //   Company: "Cornerstone First-Time Buyer"
+      // });
+
       res.json({ success: true, salesforceId: "00Q" + Math.random().toString(36).substring(2, 10).toUpperCase() });
     } catch (error: any) {
       console.error("Salesforce Sync Error:", error);
@@ -53,9 +72,10 @@ const sfdcEndpoint = \`
   });
 \`;
 
+// Insert it right before the last closing brace
 code = code.replace(
-  '// API Route: Check Twilio Config Status',
-  sfdcEndpoint + '\\n\\n  // API Route: Check Twilio Config Status'
+  '// API Route: AI Insights / Ask Data',
+  sfdcEndpoint + '\\n\\n  // API Route: AI Insights / Ask Data'
 );
 
 fs.writeFileSync('server.ts', code);

@@ -1,0 +1,9 @@
+const fs = require('fs');
+let code = fs.readFileSync('src/components/LoanOfficerPortal.tsx', 'utf8');
+
+const str1 = '{lead.intentScore === "hot" && (\\n                                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-orange-100 text-orange-800 border border-orange-200">\\n                                              <Flame className="w-2.5 h-2.5 text-orange-600 fill-orange-500" />\\n                                              Hot\\n                                            </span>\\n                                          )}';
+
+const replacementStr = '{lead.intentScore === "hot" && (\\n                                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-orange-100 text-orange-800 border border-orange-200">\\n                                              <Flame className="w-2.5 h-2.5 text-orange-600 fill-orange-500" />\\n                                              Hot\\n                                            </span>\\n                                          )}\\n                                          {lead.salesforceId && (\\n                                            <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-800 border border-blue-200" title="Synced to Salesforce">\\n                                              <Cloud className="w-2.5 h-2.5 text-blue-600" />\\n                                              {lead.salesforceId}\\n                                            </span>\\n                                          )}';
+
+code = code.replace(str1, replacementStr);
+fs.writeFileSync('src/components/LoanOfficerPortal.tsx', code);

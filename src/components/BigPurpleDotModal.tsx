@@ -146,10 +146,21 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
     setIsTesting(true);
     setTestResult(null);
     try {
+      const { auth } = await import("../firebase");
+      const user = auth.currentUser;
+      const token = user ? await user.getIdToken() : "";
+      
+      let bpdVault = undefined;
+      if (hasVault) {
+        const vaultRes = await fetchIntegrationsVault();
+        if (vaultRes.hasVault) bpdVault = vaultRes.encryptedVault;
+      }
+      
       const res = await fetch("/api/big-purple-dot/test-connection", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({
+          bpdVault,
           apiKey,
           apiSecret,
           subdomain,

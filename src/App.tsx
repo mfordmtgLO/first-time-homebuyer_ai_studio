@@ -19,6 +19,11 @@ import { EscrowTracker } from "./components/EscrowTracker";
 import { Step4AIScenarioSummary } from "./components/Step4AIScenarioSummary";
 import { LoanOfficerPortal } from "./components/LoanOfficerPortal";
 import { LeadIntakeChatbot } from "./components/LeadIntakeChatbot";
+import { LoginScreen } from "./components/LoginScreen";
+import { BranchManagement } from "./components/BranchManagement";
+import { auth } from "./firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { checkAndProvisionUser } from "./utils/authUtils";
 import { 
   INITIAL_PROFILE, 
   INITIAL_PROPERTIES, 
@@ -61,6 +66,10 @@ export default function App() {
   const [isLeadBotOpen, setIsLeadBotOpen] = useState<boolean>(false);
   const [showTelemetryModal, setShowTelemetryModal] = useState<boolean>(false);
   const [leadBotSourceContext, setLeadBotSourceContext] = useState<{ source?: string, intent?: "chat_listings" | "blueprint_download" | "buying_power" } | undefined>(undefined);
+
+  // Authentication State
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [userRole, setUserRole] = useState<"admin" | "lo" | null>(null);
 
   // Global State
   const [profile, setProfile] = useState<FinancialProfile>(INITIAL_PROFILE);
@@ -587,7 +596,7 @@ export default function App() {
         <main className={showLoPortal ? "flex-1 w-full p-0 m-0" : "flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 pb-8 transition-all duration-300 ease-in-out"}>
           {/* LOAN OFFICER PORTAL VIEW */}
           {showLoPortal ? (
-          <LoanOfficerPortal
+          <LoanOfficerPortal userRole={userRole}
             guidesState={guidesState}
             onUpdateGuidesState={handleUpdateGuidesState}
             onClose={() => setShowLoPortal(false)}

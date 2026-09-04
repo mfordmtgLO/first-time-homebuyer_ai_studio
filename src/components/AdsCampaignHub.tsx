@@ -47,6 +47,44 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [hasVault, setHasVault] = useState(false);
 
+  // New AI states
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiMetaSpec, setAiMetaSpec] = useState<any>(null);
+  const [aiGoogleSpec, setAiGoogleSpec] = useState<any>(null);
+
+  const handleGenerateCampaigns = async () => {
+    setIsGenerating(true);
+    try {
+      const { auth } = await import("../firebase");
+      const user = auth.currentUser;
+      if (!user) throw new Error("Must be logged in to generate campaigns");
+      
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/ai/meta-ads-campaign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+        body: JSON.stringify({
+          loanOfficer,
+          activeAgent,
+          adSettings
+        })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to generate");
+      
+      setAiMetaSpec(data.metaAdSpec);
+      setAiGoogleSpec(data.googleAdSpec);
+      setSaveMessage("Campaigns generated successfully via AI!");
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (e: any) {
+      console.error(e);
+      alert("Error generating campaign: " + e.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // Editable credentials state
   const [adSettings, setAdSettings] = useState<LoanOfficerAdSettings>(() => {
     return loanOfficer.adSettings || {
@@ -107,7 +145,7 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
   // Meta Campaign Spec
   const metaCampaignUrl = `${pairingUrl}${pairingUrl.includes("?") ? "&" : "?"}utm_source=meta_ads&utm_medium=cpc&utm_campaign=first_time_homebuyer_dpa&utm_content=co_branded`;
   
-  const metaAdSpec = {
+  const metaAdSpec = aiMetaSpec || {
     campaignName: `[Homebuyer Roadmap 2026] First-Time Buyer Portal • ${loanOfficer.name} + ${activeAgent.name}`,
     specialCategory: "Housing (HEC - RESPA / Fair Housing Compliant)",
     objective: "Lead Generation / Instant Interactive Portal",
@@ -131,7 +169,7 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
   // Google Ads Search Campaign Spec
   const googleCampaignUrl = `${pairingUrl}${pairingUrl.includes("?") ? "&" : "?"}utm_source=google_ads&utm_medium=search_cpc&utm_campaign=first_time_homebuyer_calculator&utm_term=oregon_dpa_assistance`;
 
-  const googleAdSpec = {
+  const googleAdSpec = aiGoogleSpec || {
     campaignName: `[Google Search] First Time Homebuyer Oregon • ${loanOfficer.name} + ${activeAgent.name}`,
     network: "Google Search (High Intent Keywords)",
     dailyBudget: adSettings.dailyBudgetUSD ? adSettings.dailyBudgetUSD + 5 : 30,
@@ -237,28 +275,41 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
       )}
 
       {/* Platform Switcher */}
-      <div className="flex items-center gap-3 border-b border-[#EAE7E0] pb-2">
-        <button
-          onClick={() => setActivePlatformTab("meta")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activePlatformTab === "meta"
-              ? "bg-[#1877F2] text-white shadow-xs"
-              : "bg-[#F1EFE9] text-[#606C5D] hover:bg-[#EAE7E0]"
-          }`}
-        >
-          <span>📘 Meta (Facebook & Instagram Feed Ads)</span>
-        </button>
+      <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-2">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setActivePlatformTab("meta")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activePlatformTab === "meta"
+                ? "bg-[#1877F2] text-white shadow-xs"
+                : "bg-[#F1EFE9] text-[#606C5D] hover:bg-[#EAE7E0]"
+            }`}
+          >
+            <span>📘 Meta (Facebook & Instagram Feed Ads)</span>
+          </button>
 
-        <button
-          onClick={() => setActivePlatformTab("google")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activePlatformTab === "google"
-              ? "bg-[#EA4335] text-white shadow-xs"
-              : "bg-[#F1EFE9] text-[#606C5D] hover:bg-[#EAE7E0]"
-          }`}
-        >
-          <span>🔍 Google Ads (Responsive Search Ads)</span>
-        </button>
+          <button
+            onClick={() => setActivePlatformTab("google")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activePlatformTab === "google"
+                ? "bg-[#EA4335] text-white shadow-xs"
+                : "bg-[#F1EFE9] text-[#606C5D] hover:bg-[#EAE7E0]"
+            }`}
+          >
+            <span>🔍 Google Ads (Responsive Search Ads)</span>
+          </button>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleGenerateCampaigns}
+            disabled={isGenerating}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#2D362E] hover:bg-[#4A5D4E] text-white text-xs font-bold rounded-xl transition-all shadow-xs disabled:opacity-50"
+          >
+            <Sparkles className="w-4 h-4 text-emerald-300" />
+            <span>{isGenerating ? "Generating..." : "Auto-Generate with AI"}</span>
+          </button>
+        </div>
       </div>
 
       {/* Quick Launch & Direct Login Cards for Ad Accounts */}

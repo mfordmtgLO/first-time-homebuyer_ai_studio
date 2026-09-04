@@ -6,10 +6,25 @@ service cloud.firestore {
     }
     
     function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() &&
+             exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'admin';
+    }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     
+    match /user_roles/{userId} {
+      allow get, create, update: if isSignedIn() && request.auth.uid == userId;
+      allow read, write: if isAdmin();
+    }
+    
+    match /whitelisted_emails/{emailId} {
+      allow get: if isSignedIn(); // Allow users to check if their email is whitelisted
+      allow read, write: if isAdmin();
+    }
+
     function isValidTwilioVault(data) {
       return data.keys().hasAll(['encryptedVault', 'enableLiveCarrierSms', 'ownerId', 'updatedAt']) &&
              data.keys().size() == 4 &&
@@ -44,11 +59,12 @@ service cloud.firestore {
                     incoming().diff(existing()).affectedKeys().hasOnly(['encryptedVault', 'updatedAt']);
     }
 
-    // Existing insecure rules (left as they were for the rest of the prototype data for now)
-    match /guides_state/{docId} { allow read: if true; allow write: if true; }
-    match /loan_officers/{loId} { allow read: if true; allow write: if true; }
-    match /agents/{agentId} { allow read: if true; allow write: if true; }
-    match /pairings/{pairingId} { allow read: if true; allow write: if true; }
-    match /email_templates/{templateId} { allow read: if true; allow write: if true; }
+    // Existing open rules for prototyping. 
+    // In the future, we will lock these down to `isOwner(userId)`
+    match /guides_state/{docId} { allow read, write: if isSignedIn(); }
+    match /loan_officers/{loId} { allow read, write: if isSignedIn(); }
+    match /agents/{agentId} { allow read, write: if isSignedIn(); }
+    match /pairings/{pairingId} { allow read, write: if isSignedIn(); }
+    match /email_templates/{templateId} { allow read, write: if isSignedIn(); }
   }
 }

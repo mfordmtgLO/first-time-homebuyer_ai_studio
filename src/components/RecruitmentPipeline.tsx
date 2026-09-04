@@ -283,10 +283,17 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
     setIsSyncingBpdAll(true);
     setBpdSyncProgress(10);
     try {
+      const { auth } = await import("../firebase");
+      const user = auth.currentUser;
+      const token = user ? await user.getIdToken() : "";
+      
+      const { fetchIntegrationsVault } = await import("../utils/vault");
+      const vaultRes = await fetchIntegrationsVault();
+      
       const res = await fetch("/api/big-purple-dot/sync", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, type })
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ items, type, bpdVault: vaultRes.encryptedVault })
       });
       const data = await res.json();
       setBpdSyncProgress(100);

@@ -1,74 +1,60 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/components/BigPurpleDotModal.tsx', 'utf8');
+let code = fs.readFileSync('server.ts', 'utf8');
 
+// Update test-connection
 code = code.replace(
-  'import { BigPurpleDotConfig, BigPurpleDotWebhookEvent } from "../types";',
-  'import { BigPurpleDotConfig, BigPurpleDotWebhookEvent } from "../types";\nimport { fetchIntegrationsVault, saveToIntegrationsVault } from "../utils/vault";'
-);
-
-code = code.replace(
-  'const [activeTab, setActiveTab] = useState<"credentials" | "webhooks" | "mapping" | "golive">("credentials");',
-  'const [activeTab, setActiveTab] = useState<"credentials" | "webhooks" | "mapping" | "golive">("credentials");\n  const [hasVault, setHasVault] = useState(false);\n  const [isSaving, setIsSaving] = useState(false);'
-);
-
-code = code.replace(
-  /fetch\("\/api\/big-purple-dot\/config"\)\n\s*\.then\(res => res\.json\(\)\)\n\s*\.then\(data => \{[^}]*\}\)/,
-  `fetchIntegrationsVault().then(res => {
-      if (res.hasVault) {
-        setHasVault(true);
-        setApiKey("••••••••••••••••");
-        setApiSecret("••••••••••••••••••••••••••••••••");
-      }
-    })`
-);
-
-code = code.replace(
-  /const handleSaveConfig = async \(\) => \{[^}]*\n\s*try \{[^}]*const res = await fetch\("\/api\/big-purple-dot\/config"[^}]*\}[^}]*onUpdateConfig\([^}]*\}[^}]*\};/m,
-  `const handleSaveConfig = async () => {
-    setIsSaving(true);
+  /app\.post\("\/api\/big-purple-dot\/test-connection", async \(req, res\) => {[\s\S]*?\/\/ Simulate connection/,
+  `app.post("/api/big-purple-dot/test-connection", authenticateUser, async (req, res) => {
     try {
-      const payload = {
-        subdomain,
-        apiKey,
-        apiSecret,
-        accountEmail,
-        webhookSecret,
-        environment,
-        autoSyncRecruits,
-        syncLoanOfficers,
-        syncRealEstateAgents,
-        loStageMapping,
-        agentStageMapping,
-        connectionStatus: apiKey ? "connected" : "not_configured"
-      };
+      let config = bpdConfig;
+      if (req.body.bpdVault) {
+        const decrypted = JSON.parse(decryptVault(req.body.bpdVault));
+        config = decrypted;
+      }
+      
+      const apiKeyToTest = (req.body.apiKey && !req.body.apiKey.includes("••")) ? req.body.apiKey.trim() : config.apiKey;
+      const apiSecretToTest = (req.body.apiSecret && !req.body.apiSecret.includes("••")) ? req.body.apiSecret.trim() : config.apiSecret;
+      const subdomainToTest = req.body.subdomain || config.subdomain || "cornerstone";
+      const environment = req.body.environment || config.environment || "sandbox";
 
-      if (apiKey && !apiKey.includes("••••")) {
-        await saveToIntegrationsVault(payload);
-        setHasVault(true);
+      if (!apiKeyToTest) {
+        return res.status(400).json({
+          success: false,
+          status: "error",
+          message: "Missing Big Purple Dot API Key. Please provide an API Key to test connection."
+        });
       }
 
-      onUpdateConfig(payload as any);
-      onTriggerToast("BPD Integration settings & Vault encrypted successfully.");
-      setTimeout(() => onClose(), 1500);
-    } catch (e: any) {
-      console.error(e);
-      alert("Failed to securely encrypt BPD Vault");
-    } finally {
-      setIsSaving(false);
-    }
-  };`
+      // Simulate connection`
 );
 
-// We should replace the hardcoded "Save Configuration" with dynamic isSaving
+// Update sync
 code = code.replace(
-  '<span className="font-bold">Save Integration Configuration</span>',
-  '<span className="font-bold">{isSaving ? "Encrypting Vault..." : "Save Integration Configuration"}</span>'
+  /app\.post\("\/api\/big-purple-dot\/sync", \(req, res\) => {[\s\S]*?const { items, type } = req\.body;/,
+  `app.post("/api/big-purple-dot/sync", authenticateUser, (req, res) => {
+    try {
+      const { items, type, bpdVault } = req.body;
+      let config = bpdConfig;
+      if (bpdVault) {
+        config = JSON.parse(decryptVault(bpdVault));
+      }
+      if (!config || !config.apiKey) {
+        return res.status(400).json({ error: "Missing Big Purple Dot credentials in vault." });
+      }`
 );
 
-// Also replace the button disabled prop
+// We need to make sure bpdConfig uses the config inside sync
 code = code.replace(
-  'disabled={!apiKey || !subdomain}',
-  'disabled={!apiKey || !subdomain || isSaving}'
+  /const environment = bpdConfig\.environment/,
+  `const environment = config.environment`
+);
+code = code.replace(
+  /bpdConfig\.environment === "sandbox"/g,
+  `config.environment === "sandbox"`
+);
+code = code.replace(
+  /bpdConfig\.lastSyncedAt = new Date\(\)\.toISOString\(\);/,
+  `// (omitted global mutation)`
 );
 
-fs.writeFileSync('src/components/BigPurpleDotModal.tsx', code);
+fs.writeFileSync('server.ts', code);

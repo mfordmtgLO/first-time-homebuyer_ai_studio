@@ -22,6 +22,7 @@ import {
   Settings
 } from "lucide-react";
 import { CapturedLead, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing, SmsTemplate } from "../types";
+import { DEFAULT_SMS_TEMPLATES } from "../data/smsTemplates";
 import { TwilioSettingsModal, getSavedTwilioConfig } from "./TwilioSettingsModal";
 
 interface SmsMessagingModalProps {
@@ -653,32 +654,28 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
                     </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    {smsTemplates.length === 0 ? (
-                      <div className="col-span-full p-3 text-center text-gray-500 italic">
-                        No custom templates found. Go to the SMS Nurture Library tab to create them.
-                      </div>
-                    ) : (
-                      smsTemplates.map(template => (
-                        <button
-                          key={template.id}
-                          onClick={() => {
-                            const filledText = template.content
-                              .replace(/{{firstName}}/g, firstName)
-                              .replace(/\[Name\]/g, firstName)
-                              .replace(/{{loName}}/g, loName)
-                              .replace(/\[AgentName\]/g, agent?.name?.split(" ")[0] || "Your Agent")
-                              .replace(/{{location}}/g, lead.preferredLocations || "Oregon")
-                              .replace(/\[City\]/g, lead.preferredLocations || "Oregon");
-                            setMessageText(filledText);
-                            setShowTemplateMenu(false);
-                          }}
-                          className="text-left p-2 bg-white border border-[#EAE7E0] rounded-xl hover:border-emerald-400 hover:bg-emerald-50 transition-colors"
-                        >
-                          <div className="font-bold text-[#2D362E] mb-0.5 truncate">{template.title}</div>
-                          <div className="text-[10px] text-[#606C5D] truncate">{template.content}</div>
-                        </button>
-                      ))
-                    )}
+                    {(!smsTemplates || smsTemplates.length === 0 ? DEFAULT_SMS_TEMPLATES : smsTemplates).map(template => (
+                      <button
+                        key={template.id}
+                        onClick={() => {
+                          const filledText = template.content
+                            .replace(/{{firstName}}/g, firstName)
+                            .replace(/\[Name\]/g, firstName)
+                            .replace(/{{loName}}/g, loName)
+                            .replace(/\[AgentName\]/g, agent?.name?.split(" ")[0] || "Your Agent")
+                            .replace(/{{location}}/g, lead.preferredLocations || "Oregon")
+                            .replace(/\[City\]/g, lead.preferredLocations || "Oregon")
+                            .replace(/{{targetPrice}}/g, lead.targetPriceRange || "$450,000")
+                            .replace(/\[TargetBudget\]/g, lead.targetPriceRange || "$450,000");
+                          setMessageText(filledText);
+                          setShowTemplateMenu(false);
+                        }}
+                        className="text-left p-2 bg-white border border-[#EAE7E0] rounded-xl hover:border-emerald-400 hover:bg-emerald-50 transition-colors"
+                      >
+                        <div className="font-bold text-[#2D362E] mb-0.5 truncate">{template.title}</div>
+                        <div className="text-[10px] text-[#606C5D] truncate">{template.content}</div>
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}

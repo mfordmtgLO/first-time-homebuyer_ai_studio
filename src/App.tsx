@@ -32,6 +32,7 @@ import {
   INITIAL_LEADS
 } from "./data/initialData";
 import { INITIAL_RECRUITING_CAMPAIGNS } from "./data/recruitingData";
+import { DEFAULT_SMS_TEMPLATES } from "./data/smsTemplates";
 import { 
   FinancialProfile, 
   PropertyListing, 
@@ -94,7 +95,8 @@ export default function App() {
       socialCampaigns: INITIAL_SOCIAL_CAMPAIGNS,
       adCampaignDrafts: INITIAL_AD_DRAFTS,
       leads: INITIAL_LEADS,
-      syncedProperties: GEOSPHERE_MOCK_LISTINGS
+      syncedProperties: GEOSPHERE_MOCK_LISTINGS,
+      smsTemplates: DEFAULT_SMS_TEMPLATES
     };
 
     try {
@@ -104,6 +106,16 @@ export default function App() {
         if (parsed.loanOfficers && parsed.pairings) {
           if (!parsed.leads) {
             parsed.leads = INITIAL_LEADS;
+          }
+          // Ensure SMS Templates are populated with rich pre-written options
+          if (!parsed.smsTemplates || parsed.smsTemplates.length === 0) {
+            parsed.smsTemplates = DEFAULT_SMS_TEMPLATES;
+          } else {
+            DEFAULT_SMS_TEMPLATES.forEach(defaultTpl => {
+              if (!parsed.smsTemplates.some((t: any) => t.id === defaultTpl.id)) {
+                parsed.smsTemplates.push(defaultTpl);
+              }
+            });
           }
           // Sanitize all loan officers and agents to guarantee data integrity
           parsed.loanOfficers = (parsed.loanOfficers as any[]).map(lo => sanitizeLoanOfficer(lo));

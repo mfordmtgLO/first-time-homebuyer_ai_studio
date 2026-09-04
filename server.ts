@@ -1361,6 +1361,90 @@ No markdown formatting.`;
     }
   });
 
+  // API Route: AI Mortgage 2nd Brain - SMS Nurture Template Generator
+  app.post("/api/gemini/generate-sms-template", async (req, res) => {
+    try {
+      const { goal, customPrompt, tone, loName, loCompany, category } = req.body || {};
+      const officer = loName || "Mike Ford";
+      const company = loCompany || "Cornerstone First Mortgage";
+      
+      const systemInstruction = `You are an expert mortgage copywriter and TCPA compliance specialist for Mortgage Loan Officers (Cornerstone First Mortgage).
+Generate a high-converting, concise text message (SMS) template for loan officers to send to prospective homebuyer leads.
+
+RULES:
+1. Length: Keep it under 240 characters (ideally 140-190 characters).
+2. Use merge variables where appropriate:
+   - {{firstName}} for lead's first name
+   - {{loName}} for Loan Officer's first name
+   - {{location}} for target city/area
+   - [AgentName] for real estate agent partner
+   - {{targetPrice}} for target price/budget
+3. Include TCPA opt-out text at the end: "Reply STOP to opt out."
+4. Voice: ${tone || "friendly, consultative, transparent, professional"}. No cheesy spam phrases.
+5. Focus/Goal: ${customPrompt || goal || "Pre-approval check-in and down payment grant overview"}.
+6. Category: ${category || "follow_up"}.
+
+Respond ONLY with a valid JSON object matching this schema:
+{
+  "title": "A concise, engaging template title with a relevant emoji (under 50 chars)",
+  "content": "The exact SMS text message with merge variables and opt-out notice",
+  "category": "${category || "follow_up"}",
+  "tags": ["Tag1", "Tag2"]
+}
+No markdown formatting or extra text outside JSON.`;
+
+      try {
+        const response = await generateWithModelFallback({
+          preferredModel: "gemini-3.7-flash",
+          contents: `Create a mortgage nurture SMS template for: ${customPrompt || goal || "home financing inquiry"}`,
+          config: {
+            systemInstruction,
+            temperature: 0.7,
+            responseMimeType: "application/json"
+          }
+        });
+
+        const text = response.text || "{}";
+        const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
+        const parsed = JSON.parse(cleaned);
+        
+        return res.json({
+          success: true,
+          template: {
+            id: `sms-tpl-ai-${Date.now()}`,
+            title: parsed.title || "✨ AI Custom Mortgage Nurture",
+            content: parsed.content || `Hi {{firstName}}, this is {{loName}} with ${company}. Checking in on your home search in {{location}}. Would you like to review custom loan options this week? Reply STOP to opt out.`,
+            category: parsed.category || category || "follow_up",
+            tags: parsed.tags || ["AI Generated", "Mortgage 2nd Brain"],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            ownerId: "ai_copilot"
+          }
+        });
+      } catch (genError) {
+        // Fallback generator when API limit occurs
+        const fallbackTitle = goal ? `✨ ${goal}` : "✨ AI Mortgage Check-in";
+        const fallbackContent = `Hi {{firstName}}, {{loName}} here with ${company}. Saw you were researching homes in {{location}}. We have special down payment grants and low-rate programs available this month. Want to review numbers? Reply STOP to opt out.`;
+        return res.json({
+          success: true,
+          template: {
+            id: `sms-tpl-ai-${Date.now()}`,
+            title: fallbackTitle,
+            content: fallbackContent,
+            category: category || "follow_up",
+            tags: ["AI Generated", "Mortgage 2nd Brain"],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            ownerId: "ai_copilot"
+          }
+        });
+      }
+    } catch (error: any) {
+      console.error("SMS template generation error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate SMS template" });
+    }
+  });
+
   // API Route: AI Buyer Lead Outreach & Co-Branded Template Generator
   app.post("/api/gemini/website-lead-email", async (req, res) => {
     const { lead, lo, agent, matchingListings } = req.body || {};

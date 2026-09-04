@@ -108,6 +108,7 @@ import { DailyMorningBriefing } from "./DailyMorningBriefing";
 import { TaskManagementPanel } from "./TaskManagementPanel";
 import { SmsTemplateLibrary } from "./SmsTemplateLibrary";
 import { BulkSmsModal } from "./BulkSmsModal";
+import { DEFAULT_SMS_TEMPLATES } from "../data/smsTemplates";
 import { ScrapeLoRosterModal } from "./ScrapeLoRosterModal";
 import { ScrapeRealtorModal } from "./ScrapeRealtorModal";
 import { LoOutreachModal } from "./LoOutreachModal";
@@ -5568,9 +5569,9 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         {/* Tab: Pre-written SMS Templates Library */}
         {activeTab === "sms_templates" && (
           <SmsTemplateLibrary
-            templates={guidesState.smsTemplates || []}
+            templates={guidesState.smsTemplates && guidesState.smsTemplates.length > 0 ? guidesState.smsTemplates : DEFAULT_SMS_TEMPLATES}
             onSaveTemplate={(template) => {
-              const currentTemplates = guidesState.smsTemplates || [];
+              const currentTemplates = guidesState.smsTemplates && guidesState.smsTemplates.length > 0 ? guidesState.smsTemplates : DEFAULT_SMS_TEMPLATES;
               const existingIndex = currentTemplates.findIndex(t => t.id === template.id);
               let updatedTemplates;
               if (existingIndex >= 0) {
@@ -5586,7 +5587,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               triggerToast(`⚡ Template '${template.title}' saved!`);
             }}
             onDeleteTemplate={(id) => {
-              const currentTemplates = guidesState.smsTemplates || [];
+              const currentTemplates = guidesState.smsTemplates && guidesState.smsTemplates.length > 0 ? guidesState.smsTemplates : DEFAULT_SMS_TEMPLATES;
               const updatedTemplates = currentTemplates.filter(t => t.id !== id);
               onUpdateGuidesState({
                 ...guidesState,
@@ -7192,7 +7193,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           lead={smsModalLead}
           loanOfficer={currentLo}
           syncedProperties={properties}
-          smsTemplates={guidesState.smsTemplates || []}
+          smsTemplates={guidesState.smsTemplates && guidesState.smsTemplates.length > 0 ? guidesState.smsTemplates : DEFAULT_SMS_TEMPLATES}
           onClose={() => setSmsModalLead(null)}
           onUpdateLead={handleUpdateLeadFromSmsModal}
         />
@@ -7368,9 +7369,26 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         isOpen={showBulkSmsModal}
         onClose={() => setShowBulkSmsModal(false)}
         selectedLeads={Array.from(selectedLeadIds).map(id => (guidesState.leads || []).find(l => l.id === id)!).filter(Boolean)}
-        templates={guidesState.smsTemplates || []}
+        templates={guidesState.smsTemplates && guidesState.smsTemplates.length > 0 ? guidesState.smsTemplates : DEFAULT_SMS_TEMPLATES}
         loanOfficer={currentLo}
         onDispatch={handleBulkSmsDispatch}
+        onSaveTemplate={(template) => {
+          const currentTemplates = guidesState.smsTemplates && guidesState.smsTemplates.length > 0 ? guidesState.smsTemplates : DEFAULT_SMS_TEMPLATES;
+          const existingIndex = currentTemplates.findIndex(t => t.id === template.id);
+          let updatedTemplates;
+          if (existingIndex >= 0) {
+            updatedTemplates = [...currentTemplates];
+            updatedTemplates[existingIndex] = template;
+          } else {
+            updatedTemplates = [template, ...currentTemplates];
+          }
+          onUpdateGuidesState({
+            ...guidesState,
+            smsTemplates: updatedTemplates
+          });
+          triggerToast(`⚡ Template '${template.title}' saved to Library!`);
+        }}
+        onTriggerToast={triggerToast}
       />
 
       {/* Twilio Carrier Credentials & Settings Modal */}

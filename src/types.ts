@@ -12,6 +12,7 @@ export interface FinancialProfile {
   state: string;
   pmiRate: number; // e.g. 0.75%
   targetMaxMonthlyPayment?: number; // Self-restricted max monthly payment goal
+  priceAlertEnabled?: boolean;
 }
 
 export interface MonthlyMortgageBreakdown {
@@ -133,6 +134,8 @@ export interface PropertyListing {
   mlsNumber?: string;
   mlsName?: string;
   zillowUrl?: string;
+  priceAlertEnabled?: boolean;
+  previousPrice?: number;
   listingAgent?: {
     id?: string;
     name?: string;

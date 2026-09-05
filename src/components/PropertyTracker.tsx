@@ -23,7 +23,9 @@ import {
   Footprints,
   Map as MapIcon,
   Compass,
-  LayoutGrid
+  LayoutGrid,
+  Bell,
+  BellRing
 } from "lucide-react";
 import { PropertyListing, FinancialProfile } from "../types";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
@@ -90,6 +92,79 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [sortBy, setSortBy] = useState("added");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [toastMessage, setToastMessage] = useState<{title: string, body: React.ReactNode, type: 'up' | 'down' | 'success'} | null>(null);
+
+  // Mock Price Updates for Price Alerts
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setProperties(prev => {
+        let changed = false;
+        const updated = prev.map(p => {
+          if (p.priceAlertEnabled && Math.random() > 0.7) { // 30% chance to change price every interval
+            changed = true;
+            const changePercent = (Math.random() * 0.05) - 0.025; // -2.5% to +2.5%
+            const newPrice = Math.round(p.price * (1 + changePercent));
+            if (newPrice !== p.price) {
+              const diff = newPrice - p.price;
+              const type = diff > 0 ? 'up' : 'down';
+              const diffFormatted = Math.abs(diff).toLocaleString();
+              setToastMessage({
+                title: 'Price Alert Triggered',
+                body: `${p.title} has ${type === 'up' ? 'increased' : 'dropped'} by $${diffFormatted}!`,
+                type
+              });
+              
+              // auto hide toast
+              setTimeout(() => {
+                setToastMessage(null);
+              }, 5000);
+
+              return { ...p, previousPrice: p.price, price: newPrice };
+            }
+          }
+          return p;
+        });
+        return changed ? updated : prev;
+      });
+    }, 10000); // Check every 10 seconds for demo purposes
+    
+    return () => clearInterval(interval);
+  }, [setProperties]);
+
+  const showExportSuccessToast = (type: 'CSV' | 'PDF') => {
+    const agentName = activeAgent?.name || loanOfficer?.name || "Kanndice McLean";
+    const agentEmail = activeAgent?.email || loanOfficer?.email || "kanndice@thecooleygroup.com";
+    const agentPhone = activeAgent?.phone || loanOfficer?.phone || "555-0123";
+    const agentBrokerage = activeAgent?.brokerage || "The Cooley Group";
+
+    setToastMessage({
+      title: `${type} Download Complete`,
+      type: 'success',
+      body: (
+        <>
+          <p>Your property tracker has been saved successfully.</p>
+          <p className="mt-2 text-[#4A5D4E] font-medium border-t border-[#EAE7E0] pt-2">
+            For more property specific details on your curated saved list today, reach out to <strong>{agentName}</strong> @ {agentBrokerage}.
+          </p>
+          <div className="flex items-center gap-3 mt-2 font-bold text-[#2D362E]">
+            <a href={`mailto:${agentEmail}`} className="flex items-center gap-1 hover:text-[#C18C5D] transition-colors">
+              <Mail className="w-3.5 h-3.5" />
+              {agentEmail}
+            </a>
+            <a href={`tel:${agentPhone}`} className="flex items-center gap-1 hover:text-[#C18C5D] transition-colors">
+              <Phone className="w-3.5 h-3.5" />
+              {agentPhone}
+            </a>
+          </div>
+        </>
+      )
+    });
+    
+    // Auto-dismiss after a longer time so they can read and click
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 12000);
+  };
 
   const handleExportCSV = () => {
     const listToExport = selectedPropertyIds.length > 0 
@@ -231,6 +306,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    showExportSuccessToast('CSV');
   };
 
   const handleExportPDF = async () => {
@@ -248,6 +324,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
       pdf.save("Property-Pipeline-Report.pdf");
+      showExportSuccessToast('PDF');
     } catch (error) {
       console.error("Failed to export PDF", error);
       alert("Failed to generate PDF. Please try again.");
@@ -261,6 +338,44 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     setProperties(prev =>
       prev.map(p => (p.id === id ? { ...p, isFavorite: !p.isFavorite } : p))
     );
+  };
+
+  const togglePriceAlert = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProperties(prev =>
+      prev.map(p => {
+        if (p.id === id) {
+          const isEnabled = !p.priceAlertEnabled;
+          if (isEnabled) {
+            // Optional: You could show a quick toast saying "Alerts enabled for this property" here
+            console.log("Price alerts enabled for", p.id);
+          }
+          return { ...p, priceAlertEnabled: isEnabled, previousPrice: p.price };
+        }
+        return p;
+      })
+    );
+  };
+
+  const allAlertsEnabled = properties.length > 0 && properties.every(p => p.priceAlertEnabled);
+
+  const toggleAllAlerts = () => {
+    const turnOn = !allAlertsEnabled;
+    setProperties(prev => prev.map(p => ({
+      ...p,
+      priceAlertEnabled: turnOn,
+      previousPrice: p.price
+    })));
+    
+    setToastMessage({
+      title: turnOn ? 'Master Alerts Enabled' : 'Master Alerts Disabled',
+      body: turnOn ? 'Price alerts are now active for all properties.' : 'Price alerts have been paused.',
+      type: turnOn ? 'down' : 'up'
+    });
+    
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 5000);
   };
 
   const deleteProperty = (id: string, e: React.MouseEvent) => {
@@ -289,6 +404,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   const filtered = properties.filter(p => {
     // 1. Status Filter
     if (filterStatus === "favorites" && !p.isFavorite) return false;
+    if (filterStatus === "alerts" && !p.priceAlertEnabled) return false;
     if (filterStatus === "consideration" && p.status !== "saved" && p.status !== "touring") return false;
     if (filterStatus === "offered" && p.status !== "offered" && p.status !== "under_contract") return false;
     if (filterStatus === "archived" && p.status !== "passed") return false;
@@ -345,7 +461,38 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   }, [filtered]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className={`bg-white border-l-4 rounded-xl shadow-2xl p-4 flex items-start gap-3 w-80 sm:w-96 border-t border-r border-b border-t-[#EAE7E0] border-r-[#EAE7E0] border-b-[#EAE7E0]`} style={{ borderLeftColor: toastMessage.type === 'up' ? '#EF4444' : toastMessage.type === 'down' ? '#10B981' : '#4A5D4E' }}>
+            {toastMessage.type === 'up' ? (
+              <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                <TrendingUp className="w-4 h-4 text-red-500" />
+              </div>
+            ) : toastMessage.type === 'down' ? (
+              <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                <FileDown className="w-4 h-4 text-emerald-500" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-[#ECFDF5] flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              </div>
+            )}
+            <div className="flex-1">
+              <h4 className="font-bold text-sm text-[#2D362E]">{toastMessage.title}</h4>
+              <div className="text-xs text-[#606C5D] mt-0.5 space-y-2">{toastMessage.body}</div>
+            </div>
+            <button 
+              onClick={() => setToastMessage(null)}
+              className="ml-auto text-[#9A9488] hover:text-[#2D362E] transition-colors shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Header & Pipeline Controls */}
       <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 space-y-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -362,7 +509,19 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             </p>
           </div>
 
-                    <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={toggleAllAlerts}
+              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-semibold text-xs shadow-sm transition-all cursor-pointer ${
+                allAlertsEnabled 
+                  ? "bg-[#ECFDF5] border-emerald-500 text-emerald-700 hover:bg-[#D1FAE5]" 
+                  : "bg-white border-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] hover:bg-stone-50"
+              }`}
+              title={allAlertsEnabled ? "Disable price alerts for all properties" : "Enable price alerts for all properties"}
+            >
+              {allAlertsEnabled ? <BellRing className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+              <span>{allAlertsEnabled ? "Alerts On" : "Alerts Off"}</span>
+            </button>
             <button
               onClick={() => setShowShareViaEmailModal(true)}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-[#4A5D4E] text-[#4A5D4E] hover:bg-[#F9F8F4] font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105"
@@ -458,6 +617,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           {[
             { id: "all", label: `All Pipeline (${properties.length})` },
             { id: "favorites", label: `Favorites (${properties.filter(p => p.isFavorite).length})` },
+            { id: "alerts", label: `Price Alerts (${properties.filter(p => p.priceAlertEnabled).length})` },
             { id: "consideration", label: `Under Consideration (${properties.filter(p => p.status === "saved" || p.status === "touring").length})` },
             { id: "offered", label: `Offered / Contract (${properties.filter(p => p.status === "offered" || p.status === "under_contract").length})` },
             { id: "archived", label: `Archived (${properties.filter(p => p.status === "passed").length})` },
@@ -719,6 +879,21 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                         }}
                       />
                       <button
+                        onClick={(e) => togglePriceAlert(property.id, e)}
+                        className={`p-2 rounded-xl backdrop-blur-md border transition-colors ${
+                          property.priceAlertEnabled
+                            ? "bg-white text-emerald-600 border-emerald-500"
+                            : "bg-white/80 text-[#606C5D] border-white/60 hover:text-[#2D362E]"
+                        }`}
+                        title={property.priceAlertEnabled ? "Price alerts enabled" : "Enable price alerts"}
+                      >
+                        {property.priceAlertEnabled ? (
+                          <BellRing className="w-4 h-4 text-emerald-500" />
+                        ) : (
+                          <Bell className="w-4 h-4" />
+                        )}
+                      </button>
+                      <button
                         onClick={(e) => toggleFavorite(property.id, e)}
                         className={`p-2 rounded-xl backdrop-blur-md border transition-colors ${
                           property.isFavorite
@@ -782,6 +957,21 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                             }
                           }}
                         />
+                        <button
+                          onClick={(e) => togglePriceAlert(property.id, e)}
+                          className={`p-1.5 rounded-xl border transition-colors ${
+                            property.priceAlertEnabled
+                              ? "bg-white text-emerald-600 border-emerald-500"
+                              : "bg-white text-[#606C5D] border-[#EAE7E0] hover:text-[#2D362E]"
+                          }`}
+                          title={property.priceAlertEnabled ? "Price alerts enabled" : "Enable price alerts"}
+                        >
+                          {property.priceAlertEnabled ? (
+                            <BellRing className="w-3.5 h-3.5 text-emerald-500" />
+                          ) : (
+                            <Bell className="w-3.5 h-3.5" />
+                          )}
+                        </button>
                         <button
                           onClick={(e) => toggleFavorite(property.id, e)}
                           className={`p-1.5 rounded-xl border transition-colors ${

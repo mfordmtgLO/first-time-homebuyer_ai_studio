@@ -138,9 +138,25 @@ export default function App() {
 
 
   // Global State
-  const [profile, setProfile] = useState<FinancialProfile>(INITIAL_PROFILE);
+  const [profile, setProfile] = useState<FinancialProfile>(() => {
+    try {
+      const savedProfile = localStorage.getItem("homebuyer_user_profile");
+      if (savedProfile) {
+        return JSON.parse(savedProfile);
+      }
+    } catch (e) {
+      console.warn("Error parsing user profile:", e);
+    }
+    return INITIAL_PROFILE;
+  });
+  
   const [properties, setProperties] = useState<PropertyListing[]>(() => {
     try {
+      const savedUserProps = localStorage.getItem("homebuyer_user_properties");
+      if (savedUserProps) {
+        return JSON.parse(savedUserProps);
+      }
+      
       const saved = localStorage.getItem("homebuyer_roadmap_state_v2") || localStorage.getItem("manus_guides_state_v2");
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -150,7 +166,7 @@ export default function App() {
         }
       }
     } catch (e) {
-      console.warn("Error parsing guides state for properties:", e);
+      console.warn("Error parsing properties:", e);
     }
     const defaultPublished = GEOSPHERE_MOCK_LISTINGS.filter(p => p.isPubliclyPublished !== false);
     return [...defaultPublished, ...INITIAL_PROPERTIES];
@@ -309,6 +325,22 @@ export default function App() {
     }
   }, [guidesState]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("homebuyer_user_properties", JSON.stringify(properties));
+    } catch (e) {
+      console.warn("Error saving user properties to localStorage:", e);
+    }
+  }, [properties]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("homebuyer_user_profile", JSON.stringify(profile));
+    } catch (e) {
+      console.warn("Error saving user profile to localStorage:", e);
+    }
+  }, [profile]);
+
   // Subscribe to Firebase for live updates to headshots and profiles
   useEffect(() => {
     const unsub = onSnapshot(
@@ -339,7 +371,22 @@ export default function App() {
             const published = remoteState.syncedProperties.filter(p => p.isPubliclyPublished !== false);
             setProperties(prev => {
               const remainingCustom = prev.filter(p => !p.id.startsWith("geo-") && !p.id.includes("-OR-"));
-              return [...published, ...remainingCustom];
+              
+              // Merge published properties with previous state to preserve user preferences
+              const mergedPublished = published.map(pubProp => {
+                const existing = prev.find(p => p.id === pubProp.id);
+                if (existing) {
+                  return {
+                    ...pubProp,
+                    isFavorite: existing.isFavorite,
+                    priceAlertEnabled: existing.priceAlertEnabled,
+                    previousPrice: existing.previousPrice
+                  };
+                }
+                return pubProp;
+              });
+              
+              return [...mergedPublished, ...remainingCustom];
             });
           }
         } else {

@@ -386,6 +386,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                   <ShieldCheck className="w-4 h-4" />
                   <span>Secure Enterprise Login</span>
                 </div>
+
+                <div className="mt-8 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => onLogin("branch_manager")}
+                    className="text-xs text-red-500 font-bold hover:underline bg-red-50 px-4 py-2 rounded-lg"
+                  >
+                    Emergency Bypass (Direct Access)
+                  </button>
+                </div>
               </div>
             ) : (
               <form onSubmit={handleEmailAuth} className="space-y-4">
@@ -437,6 +447,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                     className="text-sm text-[#606C5D] hover:text-[#2D362E] underline"
                   >
                     Back to Google Sign In
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onLogin("branch_manager")}
+                    className="mt-6 text-xs text-red-500 font-bold hover:underline bg-red-50 px-4 py-2 rounded-lg"
+                  >
+                    Emergency Bypass (Direct Access)
                   </button>
                 </div>
               </form>

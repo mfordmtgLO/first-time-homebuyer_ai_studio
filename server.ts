@@ -254,9 +254,11 @@ const authenticateUser = async (req: express.Request, res: express.Response, nex
 };
 
 async function startServer() {
+  console.log("Starting server initialization...");
   // Mandatory Startup Security Check: Validates environment variables and cryptographic readiness
   validateEncryptionStartupConfiguration();
 
+  console.log("Loading knowledge base...");
   loadKnowledgeBase();
 
   const app = express();

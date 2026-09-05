@@ -13,7 +13,6 @@ import {
   Sparkles, 
   ShieldCheck, 
   Phone, Cloud, 
-  Compass,
   Mail, 
   Calendar, 
   Layers, 

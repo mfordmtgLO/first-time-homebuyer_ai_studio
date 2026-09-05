@@ -13,6 +13,9 @@ interface BigPurpleDotModalProps {
   config?: BigPurpleDotConfig;
   onUpdateConfig: (newConfig: BigPurpleDotConfig) => void;
   onTriggerToast: (msg: string) => void;
+  userRole?: string;
+  currentLoId?: string;
+  currentLoName?: string;
 }
 
 export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
@@ -20,8 +23,15 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
   onClose,
   config,
   onUpdateConfig,
-  onTriggerToast
+  onTriggerToast,
+  userRole,
+  currentLoId,
+  currentLoName
 }) => {
+  const isBranchManager = userRole === "branch_manager" || userRole === "admin";
+  const isSeniorLo = userRole === "senior_lo";
+  const isRestrictedRole = userRole === "team_lo" || userRole === "processor";
+
   const [activeTab, setActiveTab] = useState<"credentials" | "webhooks" | "mapping" | "golive">("credentials");
   const [hasVault, setHasVault] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -83,32 +93,50 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    fetch("/api/big-purple-dot/config")
-      .then(res => res.json())
-      .then(data => {
-        if (data) {
-          if (data.subdomain) setSubdomain(data.subdomain);
-          if (data.apiKeyMasked) setApiKey(data.apiKeyMasked);
-          if (data.apiSecretMasked) setApiSecret(data.apiSecretMasked);
-          if (data.accountEmail) setAccountEmail(data.accountEmail);
-          if (data.webhookSecret) setWebhookSecret(data.webhookSecret);
-          if (data.environment) setEnvironment(data.environment);
-          if (typeof data.autoSyncRecruits === "boolean") setAutoSyncRecruits(data.autoSyncRecruits);
-          if (typeof data.syncLoanOfficers === "boolean") setSyncLoanOfficers(data.syncLoanOfficers);
-          if (typeof data.syncRealEstateAgents === "boolean") setSyncRealEstateAgents(data.syncRealEstateAgents);
-          if (data.loStageMapping) setLoStageMapping(data.loStageMapping);
-          if (data.agentStageMapping) setAgentStageMapping(data.agentStageMapping);
+    const loadConfigAndEvents = async () => {
+      try {
+        const user = auth.currentUser;
+        const token = user ? await user.getIdToken() : "";
+        const res = await fetch("/api/big-purple-dot/config", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            if (data.subdomain) setSubdomain(data.subdomain);
+            if (data.apiKeyMasked) setApiKey(data.apiKeyMasked);
+            if (data.apiSecretMasked) setApiSecret(data.apiSecretMasked);
+            if (data.accountEmail) setAccountEmail(data.accountEmail);
+            if (data.webhookSecret) setWebhookSecret(data.webhookSecret);
+            if (data.environment) setEnvironment(data.environment);
+            if (typeof data.autoSyncRecruits === "boolean") setAutoSyncRecruits(data.autoSyncRecruits);
+            if (typeof data.syncLoanOfficers === "boolean") setSyncLoanOfficers(data.syncLoanOfficers);
+            if (typeof data.syncRealEstateAgents === "boolean") setSyncRealEstateAgents(data.syncRealEstateAgents);
+            if (data.loStageMapping) setLoStageMapping(data.loStageMapping);
+            if (data.agentStageMapping) setAgentStageMapping(data.agentStageMapping);
+          }
         }
-      })
-      .catch(err => console.error("Error fetching BPD config:", err));
+      } catch (err) {
+        console.error("Error fetching BPD config:", err);
+      }
+      fetchWebhookEvents();
+    };
 
-    fetchWebhookEvents();
+    loadConfigAndEvents();
   }, [isOpen]);
 
   const fetchWebhookEvents = async () => {
     setIsLoadingEvents(true);
     try {
-      const res = await fetch("/api/big-purple-dot/webhook/events");
+      const user = auth.currentUser;
+      const token = user ? await user.getIdToken() : "";
+      const res = await fetch("/api/big-purple-dot/webhook/events", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
       const data = await res.json();
       if (data.events) {
         setWebhookEvents(data.events);
@@ -187,6 +215,10 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
   };
 
   const handleSaveConfig = async () => {
+    if (isRestrictedRole) {
+      onTriggerToast("🔒 Access Denied: Granular RBAC policy prohibits Team Loan Officers and Processors from altering branch API keys.");
+      return;
+    }
     setIsSaving(true);
     try {
       const payload: Partial<BigPurpleDotConfig> = {
@@ -207,6 +239,23 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
       if (apiKey && !apiKey.includes("••••")) {
         await saveToIntegrationsVault(payload);
         setHasVault(true);
+      }
+
+      const user = auth.currentUser;
+      const token = user ? await user.getIdToken() : "";
+
+      const saveRes = await fetch("/api/big-purple-dot/config", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!saveRes.ok) {
+        const errJson = await saveRes.json().catch(() => ({}));
+        throw new Error(errJson.error || "Failed to save BPD config");
       }
 
       onUpdateConfig({
@@ -238,9 +287,15 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
   const handleSimulateWebhook = async () => {
     setIsSimulatingPing(true);
     try {
+      const user = auth.currentUser;
+      const token = user ? await user.getIdToken() : "";
+
       const res = await fetch("/api/big-purple-dot/webhook/test-ping", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           eventType: simEventType,
           candidateName: simCandidateName,
@@ -327,6 +382,33 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
                 {environment === "production" ? "Live Production" : "Sandbox Mode"}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Granular RBAC Security Isolation Banner */}
+        <div className="px-6 py-2.5 bg-[#FAF9F5] border-b border-[#EAE7E0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+              isBranchManager 
+                ? "bg-purple-100 text-purple-800 border-purple-200" 
+                : isSeniorLo 
+                ? "bg-emerald-100 text-emerald-800 border-emerald-200" 
+                : "bg-blue-100 text-blue-800 border-blue-200"
+            }`}>
+              {isBranchManager ? "Branch Manager" : isSeniorLo ? "Senior LO" : "Team LO (Restricted)"}
+            </span>
+            <span className="text-[#606C5D]">
+              {isRestrictedRole 
+                ? `Granular RBAC Active: Operating in protected scope for ${currentLoName || currentLoId || 'originator'}. Raw branch API secrets & other LOs' webhooks are protected.`
+                : isSeniorLo
+                ? "Autonomous Producer: Configured for self-scoped CRM sync and personal webhooks."
+                : "Master Executive: Master CRM credentials & branch-wide event routing custody."}
+            </span>
+          </div>
+
+          <div className="text-[11px] font-mono text-[#4A5D4E] flex items-center gap-1 font-semibold">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Zero-Lateral Leakage: Enforced</span>
           </div>
         </div>
 
@@ -428,6 +510,16 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
                 </div>
               </div>
 
+              {isRestrictedRole && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-xs text-amber-900">
+                  <Lock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block font-bold">Encrypted Branch Credentials (RBAC Protected)</strong>
+                    <span>Your user account is operating under Granular Role-Based Access Control. Master API keys and secret bearer tokens are managed by Branch Management and encrypted in the secure vault. Your CRM events and pipelines inherit integration capabilities seamlessly without lateral credential exposure.</span>
+                  </div>
+                </div>
+              )}
+
               {/* API Key */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -440,18 +532,21 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
                 <div className="relative">
                   <input
                     type={showApiKey ? "text" : "password"}
-                    value={apiKey}
+                    value={isRestrictedRole ? "•••••••••••••••• (Encrypted in Branch Vault)" : apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
+                    disabled={isRestrictedRole}
                     placeholder="bpd_live_pk_9a87f6..."
-                    className="w-full bg-white border border-[#D5DDD6] rounded-xl px-4 py-2.5 text-sm font-mono text-[#2D362E] focus:outline-none focus:ring-2 focus:ring-purple-600 pr-12 shadow-xs"
+                    className="w-full bg-white border border-[#D5DDD6] disabled:bg-gray-100 disabled:text-gray-500 rounded-xl px-4 py-2.5 text-sm font-mono text-[#2D362E] focus:outline-none focus:ring-2 focus:ring-purple-600 pr-12 shadow-xs"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9488] hover:text-[#2D362E] p-1"
-                  >
-                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  {!isRestrictedRole && (
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9488] hover:text-[#2D362E] p-1"
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -469,18 +564,21 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
                 <div className="relative">
                   <input
                     type={showApiSecret ? "text" : "password"}
-                    value={apiSecret}
+                    value={isRestrictedRole ? "••••••••••••••••••••••••••••••••" : apiSecret}
                     onChange={(e) => setApiSecret(e.target.value)}
+                    disabled={isRestrictedRole}
                     placeholder="bpd_live_sk_4398e0f..."
-                    className="w-full bg-white border border-[#D5DDD6] rounded-xl px-4 py-2.5 text-sm font-mono text-[#2D362E] focus:outline-none focus:ring-2 focus:ring-purple-600 pr-12 shadow-xs"
+                    className="w-full bg-white border border-[#D5DDD6] disabled:bg-gray-100 disabled:text-gray-500 rounded-xl px-4 py-2.5 text-sm font-mono text-[#2D362E] focus:outline-none focus:ring-2 focus:ring-purple-600 pr-12 shadow-xs"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiSecret(!showApiSecret)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9488] hover:text-[#2D362E] p-1"
-                  >
-                    {showApiSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  {!isRestrictedRole && (
+                    <button
+                      type="button"
+                      onClick={() => setShowApiSecret(!showApiSecret)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9488] hover:text-[#2D362E] p-1"
+                    >
+                      {showApiSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -491,8 +589,9 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
                   type="email"
                   value={accountEmail}
                   onChange={(e) => setAccountEmail(e.target.value)}
+                  disabled={isRestrictedRole}
                   placeholder="fordmj@gmail.com"
-                  className="w-full bg-white border border-[#D5DDD6] rounded-xl px-4 py-2.5 text-sm text-[#2D362E] focus:outline-none focus:ring-2 focus:ring-purple-600 shadow-xs"
+                  className="w-full bg-white border border-[#D5DDD6] disabled:bg-gray-100 disabled:text-gray-500 rounded-xl px-4 py-2.5 text-sm text-[#2D362E] focus:outline-none focus:ring-2 focus:ring-purple-600 shadow-xs"
                 />
               </div>
 
@@ -518,13 +617,18 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
 
                 <button
                   onClick={handleSaveConfig}
-                  disabled={isSaving}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-[#4C1D95] to-[#581C87] hover:opacity-95 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+                  disabled={isSaving || isRestrictedRole}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-[#4C1D95] to-[#581C87] hover:opacity-95 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                 >
                   {isSaving ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
                       <span>Saving Secure Credentials...</span>
+                    </>
+                  ) : isRestrictedRole ? (
+                    <>
+                      <Lock className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Branch Manager Custody (Protected)</span>
                     </>
                   ) : (
                     <>
@@ -600,11 +704,17 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
                   <input
                     type="text"
                     readOnly
-                    value={webhookUrl}
+                    value={isRestrictedRole && currentLoId ? `${webhookUrl}?loId=${encodeURIComponent(currentLoId)}` : webhookUrl}
                     className="flex-1 bg-white border border-[#D5DDD6] rounded-xl px-3 py-2 text-xs font-mono text-[#2D362E] select-all shadow-2xs"
                   />
                   <button
-                    onClick={handleCopyWebhookUrl}
+                    onClick={() => {
+                      const urlToCopy = isRestrictedRole && currentLoId ? `${webhookUrl}?loId=${encodeURIComponent(currentLoId)}` : webhookUrl;
+                      navigator.clipboard.writeText(urlToCopy);
+                      setCopiedWebhookUrl(true);
+                      setTimeout(() => setCopiedWebhookUrl(false), 2500);
+                      onTriggerToast("Webhook URL copied to clipboard!");
+                    }}
                     className="px-4 py-2 bg-[#2D362E] hover:bg-[#1E241F] text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shrink-0"
                   >
                     {copiedWebhookUrl ? (
@@ -628,37 +738,44 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
                       <Lock className="w-3 h-3 text-[#C18C5D]" />
                       <span>Webhook HMAC Signing Secret Key</span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={handleGenerateSecret}
-                      className="text-[11px] text-purple-700 hover:text-purple-900 font-bold"
-                    >
-                      Regenerate Secret
-                    </button>
+                    {!isRestrictedRole && (
+                      <button
+                        type="button"
+                        onClick={handleGenerateSecret}
+                        className="text-[11px] text-purple-700 hover:text-purple-900 font-bold cursor-pointer"
+                      >
+                        Regenerate Secret
+                      </button>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1">
                       <input
                         type={showWebhookSecret ? "text" : "password"}
-                        value={webhookSecret}
+                        value={isRestrictedRole ? "•••••••••••••••• (Branch HMAC Enforced)" : webhookSecret}
                         onChange={(e) => setWebhookSecret(e.target.value)}
-                        className="w-full bg-white border border-[#D5DDD6] rounded-xl px-3 py-2 text-xs font-mono text-[#2D362E] pr-10 shadow-2xs"
+                        disabled={isRestrictedRole}
+                        className="w-full bg-white border border-[#D5DDD6] disabled:bg-gray-100 disabled:text-gray-500 rounded-xl px-3 py-2 text-xs font-mono text-[#2D362E] pr-10 shadow-2xs"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9488] hover:text-[#2D362E] p-1"
-                      >
-                        {showWebhookSecret ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
+                      {!isRestrictedRole && (
+                        <button
+                          type="button"
+                          onClick={() => setShowWebhookSecret(!showWebhookSecret)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9488] hover:text-[#2D362E] p-1 cursor-pointer"
+                        >
+                          {showWebhookSecret ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
                     </div>
-                    <button
-                      onClick={handleCopySecret}
-                      className="px-3 py-2 bg-white border border-[#D5DDD6] hover:bg-gray-50 text-[#2D362E] text-xs font-bold rounded-xl transition-all flex items-center gap-1 shrink-0"
-                    >
-                      {copiedSecret ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>Copy</span>
-                    </button>
+                    {!isRestrictedRole && (
+                      <button
+                        onClick={handleCopySecret}
+                        className="px-3 py-2 bg-white border border-[#D5DDD6] hover:bg-gray-50 text-[#2D362E] text-xs font-bold rounded-xl transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+                      >
+                        {copiedSecret ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>Copy</span>
+                      </button>
+                    )}
                   </div>
                   <p className="text-[11px] text-[#9A9488]">
                     Big Purple Dot sends cryptographic signatures in the <code className="font-mono bg-gray-100 px-1 py-0.5 rounded text-gray-700">x-bpd-signature</code> header to guarantee authenticity.
@@ -751,6 +868,13 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
                   </button>
                 </div>
 
+                {isRestrictedRole && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Showing webhook events routed strictly to your account ({currentLoName || currentLoId || 'originator'}). Lateral events belonging to other team members are filtered by server RBAC enforcement.</span>
+                  </div>
+                )}
+
                 <div className="bg-white border border-[#EAE7E0] rounded-2xl divide-y divide-[#EAE7E0] overflow-hidden shadow-xs max-h-64 overflow-y-auto">
                   {webhookEvents.map((evt) => (
                     <div key={evt.id} className="p-3.5 hover:bg-[#FAF9F5] transition-colors flex items-center justify-between gap-3 text-xs">
@@ -765,6 +889,12 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
                           <span className="text-[10px] bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">
                             {evt.candidateType === "loan_officer" ? "LO Prospect" : "Agent Partner"}
                           </span>
+                          {evt.ownerLoId && (
+                            <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />
+                              <span>LO: {evt.ownerLoId}</span>
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] text-[#606C5D] truncate">{evt.payloadSummary}</p>
                       </div>

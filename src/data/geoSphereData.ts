@@ -8577,6 +8577,15 @@ export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
     "isFavorite": true,
     "isPubliclyPublished": true,
     "syncedAt": "2026-08-27T15:18:51.454Z",
+    "mlsNumber": "CES-2026-7740",
+    "mlsName": "CESMLS",
+    "listingAgent": {
+      "id": "agent-kendra-martinez",
+      "name": "Kendra Martinez",
+      "phone": "(541) 555-0245",
+      "email": "kendra@centraloregonliving.com",
+      "website": "https://centraloregonliving.com"
+    },
     "overlayEligibility": {
       "usdaEligible": true,
       "usdaZoneName": "Redmond / Deschutes County USDA Zone",
@@ -8632,6 +8641,18 @@ export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
     "isFavorite": false,
     "isPubliclyPublished": true,
     "syncedAt": "2026-08-27T15:18:51.454Z",
+    "mlsNumber": "CES-2026-8812",
+    "mlsName": "CESMLS",
+    "listingAgent": {
+      "id": "agent-colton-hayes",
+      "name": "Colton Hayes",
+      "phone": "(541) 555-0319",
+      "email": "colton@highdesertcascades.com",
+      "website": "https://highdesertcascades.com"
+    },
+    "listingOffice": {
+      "name": "High Desert Cascades Realty"
+    },
     "overlayEligibility": {
       "usdaEligible": false,
       "usdaZoneName": "Redmond / Deschutes County USDA Zone",
@@ -10557,6 +10578,18 @@ export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
     "isFavorite": false,
     "isPubliclyPublished": true,
     "syncedAt": "2026-08-27T15:18:51.454Z",
+    "mlsNumber": "RMLS-2026-4419",
+    "mlsName": "RMLS",
+    "listingAgent": {
+      "id": "agent-marcus-vance",
+      "name": "Marcus Vance",
+      "phone": "(503) 555-0177",
+      "email": "marcus@willametteheritage.com",
+      "website": "https://willametteheritage.com"
+    },
+    "listingOffice": {
+      "name": "Willamette Heritage Realty"
+    },
     "overlayEligibility": {
       "usdaEligible": false,
       "lmiEligible": true,
@@ -10611,6 +10644,18 @@ export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
     "isFavorite": false,
     "isPubliclyPublished": true,
     "syncedAt": "2026-08-27T15:18:51.454Z",
+    "mlsNumber": "RMLS-2026-3829",
+    "mlsName": "RMLS",
+    "listingAgent": {
+      "id": "agent-sarah-jenkins",
+      "name": "Sarah Jenkins",
+      "phone": "(503) 555-0144",
+      "email": "sarah.jenkins@cascadevalleyre.com",
+      "website": "https://cascadevalleyre.com"
+    },
+    "listingOffice": {
+      "name": "Cascade Valley Real Estate"
+    },
     "overlayEligibility": {
       "usdaEligible": false,
       "lmiEligible": true,
@@ -10720,6 +10765,18 @@ export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
     "isFavorite": true,
     "isPubliclyPublished": true,
     "syncedAt": "2026-08-27T15:18:51.454Z",
+    "mlsNumber": "WVMLS-2026-9931",
+    "mlsName": "WVMLS",
+    "listingAgent": {
+      "id": "agent-jessica-miller",
+      "name": "Jessica Miller",
+      "phone": "(503) 555-0288",
+      "email": "jessica@midvalleyproperties.com",
+      "website": "https://midvalleyproperties.com"
+    },
+    "listingOffice": {
+      "name": "Mid-Valley Heritage Properties"
+    },
     "overlayEligibility": {
       "usdaEligible": false,
       "lmiEligible": true,

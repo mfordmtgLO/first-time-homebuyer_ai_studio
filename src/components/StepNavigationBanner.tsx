@@ -28,7 +28,8 @@ import {
   ChevronLeft,
   QrCode,
   Smartphone,
-  Copy
+  Copy,
+  Globe
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
@@ -139,6 +140,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
 
   const searchTools = [
     { id: "properties", label: "Saved Properties", icon: Building, mode: "dashboard" as const, count: propertiesCount },
+    { id: "market_trends", label: "Market Trends & Insights", icon: Globe, mode: "dashboard" as const },
     { id: "ai_copilot", label: "AI Property Copilot", icon: Sparkles, mode: "dashboard" as const },
     { id: "escrow", label: "Closing Tracker & Escrow", icon: ShieldCheck, mode: "dashboard" as const },
   ];
@@ -271,6 +273,19 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
                   {propertiesCount}
                 </span>
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate("market_trends", "dashboard")}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                currentTab === "market_trends"
+                  ? "bg-[#4A5D4E] text-white shadow-xs"
+                  : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#FAF9F5] hover:text-[#4A5D4E]"
+              }`}
+              title="Market Trends & Real Estate Intelligence"
+            >
+              <Globe className="w-4 h-4 text-[#C18C5D]" />
             </button>
 
             <button

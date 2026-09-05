@@ -35,6 +35,7 @@ interface SmsComplianceDashboardProps {
   onUpdateLead: (updatedLead: CapturedLead) => void;
   onUpdateAllLeads: (updatedLeads: CapturedLead[]) => void;
   onOpenSmsMessaging?: (lead: CapturedLead) => void;
+  userRole?: string;
 }
 
 export const SmsComplianceDashboard: React.FC<SmsComplianceDashboardProps> = ({
@@ -42,7 +43,8 @@ export const SmsComplianceDashboard: React.FC<SmsComplianceDashboardProps> = ({
   loanOfficer,
   onUpdateLead,
   onUpdateAllLeads,
-  onOpenSmsMessaging
+  onOpenSmsMessaging,
+  userRole
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTab, setFilterTab] = useState<"all" | "opted_in" | "pending" | "opted_out">("all");
@@ -244,6 +246,40 @@ export const SmsComplianceDashboard: React.FC<SmsComplianceDashboardProps> = ({
               <span>Bulk Request Authorization ({pendingLeads.length} Pending)</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Granular RBAC Audit Isolation Scope Banner */}
+      <div className="p-3.5 bg-white border border-[#EAE7E0] rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5">
+          <div className={`p-2 rounded-xl ${
+            userRole === "branch_manager" || userRole === "admin" 
+              ? "bg-purple-100 text-purple-800" 
+              : "bg-emerald-100 text-emerald-800"
+          }`}>
+            <Lock className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[#2D362E]">
+                {userRole === "branch_manager" || userRole === "admin"
+                  ? "👑 Branch Executive Audit Ledger (All Team Members)"
+                  : `🛡️ Granular RBAC Audit Isolation (${loanOfficer.name})`}
+              </span>
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#FAF9F5] border border-[#EAE7E0] text-[#606C5D]">
+                {userRole === "branch_manager" || userRole === "admin" ? "Branch-Wide" : "Self-Only Scope"}
+              </span>
+            </div>
+            <p className="text-[11px] text-[#606C5D] mt-0.5">
+              {userRole === "branch_manager" || userRole === "admin"
+                ? `Authorized to review and export TCPA consent audit trails across all ${totalLeads} branch records.`
+                : `Showing ${totalLeads} consent records assigned to ${loanOfficer.name}. Granular RBAC prevents lateral visibility into other team members' audit logs.`}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-auto text-[11px] font-mono font-semibold text-[#4A5D4E] bg-[#FAF9F5] px-3 py-1.5 rounded-xl border border-[#EAE7E0]">
+          <span>Audit Security: Enforced</span>
         </div>
       </div>
 

@@ -18,7 +18,7 @@ import {
   Check,
   Copy
 } from "lucide-react";
-import { LoanOfficerProfile, RealEstateAgentProfile } from "../types";
+import { LoanOfficerProfile, RealEstateAgentProfile, CapturedLead } from "../types";
 import { HeadshotAvatar } from "./HeadshotAvatar";
 
 interface LocalProfessionalGuidesProps {
@@ -28,6 +28,7 @@ interface LocalProfessionalGuidesProps {
   onOpenLoPortal?: () => void;
   title?: string;
   subtitle?: string;
+  onSaveLead?: (lead: CapturedLead) => void;
 }
 
 export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = ({
@@ -37,12 +38,21 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
   onOpenLoPortal,
   title,
   subtitle,
+  onSaveLead,
 }) => {
   const [contactSuccess, setContactSuccess] = useState<string | null>(null);
   const [showDirectMsgModal, setShowDirectMsgModal] = useState<boolean>(false);
   const [showQrModal, setShowQrModal] = useState<boolean>(false);
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
-  const [buyerMsg, setBuyerMsg] = useState({ name: "", email: "", phone: "", notes: "", smsConsentAuthorized: true });
+  const [buyerMsg, setBuyerMsg] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    desiredCity: "",
+    wantsCuratedList: true,
+    notes: "",
+    smsConsentAuthorized: true
+  });
 
   const leadGenUrl = loanOfficer.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM";
   const qrCodeUrl = loanOfficer.leadGenQrCodeUrl || "/lead-gen-qr-code.png";
@@ -65,9 +75,78 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
     const recipientText = showAgent && activeAgent
       ? `${loanOfficer.name} and ${activeAgent.name}`
       : loanOfficer.name;
-    setContactSuccess(`Thank you! Your message has been sent directly to ${recipientText}. They will reach out to you within 2-4 business hours.`);
+
+    const cityClean = buyerMsg.desiredCity.trim();
+    const newLead: CapturedLead = {
+      id: `lead-guide-msg-${Date.now()}`,
+      fullName: buyerMsg.name.trim(),
+      email: buyerMsg.email.trim(),
+      phone: buyerMsg.phone.trim(),
+      preferredContactTime: "Anytime",
+      timeline: "Ready in 30-60 Days",
+      targetPriceRange: "$400,000 - $550,000",
+      targetMonthlyBudget: "Optimal Low/Zero Down Payment",
+      downPaymentSavings: "Low/No Down Program Preferred",
+      grantInterest: true,
+      creditScoreTier: "Good (660+)",
+      preferredLocations: cityClean || (activeAgent?.marketAreas?.[0] || "Portland"),
+      taggedCityArea: cityClean || (activeAgent?.marketAreas?.[0] || "Portland"),
+      leadPathTag: showAgent ? "Agent Spotlight Guide Advisory" : "LO Direct Advisory",
+      propertyType: "Single Family",
+      sendSampleHomes: buyerMsg.wantsCuratedList,
+      sendSampleHomesOption: buyerMsg.wantsCuratedList
+        ? `YES - Curated list of recently listed homes in ${cityClean || "Oregon"} (Low/No Down Eligible)`
+        : "No sample list",
+      assignedLoId: loanOfficer.id,
+      assignedAgentId: activeAgent?.id || "agent-1",
+      assignedLO: loanOfficer.name,
+      assignedAgent: activeAgent?.name || "Sarah Jenkins",
+      leadSource: `Guide Consultation: ${cityClean || "Local Market"}`,
+      interactedSourceType: "chatbot",
+      intentScore: "hot",
+      status: "new",
+      notes: `[DIRECT CONSULTATION]: Buyer message: "${buyerMsg.notes}".\nDesired City: ${cityClean || "Not specified"}. Curated Low/No Down Homes requested: ${buyerMsg.wantsCuratedList ? "YES" : "NO"}.`,
+      createdAt: new Date().toISOString(),
+      smsConsentAuthorized: buyerMsg.smsConsentAuthorized,
+      smsConsentTimestamp: new Date().toISOString(),
+      smsConsentSource: "Local Professional Guide Advisory Message",
+      textNurtureEnabled: true,
+      textNurtureCurrentStep: 1,
+      textNurtureTotalSteps: 4,
+      textNurtureStageText: "1 of 4: Consultation Received",
+      lastTextSentAt: new Date().toISOString()
+    };
+
+    if (onSaveLead) {
+      onSaveLead(newLead);
+    }
+
+    try {
+      const stored = localStorage.getItem("homebuyer_roadmap_state_v2");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const existingLeads = parsed.leads || [];
+        parsed.leads = [newLead, ...existingLeads];
+        localStorage.setItem("homebuyer_roadmap_state_v2", JSON.stringify(parsed));
+      }
+      const rawLeads = localStorage.getItem("first_time_buyer_leads");
+      const leadsList = rawLeads ? JSON.parse(rawLeads) : [];
+      localStorage.setItem("first_time_buyer_leads", JSON.stringify([newLead, ...leadsList]));
+    } catch (err) {
+      console.warn("Storage error for guide lead:", err);
+    }
+
+    setContactSuccess(`Thank you! Your message and home search criteria have been sent directly to ${recipientText}. They will reach out within 2-4 business hours with your customized options.`);
     setShowDirectMsgModal(false);
-    setBuyerMsg({ name: "", email: "", phone: "", notes: "", smsConsentAuthorized: true });
+    setBuyerMsg({
+      name: "",
+      email: "",
+      phone: "",
+      desiredCity: "",
+      wantsCuratedList: true,
+      notes: "",
+      smsConsentAuthorized: true
+    });
   };
 
   const handleCopyLink = () => {
@@ -539,7 +618,7 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#606C5D]">Email Address</label>
+                  <label className="text-xs font-semibold text-[#606C5D]">Email Address <span className="text-red-500">*</span></label>
                   <input
                     type="email"
                     required
@@ -550,15 +629,45 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#606C5D]">Phone Number</label>
+                  <label className="text-xs font-semibold text-[#606C5D]">Cell Phone <span className="text-red-500">*</span></label>
                   <input
                     type="tel"
+                    required
                     placeholder="(503) 555-0199"
                     value={buyerMsg.phone}
                     onChange={(e) => setBuyerMsg(prev => ({ ...prev, phone: e.target.value }))}
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
                   />
                 </div>
+              </div>
+
+              {/* Lead Gen Mindset: Desired City and Curated Low/No Down Payment Home List */}
+              <div className="bg-[#FAF9F5] p-3 rounded-xl border border-[#EAE7E0] space-y-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D362E] flex items-center justify-between">
+                    <span>Desired City or Neighborhood in Oregon</span>
+                    <span className="text-[10px] font-normal text-[#8C5D30]">Curated Low/No Down Homes</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Portland, Beaverton, Bend, Eugene, Salem, Gresham..."
+                    value={buyerMsg.desiredCity}
+                    onChange={(e) => setBuyerMsg(prev => ({ ...prev, desiredCity: e.target.value }))}
+                    className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <label className="flex items-start gap-2 cursor-pointer select-none pt-1">
+                  <input
+                    type="checkbox"
+                    checked={buyerMsg.wantsCuratedList}
+                    onChange={(e) => setBuyerMsg(prev => ({ ...prev, wantsCuratedList: e.target.checked }))}
+                    className="mt-0.5 rounded border-[#9A9488] text-[#4A5D4E] focus:ring-[#4A5D4E]"
+                  />
+                  <span className="text-[11px] text-[#2D362E] font-medium leading-tight">
+                    Yes, send me a curated list of recently listed homes for sale in {buyerMsg.desiredCity ? <strong>{buyerMsg.desiredCity}</strong> : "my desired area"} that likely can accept low or no down payment options.
+                  </span>
+                </label>
               </div>
 
               {/* TCPA SMS Consent Question */}

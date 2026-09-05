@@ -21,6 +21,9 @@ interface RecruitmentPipelineProps {
   guidesState: ProfessionalGuidesState;
   onUpdateGuidesState: (newState: ProfessionalGuidesState | ((prev: ProfessionalGuidesState) => ProfessionalGuidesState)) => void;
   onTriggerToast: (msg: string) => void;
+  userRole?: string;
+  currentLoId?: string;
+  currentLoName?: string;
 }
 
 const TEMPLATES = {
@@ -49,7 +52,14 @@ const REALTOR_TEMPLATES = {
   ]
 };
 
-export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guidesState, onUpdateGuidesState, onTriggerToast }) => {
+export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ 
+  guidesState, 
+  onUpdateGuidesState, 
+  onTriggerToast,
+  userRole,
+  currentLoId,
+  currentLoName
+}) => {
   // Category switch: Loan Officer recruits vs Real Estate Agent recruits
   const [pipelineType, setPipelineType] = useState<"loan_officers" | "real_estate_agents">("loan_officers");
   
@@ -1345,6 +1355,9 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({ guides
           }));
         }}
         onTriggerToast={onTriggerToast}
+        userRole={userRole}
+        currentLoId={currentLoId}
+        currentLoName={currentLoName}
       />
 
       {/* Candidate Search Modal */}

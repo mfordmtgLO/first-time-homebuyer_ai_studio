@@ -5,44 +5,58 @@ import {
   RefreshCw, 
   ShieldCheck, 
   FileText, 
-  HelpCircle, 
   User, 
   Bot, 
-  ArrowRight,
-  CheckCircle2,
-  DollarSign,
-  AlertTriangle,
-  ExternalLink
+  CheckCircle2, 
+  ExternalLink,
+  Download,
+  Copy,
+  Printer,
+  Check,
+  Trash2,
+  FileDown
 } from "lucide-react";
-import { FinancialProfile, PropertyListing, ChatMessage } from "../types";
+import { FinancialProfile, PropertyListing, ChatMessage, LoanOfficerProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
 import { getZillowUrl } from "../utils/overlayClassification";
+import { jsPDF } from "jspdf";
+
+let messageSeq = 1000;
+const generateMessageId = (prefix: string) => `${prefix}-${++messageSeq}`;
 
 interface AICopilotProps {
   profile: FinancialProfile;
   properties: PropertyListing[];
+  loanOfficer?: LoanOfficerProfile;
 }
 
-export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => {
+export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanOfficer }) => {
   const [activeTool, setActiveTool] = useState<"chat" | "offer" | "inspection" | "le_decoder">("chat");
 
+  // Initial Advisor Welcome Message
+  const INITIAL_MESSAGE: ChatMessage = {
+    id: "msg-1",
+    sender: "advisor",
+    text: `Hello! I am your First-Time Homebuyer Roadmap AI Advisor. I'm here to help you navigate every phase of buying your first home—from understanding DTI ratios, Down Payment Assistance (DPA) options, and Interested Party Contribution (IPC) limits to crafting winning offers and negotiating inspection credits. How can I help you today?`,
+    timestamp: "Just now",
+    suggestedActions: [
+      "What are the seller concession & IPC limits for FHA, Conventional, VA, and USDA?",
+      "How do Conventional IPC limits change based on LTV (>90% vs 80-90% vs <=80%)?",
+      "Can seller concessions be used to pay for my down payment?",
+      "How can I ask the seller for closing credits to buy down my rate?"
+    ]
+  };
+
   // Chat State
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "msg-1",
-      sender: "advisor",
-      text: `Hello! I am your First-Time Homebuyer Roadmap AI Advisor. I'm here to help you navigate every phase of buying your first home—from understanding DTI ratios, Down Payment Assistance (DPA) options, and Interested Party Contribution (IPC) limits to crafting winning offers and negotiating inspection credits. How can I help you today?`,
-      timestamp: "Just now",
-      suggestedActions: [
-        "What are the seller concession & IPC limits for FHA, Conventional, VA, and USDA?",
-        "How do Conventional IPC limits change based on LTV (>90% vs 80-90% vs <=80%)?",
-        "Can seller concessions be used to pay for my down payment?",
-        "How can I ask the seller for closing credits to buy down my rate?"
-      ]
-    }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [inputMessage, setInputMessage] = useState("");
   const [sendingChat, setSendingChat] = useState(false);
+
+  // Session Export & Feedback State
+  const [copiedTranscript, setCopiedTranscript] = useState(false);
+  const [toastNotification, setToastNotification] = useState<string | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Offer Strategy State
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(properties[0]?.id || "custom");
@@ -62,13 +76,285 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => 
   const [inspectionResult, setInspectionResult] = useState<string | null>(null);
   const [loadingInspection, setLoadingInspection] = useState(false);
 
+  // Handlers & Session Export Actions
+  const showToast = (msg: string) => {
+    setToastNotification(msg);
+    setTimeout(() => {
+      setToastNotification(prev => prev === msg ? null : prev);
+    }, 3000);
+  };
+
+  const handleResetChat = () => {
+    setMessages([INITIAL_MESSAGE]);
+    setShowClearConfirm(false);
+    showToast("Chat consultation reset to initial state.");
+  };
+
+  const generateTranscriptText = () => {
+    const dateStr = new Date().toLocaleString("en-US", {
+      dateStyle: "full",
+      timeStyle: "short"
+    });
+
+    const divider = "=".repeat(76);
+    const subDivider = "-".repeat(76);
+
+    let text = `${divider}\n`;
+    text += `FIRST-TIME HOMEBUYER ROADMAP • AI COPILOT ADVISORY TRANSCRIPT\n`;
+    text += `Generated: ${dateStr}\n`;
+    if (loanOfficer) {
+      text += `Loan Officer: ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) • ${loanOfficer.branchName || "Cornerstone First Mortgage"}\n`;
+      text += `Contact: ${loanOfficer.phone} | ${loanOfficer.email}\n`;
+    }
+    text += `Homebuyer Profile Snapshot:\n`;
+    text += `  • Target Home Price: ${formatUSD(profile.targetPrice)}\n`;
+    text += `  • Down Payment Savings: ${formatUSD(profile.downPaymentSavings)}\n`;
+    text += `  • Annual Household Income: ${formatUSD(profile.annualIncome)}\n`;
+    text += `  • Monthly Debt Liabilities: ${formatUSD(profile.monthlyDebt)}\n`;
+    text += `  • Target State: ${profile.state || "Oregon"}\n`;
+    text += `${divider}\n\n`;
+
+    messages.forEach((msg, i) => {
+      const isUser = msg.sender === "user";
+      const speaker = isUser ? "YOU (HOMEBUYER)" : "AI HOMEBUYER COPILOT";
+      text += `[#${i + 1}] ${speaker} (${msg.timestamp || "Session Turn"}):\n`;
+      text += `${msg.text}\n\n`;
+      text += `${subDivider}\n\n`;
+    });
+
+    text += `\n${divider}\n`;
+    text += `REGULATORY & ADVISORY NOTICE:\n`;
+    text += `This advisory transcript was generated for educational and preliminary scenario planning.\n`;
+    text += `Mortgage eligibility, interested party contribution (IPC) limits, interest rates, and loan\n`;
+    text += `qualifications are subject to formal underwriting verification and lender program guidelines.\n`;
+    text += `Consult your licensed loan officer for an official Loan Estimate (LE).\n`;
+    text += `${divider}\n`;
+
+    return text;
+  };
+
+  const handleDownloadText = () => {
+    try {
+      const text = generateTranscriptText();
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const dateKey = new Date().toISOString().split("T")[0];
+      link.href = url;
+      link.download = `Homebuyer_AI_Copilot_Notes_${dateKey}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast("Session notes downloaded as text file (.txt)");
+    } catch (err) {
+      console.error("Text download failed", err);
+      showToast("Failed to download text file");
+    }
+  };
+
+  const handleCopyTranscript = async () => {
+    try {
+      const text = generateTranscriptText();
+      await navigator.clipboard.writeText(text);
+      setCopiedTranscript(true);
+      showToast("Transcript copied to clipboard!");
+      setTimeout(() => setCopiedTranscript(false), 2500);
+    } catch (err) {
+      console.error("Copy failed", err);
+      showToast("Could not copy transcript");
+    }
+  };
+
+  const handleDownloadPdf = () => {
+    setIsExportingPdf(true);
+    try {
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: "letter"
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 40;
+      const contentWidth = pageWidth - (margin * 2);
+      let y = 45;
+
+      // Header Banner Box
+      doc.setFillColor(74, 93, 78); // #4A5D4E
+      doc.rect(margin, y, contentWidth, 54, "F");
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("FIRST-TIME HOMEBUYER ROADMAP • AI COPILOT ADVISORY NOTES", margin + 14, y + 22);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      const loLine = loanOfficer ? `  •  Officer: ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId})` : "";
+      doc.text(`Consultation Date: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}${loLine}`, margin + 14, y + 38);
+
+      y += 66;
+
+      // Profile Summary Card
+      doc.setFillColor(249, 248, 244); // #F9F8F4
+      doc.rect(margin, y, contentWidth, 32, "F");
+      doc.setDrawColor(234, 231, 224); // #EAE7E0
+      doc.rect(margin, y, contentWidth, 32, "S");
+
+      doc.setTextColor(45, 54, 46);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(`Target Price: ${formatUSD(profile.targetPrice)}   |   Down Payment: ${formatUSD(profile.downPaymentSavings)}   |   Income: ${formatUSD(profile.annualIncome)}/yr   |   State: ${profile.state || "OR"}`, margin + 12, y + 19);
+
+      y += 42;
+
+      // Iterate messages
+      messages.forEach((msg, idx) => {
+        const isUser = msg.sender === "user";
+        const senderTitle = isUser ? "YOU (HOMEBUYER)" : "AI HOMEBUYER ADVISOR";
+
+        // Check page overflow
+        if (y > pageHeight - 90) {
+          doc.addPage();
+          y = 45;
+        }
+
+        // Sender header badge
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        if (isUser) {
+          doc.setTextColor(74, 93, 78);
+        } else {
+          doc.setTextColor(193, 140, 93); // #C18C5D
+        }
+        doc.text(`[#${idx + 1}] ${senderTitle} • ${msg.timestamp || "Session Turn"}`, margin, y);
+        y += 13;
+
+        // Message text
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(45, 54, 46);
+
+        const lines = doc.splitTextToSize(msg.text, contentWidth);
+        for (let i = 0; i < lines.length; i++) {
+          if (y > pageHeight - 50) {
+            doc.addPage();
+            y = 45;
+          }
+          doc.text(lines[i], margin, y);
+          y += 13;
+        }
+
+        y += 10; // Spacing
+      });
+
+      // Disclaimer footer
+      if (y > pageHeight - 70) {
+        doc.addPage();
+        y = 45;
+      }
+      doc.setDrawColor(213, 221, 214);
+      doc.line(margin, y, margin + contentWidth, y);
+      y += 14;
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(7.5);
+      doc.setTextColor(120, 130, 120);
+      const disclaimer = "Notice: This AI Copilot consultation summary is provided for educational and scenario planning purposes only. Mortgage eligibility, interest rates, seller concessions, and underwriting conditions are subject to review and official Loan Estimate (LE) disclosures from your licensed loan officer.";
+      const disclaimerLines = doc.splitTextToSize(disclaimer, contentWidth);
+      doc.text(disclaimerLines, margin, y);
+
+      const dateKey = new Date().toISOString().split("T")[0];
+      doc.save(`Homebuyer_AI_Copilot_Notes_${dateKey}.pdf`);
+      showToast("Session notes downloaded as PDF (.pdf)");
+    } catch (err) {
+      console.error("PDF generation error", err);
+      showToast("Failed to generate PDF. You can use Print or Text download.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handlePrintChat = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>AI Homebuyer Copilot Consultation - ${new Date().toLocaleDateString()}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 40px; color: #2D362E; line-height: 1.6; }
+            .header { border-bottom: 2px solid #4A5D4E; padding-bottom: 16px; margin-bottom: 24px; }
+            h1 { color: #4A5D4E; margin: 0 0 6px 0; font-size: 22px; }
+            .meta { color: #606C5D; font-size: 13px; margin-bottom: 12px; }
+            .profile-box { background: #FAF9F5; border: 1px solid #EAE7E0; padding: 12px 16px; border-radius: 8px; font-size: 12px; margin-bottom: 24px; }
+            .msg { margin-bottom: 20px; padding: 14px 18px; border-radius: 8px; font-size: 13px; }
+            .msg.user { background: #F1EFE9; border-left: 4px solid #4A5D4E; }
+            .msg.advisor { background: #FFFFFF; border: 1px solid #EAE7E0; border-left: 4px solid #C18C5D; }
+            .sender { font-weight: bold; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+            .sender.user { color: #4A5D4E; }
+            .sender.advisor { color: #C18C5D; }
+            .disclaimer { border-top: 1px solid #EAE7E0; margin-top: 32px; padding-top: 16px; font-size: 11px; color: #9A9488; font-style: italic; }
+            @media print {
+              body { margin: 20px; }
+              .msg { break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>First-Time Homebuyer Roadmap • AI Copilot Notes</h1>
+            <div class="meta">
+              Date: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              ${loanOfficer ? ` | Loan Officer: ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId})` : ""}
+            </div>
+            <div class="profile-box">
+              <strong>Profile Snapshot:</strong> Target Price: ${formatUSD(profile.targetPrice)} | Down Payment: ${formatUSD(profile.downPaymentSavings)} | Income: ${formatUSD(profile.annualIncome)}/yr | State: ${profile.state || "Oregon"}
+            </div>
+          </div>
+
+          <div class="conversation">
+            ${messages.map((m, idx) => `
+              <div class="msg ${m.sender === "user" ? "user" : "advisor"}">
+                <div class="sender ${m.sender === "user" ? "user" : "advisor"}">
+                  ${m.sender === "user" ? "Homebuyer" : "AI Copilot Advisor"} • ${m.timestamp || `Turn #${idx + 1}`}
+                </div>
+                <div class="content">${m.text.replace(/\n/g, "<br/>")}</div>
+              </div>
+            `).join("")}
+          </div>
+
+          <div class="disclaimer">
+            Notice: This AI Copilot consultation summary is provided for educational and preliminary planning purposes. Loan approval, interest rates, seller credit allowances, and closing conditions are subject to underwriter review and official Loan Estimate (LE) disclosures from your licensed loan officer.
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   // Handlers
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || inputMessage;
     if (!query.trim() || sendingChat) return;
 
     const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
+      id: generateMessageId("user"),
       sender: "user",
       text: query,
       timestamp: "Just now"
@@ -97,7 +383,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => 
 
       const data = await res.json();
       const botMsg: ChatMessage = {
-        id: `bot-${Date.now()}`,
+        id: generateMessageId("bot"),
         sender: "advisor",
         text: data.reply || data.fallback || "I'm here to help you evaluate properties and financing options.",
         timestamp: "Just now"
@@ -106,7 +392,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => 
     } catch (e) {
       console.error(e);
       const botMsg: ChatMessage = {
-        id: `bot-${Date.now()}`,
+        id: generateMessageId("bot"),
         sender: "advisor",
         text: "I am ready to assist with your mortgage questions, contract terms, or inspection reviews. Feel free to ask anything about the first-time homebuyer process!",
         timestamp: "Just now"
@@ -234,7 +520,110 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties }) => 
 
       {/* Tool 1: Interactive Chat Tab */}
       {activeTool === "chat" && (
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] flex flex-col h-[650px] overflow-hidden shadow-sm">
+        <div className="relative bg-white rounded-2xl border border-[#EAE7E0] flex flex-col h-[650px] overflow-hidden shadow-sm">
+          {/* Feedback Toast Notification */}
+          {toastNotification && (
+            <div className="absolute top-16 right-4 z-30 px-3.5 py-2 rounded-xl bg-[#2D362E] text-white text-xs font-medium shadow-xl flex items-center gap-2 transition-all">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{toastNotification}</span>
+            </div>
+          )}
+
+          {/* Chat Header Bar: Status & Session Export Controls */}
+          <div className="px-4 sm:px-6 py-3 bg-[#FAF9F5] border-b border-[#EAE7E0] flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="relative flex items-center justify-center">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping absolute"></span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#2D362E]">AI Copilot Session</span>
+                  <span className="text-[10px] font-semibold text-[#4A5D4E] bg-[#4A5D4E]/10 border border-[#4A5D4E]/20 px-2 py-0.5 rounded-full">
+                    {messages.length} {messages.length === 1 ? "entry" : "entries"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#9A9488] hidden sm:block">
+                  Personalized mortgage guidelines, offer strategy & closing credits
+                </p>
+              </div>
+            </div>
+
+            {/* Export & Session Controls */}
+            <div className="flex items-center gap-1.5 ml-auto">
+              {/* Download .TXT */}
+              <button
+                onClick={handleDownloadText}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#2D362E] text-xs font-bold transition-all shadow-2xs hover:border-[#4A5D4E]/40 cursor-pointer"
+                title="Download full chat history as a clean text (.txt) file for your personal records or email drafts"
+              >
+                <Download className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                <span>Export .TXT</span>
+              </button>
+
+              {/* Save / Export PDF */}
+              <button
+                onClick={handleDownloadPdf}
+                disabled={isExportingPdf}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#2D362E] text-xs font-bold transition-all shadow-2xs hover:border-[#C18C5D]/40 cursor-pointer disabled:opacity-50"
+                title="Export formal PDF document with Cornerstone branding and profile summary"
+              >
+                {isExportingPdf ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C18C5D]" />
+                ) : (
+                  <FileDown className="w-3.5 h-3.5 text-[#C18C5D]" />
+                )}
+                <span>{isExportingPdf ? "Exporting..." : "Save PDF"}</span>
+              </button>
+
+              {/* Copy Transcript */}
+              <button
+                onClick={handleCopyTranscript}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#606C5D] text-xs font-medium transition-colors cursor-pointer"
+                title="Copy entire transcript to clipboard"
+              >
+                {copiedTranscript ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span className="hidden md:inline">{copiedTranscript ? "Copied" : "Copy"}</span>
+              </button>
+
+              {/* Print */}
+              <button
+                onClick={handlePrintChat}
+                className="p-1.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#606C5D] hover:text-[#2D362E] transition-colors cursor-pointer"
+                title="Open formatted printable dialogue"
+              >
+                <Printer className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Clear / Reset Chat */}
+              {showClearConfirm ? (
+                <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-1 rounded-xl text-xs">
+                  <span className="text-amber-800 text-[10px] font-bold">Reset?</span>
+                  <button
+                    onClick={handleResetChat}
+                    className="text-[10px] font-bold text-rose-600 hover:text-rose-800 px-1.5 py-0.5 rounded bg-white border border-rose-200 cursor-pointer"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setShowClearConfirm(false)}
+                    className="text-[10px] text-gray-600 hover:text-gray-900 px-1.5 py-0.5 cursor-pointer"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowClearConfirm(true)}
+                  className="p-1.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-rose-50 hover:text-rose-600 text-[#9A9488] transition-colors cursor-pointer"
+                  title="Clear chat and start fresh consultation"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Chat message history */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {messages.map((msg) => {

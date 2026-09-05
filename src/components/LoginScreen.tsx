@@ -1,8 +1,30 @@
-import React, { useState } from "react";
-import { signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import React, { useState, useEffect } from "react";
+import { 
+  signInWithPopup, 
+  signInWithRedirect, 
+  GoogleAuthProvider, 
+  signOut, 
+  getRedirectResult, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  RecaptchaVerifier,
+  PhoneAuthProvider,
+  PhoneMultiFactorGenerator,
+  TotpMultiFactorGenerator,
+  getMultiFactorResolver,
+  setPersistence,
+  browserSessionPersistence,
+  inMemoryPersistence
+} from "firebase/auth";
 import { auth } from "../firebase";
 import { checkAndProvisionUser } from "../utils/authUtils";
 import { ShieldCheck, AlertTriangle, Building, ArrowRight } from "lucide-react";
+
+declare global {
+  interface Window {
+    recaptchaVerifier?: any;
+  }
+}
 
 interface LoginScreenProps {
   onLogin: (role: string) => void;
@@ -16,6 +38,42 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
 
+  // Remember Me state utilizing Firebase browserSessionPersistence for dashboard workflow
+  const [rememberMe, setRememberMe] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("lo_remember_me");
+      return saved !== null ? saved === "true" : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleRememberMe = (checked: boolean) => {
+    setRememberMe(checked);
+    try {
+      localStorage.setItem("lo_remember_me", String(checked));
+    } catch (e) {
+      console.warn("Could not save remember_me preference:", e);
+    }
+  };
+
+  const applyPersistence = async (isRemembered: boolean) => {
+    try {
+      if (isRemembered) {
+        // Utilize Firebase's browserSessionPersistence to persist the loan officer's dashboard session
+        await setPersistence(auth, browserSessionPersistence);
+      } else {
+        await setPersistence(auth, inMemoryPersistence);
+      }
+    } catch (persistErr) {
+      console.warn("Failed to set Firebase auth persistence:", persistErr);
+    }
+  };
+
+  useEffect(() => {
+    applyPersistence(rememberMe);
+  }, [rememberMe]);
+
   // MFA States
   const [mfaResolver, setMfaResolver] = useState<any>(null);
   const [mfaVerificationCode, setMfaVerificationCode] = useState("");
@@ -23,10 +81,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [mfaVerificationId, setMfaVerificationId] = useState("");
   
   useEffect(() => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'login-recaptcha', {
-        size: 'invisible'
-      });
+    try {
+      const container = document.getElementById('login-recaptcha');
+      if (container && !window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'login-recaptcha', {
+          size: 'invisible'
+        });
+      }
+    } catch (e) {
+      console.warn("Recaptcha initialization deferred:", e);
     }
   }, []);
 
@@ -66,6 +129,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setIsLoading(true);
     setError(null);
     try {
+      await applyPersistence(rememberMe);
       let assertion;
       if (mfaMethod === 'totp') {
         assertion = TotpMultiFactorGenerator.assertionForSignIn(mfaResolver.hints[0].uid, mfaVerificationCode);
@@ -98,6 +162,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setIsLoading(true);
     setError(null);
     try {
+      await applyPersistence(rememberMe);
       let result;
       if (isSignUp) {
         result = await createUserWithEmailAndPassword(auth, email, password);
@@ -108,7 +173,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       try {
         const role = await checkAndProvisionUser(result.user);
         onLogin(role);
-  
+      } catch (provisionErr: any) {
+        if (provisionErr.message === "NOT_WHITELISTED") {
+          setError("Access Denied: Your email has not been whitelisted by the Branch Manager. Please request access.");
+          await signOut(auth);
+        } else {
+          setError("Authentication error. Please contact support.");
+        }
+      }
     } catch (err: any) {
       if (err.code === 'auth/multi-factor-auth-required') {
         const resolver = getMultiFactorResolver(auth, err);
@@ -116,21 +188,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         
         // Find which hints are available
         const hints = resolver.hints;
-        if (hints[0].factorId === 'totp') {
-          setMfaMethod('totp');
-        } else if (hints[0].factorId === 'phone') {
-          setMfaMethod('sms');
-          // Automatically send SMS
-          try {
-            const phoneInfoOptions = {
-              multiFactorHint: hints[0],
-              session: resolver.session
-            };
-            const phoneAuthProvider = new PhoneAuthProvider(auth);
-            const verificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, window.recaptchaVerifier);
-            setMfaVerificationId(verificationId);
-          } catch (smsErr: any) {
-            setError("Failed to send SMS code.");
+        if (hints && hints.length > 0) {
+          if (hints[0].factorId === 'totp') {
+            setMfaMethod('totp');
+          } else if (hints[0].factorId === 'phone') {
+            setMfaMethod('sms');
+            // Automatically send SMS
+            try {
+              const phoneInfoOptions = {
+                multiFactorHint: hints[0],
+                session: resolver.session
+              };
+              const phoneAuthProvider = new PhoneAuthProvider(auth);
+              const verificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, window.recaptchaVerifier);
+              setMfaVerificationId(verificationId);
+            } catch (smsErr: any) {
+              setError("Failed to send SMS code.");
+            }
           }
         }
         setIsLoading(false);
@@ -139,15 +213,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       
       console.error(err);
       setError(`Authentication failed: ${err.message}`);
+    } finally {
       setIsLoading(false);
     }
-
   };
 
   const handleRedirectLogin = async () => {
     setIsLoading(true);
     setError(null);
     try {
+      await applyPersistence(rememberMe);
       const provider = new GoogleAuthProvider();
       await signInWithRedirect(auth, provider);
       // The page will redirect, so no code runs after this
@@ -162,6 +237,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setIsLoading(true);
     setError(null);
     try {
+      await applyPersistence(rememberMe);
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       
@@ -183,6 +259,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       setIsLoading(false);
     }
   };
+
+  const renderRememberMe = () => (
+    <div className="p-3.5 bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] transition-colors hover:border-[#C18C5D]/40">
+      <label htmlFor="remember-me" className="flex items-center gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          id="remember-me"
+          name="rememberMe"
+          checked={rememberMe}
+          onChange={(e) => handleToggleRememberMe(e.target.checked)}
+          className="w-4 h-4 rounded text-[#4A5D4E] border-[#D1CDC7] focus:ring-[#4A5D4E] focus:ring-offset-0 cursor-pointer accent-[#4A5D4E]"
+          aria-label="Remember Me"
+        />
+        <div className="flex flex-col text-left flex-1">
+          <span className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5">
+            <span>Remember Me</span>
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-100 text-emerald-800">
+              Session
+            </span>
+          </span>
+          <span className="text-[11px] text-[#606C5D]">
+            Keep loan officers logged into dashboard across browser restarts
+          </span>
+        </div>
+      </label>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#F5F4F0] flex items-center justify-center p-4">
@@ -214,94 +317,133 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         )}
 
         
-        {!useEmail ? (
-          <div className="space-y-6">
-            <button
-              onClick={handleLogin}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 bg-[#2D362E] hover:bg-[#4A5D4E] text-white px-6 py-4 rounded-xl font-bold transition-colors disabled:opacity-50"
-            >
-              {isLoading ? "Authenticating..." : "Sign in with Google"}
-              {!isLoading && <ArrowRight className="w-4 h-4" />}
-            </button>
-            
-            {error && (error.includes("popup-closed-by-user") || error.includes("Redirect login") || error.includes("cross-origin")) && (
-              <button
-                onClick={() => { setError(null); setUseEmail(true); }}
-                className="w-full flex items-center justify-center gap-2 bg-white border-2 border-[#2D362E] text-[#2D362E] hover:bg-gray-50 px-6 py-4 rounded-xl font-bold transition-colors mt-4"
-              >
-                Use Email & Password Instead
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
-
-            <button
-              onClick={() => { setError(null); setUseEmail(true); }}
-              className="w-full text-center text-sm text-[#606C5D] hover:text-[#2D362E] mt-4 underline"
-            >
-              Alternative: Sign in with Email
-            </button>
-
-            <div className="flex items-center justify-center gap-2 text-xs text-[#9A9488]">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Secure Enterprise Login</span>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleEmailAuth} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[#2D362E] mb-1">Email Address</label>
-              <input 
-                type="email" 
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-[#EAE7E0] focus:outline-none focus:ring-2 focus:ring-[#C18C5D] bg-[#F9F8F4]"
-                placeholder="fordmj@gmail.com"
-              />
+        {mfaResolver ? (
+          <form onSubmit={handleVerifyMfa} className="space-y-4">
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 leading-relaxed">
+              <strong>Two-Factor Authentication:</strong> Enter the verification code from your {mfaMethod === 'totp' ? 'Authenticator app' : 'phone via SMS'}.
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#2D362E] mb-1">Password</label>
+              <label className="block text-sm font-medium text-[#2D362E] mb-1">Verification Code</label>
               <input 
-                type="password" 
+                type="text" 
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={mfaVerificationCode}
+                onChange={(e) => setMfaVerificationCode(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-[#EAE7E0] focus:outline-none focus:ring-2 focus:ring-[#C18C5D] bg-[#F9F8F4]"
-                placeholder="••••••••"
+                placeholder="123456"
               />
             </div>
-            
             <button
               type="submit"
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-2 bg-[#2D362E] hover:bg-[#4A5D4E] text-white px-6 py-4 rounded-xl font-bold transition-colors disabled:opacity-50 mt-2"
             >
-              {isLoading ? "Authenticating..." : (isSignUp ? "Create Admin Account" : "Sign in securely")}
+              {isLoading ? "Verifying..." : "Verify & Sign In"}
             </button>
-
-            <div className="flex flex-col items-center gap-3 mt-4">
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-[#C18C5D] font-medium hover:underline"
-              >
-                {isSignUp ? "Already have an account? Sign in" : "First time using password? Create account"}
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => { setUseEmail(false); setError(null); }}
-                className="text-sm text-[#606C5D] hover:text-[#2D362E] underline"
-              >
-                Back to Google Sign In
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => { setMfaResolver(null); setMfaVerificationCode(""); }}
+              className="w-full text-center text-sm text-[#606C5D] hover:text-[#2D362E] mt-2 underline"
+            >
+              Cancel
+            </button>
           </form>
+        ) : (
+          <>
+            {!useEmail ? (
+              <div className="space-y-4">
+                {renderRememberMe()}
+
+                <button
+                  onClick={handleLogin}
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center gap-2 bg-[#2D362E] hover:bg-[#4A5D4E] text-white px-6 py-4 rounded-xl font-bold transition-colors disabled:opacity-50"
+                >
+                  {isLoading ? "Authenticating..." : "Sign in with Google"}
+                  {!isLoading && <ArrowRight className="w-4 h-4" />}
+                </button>
+                
+                {error && (error.includes("popup-closed-by-user") || error.includes("Redirect login") || error.includes("cross-origin")) && (
+                  <button
+                    onClick={() => { setError(null); setUseEmail(true); }}
+                    className="w-full flex items-center justify-center gap-2 bg-white border-2 border-[#2D362E] text-[#2D362E] hover:bg-gray-50 px-6 py-4 rounded-xl font-bold transition-colors mt-4"
+                  >
+                    Use Email & Password Instead
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+
+                <button
+                  onClick={() => { setError(null); setUseEmail(true); }}
+                  className="w-full text-center text-sm text-[#606C5D] hover:text-[#2D362E] mt-4 underline"
+                >
+                  Alternative: Sign in with Email
+                </button>
+
+                <div className="flex items-center justify-center gap-2 text-xs text-[#9A9488] pt-2">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Secure Enterprise Login</span>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleEmailAuth} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#2D362E] mb-1">Email Address</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-[#EAE7E0] focus:outline-none focus:ring-2 focus:ring-[#C18C5D] bg-[#F9F8F4]"
+                    placeholder="fordmj@gmail.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#2D362E] mb-1">Password</label>
+                  <input 
+                    type="password" 
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-[#EAE7E0] focus:outline-none focus:ring-2 focus:ring-[#C18C5D] bg-[#F9F8F4]"
+                    placeholder="••••••••"
+                  />
+                </div>
+                
+                {renderRememberMe()}
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center gap-2 bg-[#2D362E] hover:bg-[#4A5D4E] text-white px-6 py-4 rounded-xl font-bold transition-colors disabled:opacity-50 mt-2"
+                >
+                  {isLoading ? "Authenticating..." : (isSignUp ? "Create Admin Account" : "Sign in securely")}
+                </button>
+
+                <div className="flex flex-col items-center gap-3 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsSignUp(!isSignUp)}
+                    className="text-sm text-[#C18C5D] font-medium hover:underline"
+                  >
+                    {isSignUp ? "Already have an account? Sign in" : "First time using password? Create account"}
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => { setUseEmail(false); setError(null); }}
+                    className="text-sm text-[#606C5D] hover:text-[#2D362E] underline"
+                  >
+                    Back to Google Sign In
+                  </button>
+                </div>
+              </form>
+            )}
+          </>
         )}
 
       </div>
-          )} {/* close mfa ui */}
+      <div id="login-recaptcha" className="hidden"></div>
     </div>
   );
 };

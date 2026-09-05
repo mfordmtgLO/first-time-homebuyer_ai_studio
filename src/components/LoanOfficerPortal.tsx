@@ -13,6 +13,7 @@ import {
   Sparkles, 
   ShieldCheck, 
   Phone, Cloud, 
+  Compass,
   Mail, 
   Calendar, 
   Layers, 
@@ -125,6 +126,7 @@ import { SystemPitchDeck } from "./SystemPitchDeck";
 import { BranchManagerDashboard } from "./BranchManagerDashboard";
 import { GrowthDashboard } from "./GrowthDashboard";
 import { BranchManagement } from "./BranchManagement";
+import { MetadataConfiguration } from "./MetadataConfiguration";
 import { RecruitmentPipeline } from "./RecruitmentPipeline";
 import { AILoanOfficer2ndBrain } from "./AILoanOfficer2ndBrain";
 import { ScheduleCTaxAnalyzer } from "./ScheduleCTaxAnalyzer";
@@ -135,9 +137,11 @@ import { GoogleWorkspaceModal } from "./GoogleWorkspaceModal";
 import { WorkspaceStatusWidget } from "./WorkspaceStatusWidget";
 import { googleWorkspace, GoogleWorkspaceUser } from "../services/googleWorkspaceService";
 import { launchLocalOutlookDraft, appendWorkEmailSignature } from "../utils/outlookEmailService";
+import { getLoanOfficerAgentCategories, getAgentMlsInfo, OREGON_MLS_SYSTEMS } from "../utils/marketNewsListingMatcher";
+import { RbacRole, normalizeRole, getRolePermissions } from "../utils/rbac";
 
 interface LoanOfficerPortalProps {
-  userRole?: "admin" | "lo" | null;
+  userRole?: RbacRole | "admin" | "lo" | string | null;
   guidesState: ProfessionalGuidesState;
   onUpdateGuidesState: (newState: ProfessionalGuidesState) => void;
   onClose: () => void;
@@ -350,7 +354,18 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     guidesState.loanOfficers.find(l => l.id === authenticatedLoId) || 
     guidesState.loanOfficers[0];
 
-  const isAdminUser = Boolean(loggedInUser?.isAdmin || loggedInUser?.id === guidesState.adminLoanOfficerId);
+  // Derive granular RBAC role & permissions
+  const effectiveRbacRole = normalizeRole(
+    userRole || (loggedInUser?.isAdmin || loggedInUser?.id === guidesState.adminLoanOfficerId ? "branch_manager" : "team_lo")
+  );
+  const permissions = getRolePermissions(effectiveRbacRole);
+
+  const isAdminUser = Boolean(
+    effectiveRbacRole === "branch_manager" || 
+    userRole === "admin" || 
+    loggedInUser?.isAdmin || 
+    loggedInUser?.id === guidesState.adminLoanOfficerId
+  );
 
   // Which Loan Officer dashboard is currently being managed/viewed
   // If Mike Ford (Admin): can switch to any LO; if downstream LO: locked to self
@@ -2146,19 +2161,21 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               <span>Pitch Deck & ROI Metrics</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab("branch_admin_metrics")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
-                activeTab === "branch_admin_metrics"
-                  ? "bg-[#4A5D4E] text-white shadow-xs"
-                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
-              }`}
-            >
-              <PieChart className="w-4 h-4 text-[#C18C5D]" />
-              <span>Branch Performance & ROI</span>
-            </button>
+            {(isAdminUser || permissions.canViewBranchMetrics) && (
+              <button
+                onClick={() => setActiveTab("branch_admin_metrics")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                  activeTab === "branch_admin_metrics"
+                    ? "bg-[#4A5D4E] text-white shadow-xs"
+                    : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+                }`}
+              >
+                <PieChart className="w-4 h-4 text-[#C18C5D]" />
+                <span>Branch Performance & ROI</span>
+              </button>
+            )}
 
-            {userRole === "admin" && (
+            {(isAdminUser || permissions.canManageBranchUsers) && (
               <button
                 data-tab-id="branch_management"
                 onClick={() => setActiveTab("branch_management")}
@@ -2167,9 +2184,10 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     ? "bg-[#606C5D] text-white shadow-md shadow-[#4A5D4E]/20"
                     : "text-[#9A9488] hover:bg-[#F8F7F4] hover:text-[#2D362E]"
                 }`}
+                title="Manage branch roles, granular RBAC, whitelist, and two-factor authentication"
               >
-                <Building className="w-4 h-4 text-[#C18C5D]" />
-                <span>Branch Access & Security</span>
+                <ShieldCheck className="w-4 h-4 text-[#C18C5D]" />
+                <span>Site Visibility & Branch RBAC</span>
               </button>
             )}
 
@@ -2820,20 +2838,28 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     </select>
                   </div>
 
-                  {/* Loan Officer Filter */}
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <span className="text-[#606C5D] font-semibold">Assigned LO:</span>
-                    <select
-                      value={leadLoFilter}
-                      onChange={(e) => setLeadLoFilter(e.target.value)}
-                      className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-2.5 py-1.5 text-xs font-semibold text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
-                    >
-                      <option value="all">All Loan Officers</option>
-                      {guidesState.loanOfficers.map(lo => (
-                        <option key={lo.id} value={lo.id}>{lo.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Loan Officer Filter or Isolated Scope Indicator */}
+                  {permissions.canViewAllLeads ? (
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="text-[#606C5D] font-semibold">Assigned LO:</span>
+                      <select
+                        value={leadLoFilter}
+                        onChange={(e) => setLeadLoFilter(e.target.value)}
+                        className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-2.5 py-1.5 text-xs font-semibold text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
+                      >
+                        <option value="all">All Loan Officers</option>
+                        {guidesState.loanOfficers.map(lo => (
+                          <option key={lo.id} value={lo.id}>{lo.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-xl">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="font-semibold">{currentLo.name}'s Leads</span>
+                      <span className="text-[10px] bg-emerald-100/60 px-1.5 py-0.2 rounded text-emerald-900 font-mono">RBAC Scoped</span>
+                    </div>
+                  )}
 
                   {/* View Mode Switcher */}
                   <div className="flex items-center border border-[#EAE7E0] rounded-xl p-0.5 bg-[#FAF9F5] ml-auto">
@@ -2918,7 +2944,9 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 } else if (leadStatusFilter === "closed") {
                   matchStatus = lead.status === "closed" || lead.status === "archived";
                 }
-                const matchLo = leadLoFilter === "all" || lead.assignedLoId === leadLoFilter;
+                const matchLo = permissions.canViewAllLeads 
+                  ? (leadLoFilter === "all" || lead.assignedLoId === leadLoFilter) 
+                  : (lead.assignedLoId === currentLo.id || lead.assignedLO === currentLo.name || (lead as any).loId === currentLo.id);
 
                 let matchSource = true;
                 if (leadSourceFilter === "campaign") {
@@ -4079,7 +4107,10 @@ Best regards,`,
           <RecruitmentPipeline 
             guidesState={guidesState} 
             onUpdateGuidesState={onUpdateGuidesState} 
-            onTriggerToast={triggerToast} 
+            onTriggerToast={triggerToast}
+            userRole={effectiveRbacRole}
+            currentLoId={currentLo.id}
+            currentLoName={currentLo.name}
           />
         )}
 
@@ -5565,6 +5596,142 @@ Mike Ford`;
                 />
               </div>
 
+              {/* Market News Agent Spotlight Dropdown & MLS Area Rule */}
+              {(() => {
+                const loAgentCategories = getLoanOfficerAgentCategories(
+                  currentLo,
+                  guidesState.agentRoster,
+                  guidesState.pairings
+                );
+                const spotAgent = loAgentCategories.currentSpotlightAgent;
+                const mlsInfo = getAgentMlsInfo(spotAgent);
+                const isPaired = loAgentCategories.pairedAgents.some(a => a.id === spotAgent?.id);
+
+                return (
+                  <div className="space-y-4 bg-gradient-to-br from-[#FAF9F5] via-white to-[#F5F2EA] p-5 sm:p-6 rounded-2xl border-2 border-[#C18C5D]/30 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EAE7E0] pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="p-1.5 rounded-lg bg-[#C18C5D]/15 text-[#8C5D30]">
+                            <Sparkles className="w-4 h-4 text-[#C18C5D]" />
+                          </span>
+                          <h4 className="text-sm font-serif font-bold text-[#2D362E]">
+                            Market News Agent Spotlight (Solo LO Link Sourcing)
+                          </h4>
+                        </div>
+                        <p className="text-xs text-[#606C5D] mt-1">
+                          Controls which agent is spotlighted with rotating recommendations and 10–15 matched low/no down payment listings when buyers visit your solo Loan Officer URL.
+                        </p>
+                      </div>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200 shrink-0">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Oregon MLS & RentCast Synced
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5">
+                          <span>Select Spotlight Agent from Stable or Existing Pairings</span>
+                        </label>
+                        <span className="text-[11px] text-[#8C5D30] font-semibold">
+                          {loAgentCategories.pairedAgents.length} Paired • {loAgentCategories.unpairedAgents.length} Stable (Imported)
+                        </span>
+                      </div>
+
+                      <select
+                        value={currentLo.marketNewsSpotlightAgentId || spotAgent?.id || ""}
+                        onChange={(e) => {
+                          const selectedId = e.target.value;
+                          updateCurrentLoField("marketNewsSpotlightAgentId", selectedId);
+                          const agent = guidesState.agentRoster.find(a => a.id === selectedId);
+                          if (agent) {
+                            triggerToast(`🎯 Market News Spotlight set to ${agent.name} (${agent.mlsAffiliation || "Oregon MLS"})`);
+                          }
+                        }}
+                        className="w-full bg-white border-2 border-[#C18C5D]/40 hover:border-[#C18C5D] rounded-xl px-3.5 py-2.5 text-xs font-medium text-[#2D362E] focus:outline-none focus:border-[#4A5D4E] shadow-2xs transition-colors cursor-pointer"
+                      >
+                        <optgroup label="🤝 Paired Partner Agents (Existing Active Pairings)">
+                          {loAgentCategories.pairedAgents.map(agent => (
+                            <option key={agent.id} value={agent.id}>
+                              ⭐ {agent.name} — {agent.brokerage} [{agent.mlsAffiliation || "RMLS"}: {(agent.marketAreas || []).slice(0, 2).join(", ")}]
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="📋 Stable of Imported Agents (Not Yet Paired)">
+                          {loAgentCategories.unpairedAgents.map(agent => (
+                            <option key={agent.id} value={agent.id}>
+                              📋 {agent.name} — {agent.brokerage} [{agent.mlsAffiliation || "Oregon MLS"}: {(agent.marketAreas || []).slice(0, 2).join(", ")}]
+                            </option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </div>
+
+                    {/* Spotlight Agent Details Card */}
+                    {spotAgent && (
+                      <div className="bg-white rounded-xl p-4 border border-[#EAE7E0] space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] overflow-hidden flex items-center justify-center shrink-0">
+                              {spotAgent.headshotUrl ? (
+                                <img src={spotAgent.headshotUrl} alt={spotAgent.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <UserCheck className="w-6 h-6 text-[#4A5D4E]" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h5 className="text-sm font-bold text-[#2D362E]">{spotAgent.name}</h5>
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                  isPaired ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-blue-50 text-blue-800 border border-blue-200"
+                                }`}>
+                                  {isPaired ? "🤝 Active LO Pairing" : "📋 Stable (Imported)"}
+                                </span>
+                              </div>
+                              <p className="text-xs text-[#606C5D]">{spotAgent.title} • {spotAgent.brokerage}</p>
+                              <p className="text-[11px] text-[#9A9488]">{spotAgent.phone} • {spotAgent.email}</p>
+                            </div>
+                          </div>
+
+                          <div className="text-left sm:text-right space-y-1">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#4A5D4E]/10 text-[#4A5D4E] text-xs font-bold border border-[#4A5D4E]/20">
+                              <Compass className="w-3.5 h-3.5 text-[#C18C5D]" />
+                              {mlsInfo.mls.shortName}
+                            </span>
+                            <p className="text-[10px] text-[#9A9488]">
+                              Counties: {mlsInfo.allCounties.slice(0, 4).join(", ")}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Injection Rules Summary */}
+                        <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#EAE7E0] text-[11px] space-y-1.5 text-[#606C5D]">
+                          <div className="flex items-start gap-1.5 font-medium">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                            <span>
+                              <strong>Solo Loan Officer URL Rule:</strong> Homebuyers visiting your solo link (no agent parameter) will see <em>{spotAgent.name}</em> ({spotAgent.phone}) injected with random timing into housing market intelligence.
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-1.5 font-medium">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                            <span>
+                              <strong>10–15 Listings MLS Filter:</strong> Features recent homes in <strong>{mlsInfo.primaryCounty} County</strong> matching USDA 0% down, OHCS LMI flex grants, Lakeview National, and FirstHome price caps with direct Zillow verification links.
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-1.5 font-medium">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                            <span>
+                              <strong>Listing Agent Synchronization:</strong> If {spotAgent.name} is the listing agent of record on any home (via RentCast data), that home is highlighted with a gold direct listing badge and direct contact action.
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D362E]">Professional Bio</label>
                 <textarea
@@ -5684,8 +5851,13 @@ Mike Ford`;
         {/* Tab: SMS Compliance & Opt-in Management Dashboard */}
         {activeTab === "sms_compliance" && (
           <SmsComplianceDashboard
-            leads={guidesState.leads || []}
+            leads={
+              permissions.canViewAllAuditLogs
+                ? (guidesState.leads || [])
+                : (guidesState.leads || []).filter(l => l.assignedLoId === currentLo.id || l.assignedLO === currentLo.name || (l as any).loId === currentLo.id)
+            }
             loanOfficer={currentLo}
+            userRole={effectiveRbacRole}
             onUpdateLead={(updatedLead) => {
               const updatedLeads = (guidesState.leads || []).map(l => l.id === updatedLead.id ? updatedLead : l);
               onUpdateGuidesState({
@@ -5743,7 +5915,13 @@ Mike Ford`;
 
         {activeTab === "branch_management" && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both">
-            <BranchManagement />
+            <BranchManagement onNavigateToSeo={() => setActiveTab("branch_seo_metadata")} />
+          </div>
+        )}
+
+        {activeTab === "branch_seo_metadata" && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out fill-mode-both">
+            <MetadataConfiguration onBackToBranchManagement={() => setActiveTab("branch_management")} />
           </div>
         )}
 
@@ -5751,6 +5929,7 @@ Mike Ford`;
           <BranchManagerDashboard 
             guidesState={guidesState}
             onUpdateGuidesState={onUpdateGuidesState}
+            onTriggerToast={triggerToast}
           />
         )}
 

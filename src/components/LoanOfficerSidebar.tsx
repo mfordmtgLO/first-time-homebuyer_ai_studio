@@ -57,6 +57,8 @@ export type TabId =
   | "social_push" 
   | "ad_campaigns" 
   | "system_pitch_deck" 
+  | "branch_management"
+  | "branch_seo_metadata"
   | "branch_admin_metrics" 
   | "growth_dashboard";
 
@@ -243,10 +245,18 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
       items: [
         {
           id: "branch_management",
-          label: "Branch Access & Security",
+          label: "Branch Security & Whitelist",
           icon: <ShieldCheck className="w-4 h-4" />,
           badge: "Admin",
           badgeColor: "bg-amber-500 text-white",
+          requiresAdmin: true
+        },
+        {
+          id: "branch_seo_metadata",
+          label: "Website SEO & Meta Tags",
+          icon: <Globe className="w-4 h-4" />,
+          badge: "SEO",
+          badgeColor: "bg-emerald-600 text-white",
           requiresAdmin: true
         },
         {

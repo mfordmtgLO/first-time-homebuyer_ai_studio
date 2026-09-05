@@ -20,7 +20,10 @@ import {
   TrendingUp,
   Clock,
   Mail,
-  Footprints
+  Footprints,
+  Map as MapIcon,
+  Compass,
+  LayoutGrid
 } from "lucide-react";
 import { PropertyListing, FinancialProfile } from "../types";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
@@ -43,6 +46,7 @@ import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 import { EmailOutreachModal } from "./EmailOutreachModal";
 import { PropertyReportModal } from "./PropertyReportModal";
 import { ShareViaEmailModal } from "./ShareViaEmailModal";
+import { PropertyMapOverlay } from "./PropertyMapOverlay";
 import { ROADMAP_MILESTONES, DOCUMENT_VAULT_ITEMS } from "../data/initialData";
 import { RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import html2canvas from "html2canvas";
@@ -74,6 +78,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   onOpenNewModal,
   onAskAiAboutProperty,
 }) => {
+  const [viewMode, setViewMode] = useState<"cards" | "map">("map");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [overlayFilter, setOverlayFilter] = useState<string>("all");
   const [compareIds, setCompareIds] = useState<string[]>([]);
@@ -266,8 +271,8 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     }
   };
 
-  const toggleCompare = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleCompare = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (compareIds.includes(id)) {
       setCompareIds(prev => prev.filter(cid => cid !== id));
     } else {
@@ -409,6 +414,45 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           </div>
         </div>
 
+        {/* Primary View Mode Switcher: Google Maps Overlay vs Grid Cards */}
+        <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-[#EAE7E0]">
+          <div className="flex items-center gap-1.5 p-1 bg-[#FAF9F5] rounded-2xl border border-[#EAE7E0]">
+            <button
+              onClick={() => setViewMode("map")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === "map"
+                  ? "bg-[#4A5D4E] text-white shadow-2xs font-bold"
+                  : "text-[#606C5D] hover:text-[#2D362E]"
+              }`}
+            >
+              <Compass className="w-4 h-4 text-emerald-300" />
+              <span>Google Maps Overlay & Radius Search</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-400 text-stone-900 ml-1">
+                Readiness & Amenities
+              </span>
+            </button>
+            <button
+              onClick={() => setViewMode("cards")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === "cards"
+                  ? "bg-[#4A5D4E] text-white shadow-2xs font-bold"
+                  : "text-[#606C5D] hover:text-[#2D362E]"
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span>Pipeline Cards & Scorecards ({filtered.length})</span>
+            </button>
+          </div>
+
+          <div className="text-xs text-[#606C5D] font-medium hidden sm:block">
+            {viewMode === "map" ? (
+              <span>Interactive radius search & amenity proximity view</span>
+            ) : (
+              <span>Detail list & on-site tour scorecard auditing</span>
+            )}
+          </div>
+        </div>
+
         {/* Status Filter Tabs */}
         <div className="flex flex-wrap gap-2 pt-2 border-t border-[#EAE7E0]">
           {[
@@ -525,6 +569,21 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Google Maps Platform Overlay with Radius Search Visualization */}
+      {viewMode === "map" && (
+        <div className="mb-6">
+          <PropertyMapOverlay
+            properties={properties}
+            profile={profile}
+            onOpenScorecard={onOpenScorecard}
+            onAskAiAboutProperty={onAskAiAboutProperty}
+            compareIds={compareIds}
+            onToggleCompare={toggleCompare}
+            onCloseMap={() => setViewMode("cards")}
+          />
+        </div>
+      )}
 
       <div id="property-report-content" className="p-4 bg-white/50 rounded-xl">
       {/* Listing Agent Distribution Chart */}

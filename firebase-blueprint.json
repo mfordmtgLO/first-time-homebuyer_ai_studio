@@ -175,12 +175,113 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["encryptedVault", "enableLiveCarrierSms", "ownerId", "updatedAt"]
+    },
+    "UserIntegrations": {
+      "title": "UserIntegrations",
+      "description": "User third party integrations configuration and vault",
+      "type": "object",
+      "properties": {
+        "salesforceVault": { "type": "string" },
+        "totalExpertVault": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "Global application settings including public visibility and SEO metadata",
+      "type": "object",
+      "properties": {
+        "isPublic": { "type": "boolean" },
+        "seoMetadata": { "type": "object" },
+        "metaTitle": { "type": "string" },
+        "metaDescription": { "type": "string" },
+        "ogTitle": { "type": "string" },
+        "ogDescription": { "type": "string" },
+        "ogImage": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "lastUpdatedBy": { "type": "string" }
+      }
+    },
+    "BranchAuditLog": {
+      "title": "BranchAuditLog",
+      "description": "Immutable security and compliance audit log recording team members access to sensitive CRM assets like API keys, webhooks, and private customer data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "actorEmail": { "type": "string" },
+        "actorName": { "type": "string" },
+        "actorRole": { "type": "string" },
+        "actionType": { "type": "string" },
+        "actionLabel": { "type": "string" },
+        "assetCategory": { "type": "string" },
+        "assetName": { "type": "string" },
+        "targetAssetId": { "type": "string" },
+        "status": { "type": "string" },
+        "severity": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "userAgent": { "type": "string" },
+        "details": { "type": "string" },
+        "rbacPolicyRule": { "type": "string" },
+        "integrityHash": { "type": "string" },
+        "previousHash": { "type": "string" },
+        "sequenceIndex": { "type": "number" },
+        "timestamp": { "type": "string" }
+      },
+      "required": [
+        "id",
+        "actorEmail",
+        "actionType",
+        "assetCategory",
+        "assetName",
+        "status",
+        "timestamp"
+      ]
+    },
+    "WebhookEvent": {
+      "title": "WebhookEvent",
+      "description": "Persisted inbound and outbound CRM webhook events with zero-lateral RBAC segregation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "event": { "type": "string" },
+        "ownerLoId": { "type": "string" },
+        "targetLoId": { "type": "string" },
+        "candidateName": { "type": "string" },
+        "candidateType": { "type": "string" },
+        "source": { "type": "string" },
+        "status": { "type": "string" },
+        "payload": { "type": "object" },
+        "createdAt": { "type": "string" }
+      },
+      "required": [
+        "id",
+        "timestamp",
+        "event",
+        "status"
+      ]
     }
   },
   "firestore": {
+    "webhook_events/{eventId}": {
+      "schema": { "$ref": "#/entities/WebhookEvent" },
+      "description": "Persisted webhook event stream with zero-lateral originator isolation"
+    },
+    "branch_audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/BranchAuditLog" },
+      "description": "Branch security audit records for sensitive CRM assets, webhooks, and customer PII access"
+    },
+    "app_settings/{docId}": {
+      "schema": { "$ref": "#/entities/AppSettings" },
+      "description": "Global application configuration and SEO metadata"
+    },
     "twilio_vault/{userId}": {
       "schema": { "$ref": "#/entities/TwilioVault" },
       "description": "Encrypted Twilio credentials for a user"
+    },
+    "user_integrations/{userId}": {
+      "schema": { "$ref": "#/entities/UserIntegrations" },
+      "description": "User third party integrations"
     },
     "guides_state/{docId}": {
       "schema": "GuidesState",

@@ -24,13 +24,14 @@ import {
   Mail,
   FolderLock
 } from "lucide-react";
-import { FinancialProfile, PropertyListing, RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
+import { FinancialProfile, PropertyListing, RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile, CapturedLead } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 import { hasAuthenticPropertyPhoto, getZillowUrl } from "../utils/overlayClassification";
 import { SavingsGoalTracker } from "./SavingsGoalTracker";
 import { RAGDocumentsWidget } from "./RAGDocumentsWidget";
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 import { RealTimeMortgageRateTracker } from "./RealTimeMortgageRateTracker";
+import { MarketTrends } from "./MarketTrends";
 import { HomebuyingPlanPrintModal } from "./HomebuyingPlanPrintModal";
 import { ShareViaEmailModal } from "./ShareViaEmailModal";
 
@@ -50,6 +51,8 @@ interface DashboardOverviewProps {
   onOpenLoPortal?: () => void;
   isSidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
+  onSaveLead?: (lead: CapturedLead) => void;
+  onTriggerToast?: (msg: string) => void;
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -68,6 +71,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onOpenLoPortal,
   isSidebarCollapsed = false,
   onToggleSidebar,
+  onSaveLead,
+  onTriggerToast,
 }) => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -504,6 +509,18 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Real-Time Market Trends & Strategy Intelligence Hub (Safeguarded: No Rate Talk, Local Agent Advisory Injections) */}
+      <MarketTrends
+        isEmbedded={true}
+        activeAgent={activeAgent}
+        loanOfficer={loanOfficer}
+        isCoBranded={isCoBranded}
+        listings={properties}
+        onNavigate={onNavigate}
+        onSaveLead={onSaveLead}
+        onTriggerToast={onTriggerToast}
+      />
 
       <RAGDocumentsWidget documents={documents} setDocuments={setDocuments} />
 

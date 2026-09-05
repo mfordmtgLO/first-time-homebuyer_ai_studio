@@ -62,7 +62,7 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
   const [copiedStep4Url, setCopiedStep4Url] = useState(false);
 
   const leadGenUrl = loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM";
-  const leadQrUrl进 = loanOfficer?.leadGenQrCodeUrl || "/lead-gen-qr-code.png";
+  const leadQrUrl = loanOfficer?.leadGenQrCodeUrl || "/lead-gen-qr-code.png";
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(leadGenUrl);
@@ -480,7 +480,7 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
             <div className="space-y-3">
               <div className="inline-block p-4 bg-[#FAF9F5] border-2 border-[#EAE7E0] rounded-2xl shadow-inner">
                 <img 
-                  src={leadQrUrl进} 
+                  src={leadQrUrl} 
                   alt="Loan Officer Pre-Approval QR Code" 
                   className="w-48 h-48 sm:w-56 sm:h-56 mx-auto object-contain"
                   referrerPolicy="no-referrer"

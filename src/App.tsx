@@ -16,6 +16,7 @@ import { NewPropertyModal } from "./components/NewPropertyModal";
 import { MortgageLab } from "./components/MortgageLab";
 import { AICopilot } from "./components/AICopilot";
 import { EscrowTracker } from "./components/EscrowTracker";
+import { MarketTrends } from "./components/MarketTrends";
 import { Step4AIScenarioSummary } from "./components/Step4AIScenarioSummary";
 import { LoanOfficerPortal } from "./components/LoanOfficerPortal";
 import { LeadIntakeChatbot } from "./components/LeadIntakeChatbot";
@@ -24,6 +25,7 @@ import { BranchManagement } from "./components/BranchManagement";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { checkAndProvisionUser } from "./utils/authUtils";
+import { applyMetadataToDocument, fetchSavedSeoMetadata } from "./utils/seoManager";
 import { 
   INITIAL_PROFILE, 
   INITIAL_PROPERTIES, 
@@ -45,7 +47,8 @@ import {
   RoadmapMilestone, 
   DocumentItem, 
   ProfessionalGuidesState,
-  CapturedLead
+  CapturedLead,
+  RbacRole
 } from "./types";
 import { 
   sanitizeLoanOfficer, 
@@ -67,21 +70,20 @@ export default function App() {
   const [showTelemetryModal, setShowTelemetryModal] = useState<boolean>(false);
   const [leadBotSourceContext, setLeadBotSourceContext] = useState<{ source?: string, intent?: "chat_listings" | "blueprint_download" | "buying_power" } | undefined>(undefined);
 
-  // Authentication State
+  // Authentication & Site Visibility State
   const [isAuthChecking, setIsAuthChecking] = useState(true);
-  const [userRole, setUserRole] = useState<"admin" | "lo" | null>(null);
+  const [isSettingsChecking, setIsSettingsChecking] = useState(true);
+  const [userRole, setUserRole] = useState<RbacRole | "admin" | "lo" | null>(null);
   const [isAppPublic, setIsAppPublic] = useState(false);
-
-
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const role = await checkAndProvisionUser(user);
-          setUserRole(role as "admin" | "lo");
+          setUserRole(role);
         } catch (e) {
-          console.error(e);
+          console.error("Auth provisioning error:", e);
           setUserRole(null);
         }
       } else {
@@ -90,12 +92,27 @@ export default function App() {
       setIsAuthChecking(false);
     });
 
+    // Initialize SEO metadata for public consumer website
+    fetchSavedSeoMetadata()
+      .then((meta) => {
+        applyMetadataToDocument(meta);
+      })
+      .catch((err) => console.warn("Initial SEO metadata load notice:", err));
+
     const unsubscribeSettings = onSnapshot(doc(db, "app_settings", "global"), (docSnap) => {
       if (docSnap.exists()) {
-        setIsAppPublic(docSnap.data().isPublic === true);
+        const data = docSnap.data();
+        setIsAppPublic(data.isPublic === true);
+        if (data.seoMetadata) {
+          applyMetadataToDocument(data.seoMetadata);
+        }
       } else {
         setIsAppPublic(false);
       }
+      setIsSettingsChecking(false);
+    }, (err) => {
+      console.warn("Global settings snapshot error:", err);
+      setIsSettingsChecking(false);
     });
 
     return () => {
@@ -109,11 +126,11 @@ export default function App() {
   const search = typeof window !== "undefined" ? window.location.search.toLowerCase() : "";
   
   const isPortalAccess = 
-    pathname.includes("/portal") || 
-    pathname.includes("/admin") || 
-    pathname.includes("/login") ||
-    pathname.includes("first-time_homebuyer_portal") ||
-    pathname.includes("first-time-homebuyer-portal") ||
+    pathname === "/portal" ||
+    pathname.startsWith("/portal/") ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname === "/login" ||
     hash.includes("portal") || 
     hash.includes("admin") ||
     search.includes("portal=lo") ||
@@ -294,40 +311,48 @@ export default function App() {
 
   // Subscribe to Firebase for live updates to headshots and profiles
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "guides_state", "singleton"), (snapshot) => {
-      if (snapshot.exists()) {
-        const remoteState = snapshot.data() as ProfessionalGuidesState;
-        
-        setGuidesState((prev) => {
-          const updatedLo = remoteState.loanOfficers.find(lo => lo.id === prev.loanOfficer.id) || prev.loanOfficer;
+    const unsub = onSnapshot(
+      doc(db, "guides_state", "singleton"),
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const remoteState = snapshot.data() as ProfessionalGuidesState;
           
-          return {
-            ...prev,
-            loanOfficers: remoteState.loanOfficers.map(lo => sanitizeLoanOfficer(lo)),
-            agentRoster: remoteState.agentRoster.map(agent => sanitizeAgent(agent)),
-            pairings: remoteState.pairings || prev.pairings,
-            recruitingCampaigns: remoteState.recruitingCampaigns || prev.recruitingCampaigns || INITIAL_RECRUITING_CAMPAIGNS,
-            socialCampaigns: remoteState.socialCampaigns || prev.socialCampaigns,
-            adCampaignDrafts: remoteState.adCampaignDrafts || prev.adCampaignDrafts,
-            leads: remoteState.leads || prev.leads,
-            syncedProperties: remoteState.syncedProperties || prev.syncedProperties,
-            loanOfficer: sanitizeLoanOfficer(updatedLo)
-          };
-        });
-
-        // Also update the live properties list if the Loan Officer published new listings
-        if (remoteState.syncedProperties && remoteState.syncedProperties.length > 0) {
-          const published = remoteState.syncedProperties.filter(p => p.isPubliclyPublished !== false);
-          setProperties(prev => {
-            const remainingCustom = prev.filter(p => !p.id.startsWith("geo-") && !p.id.includes("-OR-"));
-            return [...published, ...remainingCustom];
+          setGuidesState((prev) => {
+            const updatedLo = remoteState.loanOfficers.find(lo => lo.id === prev.loanOfficer.id) || prev.loanOfficer;
+            
+            return {
+              ...prev,
+              loanOfficers: remoteState.loanOfficers.map(lo => sanitizeLoanOfficer(lo)),
+              agentRoster: remoteState.agentRoster.map(agent => sanitizeAgent(agent)),
+              pairings: remoteState.pairings || prev.pairings,
+              recruitingCampaigns: remoteState.recruitingCampaigns || prev.recruitingCampaigns || INITIAL_RECRUITING_CAMPAIGNS,
+              socialCampaigns: remoteState.socialCampaigns || prev.socialCampaigns,
+              adCampaignDrafts: remoteState.adCampaignDrafts || prev.adCampaignDrafts,
+              leads: remoteState.leads || prev.leads,
+              syncedProperties: remoteState.syncedProperties || prev.syncedProperties,
+              loanOfficer: sanitizeLoanOfficer(updatedLo)
+            };
           });
+
+          // Also update the live properties list if the Loan Officer published new listings
+          if (remoteState.syncedProperties && remoteState.syncedProperties.length > 0) {
+            const published = remoteState.syncedProperties.filter(p => p.isPubliclyPublished !== false);
+            setProperties(prev => {
+              const remainingCustom = prev.filter(p => !p.id.startsWith("geo-") && !p.id.includes("-OR-"));
+              return [...published, ...remainingCustom];
+            });
+          }
+        } else {
+          // First time initialization: Push local state up to Firebase if authenticated
+          if (auth.currentUser) {
+            setDoc(doc(db, "guides_state", "singleton"), guidesState).catch(console.warn);
+          }
         }
-      } else {
-        // First time initialization: Push local state (which might contain the LO's uploaded headshot) up to Firebase
-        setDoc(doc(db, "guides_state", "singleton"), guidesState).catch(console.warn);
+      },
+      (error) => {
+        console.warn("Guides state snapshot listener notice:", error);
       }
-    });
+    );
     
     return unsub;
   }, []);
@@ -575,6 +600,24 @@ export default function App() {
 
   const activeAgent = guidesState.agentRoster.find(a => a.id === guidesState.activeAgentId) || guidesState.agentRoster[0];
 
+  // Access Verification Loading Screen (Wait for Auth & Firestore App Settings to resolve)
+  if (isAuthChecking || isSettingsChecking) {
+    return (
+      <div className="min-h-screen bg-[#F9F8F4] flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <ShieldCheck className="w-12 h-12 text-[#4A5D4E] mb-4 opacity-50" />
+          <p className="text-[#606C5D] font-mono text-xs uppercase tracking-widest">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // When website is PRIVATE (Locked), only authenticated & authorized users (Admin / LO) can access it.
+  // When website is PUBLIC (Unlocked), any visitor can view the public consumer website, but portal/admin routes require login.
+  if (!userRole && (!isAppPublic || isPortalAccess)) {
+    return <LoginScreen onLogin={(role) => setUserRole(role as any)} />;
+  }
+
   return (
     <div className="h-[100dvh] w-full bg-[#F9F8F4] text-[#2D362E] flex flex-col selection:bg-[#C18C5D]/25 selection:text-[#2D362E] font-sans antialiased overflow-hidden relative">
       
@@ -713,7 +756,7 @@ export default function App() {
             {/* DASHBOARD MODE VIEWS (SECURED USER DASHBOARD) */}
             {currentMode === "dashboard" && (
               <div>
-                {(activeTab === "dashboard" || (!["step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow"].includes(activeTab))) && (
+                {(activeTab === "dashboard" || (!["step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow", "market_trends"].includes(activeTab))) && (
                   <DashboardOverview
                     profile={profile}
                     setProfile={setProfile}
@@ -728,6 +771,7 @@ export default function App() {
                     onOpenLoPortal={() => setShowLoPortal(true)}
                     isSidebarCollapsed={isSidebarCollapsed}
                     onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
+                    onSaveLead={handleSaveLead}
                   />
                 )}
 
@@ -777,11 +821,26 @@ export default function App() {
                   <AICopilot
                     profile={profile}
                     properties={properties}
+                    loanOfficer={guidesState.loanOfficer}
                   />
                 )}
 
                 {activeTab === "escrow" && (
                   <EscrowTracker />
+                )}
+
+                {activeTab === "market_trends" && (
+                  <MarketTrends
+                    activeAgent={activeAgent}
+                    loanOfficer={guidesState.loanOfficer}
+                    agentRoster={guidesState.agentRoster}
+                    pairings={guidesState.pairings}
+                    isCoBranded={guidesState.isCoBranded}
+                    listings={properties}
+                    onNavigate={handleNavigate}
+                    onSaveLead={handleSaveLead}
+                    onTriggerToast={triggerToast}
+                  />
                 )}
               </div>
             )}

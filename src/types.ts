@@ -104,6 +104,28 @@ export interface PropertyListing {
   scorecard?: TourScorecard;
   isFavorite: boolean;
   walkScore?: number;
+  lat?: number;
+  lng?: number;
+  schoolDistrict?: string;
+  assignedSchools?: {
+    name: string;
+    type: 'Elementary' | 'Middle' | 'High';
+    rating: number;
+    distanceMiles: number;
+  }[];
+  nearbyAmenities?: {
+    name: string;
+    category: 'transit' | 'school' | 'grocery' | 'park' | 'health' | 'dining';
+    distanceMiles: number;
+    walkTimeMinutes: number;
+  }[];
+  homebuyingReadiness?: {
+    score: number;
+    tier: 'High' | 'Moderate' | 'Developing';
+    label: string;
+    positiveFactors: string[];
+    cautionFactors: string[];
+  };
   isPubliclyPublished?: boolean;
   overlayEligibility?: OverlayEligibility;
   sourceGeoSphereId?: string;
@@ -112,6 +134,7 @@ export interface PropertyListing {
   mlsName?: string;
   zillowUrl?: string;
   listingAgent?: {
+    id?: string;
     name?: string;
     phone?: string;
     email?: string;
@@ -296,6 +319,7 @@ export interface LoanOfficerProfile {
   realTrendsUnits?: number;
   realTrendsYear?: number;
   emailHistory?: EmailHistoryItem[];
+  marketNewsSpotlightAgentId?: string;
 }
 
 export interface EmailHistoryItem {
@@ -369,6 +393,9 @@ export interface RealEstateAgentProfile {
   realTrendsCategory?: string;
   emailHistory?: EmailHistoryItem[];
   topPartners12Mo?: CoClosedBusinessPartner[];
+  mlsAffiliation?: 'RMLS' | 'WVMLS' | 'CESMLS' | 'SOMLS' | string;
+  mlsAreas?: string[];
+  licensedCounties?: string[];
 }
 
 export interface BigPurpleDotConfig {
@@ -400,7 +427,10 @@ export interface BigPurpleDotWebhookEvent {
   source?: string;
   payloadSummary?: string;
   details?: any;
+  ownerLoId?: string;
 }
+
+export type { RbacRole, RbacPermissions, RbacRoleDefinition, WhitelistedUserRecord } from "./utils/rbac";
 
 export interface LOPairing {
   id: string;
@@ -652,4 +682,84 @@ export interface EmailTemplate {
   createdAt: string;
   updatedAt: string;
   ownerId: string;
+}
+
+export interface PublicWebsiteMetadata {
+  metaTitle: string;
+  metaDescription: string;
+  keywords: string;
+  canonicalUrl: string;
+  robots: string; // "index, follow" | "noindex, nofollow"
+  author: string;
+  
+  // Open Graph (Facebook, LinkedIn, iMessage, WhatsApp)
+  ogTitle: string;
+  ogDescription: string;
+  ogImage: string;
+  ogType: string;
+  ogSiteName: string;
+  
+  // Twitter / X Card
+  twitterCard: "summary_large_image" | "summary";
+  twitterTitle: string;
+  twitterDescription: string;
+  twitterImage: string;
+  twitterSite?: string;
+
+  // Structured Data / Schema.org (JSON-LD)
+  enableStructuredData?: boolean;
+  businessName?: string;
+  nmlsId?: string;
+  phone?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  streetAddress?: string;
+  
+  // Audit / Save Info
+  lastUpdated?: string;
+  updatedBy?: string;
+}
+
+// CRM & RBAC Asset Access Audit Log Definitions
+export type AuditAssetCategory = 'api_keys' | 'webhooks' | 'customer_pii' | 'rbac_admin';
+
+export type AuditActionType = 
+  | 'view_secret'
+  | 'rotate_key'
+  | 'update_webhook'
+  | 'dispatch_webhook'
+  | 'view_lead_pii'
+  | 'export_lead_data'
+  | 'inspect_tcpa_cert'
+  | 'lateral_access_blocked'
+  | 'modify_role'
+  | 'whitelist_member'
+  | 'security_hardening';
+
+export type AuditLogStatus = 'granted' | 'blocked' | 'flagged' | 'elevated';
+export type AuditSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export interface CrmAuditLogEntry {
+  id: string;
+  timestamp: string; // ISO 8601 string
+  actorEmail: string;
+  actorName: string;
+  actorRole: 'branch_manager' | 'senior_lo' | 'team_lo' | 'processor';
+  actionType: AuditActionType;
+  actionLabel: string;
+  assetCategory: AuditAssetCategory;
+  assetName: string;
+  targetAssetId?: string;
+  status: AuditLogStatus;
+  severity: AuditSeverity;
+  ipAddress: string;
+  userAgent?: string;
+  details: string;
+  rbacPolicyRule: string;
+  integrityHash: string; // SHA-256 tamper-evident hash
+  previousHash?: string; // Cryptographic hash link to previous audit log entry (Hash Chain)
+  sequenceIndex?: number; // Monotonically increasing sequence index in hash chain
+  leadId?: string;
+  leadName?: string;
 }

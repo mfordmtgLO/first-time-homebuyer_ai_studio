@@ -1,6 +1,6 @@
 {
   "name": "First-Time Homebuyer Roadmap",
-  "description": "Comprehensive first-time homebuyer roadmap and intelligent portal with mortgage calculations, property tour scorecards, grant finder, closing tracker, and AI homebuying advisor.",
+  "description": "Comprehensive first-time homebuyer roadmap and portal featuring Google Maps radius search, school district insights, key amenity proximity, mortgage calculations, property tour scorecards, grant finder, and AI advisor.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

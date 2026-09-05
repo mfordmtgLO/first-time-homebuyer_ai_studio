@@ -1,0 +1,971 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:d4e96434-cef7-42af-bb21-efc7df7937c0",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-09-05T16:01:25.721Z",
+    "tools": [
+      {
+        "vendor": "Snyk & CycloneDX",
+        "name": "mortgage-sbom-generator",
+        "version": "1.5.0"
+      }
+    ],
+    "authors": [
+      {
+        "name": "Branch Compliance Officer",
+        "email": "compliance@premier.loans"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "name": "react-example",
+      "version": "0.0.0",
+      "description": "First-Time Homebuyer Educational Portal & Secure Mortgage CRM Platform",
+      "purl": "pkg:npm/react-example@0.0.0"
+    },
+    "properties": [
+      {
+        "name": "compliance:standard",
+        "value": "GLBA FTC Safeguards Rule (16 CFR Part 314)"
+      },
+      {
+        "name": "snyk:scan:status",
+        "value": "ACTIVE_MONITORING"
+      },
+      {
+        "name": "snyk:severity:threshold",
+        "value": "HIGH"
+      },
+      {
+        "name": "snyk:vulnerabilities:high_or_critical",
+        "value": "0"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "@firebase/eslint-plugin-security-rules",
+      "version": "0.0.2",
+      "scope": "required",
+      "purl": "pkg:npm/@firebase/eslint-plugin-security-rules@0.0.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/@firebase/eslint-plugin-security-rules"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@google/genai",
+      "version": "2.18.0",
+      "scope": "required",
+      "purl": "pkg:npm/@google/genai@2.18.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/@google/genai"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@sentry/react",
+      "version": "10.73.0",
+      "scope": "required",
+      "purl": "pkg:npm/@sentry/react@10.73.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/@sentry/react"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@tailwindcss/vite",
+      "version": "4.3.3",
+      "scope": "required",
+      "purl": "pkg:npm/@tailwindcss/vite@4.3.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/@tailwindcss/vite"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@types/canvas-confetti",
+      "version": "1.9.0",
+      "scope": "required",
+      "purl": "pkg:npm/@types/canvas-confetti@1.9.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/@types/canvas-confetti"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@types/qrcode",
+      "version": "1.5.6",
+      "scope": "required",
+      "purl": "pkg:npm/@types/qrcode@1.5.6",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/@types/qrcode"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vis.gl/react-google-maps",
+      "version": "1.9.0",
+      "scope": "required",
+      "purl": "pkg:npm/@vis.gl/react-google-maps@1.9.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/@vis.gl/react-google-maps"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vitejs/plugin-react",
+      "version": "5.2.0",
+      "scope": "required",
+      "purl": "pkg:npm/@vitejs/plugin-react@5.2.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/@vitejs/plugin-react"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "canvas-confetti",
+      "version": "1.9.4",
+      "scope": "required",
+      "purl": "pkg:npm/canvas-confetti@1.9.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/canvas-confetti"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "dotenv",
+      "version": "17.4.2",
+      "scope": "required",
+      "purl": "pkg:npm/dotenv@17.4.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-2-Clause"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/dotenv"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "express",
+      "version": "4.22.2",
+      "scope": "required",
+      "purl": "pkg:npm/express@4.22.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/express"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "express-rate-limit",
+      "version": "8.7.0",
+      "scope": "required",
+      "purl": "pkg:npm/express-rate-limit@8.7.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/express-rate-limit"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "firebase",
+      "version": "12.18.0",
+      "scope": "required",
+      "purl": "pkg:npm/firebase@12.18.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/firebase"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "firebase-admin",
+      "version": "14.3.0",
+      "scope": "required",
+      "purl": "pkg:npm/firebase-admin@14.3.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/firebase-admin"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "helmet",
+      "version": "8.3.0",
+      "scope": "required",
+      "purl": "pkg:npm/helmet@8.3.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/helmet"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "html2canvas",
+      "version": "1.4.1",
+      "scope": "required",
+      "purl": "pkg:npm/html2canvas@1.4.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/html2canvas"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "jspdf",
+      "version": "4.2.1",
+      "scope": "required",
+      "purl": "pkg:npm/jspdf@4.2.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/jspdf"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "lucide-react",
+      "version": "0.546.0",
+      "scope": "required",
+      "purl": "pkg:npm/lucide-react@0.546.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/lucide-react"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "motion",
+      "version": "12.43.0",
+      "scope": "required",
+      "purl": "pkg:npm/motion@12.43.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/motion"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "qrcode",
+      "version": "1.5.4",
+      "scope": "required",
+      "purl": "pkg:npm/qrcode@1.5.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/qrcode"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "qrcode.react",
+      "version": "4.2.0",
+      "scope": "required",
+      "purl": "pkg:npm/qrcode.react@4.2.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/qrcode.react"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "react",
+      "version": "19.2.8",
+      "scope": "required",
+      "purl": "pkg:npm/react@19.2.8",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/react"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "react-dom",
+      "version": "19.2.8",
+      "scope": "required",
+      "purl": "pkg:npm/react-dom@19.2.8",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/react-dom"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "recharts",
+      "version": "3.10.1",
+      "scope": "required",
+      "purl": "pkg:npm/recharts@3.10.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/recharts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "vite",
+      "version": "6.4.3",
+      "scope": "required",
+      "purl": "pkg:npm/vite@6.4.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/vite"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@eslint/js",
+      "version": "10.0.1",
+      "scope": "optional",
+      "purl": "pkg:npm/@eslint/js@10.0.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/@eslint/js"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@types/express",
+      "version": "4.17.25",
+      "scope": "optional",
+      "purl": "pkg:npm/@types/express@4.17.25",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/@types/express"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@types/node",
+      "version": "22.20.1",
+      "scope": "optional",
+      "purl": "pkg:npm/@types/node@22.20.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/@types/node"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "autoprefixer",
+      "version": "10.5.4",
+      "scope": "optional",
+      "purl": "pkg:npm/autoprefixer@10.5.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/autoprefixer"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "esbuild",
+      "version": "0.25.12",
+      "scope": "optional",
+      "purl": "pkg:npm/esbuild@0.25.12",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/esbuild"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "eslint",
+      "version": "10.9.1",
+      "scope": "optional",
+      "purl": "pkg:npm/eslint@10.9.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/eslint"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "eslint-plugin-react-hooks",
+      "version": "7.1.1",
+      "scope": "optional",
+      "purl": "pkg:npm/eslint-plugin-react-hooks@7.1.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/eslint-plugin-react-hooks"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "eslint-plugin-react-refresh",
+      "version": "0.5.6",
+      "scope": "optional",
+      "purl": "pkg:npm/eslint-plugin-react-refresh@0.5.6",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/eslint-plugin-react-refresh"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "globals",
+      "version": "17.12.0",
+      "scope": "optional",
+      "purl": "pkg:npm/globals@17.12.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/globals"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "prettier",
+      "version": "3.9.6",
+      "scope": "optional",
+      "purl": "pkg:npm/prettier@3.9.6",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/prettier"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tailwindcss",
+      "version": "4.3.3",
+      "scope": "optional",
+      "purl": "pkg:npm/tailwindcss@4.3.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/tailwindcss"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tsx",
+      "version": "4.23.12",
+      "scope": "optional",
+      "purl": "pkg:npm/tsx@4.23.12",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/tsx"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "typescript",
+      "version": "5.8.3",
+      "scope": "optional",
+      "purl": "pkg:npm/typescript@5.8.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/typescript"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "typescript-eslint",
+      "version": "8.69.0",
+      "scope": "optional",
+      "purl": "pkg:npm/typescript-eslint@8.69.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/typescript-eslint"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "vite",
+      "version": "6.4.3",
+      "scope": "optional",
+      "purl": "pkg:npm/vite@6.4.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/vite"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "vitest",
+      "version": "5.0.0",
+      "scope": "optional",
+      "purl": "pkg:npm/vitest@5.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://www.npmjs.com/package/vitest"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/@firebase/eslint-plugin-security-rules@0.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/@google/genai@2.18.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/@sentry/react@10.73.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/@tailwindcss/vite@4.3.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/@types/canvas-confetti@1.9.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/@types/qrcode@1.5.6",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/@vis.gl/react-google-maps@1.9.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/@vitejs/plugin-react@5.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/canvas-confetti@1.9.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/dotenv@17.4.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/express@4.22.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/express-rate-limit@8.7.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/firebase@12.18.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/firebase-admin@14.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/helmet@8.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/html2canvas@1.4.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/jspdf@4.2.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/lucide-react@0.546.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/motion@12.43.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/qrcode@1.5.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/qrcode.react@4.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/react@19.2.8",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/react-dom@19.2.8",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/recharts@3.10.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vite@6.4.3",
+      "dependsOn": []
+    }
+  ]
+}

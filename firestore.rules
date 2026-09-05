@@ -6,29 +6,93 @@ service cloud.firestore {
     }
     
     function isSignedIn() { return request.auth != null; }
+    function isMasterAdmin() {
+      return isSignedIn() &&
+             (request.auth.token.email.lower() == 'fordmj@gmail.com' ||
+              (exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+               (get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'admin' ||
+                get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.rbacRole == 'branch_manager')));
+    }
     function isAdmin() {
+      return isMasterAdmin();
+    }
+    function isBranchManager() {
+      return isMasterAdmin();
+    }
+    function getUserRoleDoc() {
+      return get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data;
+    }
+    function isSeniorLo() {
       return isSignedIn() &&
              exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'admin';
+             getUserRoleDoc().rbacRole == 'senior_lo';
+    }
+    function isTeamLo() {
+      return isSignedIn() &&
+             exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+             getUserRoleDoc().rbacRole == 'team_lo';
+    }
+    function isProcessor() {
+      return isSignedIn() &&
+             exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+             getUserRoleDoc().rbacRole == 'processor';
     }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     
     match /user_roles/{userId} {
-      allow get, create, update: if isSignedIn() && request.auth.uid == userId;
-      allow read, write: if isAdmin();
+      allow get: if isSignedIn() && (request.auth.uid == userId || isBranchManager());
+      allow list: if isBranchManager();
+      allow create, update: if isSignedIn() && (
+        (request.auth.uid == userId && (
+          !incoming().keys().hasAny(['rbacRole']) || 
+          incoming().rbacRole == 'team_lo' ||
+          (resource != null && incoming().rbacRole == existing().rbacRole)
+        )) ||
+        isBranchManager()
+      );
+      allow delete: if isBranchManager();
     }
-    
     
     match /app_settings/{docId} {
       allow read: if true;
-      allow write: if true; // ALlow all for testing
+      allow write: if isBranchManager();
     }
 
     match /whitelisted_emails/{emailId} {
       allow get: if isSignedIn(); // Allow users to check if their email is whitelisted
-      allow read, write: if isAdmin();
+      allow list, write: if isBranchManager();
+    }
+
+    match /webhook_events/{eventId} {
+      // Zero-lateral access control: Branch Managers see all; originators only see assigned webhooks
+      allow get: if isSignedIn() && isValidId(eventId) && (
+        isBranchManager() || 
+        (resource != null && (resource.data.ownerLoId == request.auth.uid || resource.data.targetLoId == request.auth.uid))
+      );
+      allow list: if isSignedIn() && (
+        isBranchManager() ||
+        resource.data.ownerLoId == request.auth.uid ||
+        resource.data.targetLoId == request.auth.uid
+      );
+      allow create, update, delete: if isBranchManager();
+    }
+
+    match /branch_audit_logs/{logId} {
+      // Branch Managers can read all logs. Originators can read their own logs.
+      allow get: if isSignedIn() && isValidId(logId) && (
+        isBranchManager() || 
+        (resource != null && resource.data.actorEmail == request.auth.token.email)
+      );
+      allow list: if isSignedIn() && isBranchManager();
+      // Signed in team members can append audit events
+      allow create: if isSignedIn() && isValidId(logId) && (
+        isBranchManager() ||
+        (incoming().actorEmail == request.auth.token.email)
+      );
+      // Immutability: audit logs cannot be altered or erased
+      allow update, delete: if false;
     }
 
     function isValidTwilioVault(data) {
@@ -40,10 +104,12 @@ service cloud.firestore {
     }
 
     match /twilio_vault/{userId} {
-      allow get, delete: if isSignedIn() && isValidId(userId) && userId == request.auth.uid;
+      allow get, delete: if isSignedIn() && isValidId(userId) && (userId == request.auth.uid || isBranchManager());
       allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
+                    (isBranchManager() || isSeniorLo()) &&
                     isValidTwilioVault(incoming()) && incoming().updatedAt == request.time;
       allow update: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
+                    (isBranchManager() || isSeniorLo()) &&
                     isValidTwilioVault(incoming()) && incoming().updatedAt == request.time &&
                     incoming().ownerId == existing().ownerId &&
                     incoming().diff(existing()).affectedKeys().hasOnly(['encryptedVault', 'enableLiveCarrierSms', 'updatedAt']);
@@ -56,21 +122,42 @@ service cloud.firestore {
     }
 
     match /integrations_vault/{userId} {
-      allow get, delete: if isSignedIn() && isValidId(userId) && userId == request.auth.uid;
+      allow get: if isSignedIn() && isValidId(userId) && (userId == request.auth.uid || isBranchManager());
+      allow delete: if isSignedIn() && isValidId(userId) && (userId == request.auth.uid || isBranchManager());
       allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
+                    (isBranchManager() || isSeniorLo()) &&
                     isValidIntegrationsVault(incoming()) && incoming().updatedAt == request.time;
       allow update: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
+                    (isBranchManager() || isSeniorLo()) &&
                     isValidIntegrationsVault(incoming()) && incoming().updatedAt == request.time &&
                     incoming().ownerId == existing().ownerId &&
                     incoming().diff(existing()).affectedKeys().hasOnly(['encryptedVault', 'updatedAt']);
     }
 
-    // Existing open rules for prototyping. 
-    // In the future, we will lock these down to `isOwner(userId)`
-    match /guides_state/{docId} { allow read, write: if isSignedIn(); }
-    match /loan_officers/{loId} { allow read, write: if isSignedIn(); }
-    match /agents/{agentId} { allow read, write: if isSignedIn(); }
-    match /pairings/{pairingId} { allow read, write: if isSignedIn(); }
-    match /email_templates/{templateId} { allow read, write: if isSignedIn(); }
+    match /user_integrations/{userId} {
+      allow get, delete, create, update: if isSignedIn() && isValidId(userId) && (userId == request.auth.uid || isBranchManager());
+    }
+
+    // Public co-branded guide profiles, published properties, and roadmap configuration
+    match /guides_state/{docId} { 
+      allow read: if true; 
+      allow write: if isSignedIn(); 
+    }
+    match /loan_officers/{loId} { 
+      allow read: if true; 
+      allow write: if isSignedIn(); 
+    }
+    match /agents/{agentId} { 
+      allow read: if true; 
+      allow write: if isSignedIn(); 
+    }
+    match /pairings/{pairingId} { 
+      allow read: if true; 
+      allow write: if isSignedIn(); 
+    }
+    match /email_templates/{templateId} { 
+      allow read: if true; 
+      allow write: if isSignedIn(); 
+    }
   }
 }

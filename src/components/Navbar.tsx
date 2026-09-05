@@ -28,7 +28,8 @@ import {
   Info,
   Clock,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Globe
 } from "lucide-react";
 import { FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
@@ -112,6 +113,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "mortgagelab", label: "Mortgage Lab & PITI", shortLabel: "Mortgage Lab", icon: TrendingUp, mode: "dashboard" },
     { id: "ai_copilot", label: "AI Advisor Copilot", shortLabel: "AI Advisor", icon: Sparkles, badge: "Gemini 3.7", mode: "dashboard" },
     { id: "escrow", label: "Closing & Escrow Tracker", shortLabel: "Closing Tracker", icon: ShieldCheck, mode: "dashboard" },
+    { id: "market_trends", label: "Market Trends & Insights", shortLabel: "Market Trends", icon: Globe, badge: "Live", mode: "dashboard" },
   ];
 
   // Secondary Tools Nav Items (Steps 1-4 removed because they are in the dedicated Guided 4-Step block; DPA is secured to dashboard mode)

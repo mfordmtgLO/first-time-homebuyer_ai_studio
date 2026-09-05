@@ -99,7 +99,8 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
     headshotUrl: finalHeadshot,
     websiteUrl: lo.websiteUrl && !lo.websiteUrl.includes("/lo/") ? lo.websiteUrl : (matchedDefault?.websiteUrl || `https://cfmtg.com/${canonicalSlug}/`),
     customSlug: canonicalSlug,
-    isAdmin: matchedDefault?.isAdmin ?? lo.isAdmin ?? false
+    isAdmin: matchedDefault?.isAdmin ?? lo.isAdmin ?? false,
+    marketNewsSpotlightAgentId: lo.marketNewsSpotlightAgentId || matchedDefault?.marketNewsSpotlightAgentId
   };
 }
 

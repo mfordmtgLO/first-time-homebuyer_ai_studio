@@ -2,12 +2,20 @@ import React, { useState } from "react";
 import { ProfessionalGuidesState } from "../types";
 import { 
   Users, TrendingUp, PieChart, BarChart3, Clock, Calendar, 
-  Search, Filter, ChevronDown, Award, Target, Activity, ShieldCheck
+  Search, Filter, ChevronDown, Award, Target, Activity, ShieldCheck,
+  Download, FileSpreadsheet, Database, CheckCircle2, Layers
 } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
   ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, LineChart, Line 
 } from "recharts";
+import { SalesforceCsvExportModal } from "./SalesforceCsvExportModal";
+import { 
+  CrmExportFormat,
+  triggerCrmCsvDownload,
+  triggerSalesforceCsvDownload,
+  triggerTotalExpertCsvDownload 
+} from "../services/crmLeadExportService";
 
 const performanceData = [
   { name: 'Jan', leads: 120, closed: 25 },
@@ -25,15 +33,47 @@ const sourceData = [
   { name: 'Paid Ads', value: 10, color: '#2D362E' },
 ];
 
-
-
 interface BranchManagerDashboardProps {
   guidesState: ProfessionalGuidesState;
   onUpdateGuidesState: (newState: ProfessionalGuidesState | ((prev: ProfessionalGuidesState) => ProfessionalGuidesState)) => void;
+  onTriggerToast?: (msg: string) => void;
 }
 
-export const BranchManagerDashboard: React.FC<BranchManagerDashboardProps> = ({ guidesState, onUpdateGuidesState }) => {
+export const BranchManagerDashboard: React.FC<BranchManagerDashboardProps> = ({ guidesState, onUpdateGuidesState, onTriggerToast }) => {
   const [dateRange, setDateRange] = useState("YTD");
+  const [showExportModal, setShowExportModal] = useState<boolean>(false);
+  const [modalFormat, setModalFormat] = useState<CrmExportFormat>("salesforce");
+  const [localToast, setLocalToast] = useState<string | null>(null);
+
+  const leads = guidesState.leads || [];
+
+  const handleQuickDownloadCsv = (format: CrmExportFormat = "salesforce") => {
+    if (leads.length === 0) {
+      const msg = "No leads in current branch state to export.";
+      if (onTriggerToast) onTriggerToast(msg);
+      else {
+        setLocalToast(msg);
+        setTimeout(() => setLocalToast(null), 3000);
+      }
+      return;
+    }
+
+    const result = triggerCrmCsvDownload(
+      format,
+      leads,
+      guidesState.loanOfficers || [],
+      guidesState.agents || []
+    );
+
+    const formatName = format === "totalexpert" ? "Total Expert CRM" : "Salesforce CRM";
+    const msg = `Downloaded ${result.rowCount} branch leads formatted for ${formatName} (${result.fileName})`;
+    if (onTriggerToast) {
+      onTriggerToast(msg);
+    } else {
+      setLocalToast(msg);
+      setTimeout(() => setLocalToast(null), 3500);
+    }
+  };
 
   const teamData = guidesState.loanOfficers
     .filter(lo => lo.id !== guidesState.adminLoanOfficerId)
@@ -54,12 +94,11 @@ export const BranchManagerDashboard: React.FC<BranchManagerDashboardProps> = ({ 
       };
     });
 
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-[#2D362E] to-[#4A5D4E] rounded-3xl p-6 sm:p-8 text-white shadow-md">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <ShieldCheck className="w-6 h-6 text-[#E7C19D]" />
@@ -69,11 +108,44 @@ export const BranchManagerDashboard: React.FC<BranchManagerDashboardProps> = ({ 
               Shadow team dashboards, track 2nd Brain utilization, monitor agent co-brand pairs, and analyze average days-to-close metrics across the branch.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Quick Download Leads Buttons */}
+            <div className="flex items-center bg-white/10 rounded-xl p-1 border border-white/20">
+              <button
+                onClick={() => handleQuickDownloadCsv("salesforce")}
+                className="px-3 py-1.5 bg-[#00A1E0] hover:bg-[#0089BE] text-white rounded-lg font-bold text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+                title="Download leads formatted for Salesforce CRM"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Salesforce CSV</span>
+              </button>
+              <button
+                onClick={() => handleQuickDownloadCsv("totalexpert")}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs transition-colors flex items-center gap-1.5 shadow-sm ml-1"
+                title="Download leads formatted for Total Expert CRM"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Total Expert CSV</span>
+              </button>
+            </div>
+
+            {/* Ingestion Studio Modal Trigger */}
+            <button
+              onClick={() => {
+                setModalFormat("salesforce");
+                setShowExportModal(true);
+              }}
+              className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5 border border-white/20 shrink-0"
+              title="View field mapping and preview CRM leads"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-[#00A1E0]" />
+              <span>CRM Schema Studio</span>
+            </button>
+
             <select 
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="bg-white/10 border border-white/20 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-[#C18C5D] font-medium"
+              className="bg-white/10 border border-white/20 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-[#C18C5D] font-medium text-xs sm:text-sm"
             >
               <option value="30" className="text-gray-900">Last 30 Days</option>
               <option value="90" className="text-gray-900">Last 90 Days</option>
@@ -87,7 +159,7 @@ export const BranchManagerDashboard: React.FC<BranchManagerDashboardProps> = ({ 
       {/* Top Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Leads (YTD)", value: "845", trend: "+12%", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Total Leads (Branch Roster)", value: leads.length > 0 ? String(leads.length) : "845", trend: "+12%", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
           { label: "Funded/Closed (YTD)", value: "158", trend: "+18%", icon: Award, color: "text-emerald-600", bg: "bg-emerald-50" },
           { label: "Avg Days to Close", value: "24.5", trend: "-2.3 days", icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
           { label: "Active Agent Pairs", value: "38", trend: "+5", icon: Target, color: "text-purple-600", bg: "bg-purple-50" },
@@ -107,6 +179,74 @@ export const BranchManagerDashboard: React.FC<BranchManagerDashboardProps> = ({ 
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Enterprise CRM & Salesforce/Total Expert Leads Ingestion Hub */}
+      <div className="bg-gradient-to-br from-[#1B365D] via-[#24426E] to-[#1B365D] rounded-3xl p-6 sm:p-7 text-white shadow-sm border border-[#2D4E7C]">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-white/10 rounded-2xl border border-white/15 text-[#00A1E0] shrink-0">
+              <Database className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h3 className="text-lg font-bold font-display">Enterprise CRM Lead Ingestion (Salesforce &amp; Total Expert)</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#00A1E0]/20 text-[#00A1E0] border border-[#00A1E0]/30 uppercase tracking-wider">
+                  RFC 4180 UTF-8 BOM
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                  Total Expert &amp; Jungo FSC Ready
+                </span>
+              </div>
+              <p className="text-xs text-blue-100/85 mt-1.5 max-w-2xl leading-relaxed">
+                Export branch homebuyer leads transformed according to the enterprise schemas for <strong>Salesforce Lead Object / Jungo CRM</strong> and <strong>Total Expert Mortgage Marketing Engine</strong>. Includes automatic contact name splitting, household creation, Total Expert owner email routing, standardized date formatting (ISO 8601 vs YYYY-MM-DD HH:mm:ss), TCPA opt-in audit stamps, and Realtor co-brand attribution.
+              </p>
+              <div className="flex items-center gap-3 sm:gap-4 mt-3 text-xs text-blue-200 flex-wrap">
+                <span className="flex items-center gap-1.5 font-semibold text-white">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  {leads.length} Leads in Current State
+                </span>
+                <span className="text-blue-300/40">&bull;</span>
+                <span>Salesforce (39 Fields)</span>
+                <span className="text-blue-300/40">&bull;</span>
+                <span>Total Expert (42 Fields)</span>
+                <span className="text-blue-300/40">&bull;</span>
+                <span>UTF-8 Byte Order Mark (BOM)</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex sm:items-center gap-2.5 flex-col sm:flex-row shrink-0">
+            <button
+              onClick={() => {
+                setModalFormat("salesforce");
+                setShowExportModal(true);
+              }}
+              className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 border border-white/20"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-[#00A1E0]" />
+              CRM Schema Studio
+            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => handleQuickDownloadCsv("salesforce")}
+                className="px-4 py-2.5 bg-[#00A1E0] hover:bg-[#0089BE] text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                title="Download Salesforce Lead CSV"
+              >
+                <Download className="w-4 h-4" />
+                Salesforce
+              </button>
+              <button
+                onClick={() => handleQuickDownloadCsv("totalexpert")}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                title="Download Total Expert Contact CSV"
+              >
+                <Download className="w-4 h-4" />
+                Total Expert
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Charts Row */}
@@ -258,6 +398,25 @@ export const BranchManagerDashboard: React.FC<BranchManagerDashboardProps> = ({ 
         )}
         </div>
       </div>
+
+      {/* Local Toast Notification */}
+      {localToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1B365D] text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/20 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3 duration-300">
+          <CheckCircle2 className="w-4 h-4 text-[#00A1E0] shrink-0" />
+          <span>{localToast}</span>
+        </div>
+      )}
+
+      {/* Salesforce & Total Expert CSV Export & Ingestion Studio Modal */}
+      <SalesforceCsvExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        leads={leads}
+        loanOfficers={guidesState.loanOfficers || []}
+        agents={guidesState.agents || []}
+        defaultFormat={modalFormat}
+        onTriggerToast={onTriggerToast || setLocalToast}
+      />
     </div>
   );
 };

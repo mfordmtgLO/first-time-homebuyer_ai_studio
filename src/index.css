@@ -144,7 +144,7 @@
     font-size: 12pt !important;
   }
 
-  nav, header, footer, aside, .print\\:hidden, #ai-lead-bot-container, .lead-bot-floating {
+  nav, header, footer, aside, .print\:hidden, #ai-lead-bot-container, .lead-bot-floating {
     display: none !important;
   }
 

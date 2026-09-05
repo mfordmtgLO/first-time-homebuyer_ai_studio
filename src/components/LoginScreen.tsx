@@ -174,6 +174,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         const role = await checkAndProvisionUser(result.user);
         onLogin(role);
       } catch (provisionErr: any) {
+        console.error("Provisioning error:", provisionErr);
         if (provisionErr.message === "NOT_WHITELISTED") {
           setError("Access Denied: Your email has not been whitelisted by the Branch Manager. Please request access.");
           await signOut(auth);
@@ -245,6 +246,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         const role = await checkAndProvisionUser(result.user);
         onLogin(role);
       } catch (err: any) {
+         console.error("Provisioning error (Google):", err);
          if (err.message === "NOT_WHITELISTED") {
            setError("Access Denied: Your email has not been whitelisted by the Branch Manager. Please request access.");
            await signOut(auth);

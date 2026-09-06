@@ -38,6 +38,8 @@ interface RoadmapViewProps {
   loanOfficer?: LoanOfficerProfile;
   activeAgent?: RealEstateAgentProfile;
   isCoBranded?: boolean;
+  setDocuments?: React.Dispatch<React.SetStateAction<DocumentItem[]>>;
+  agentRoster?: RealEstateAgentProfile[];
 }
 
 export const RoadmapView: React.FC<RoadmapViewProps> = ({
@@ -52,6 +54,8 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
   loanOfficer,
   activeAgent,
   isCoBranded = false,
+  setDocuments,
+  agentRoster,
 }) => {
   const [selectedStage, setSelectedStage] = useState<string>("All");
   const [expandedStepId, setExpandedStepId] = useState<string>("step-1");
@@ -609,6 +613,7 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
         loanOfficer={loanOfficer}
         activeAgent={activeAgent}
         isCoBranded={isCoBranded}
+        agentRoster={agentRoster}
       />
 
       {/* Share Roadmap & Properties via Email Modal with Automated Milestone Alerts */}

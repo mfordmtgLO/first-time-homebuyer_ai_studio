@@ -422,7 +422,8 @@ export default function App() {
   useEffect(() => {
     const pollWebhookLeads = async () => {
       try {
-        const res = await fetch("/api/data/sync/poll");
+        const url = new URL("/api/data/sync/poll", window.location.origin).toString();
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           if (data.leads && data.leads.length > 0) {
@@ -435,8 +436,8 @@ export default function App() {
             });
           }
         }
-      } catch (err) {
-        console.error("Failed to poll webhook leads", err);
+      } catch (err: any) {
+        console.error("Failed to poll webhook leads", err?.message || err);
       }
     };
     
@@ -795,6 +796,7 @@ export default function App() {
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
                     isCoBranded={guidesState.isCoBranded}
+                    agentRoster={guidesState.agentRoster}
                   />
                 )}
               </div>
@@ -819,6 +821,7 @@ export default function App() {
                     isSidebarCollapsed={isSidebarCollapsed}
                     onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
                     onSaveLead={handleSaveLead}
+                    agentRoster={guidesState.agentRoster}
                   />
                 )}
 
@@ -836,6 +839,7 @@ export default function App() {
                     isCoBranded={guidesState.isCoBranded}
                     onNavigate={handleNavigate}
                     onOpenLoPortal={() => setShowLoPortal(true)}
+                    agentRoster={guidesState.agentRoster}
                   />
                 )}
 

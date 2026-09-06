@@ -1,15 +1,27 @@
 import React, { useState } from "react";
-import { CapturedLead, LoanOfficerProfile } from "../types";
-import { Layers, Inbox, Phone, CheckCircle2, ShieldCheck, Flag } from "lucide-react";
+import { CapturedLead, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
+import { Layers, Inbox, Phone, CheckCircle2, ShieldCheck, Flag, Tag, Users, User, Settings2, QrCode, Link as LinkIcon, Sparkles, Mail, DollarSign, Target, ChevronDown, Download, Trophy, PartyPopper } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 interface MasterLeadJourneyTabProps {
   leads: CapturedLead[];
   onUpdateLead: (updatedLead: CapturedLead) => void;
   loanOfficer: LoanOfficerProfile;
+  agentRoster?: RealEstateAgentProfile[];
 }
 
-export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ leads, onUpdateLead, loanOfficer }) => {
+export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ leads, onUpdateLead, loanOfficer, agentRoster = [] }) => {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
+  const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
+  
+  // New Open House / Lead Magnet State
+  const [showKioskGenerator, setShowKioskGenerator] = useState(false);
+  const [kioskType, setKioskType] = useState<"open_house" | "social_link">("open_house");
+  const [kioskAgentId, setKioskAgentId] = useState<string>("");
+  const [kioskPropertyAddress, setKioskPropertyAddress] = useState("");
+  const [kioskCustomTag, setKioskCustomTag] = useState("");
+  
+  const [celebratingCol, setCelebratingCol] = useState<string | null>(null);
 
   const columns = [
     { id: "new", title: "New (Uncontacted)", icon: <Inbox className="w-4 h-4 text-blue-500" />, bg: "bg-blue-50" },
@@ -36,6 +48,12 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ lead
       const leadToMove = leads.find(l => l.id === leadId);
       if (leadToMove && leadToMove.status !== newStatus) {
         onUpdateLead({ ...leadToMove, status: newStatus as any });
+        
+        // Positive visual reinforcement when moving a lead forward
+        if (newStatus === "pre_approved" || newStatus === "closed") {
+          setCelebratingCol(newStatus);
+          setTimeout(() => setCelebratingCol(null), 2500);
+        }
       }
     }
     setDraggedLeadId(null);
@@ -63,10 +81,103 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ lead
             </span>
           </div>
           <p className="text-xs text-[#606C5D] mt-1 max-w-2xl">
-            Drag and drop leads to seamlessly move them through the master journey pipeline. 
+            Drag and drop leads to seamlessly move them through the master journey pipeline. View and edit complete lead capture details including origin, cobrand agent, and tags.
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setShowKioskGenerator(!showKioskGenerator)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-2 ${
+              showKioskGenerator 
+                ? 'bg-[#2D362E] text-white border-[#2D362E]' 
+                : 'bg-white text-[#2D362E] border-[#EAE7E0] hover:bg-[#F9F8F4]'
+            }`}
+          >
+            <QrCode className="w-4 h-4" />
+            Lead Capture Kiosk Builder
+          </button>
+        </div>
       </div>
+
+      {showKioskGenerator && (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-3xl p-6 shadow-inner animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <h4 className="font-bold text-[#2D362E]">Top-of-Funnel Capture Builder</h4>
+              <p className="text-[11px] text-[#606C5D]">Generate trackable iPad sign-in sheets or social links for your agents to capture live leads straight into this board.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Capture Type</label>
+              <select 
+                value={kioskType}
+                onChange={(e) => setKioskType(e.target.value as any)}
+                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-sm font-medium text-[#2D362E]"
+              >
+                <option value="open_house">Open House iPad Kiosk</option>
+                <option value="social_link">Agent Social Media Link</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Partner Agent</label>
+              <select 
+                value={kioskAgentId}
+                onChange={(e) => setKioskAgentId(e.target.value)}
+                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-sm font-medium text-[#2D362E]"
+              >
+                <option value="">Select an Agent...</option>
+                {agentRoster.map(a => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">
+                {kioskType === 'open_house' ? 'Property Address' : 'Campaign Name'}
+              </label>
+              <input 
+                type="text"
+                value={kioskPropertyAddress}
+                onChange={(e) => setKioskPropertyAddress(e.target.value)}
+                placeholder={kioskType === 'open_house' ? "123 Main St" : "Fall Buyer Seminar"}
+                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-sm font-medium text-[#2D362E] placeholder:text-[#9A9488]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Auto-Apply Tag</label>
+              <input 
+                type="text"
+                value={kioskCustomTag}
+                onChange={(e) => setKioskCustomTag(e.target.value)}
+                placeholder="e.g. LMI Hot List"
+                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-sm font-medium text-[#2D362E] placeholder:text-[#9A9488]"
+              />
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-center gap-3 pt-5 border-t border-[#EAE7E0]">
+            <button 
+              disabled={!kioskAgentId}
+              onClick={() => {
+                const agent = agentRoster.find(a => a.id === kioskAgentId);
+                alert(`Generated URL: https://portal.myhometrac.com/kiosk/${loanOfficer.id}/${agent?.id}?address=${encodeURIComponent(kioskPropertyAddress)}&tag=${encodeURIComponent(kioskCustomTag)}\n\n(In production, this opens a full-screen React route or downloads a printable QR code PDF)`);
+              }}
+              className="px-5 py-2.5 bg-[#4A5D4E] hover:bg-[#2D362E] text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {kioskType === 'open_house' ? <QrCode className="w-4 h-4" /> : <LinkIcon className="w-4 h-4" />}
+              Generate {kioskType === 'open_house' ? 'Printable QR Sign-In' : 'Trackable Link'}
+            </button>
+            <p className="text-xs text-[#606C5D] max-w-lg">
+              Any buyer who registers via this link will automatically appear in your "New" column below, pre-assigned to the selected agent and permanently tagged.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex overflow-x-auto gap-4 pb-4 h-[70vh] dashboard-horizontal-scrollbar">
         {columns.map(col => {
@@ -83,10 +194,38 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ lead
           return (
             <div 
               key={col.id} 
-              className={`flex flex-col min-w-[300px] max-w-[350px] flex-1 rounded-2xl border border-[#EAE7E0] bg-white overflow-hidden shadow-sm`}
+              className={`relative flex flex-col min-w-[300px] max-w-[350px] flex-1 rounded-2xl border border-[#EAE7E0] bg-white overflow-hidden shadow-sm transition-all duration-300 ${celebratingCol === col.id ? 'ring-4 ring-emerald-500/30' : ''}`}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, col.id)}
             >
+              <AnimatePresence>
+                {celebratingCol === col.id && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    className="absolute inset-0 z-20 pointer-events-none flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm"
+                  >
+                    <motion.div
+                      initial={{ scale: 0, rotate: -20 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", bounce: 0.6, duration: 0.6 }}
+                      className="bg-emerald-100 p-4 rounded-full border border-emerald-200 mb-3 shadow-xl"
+                    >
+                      <PartyPopper className="w-10 h-10 text-emerald-600" />
+                    </motion.div>
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="font-black text-lg text-emerald-800"
+                    >
+                      Milestone Reached!
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div className={`p-4 border-b border-[#EAE7E0] flex items-center justify-between ${col.bg}`}>
                 <div className="flex items-center gap-2 font-bold text-sm text-[#2D362E]">
                   {col.icon}
@@ -107,6 +246,16 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ lead
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="font-bold text-sm text-[#2D362E]">{lead.fullName}</div>
+                      <button 
+                        onClick={() => setExpandedLeadId(expandedLeadId === lead.id ? null : lead.id)}
+                        className="p-1 hover:bg-[#F9F8F4] rounded-md transition-colors text-[#9A9488] hover:text-[#2D362E]"
+                      >
+                        <Settings2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="text-xs text-[#606C5D] mb-1">{lead.targetPriceRange || "TBD"} • {lead.propertyType || "Home"}</div>
+                    
+                    <div className="flex flex-wrap gap-1.5 mt-2 mb-3">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
                         lead.intentScore === 'hot' ? 'bg-amber-100 text-amber-800 border-amber-200' :
                         lead.intentScore === 'warm' ? 'bg-blue-100 text-blue-800 border-blue-200' :
@@ -114,19 +263,135 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ lead
                       }`}>
                         {lead.intentScore.toUpperCase()}
                       </span>
+                      {lead.leadPathTag && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md border bg-purple-50 text-purple-800 border-purple-200 flex items-center gap-1">
+                          <Tag className="w-3 h-3" /> {lead.leadPathTag}
+                        </span>
+                      )}
+                      {lead.leadSource && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md border bg-blue-50 text-blue-800 border-blue-200">
+                          {lead.leadSource}
+                        </span>
+                      )}
                     </div>
-                    <div className="text-xs text-[#606C5D] mb-1">{lead.targetPriceRange || "TBD"} • {lead.propertyType || "Home"}</div>
+
+                    {expandedLeadId === lead.id && (
+                      <div className="mt-3 pt-3 border-t border-[#EAE7E0] space-y-4">
+                        
+                        {/* New CRM Details Section */}
+                        <div className="bg-[#F9F8F4] p-3 rounded-xl border border-[#EAE7E0] space-y-2">
+                          <h5 className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider mb-2">Smart Actions & CRM Details</h5>
+                          <div className="grid grid-cols-2 gap-2 text-[10px]">
+                            <div className="flex flex-col">
+                              <span className="text-[#9A9488]">Phone</span>
+                              <span className="font-semibold text-[#2D362E]">{lead.phone || 'N/A'}</span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[#9A9488]">Email</span>
+                              <span className="font-semibold text-[#2D362E] truncate" title={lead.email}>{lead.email || 'N/A'}</span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[#9A9488]">Target</span>
+                              <span className="font-semibold text-[#2D362E]">{lead.targetPriceRange || 'N/A'}</span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[#9A9488]">Savings</span>
+                              <span className="font-semibold text-[#2D362E]">{lead.downPaymentSavings || 'N/A'}</span>
+                            </div>
+                          </div>
+                          
+                          <button 
+                            onClick={() => {
+                              const script = `Hi ${lead.fullName.split(' ')[0]},\n\nI saw you were looking at ${lead.propertyType || 'homes'} around ${lead.targetPriceRange || 'your target budget'}. Based on your file, you may qualify for a zero-down program. Do you have 5 minutes to connect with me and ${lead.assignedAgent || 'my partner agent'} today?\n\n- ${loanOfficer.name}`;
+                              alert(`Generated Smart Script (copied to clipboard):\n\n${script}`);
+                            }}
+                            className="w-full mt-2 bg-[#4A5D4E] hover:bg-[#2D362E] text-white py-1.5 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1"
+                          >
+                            <Sparkles className="w-3 h-3" /> Generate Smart Follow-Up
+                          </button>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Internal Notes</label>
+                          <textarea 
+                            value={lead.notes || ""}
+                            onChange={(e) => onUpdateLead({ ...lead, notes: e.target.value })}
+                            placeholder="Add notes from phone calls or meetings..."
+                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-lg px-2 py-1.5 text-xs font-semibold text-[#2D362E] min-h-[60px]"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Intent Score</label>
+                          <select 
+                            value={lead.intentScore}
+                            onChange={(e) => onUpdateLead({ ...lead, intentScore: e.target.value as 'hot' | 'warm' | 'exploring' })}
+                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-lg px-2 py-1.5 text-xs font-semibold text-[#2D362E]"
+                          >
+                            <option value="exploring">Exploring</option>
+                            <option value="warm">Warm</option>
+                            <option value="hot">Hot</option>
+                          </select>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Lead Source</label>
+                          <input 
+                            type="text"
+                            value={lead.leadSource || ""}
+                            onChange={(e) => onUpdateLead({ ...lead, leadSource: e.target.value })}
+                            placeholder="e.g. Zillow, Bot, Open House"
+                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-lg px-2 py-1.5 text-xs font-semibold text-[#2D362E]"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Custom Tag / Label</label>
+                          <input 
+                            type="text"
+                            value={lead.leadPathTag || ""}
+                            onChange={(e) => onUpdateLead({ ...lead, leadPathTag: e.target.value })}
+                            placeholder="e.g. LMI Eligible, USDA, Lakeview"
+                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-lg px-2 py-1.5 text-xs font-semibold text-[#2D362E]"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider flex items-center gap-1">
+                            <Users className="w-3 h-3" /> Co-Brand Agent
+                          </label>
+                          <select 
+                            value={lead.assignedAgentId || ""}
+                            onChange={(e) => {
+                              const selectedAgentId = e.target.value;
+                              const selectedAgent = agentRoster.find(a => a.id === selectedAgentId);
+                              onUpdateLead({ 
+                                ...lead, 
+                                assignedAgentId: selectedAgentId,
+                                assignedAgent: selectedAgent?.name
+                              });
+                            }}
+                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-lg px-2 py-1.5 text-xs font-semibold text-[#2D362E]"
+                          >
+                            <option value="">Unassigned</option>
+                            {agentRoster.map(agent => (
+                              <option key={agent.id} value={agent.id}>{agent.name} - {agent.brokerage}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
                     
-                    <div className="mt-3 flex items-center gap-2">
+                    <div className="mt-3 flex items-center gap-2 pt-2 border-t border-[#EAE7E0]/50">
                       <select 
                         value={lead.status === "in_escrow" ? "pre_approved" : lead.status === "archived" ? "closed" : lead.status}
                         onChange={(e) => onUpdateLead({ ...lead, status: e.target.value as any })}
-                        className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-lg px-2 py-1.5 text-xs font-semibold text-[#2D362E]"
+                        className="w-full bg-white border border-[#EAE7E0] rounded-lg px-2 py-1.5 text-xs font-semibold text-[#2D362E] hover:border-[#4A5D4E]/30"
                       >
-                        <option value="new">Move to New</option>
-                        <option value="contacted">Move to Contacted</option>
-                        <option value="pre_approved">Move to Qualified</option>
-                        <option value="closed">Move to Closed</option>
+                        <option value="new">Status: New</option>
+                        <option value="contacted">Status: Contacted</option>
+                        <option value="pre_approved">Status: Qualified</option>
+                        <option value="closed">Status: Closed</option>
                       </select>
                     </div>
                   </div>

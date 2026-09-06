@@ -41,6 +41,7 @@ interface Step4AIScenarioSummaryProps {
   onOpenLoPortal?: () => void;
   onRequestBlueprint?: () => void;
   onRequestListings?: () => void;
+  agentRoster?: RealEstateAgentProfile[];
 }
 
 export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
@@ -55,6 +56,7 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
   onOpenLoPortal,
   onRequestBlueprint,
   onRequestListings,
+  agentRoster,
 }) => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -551,6 +553,7 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
         loanOfficer={loanOfficer}
         activeAgent={activeAgent}
         isCoBranded={isCoBranded}
+        agentRoster={agentRoster}
       />
 
       {/* Share Master Plan & Properties via Email Modal */}

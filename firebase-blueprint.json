@@ -260,9 +260,28 @@
         "event",
         "status"
       ]
+    },
+    "WhitelistedEmail": {
+      "title": "WhitelistedEmail",
+      "description": "Authorized employee email address with designated RBAC role and provisioning details",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "notes": { "type": "string" },
+        "addedBy": { "type": "string" },
+        "addedAt": { "type": "string" },
+        "assignedLoId": { "type": "string" },
+        "customPermissions": { "type": "object" }
+      },
+      "required": ["email", "role"]
     }
   },
   "firestore": {
+    "whitelisted_emails/{emailId}": {
+      "schema": { "$ref": "#/entities/WhitelistedEmail" },
+      "description": "Whitelisted team emails and assigned RBAC roles for branch access control"
+    },
     "webhook_events/{eventId}": {
       "schema": { "$ref": "#/entities/WebhookEvent" },
       "description": "Persisted webhook event stream with zero-lateral originator isolation"

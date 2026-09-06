@@ -53,6 +53,7 @@ interface DashboardOverviewProps {
   onToggleSidebar?: () => void;
   onSaveLead?: (lead: CapturedLead) => void;
   onTriggerToast?: (msg: string) => void;
+  agentRoster?: RealEstateAgentProfile[];
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -73,6 +74,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onToggleSidebar,
   onSaveLead,
   onTriggerToast,
+  agentRoster,
 }) => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -583,6 +585,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         loanOfficer={loanOfficer}
         activeAgent={activeAgent}
         isCoBranded={isCoBranded}
+        agentRoster={agentRoster}
       />
 
       {/* Share Roadmap & Saved Properties via Email Modal */}

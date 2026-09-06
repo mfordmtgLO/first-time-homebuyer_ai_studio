@@ -59,6 +59,7 @@ interface HomebuyingPlanPrintModalProps {
   loanOfficer?: LoanOfficerProfile;
   activeAgent?: RealEstateAgentProfile;
   isCoBranded?: boolean;
+  agentRoster?: RealEstateAgentProfile[];
 }
 
 export const HomebuyingPlanPrintModal: React.FC<HomebuyingPlanPrintModalProps> = ({
@@ -69,9 +70,15 @@ export const HomebuyingPlanPrintModal: React.FC<HomebuyingPlanPrintModalProps> =
   properties,
   documents = [],
   loanOfficer,
-  activeAgent,
+  activeAgent: propActiveAgent,
   isCoBranded = false,
+  agentRoster,
 }) => {
+  // If we are not co-branded (solo LO link) and we have a loan officer with a spotlight agent, use that agent
+  const activeAgent = (!isCoBranded && loanOfficer?.marketNewsSpotlightAgentId && !propActiveAgent && agentRoster) 
+    ? agentRoster.find(a => a.id === loanOfficer.marketNewsSpotlightAgentId) || propActiveAgent
+    : propActiveAgent;
+
   const [includeFinancials, setIncludeFinancials] = useState(true);
   const [includeRoadmap, setIncludeRoadmap] = useState(true);
   const [includeProperties, setIncludeProperties] = useState(true);

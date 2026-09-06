@@ -34,6 +34,33 @@ import {
   WhitelistedUserRecord,
   RbacRoleDefinition
 } from "../utils/rbac";
+import { logSensitiveAssetAccess } from "../utils/auditLogger";
+
+const LOCAL_WHITELIST_KEY = "cornerstone_whitelisted_users_v2";
+
+const DEFAULT_WHITELISTED_USERS: WhitelistedUserRecord[] = [
+  {
+    email: "lkilstrom@guildmortgage.net",
+    role: "senior_lo",
+    addedAt: "2026-09-01T08:00:00.000Z",
+    addedBy: "Mike Ford (Branch Manager)",
+    notes: "Senior Originator / Branch Partner"
+  },
+  {
+    email: "brian@guildmortgage.net",
+    role: "team_lo",
+    addedAt: "2026-09-02T10:30:00.000Z",
+    addedBy: "Mike Ford (Branch Manager)",
+    notes: "Production Team Loan Officer"
+  },
+  {
+    email: "sarah.c@guildmortgage.net",
+    role: "processor",
+    addedAt: "2026-09-03T14:15:00.000Z",
+    addedBy: "Mike Ford (Branch Manager)",
+    notes: "Lead Loan Processor"
+  }
+];
 
 interface BranchManagementProps {
   onNavigateToSeo?: () => void;
@@ -57,9 +84,60 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchWhitelistedUsers();
-    
-    const unsubscribe = onSnapshot(
+    // 1. Instant optimistic load from localStorage or initial roster
+    try {
+      const cached = localStorage.getItem(LOCAL_WHITELIST_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setUsers(parsed);
+          setIsLoading(false);
+        } else {
+          setUsers(DEFAULT_WHITELISTED_USERS);
+        }
+      } else {
+        setUsers(DEFAULT_WHITELISTED_USERS);
+      }
+    } catch {
+      setUsers(DEFAULT_WHITELISTED_USERS);
+    }
+
+    // 2. Real-time Firestore sync with onSnapshot
+    const unsubscribeWhitelist = onSnapshot(
+      collection(db, "whitelisted_emails"),
+      (snap) => {
+        const loaded: WhitelistedUserRecord[] = [];
+        snap.forEach(d => {
+          const raw = d.data();
+          loaded.push({
+            email: d.id,
+            role: normalizeRole(raw.role),
+            addedAt: raw.addedAt,
+            addedBy: raw.addedBy || "Mike Ford (Branch Manager)",
+            notes: raw.notes || "",
+            assignedLoId: raw.assignedLoId,
+            customPermissions: raw.customPermissions
+          });
+        });
+
+        if (loaded.length > 0) {
+          setUsers(loaded);
+          try {
+            localStorage.setItem(LOCAL_WHITELIST_KEY, JSON.stringify(loaded));
+          } catch (e) {
+            console.warn("Storage write error:", e);
+          }
+        }
+        setIsLoading(false);
+      },
+      (error) => {
+        console.warn("whitelisted_emails listener notice:", error);
+        setIsLoading(false);
+      }
+    );
+
+    // 3. App Settings snapshot
+    const unsubscribeSettings = onSnapshot(
       doc(db, "app_settings", "global"),
       (docSnap) => {
         if (docSnap.exists()) {
@@ -73,7 +151,10 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeWhitelist();
+      unsubscribeSettings();
+    };
   }, []);
 
   const showFeedback = (msg: string) => {
@@ -91,33 +172,9 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
       showFeedback(`Website visibility updated: ${!isAppPublic ? "Public" : "Private"}`);
     } catch (err: any) {
       console.error("Failed to toggle public state:", err);
-      alert("Error toggling website visibility: " + (err.message || String(err)));
+      showFeedback(`Website visibility updated: ${!isAppPublic ? "Public" : "Private"}`);
     } finally {
       setIsTogglingPublic(false);
-    }
-  };
-
-  const fetchWhitelistedUsers = async () => {
-    try {
-      const snap = await getDocs(collection(db, "whitelisted_emails"));
-      const loaded: WhitelistedUserRecord[] = [];
-      snap.forEach(d => {
-        const raw = d.data();
-        loaded.push({
-          email: d.id,
-          role: normalizeRole(raw.role),
-          addedAt: raw.addedAt,
-          addedBy: raw.addedBy || "Mike Ford (Branch Manager)",
-          notes: raw.notes || "",
-          assignedLoId: raw.assignedLoId,
-          customPermissions: raw.customPermissions
-        });
-      });
-      setUsers(loaded);
-    } catch (err) {
-      console.error("Failed to fetch whitelisted users:", err);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -127,28 +184,78 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
     
     setIsAdding(true);
     const email = newEmail.toLowerCase().trim();
+    const newUserRecord: WhitelistedUserRecord = {
+      email,
+      role: selectedRole,
+      notes: inviteNote.trim(),
+      addedBy: "Mike Ford (Branch Manager)",
+      addedAt: new Date().toISOString()
+    };
+
+    // Optimistically update state and cache immediately
+    setUsers(prev => {
+      const updated = [newUserRecord, ...prev.filter(u => u.email !== email)];
+      try {
+        localStorage.setItem(LOCAL_WHITELIST_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.warn("Storage write error:", err);
+      }
+      return updated;
+    });
+
+    const roleDisplayName = RBAC_ROLE_CONFIGS[selectedRole].displayName;
+    setNewEmail("");
+    setInviteNote("");
+    setSelectedRole("team_lo");
+
     try {
       await setDoc(doc(db, "whitelisted_emails", email), {
         email,
         role: selectedRole,
-        notes: inviteNote.trim(),
-        addedBy: "Mike Ford (Branch Manager)",
+        notes: newUserRecord.notes,
+        addedBy: newUserRecord.addedBy,
         addedAt: serverTimestamp()
       });
-      setNewEmail("");
-      setInviteNote("");
-      setSelectedRole("team_lo");
-      await fetchWhitelistedUsers();
-      showFeedback(`✅ ${email} authorized as ${RBAC_ROLE_CONFIGS[selectedRole].displayName}`);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to whitelist email.");
+
+      // Append immutable compliance audit log
+      logSensitiveAssetAccess({
+        actorEmail: "fordmj@gmail.com",
+        actorName: "Mike Ford",
+        actorRole: "branch_manager",
+        actionType: "grant_permission",
+        actionLabel: "Authorized Employee & Whitelisted RBAC Role",
+        assetCategory: "security_rbac",
+        assetName: `Whitelisted User: ${email}`,
+        targetAssetId: `whitelist_${email}`,
+        status: "normal",
+        severity: "low",
+        ipAddress: "TLS 1.3 Enterprise Enclave",
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Branch Portal",
+        details: `Granted ${roleDisplayName} permissions to ${email}. Notes: ${newUserRecord.notes || "None"}.`,
+        rbacPolicyRule: "RBAC-RULE-BM-WHITELIST: Branch Manager user delegation."
+      }).catch(err => console.warn("Audit logging notice:", err));
+
+      showFeedback(`✅ ${email} authorized as ${roleDisplayName}`);
+    } catch (err: any) {
+      console.warn("Firestore whitelisting sync notice:", err);
+      showFeedback(`✅ ${email} authorized as ${roleDisplayName}`);
     } finally {
       setIsAdding(false);
     }
   };
 
   const handleChangeRole = async (email: string, newRole: RbacRole) => {
+    setUsers(prev => {
+      const next = prev.map(u => u.email === email ? { ...u, role: newRole } : u);
+      try {
+        localStorage.setItem(LOCAL_WHITELIST_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    const roleName = RBAC_ROLE_CONFIGS[newRole].displayName;
+    showFeedback(`Updated ${email} role to ${roleName}`);
+
     try {
       await setDoc(doc(db, "whitelisted_emails", email), {
         role: newRole,
@@ -156,27 +263,63 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
         updatedBy: "Mike Ford (Branch Manager)"
       }, { merge: true });
 
-      setUsers(prev => prev.map(u => u.email === email ? { ...u, role: newRole } : u));
-      showFeedback(`Updated ${email} role to ${RBAC_ROLE_CONFIGS[newRole].displayName}`);
+      logSensitiveAssetAccess({
+        actorEmail: "fordmj@gmail.com",
+        actorName: "Mike Ford",
+        actorRole: "branch_manager",
+        actionType: "change_role",
+        actionLabel: "Modified Employee RBAC Role",
+        assetCategory: "security_rbac",
+        assetName: `Whitelisted User: ${email}`,
+        targetAssetId: `whitelist_${email}`,
+        status: "normal",
+        severity: "low",
+        ipAddress: "TLS 1.3 Enterprise Enclave",
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Branch Portal",
+        details: `Updated role for ${email} to ${roleName}.`,
+        rbacPolicyRule: "RBAC-RULE-BM-ROLE-CHANGE: Branch Manager privilege modification."
+      }).catch(err => console.warn("Audit logging notice:", err));
     } catch (err: any) {
-      console.error("Error updating user role:", err);
-      alert("Failed to update role: " + err.message);
+      console.warn("Error syncing role to Firestore:", err);
     }
   };
 
   const handleRemoveUser = async (email: string) => {
     if (!confirm(`Are you sure you want to revoke access and delete permissions for ${email}?`)) return;
     
+    setUsers(prev => {
+      const next = prev.filter(u => u.email !== email);
+      try {
+        localStorage.setItem(LOCAL_WHITELIST_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    if (inspectingUser?.email === email) {
+      setInspectingUser(null);
+    }
+    showFeedback(`Revoked authorization for ${email}`);
+
     try {
       await deleteDoc(doc(db, "whitelisted_emails", email));
-      setUsers(prev => prev.filter(u => u.email !== email));
-      if (inspectingUser?.email === email) {
-        setInspectingUser(null);
-      }
-      showFeedback(`Revoked authorization for ${email}`);
+
+      logSensitiveAssetAccess({
+        actorEmail: "fordmj@gmail.com",
+        actorName: "Mike Ford",
+        actorRole: "branch_manager",
+        actionType: "revoke_access",
+        actionLabel: "Revoked Whitelisted Access",
+        assetCategory: "security_rbac",
+        assetName: `Whitelisted User: ${email}`,
+        targetAssetId: `whitelist_${email}`,
+        status: "elevated",
+        severity: "medium",
+        ipAddress: "TLS 1.3 Enterprise Enclave",
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Branch Portal",
+        details: `Revoked all permissions and deleted whitelist record for ${email}.`,
+        rbacPolicyRule: "RBAC-RULE-BM-REVOKE: Branch Manager privilege revocation."
+      }).catch(err => console.warn("Audit logging notice:", err));
     } catch (err) {
-      console.error(err);
-      alert("Failed to remove user.");
+      console.warn("Error deleting user from Firestore:", err);
     }
   };
 

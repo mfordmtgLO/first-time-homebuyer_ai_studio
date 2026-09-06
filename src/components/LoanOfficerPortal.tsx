@@ -2295,6 +2295,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             <MasterLeadJourneyTab 
               leads={guidesState.leads || []}
               loanOfficer={currentLo}
+              agentRoster={guidesState.agentRoster || []}
               onUpdateLead={(updatedLead) => {
                 const currentLeads = guidesState.leads || [];
                 const updated = currentLeads.map(l => l.id === updatedLead.id ? updatedLead : l);

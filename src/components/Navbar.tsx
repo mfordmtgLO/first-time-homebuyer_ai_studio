@@ -29,7 +29,10 @@ import {
   Clock,
   ArrowUpRight,
   ArrowDownRight,
-  Globe
+  Globe,
+  Maximize2,
+  Minimize2,
+  ExternalLink
 } from "lucide-react";
 import { FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
@@ -57,6 +60,8 @@ interface NavbarProps {
   onOpenLeadBot?: () => void;
   onNavigateToGuides?: () => void;
   loName?: string;
+  isFullScreen?: boolean;
+  onToggleFullScreen?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -70,7 +75,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenLoPortal,
   onOpenLeadBot,
   onNavigateToGuides,
-  loName = "Mike Ford"
+  loName = "Mike Ford",
+  isFullScreen = false,
+  onToggleFullScreen
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -435,6 +442,29 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <span className="text-white font-black tracking-widest text-xs sm:text-sm">GO</span>
             </button>
+
+            {/* Full-Screen Workspace Toggle Button in Micro-Bar */}
+            {onToggleFullScreen && (
+              <button
+                id="navbar-fullscreen-toggle-micro-btn"
+                type="button"
+                onClick={onToggleFullScreen}
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white hover:bg-[#F1EFE9] border border-[#DEDAD2] text-[#4A5D4E] hover:text-[#2D362E] text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                title={isFullScreen ? "Exit Full-Screen Workspace (Esc)" : "Full-Screen Workspace (Hides navigation & sidebar for maximum document & property analysis area)"}
+              >
+                {isFullScreen ? (
+                  <>
+                    <Minimize2 className="w-3.5 h-3.5 text-[#C18C5D]" />
+                    <span className="text-[11px]">Exit Full Screen</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                    <span className="text-[11px]">Full Screen</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
         </div>
@@ -496,8 +526,47 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
 
-          {/* Absolute Top-Right Controls on Desktop (Prequal CTA + Mobile Hamburger) */}
+          {/* Absolute Top-Right Controls on Desktop (Prequal CTA + Fullscreen + Mobile Hamburger) */}
           <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            {onToggleFullScreen && (
+              <button
+                id="navbar-fullscreen-toggle-btn"
+                type="button"
+                onClick={onToggleFullScreen}
+                className={`hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer border ${
+                  isFullScreen 
+                    ? "bg-[#C18C5D] text-white border-[#A67448] hover:bg-[#A67448]" 
+                    : "bg-white text-[#4A5D4E] border-[#EAE7E0] hover:bg-[#F1EFE9] hover:text-[#2D362E]"
+                }`}
+                title={isFullScreen ? "Exit Full-Screen Workspace (Esc)" : "Full-Screen Workspace (Hides navigation & sidebar for maximum document & property analysis area)"}
+              >
+                {isFullScreen ? (
+                  <>
+                    <Minimize2 className="w-4 h-4 text-white" />
+                    <span>Exit Full Screen</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="w-4 h-4 text-[#4A5D4E]" />
+                    <span>Full Screen</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Pop-out / Open in New Tab Button */}
+            <a
+              id="navbar-open-newtab-btn"
+              href={window.location.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer border bg-white text-[#606C5D] border-[#EAE7E0] hover:bg-[#F1EFE9] hover:text-[#2D362E]"
+              title="Open application in a full independent browser tab (↗)"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-[#4A5D4E]" />
+              <span className="hidden md:inline">New Tab</span>
+            </a>
+
             {onOpenLeadBot && (
               <button
                 onClick={onOpenLeadBot}

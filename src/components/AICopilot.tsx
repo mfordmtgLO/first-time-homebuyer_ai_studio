@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   Sparkles, 
   Send, 
@@ -14,7 +14,9 @@ import {
   Printer,
   Check,
   Trash2,
-  FileDown
+  FileDown,
+  GripVertical,
+  RotateCcw
 } from "lucide-react";
 import { FinancialProfile, PropertyListing, ChatMessage, LoanOfficerProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
@@ -51,6 +53,71 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [inputMessage, setInputMessage] = useState("");
   const [sendingChat, setSendingChat] = useState(false);
+
+  // Dynamic Horizontal Resize State for Chat Container
+  const [chatContainerWidth, setChatContainerWidth] = useState<number | null>(() => {
+    try {
+      const saved = localStorage.getItem("ai_copilot_chat_width");
+      return saved ? parseInt(saved, 10) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isResizingChat, setIsResizingChat] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Mouse move and mouse up listeners for horizontal dynamic resizing
+  useEffect(() => {
+    if (!isResizingChat) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!chatContainerRef.current) return;
+      const rect = chatContainerRef.current.getBoundingClientRect();
+      const calculatedWidth = e.clientX - rect.left;
+      // Clamp between 360px and maximum window width minus boundary margin
+      const minWidth = 360;
+      const maxWidth = Math.max(minWidth, window.innerWidth - 64);
+      const clampedWidth = Math.max(minWidth, Math.min(calculatedWidth, maxWidth));
+      setChatContainerWidth(clampedWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingChat(false);
+      setChatContainerWidth((currentWidth) => {
+        if (currentWidth) {
+          try {
+            localStorage.setItem("ai_copilot_chat_width", currentWidth.toString());
+          } catch {}
+        }
+        return currentWidth;
+      });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizingChat]);
+
+  const handleStartResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizingChat(true);
+  };
+
+  const handleResetChatWidth = () => {
+    setChatContainerWidth(null);
+    try {
+      localStorage.removeItem("ai_copilot_chat_width");
+    } catch {}
+  };
 
   // Session Export & Feedback State
   const [copiedTranscript, setCopiedTranscript] = useState(false);
@@ -488,6 +555,32 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
               Personalized guidance, automated offer terms, inspection defect triage, and Loan Estimate decoding.
             </p>
           </div>
+
+          {/* Header Action Controls: Reset Chat Window Width Button */}
+          <div className="flex items-center gap-2">
+            <button
+              id="aicopilot-header-reset-width-btn"
+              onClick={handleResetChatWidth}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer shadow-2xs ${
+                chatContainerWidth
+                  ? "bg-[#4A5D4E] text-white border-[#4A5D4E] hover:bg-[#3d4d40]"
+                  : "bg-white text-[#606C5D] border-[#EAE7E0] hover:bg-[#F1EFE9] hover:text-[#2D362E]"
+              }`}
+              title={
+                chatContainerWidth
+                  ? `Current width: ${Math.round(chatContainerWidth)}px. Click to reset chat window to default width (100%)`
+                  : "Chat window is currently at its default width (100%)"
+              }
+            >
+              <RotateCcw className={`w-3.5 h-3.5 ${chatContainerWidth ? "text-white" : "text-[#4A5D4E]"}`} />
+              <span>Reset Width</span>
+              {chatContainerWidth && (
+                <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono">
+                  {Math.round(chatContainerWidth)}px
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Tab Switcher */}
@@ -520,7 +613,16 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
 
       {/* Tool 1: Interactive Chat Tab */}
       {activeTool === "chat" && (
-        <div className="relative bg-white rounded-2xl border border-[#EAE7E0] flex flex-col h-[650px] overflow-hidden shadow-sm">
+        <div
+          ref={chatContainerRef}
+          style={{
+            width: chatContainerWidth ? `${chatContainerWidth}px` : "100%",
+            maxWidth: chatContainerWidth ? "min(100vw - 32px, 1800px)" : "100%",
+            minWidth: "360px",
+            transition: isResizingChat ? "none" : "width 0.15s ease-out"
+          }}
+          className="relative bg-white rounded-2xl border border-[#EAE7E0] flex flex-col h-[650px] overflow-hidden shadow-sm pr-1"
+        >
           {/* Feedback Toast Notification */}
           {toastNotification && (
             <div className="absolute top-16 right-4 z-30 px-3.5 py-2 rounded-xl bg-[#2D362E] text-white text-xs font-medium shadow-xl flex items-center gap-2 transition-all">
@@ -542,6 +644,11 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
                   <span className="text-[10px] font-semibold text-[#4A5D4E] bg-[#4A5D4E]/10 border border-[#4A5D4E]/20 px-2 py-0.5 rounded-full">
                     {messages.length} {messages.length === 1 ? "entry" : "entries"}
                   </span>
+                  {chatContainerWidth && (
+                    <span className="text-[10px] font-medium text-[#606C5D] bg-white border border-[#EAE7E0] px-1.5 py-0.5 rounded hidden sm:inline-block">
+                      {Math.round(chatContainerWidth)}px
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-[#9A9488] hidden sm:block">
                   Personalized mortgage guidelines, offer strategy & closing credits
@@ -551,6 +658,18 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
 
             {/* Export & Session Controls */}
             <div className="flex items-center gap-1.5 ml-auto">
+              {/* Reset Width Button if resized */}
+              {chatContainerWidth && (
+                <button
+                  onClick={handleResetChatWidth}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#606C5D] text-xs font-medium transition-colors cursor-pointer"
+                  title={`Current chat width: ${chatContainerWidth}px. Click to reset to default 100%`}
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                  <span className="hidden sm:inline">Reset Width</span>
+                </button>
+              )}
+
               {/* Download .TXT */}
               <button
                 onClick={handleDownloadText}
@@ -691,6 +810,28 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
             >
               <Send className="w-4 h-4" />
             </button>
+          </div>
+
+          {/* Draggable Horizontal Resize Handle on Right Edge */}
+          <div
+            id="chat-container-resize-handle"
+            onMouseDown={handleStartResize}
+            onDoubleClick={handleResetChatWidth}
+            title="Drag horizontally to resize chat window (Double-click to reset)"
+            className={`absolute top-0 right-0 w-3.5 h-full cursor-col-resize z-40 transition-colors flex items-center justify-center group select-none border-l ${
+              isResizingChat
+                ? "bg-[#4A5D4E]/25 border-[#4A5D4E]"
+                : "bg-[#FAF9F5] hover:bg-[#4A5D4E]/15 border-[#EAE7E0] hover:border-[#4A5D4E]/40"
+            }`}
+          >
+            {/* Visual Grip Handle Indicator */}
+            <div className={`flex flex-col items-center justify-center gap-1 px-0.5 py-2.5 rounded-full transition-all ${
+              isResizingChat
+                ? "bg-[#4A5D4E] text-white py-5 shadow-sm"
+                : "bg-[#EAE7E0] group-hover:bg-[#4A5D4E] text-[#606C5D] group-hover:text-white"
+            }`}>
+              <GripVertical className="w-2.5 h-5" />
+            </div>
           </div>
         </div>
       )}

@@ -131,6 +131,11 @@ export const INITIAL_PROPERTIES: PropertyListing[] = [
     yearBuilt: 1978,
     propertyType: "Single Family",
     imageUrl: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=80",
+    galleryUrls: [
+      "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=1200&q=80"
+    ],
     status: "saved",
     notes: "Original Douglas fir hardwood floors, great natural lighting. Heat pump is 14 years old and will need replacement in 2-3 years.",
     daysOnMarket: 22,
@@ -169,6 +174,11 @@ export const INITIAL_PROPERTIES: PropertyListing[] = [
     yearBuilt: 2019,
     propertyType: "Single Family",
     imageUrl: "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80",
+    galleryUrls: [
+      "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=1200&q=80"
+    ],
     status: "offered",
     notes: "Submitted offer for $440,000 with $6,000 seller credit towards 2-1 interest rate buydown. Awaiting seller response.",
     daysOnMarket: 5,

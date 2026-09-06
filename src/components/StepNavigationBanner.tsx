@@ -29,7 +29,9 @@ import {
   QrCode,
   Smartphone,
   Copy,
-  Globe
+  Globe,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
@@ -53,6 +55,8 @@ interface StepNavigationBannerProps {
   loanOfficer?: LoanOfficerProfile;
   activeAgent?: RealEstateAgentProfile;
   propertiesCount?: number;
+  isFullScreen?: boolean;
+  onToggleFullScreen?: () => void;
 }
 
 export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
@@ -71,7 +75,9 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   onTriggerToast,
   loanOfficer,
   activeAgent,
-  propertiesCount = 0
+  propertiesCount = 0,
+  isFullScreen = false,
+  onToggleFullScreen
 }) => {
   const effectiveMode = activeMode || currentMode;
   const [showNavQrModal, setShowNavQrModal] = useState<boolean>(false);
@@ -315,8 +321,23 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
           </div>
         </div>
 
-        {/* Bottom: Quick Expand Strip */}
+        {/* Bottom: Quick Expand Strip & Fullscreen Toggle */}
         <div className="w-full pt-2 border-t border-[#EAE7E0]/80 flex flex-col items-center gap-1.5">
+          {onToggleFullScreen && (
+            <button
+              type="button"
+              onClick={onToggleFullScreen}
+              className="w-10 h-10 rounded-xl bg-white hover:bg-[#FAF9F5] border border-[#EAE7E0] hover:border-[#4A5D4E] text-[#4A5D4E] flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+              title={isFullScreen ? "Exit Full-Screen Workspace" : "Enter Full-Screen Workspace"}
+            >
+              {isFullScreen ? (
+                <Minimize2 className="w-4 h-4 text-[#C18C5D]" />
+              ) : (
+                <Maximize2 className="w-4 h-4 text-[#4A5D4E]" />
+              )}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -349,18 +370,42 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
             Guided 4-Step Homebuyer Journey
           </span>
           
-          {/* Vertical Sidebar Collapse Button */}
-          {isVertical && onToggleCollapse && (
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className="p-1 rounded-lg bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
-              title="Collapse Sidebar to compact rail"
-            >
-              <PanelLeftClose className="w-4 h-4 text-[#4A5D4E]" />
-              <span className="text-[10px] text-[#606C5D]">Collapse</span>
-            </button>
-          )}
+          {/* Vertical Sidebar Collapse Button & Full-Screen Workspace Toggle */}
+          <div className="flex items-center gap-1.5">
+            {isVertical && onToggleFullScreen && (
+              <button
+                id="step-banner-fullscreen-toggle-btn"
+                type="button"
+                onClick={onToggleFullScreen}
+                className="p-1 rounded-lg bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+                title={isFullScreen ? "Exit Full-Screen Workspace (Esc)" : "Full-Screen Workspace (Hides top navigation & sidebar)"}
+              >
+                {isFullScreen ? (
+                  <>
+                    <Minimize2 className="w-3.5 h-3.5 text-[#C18C5D]" />
+                    <span className="text-[10px] text-[#C18C5D]">Exit Full</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                    <span className="text-[10px] text-[#4A5D4E]">Full</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {isVertical && onToggleCollapse && (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="p-1 rounded-lg bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+                title="Collapse Sidebar to compact rail"
+              >
+                <PanelLeftClose className="w-4 h-4 text-[#4A5D4E]" />
+                <span className="text-[10px] text-[#606C5D]">Collapse</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className={`flex items-center gap-2 ${isVertical ? "w-full flex-wrap justify-between" : "self-start sm:self-auto flex-wrap"}`}>

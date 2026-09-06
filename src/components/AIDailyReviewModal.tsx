@@ -10,9 +10,13 @@ import {
   Sun, 
   Compass, 
   Flame, 
-  Moon,
-  RefreshCw,
-  Target
+  Moon, 
+  RefreshCw, 
+  Target,
+  Trophy,
+  Coffee,
+  Lightbulb,
+  Award
 } from "lucide-react";
 
 export interface DailyReviewData {
@@ -21,6 +25,12 @@ export interface DailyReviewData {
   whatDoneSummary: string;
   topPriorities: string[];
   coachingQuote: string;
+  topProducerTip?: {
+    headline: string;
+    advice: string;
+    focusOutcome: string;
+  };
+  managerPerspective?: string;
   nextActionRecommendation?: {
     tabId: string;
     actionTitle: string;
@@ -187,6 +197,58 @@ export const AIDailyReviewModal: React.FC<AIDailyReviewModalProps> = ({
                   ))}
                 </div>
               </div>
+
+              {/* AI Sales Manager Direct Coaching & Top Producer Tip */}
+              {reviewData?.topProducerTip && (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-[#FAF6EE] to-[#F2EDE2] border border-[#DCD7CD] space-y-2.5 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-[#C18C5D] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                        <Trophy className="w-4 h-4 text-amber-100" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#A87447] block">
+                          Sales Manager &ldquo;Top Producer&rdquo; Advice
+                        </span>
+                        <h4 className="font-bold text-xs sm:text-sm text-[#2D362E]">
+                          {reviewData.topProducerTip.headline}
+                        </h4>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-200/60 text-amber-900 border border-amber-300/60 flex items-center gap-1 shrink-0">
+                      <Award className="w-3 h-3 text-[#A87447]" />
+                      <span>Top LO Track</span>
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-[#4A5D4E] leading-relaxed">
+                    {reviewData.topProducerTip.advice}
+                  </p>
+
+                  <div className="pt-2 border-t border-[#DCD7CD]/60 flex items-center gap-2 text-[11px] font-semibold text-[#606C5D]">
+                    <Coffee className="w-3.5 h-3.5 text-[#C18C5D] shrink-0" />
+                    <span className="text-[#2D362E] font-bold">Key Win:</span>
+                    <span className="text-[#606C5D]">{reviewData.topProducerTip.focusOutcome}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Sales Manager Realistic Attitude & Empathy */}
+              {reviewData?.managerPerspective && (
+                <div className="p-3.5 rounded-2xl bg-white border border-[#EAE7E0] flex items-start gap-3 shadow-2xs">
+                  <div className="w-7 h-7 rounded-xl bg-[#2D362E] text-[#E7C19D] flex items-center justify-center shrink-0 mt-0.5">
+                    <Lightbulb className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#7D8877] block">
+                      Branch Manager Perspective
+                    </span>
+                    <p className="text-xs text-[#2D362E] leading-relaxed font-medium">
+                      {reviewData.managerPerspective}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* AI Coaching Quote */}
               {reviewData?.coachingQuote && (

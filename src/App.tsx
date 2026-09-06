@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useIsMobile } from "./hooks/useIsMobile";
-import { Compass, ShieldCheck } from "lucide-react";
+import { Compass, ShieldCheck, Maximize2, Minimize2 } from "lucide-react";
 import { Navbar } from "./components/Navbar";
 import { StepNavigationBanner } from "./components/StepNavigationBanner";
 import { MobileBottomNav } from "./components/MobileBottomNav";
@@ -454,6 +454,39 @@ export default function App() {
   // Collapsible Sidebar Layout State (Initial state: collapsed)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true);
 
+  // Full-Screen Workspace Mode: Hides top navigation and sidebar to maximize space for document/property analysis
+  const [isFullScreen, setIsFullScreen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("homebuyer_fullscreen_workspace") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleFullScreen = () => {
+    setIsFullScreen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("homebuyer_fullscreen_workspace", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Keyboard shortcut: Press Escape to exit full-screen workspace mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullScreen) {
+        setIsFullScreen(false);
+        try {
+          localStorage.setItem("homebuyer_fullscreen_workspace", "false");
+        } catch {}
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFullScreen]);
+
   // Dynamic Header Height for sticky sidebar
   const [headerHeight, setHeaderHeight] = useState(72);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -669,8 +702,8 @@ export default function App() {
   return (
     <div className="h-[100dvh] w-full bg-[#F9F8F4] text-[#2D362E] flex flex-col selection:bg-[#C18C5D]/25 selection:text-[#2D362E] font-sans antialiased overflow-hidden relative">
       
-      {/* Top Navigation (Flex None - Pinned to Top) */}
-      {!showLoPortal && (
+      {/* Top Navigation (Flex None - Pinned to Top - Hidden when Full-Screen Workspace is active) */}
+      {!showLoPortal && !isFullScreen && (
         <div ref={headerRef} className="flex-none relative z-40 bg-[#F9F8F4]/98 backdrop-blur-md border-b border-[#EAE7E0]/80 shadow-md">
           <Navbar
             currentTab={activeTab}
@@ -684,6 +717,8 @@ export default function App() {
             onOpenLeadBot={() => { setLeadBotSourceContext(undefined); setIsLeadBotOpen(true); }}
             onNavigateToGuides={handleNavigateToGuides}
             loName={guidesState.loanOfficer.name}
+            isFullScreen={isFullScreen}
+            onToggleFullScreen={toggleFullScreen}
           />
           {/* Mobile Only: Horizontal Step Banner */}
           <div className="lg:hidden w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 bg-[#F9F8F4] border-t border-[#EAE7E0]/80 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.05)]">
@@ -694,17 +729,44 @@ export default function App() {
               onNavigateToGuides={handleNavigateToGuides}
               loanOfficerName={guidesState.loanOfficer.name}
               activeAgentName={activeAgent.name}
+              isFullScreen={isFullScreen}
+              onToggleFullScreen={toggleFullScreen}
             />
           </div>
         </div>
       )}
 
+      {/* Floating Exit Full-Screen Control Banner when in Full-Screen Workspace */}
+      {isFullScreen && (
+        <aside
+          aria-label="Full-Screen Workspace Controls"
+          className="fixed top-3 right-5 z-50 flex items-center gap-2 bg-[#2D362E]/95 backdrop-blur-md text-white px-3.5 py-1.5 rounded-full shadow-2xl border border-white/20 animate-in fade-in slide-in-from-top-3 duration-200"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-1" />
+          <span className="text-xs font-semibold tracking-wide text-[#EAE7E0] hidden sm:inline">
+            Full-Screen Workspace
+          </span>
+          <span className="text-[10px] text-[#A69F93] hidden md:inline font-mono bg-black/30 px-1.5 py-0.5 rounded">
+            Press Esc
+          </span>
+          <button
+            type="button"
+            onClick={toggleFullScreen}
+            className="flex items-center gap-1 text-xs font-bold bg-[#C18C5D] hover:bg-[#a67448] active:scale-95 text-white px-2.5 py-1 rounded-full transition-all cursor-pointer shadow-xs ml-1"
+            title="Exit Full-Screen Workspace and restore sidebar and top navigation (Esc)"
+          >
+            <Minimize2 className="w-3.5 h-3.5" />
+            <span>Exit</span>
+          </button>
+        </aside>
+      )}
+
       {/* Scrollable Content Area (Flex 1) */}
       <div className="flex-1 w-full overflow-y-auto overflow-x-hidden flex flex-col relative scroll-smooth">
         {/* Main Layout Wrapper */}
-      <div className={showLoPortal ? "flex-1 w-full" : "flex-1 w-full max-w-[1700px] mx-auto flex transition-all duration-300"}>
-        {/* Desktop Only: Left Sidebar for Step Navigation & Tools Hub */}
-        {!showLoPortal && (
+      <div className={showLoPortal ? "flex-1 w-full" : isFullScreen ? "flex-1 w-full max-w-full px-2 sm:px-4 md:px-6 transition-all duration-300" : "flex-1 w-full max-w-[1700px] mx-auto flex transition-all duration-300"}>
+        {/* Desktop Only: Left Sidebar for Step Navigation & Tools Hub (Hidden in Full-Screen Workspace) */}
+        {!showLoPortal && !isFullScreen && (
           <aside 
             className={`hidden lg:flex flex-col shrink-0 border-r border-[#EAE7E0] bg-[#F9F8F4] z-30 self-start sticky top-0 transition-all duration-300 ease-in-out ${
               isSidebarCollapsed ? "w-16 sm:w-18 md:w-20 p-2" : "w-80 sm:w-84 xl:w-88 p-3 sm:p-4"
@@ -728,12 +790,20 @@ export default function App() {
               loanOfficer={guidesState.loanOfficer}
               activeAgent={activeAgent}
               propertiesCount={properties.length}
+              isFullScreen={isFullScreen}
+              onToggleFullScreen={toggleFullScreen}
             />
           </aside>
         )}
 
-        {/* Main Content Area: Expands & shrinks dynamically to match sidebar state */}
-        <main className={showLoPortal ? "flex-1 w-full p-0 m-0" : "flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 pb-8 transition-all duration-300 ease-in-out"}>
+        {/* Main Content Area: Expands & shrinks dynamically to match sidebar & full-screen states */}
+        <main className={
+          showLoPortal 
+            ? "flex-1 w-full p-0 m-0" 
+            : isFullScreen
+            ? "flex-1 min-w-0 w-full px-2 sm:px-6 lg:px-10 py-4 md:py-6 space-y-6 pb-12 transition-all duration-300 ease-in-out"
+            : "flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 pb-8 transition-all duration-300 ease-in-out"
+        }>
           {/* LOAN OFFICER PORTAL VIEW */}
           {showLoPortal ? (
           <LoanOfficerPortal userRole={userRole}
@@ -900,8 +970,8 @@ export default function App() {
       </main>
       </div>
 
-      {/* Footer */}
-      {!showLoPortal && (
+      {/* Footer (Hidden when Full-Screen Workspace is active) */}
+      {!showLoPortal && !isFullScreen && (
         <footer className="bg-[#F1EFE9] border-t border-[#EAE7E0] py-10 px-4 sm:px-6 lg:px-8 mt-16 text-xs text-[#606C5D]">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
@@ -935,8 +1005,8 @@ export default function App() {
         </footer>
       )}
       </div>
-      {/* Bottom Nav (Flex None - Pinned to Bottom on Mobile) */}
-      <MobileBottomNav activeTab={activeTab} onNavigate={handleNavigate} />
+      {/* Bottom Nav (Flex None - Pinned to Bottom on Mobile - Hidden when in Full-Screen Workspace) */}
+      {!isFullScreen && <MobileBottomNav activeTab={activeTab} onNavigate={handleNavigate} />}
 
       {/* Scorecard Modal */}
       {scorecardProperty && (

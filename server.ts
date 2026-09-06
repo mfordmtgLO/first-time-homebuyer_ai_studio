@@ -824,90 +824,298 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
     const phase = payload?.timePhase || "morning";
     const name = payload?.loProfile?.name || "Mike Ford";
     const isAdmin = Boolean(payload?.isAdmin);
-    const completed = payload?.completedTasks?.length || 0;
-    const pending = payload?.pendingTasks?.length || 0;
+    const completedList = Array.isArray(payload?.completedTasks) ? payload.completedTasks : [];
+    const pendingList = Array.isArray(payload?.pendingTasks) ? payload.pendingTasks : [];
+    const completed = completedList.length;
+    const pending = pendingList.length;
     const total = completed + pending;
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
     const timeStr = payload?.currentTimeString || "Active Shift";
 
     if (phase === "morning") {
-      return {
-        headline: `Morning Pipeline Kickoff (${timeStr})`,
-        motivationalBadge: "High-Energy Launch — First touches set the day's pace!",
-        whatDoneSummary: completed > 0 
-          ? `Off to an active start with ${completed} priority action${completed > 1 ? 's' : ''} already handled.` 
-          : `Morning pipeline queued with ${total || 5} operational touchpoints ready for rapid execution.`,
-        topPriorities: [
-          "Reach out to high-intent buyer inquiries in CRM before 10:30 AM.",
-          "Check rate-lock expirations and underwriting conditions across active files.",
-          isAdmin 
-            ? "Review candidate recruiting pipeline & schedule branch intro syncs." 
-            : "Verify borrower scenario drafts on Scenario Workbench for weekend home tours."
-        ],
-        coachingQuote: "Speed-to-lead in the first 2 hours of the day drives 70% of downstream borrower conversions.",
-        nextActionRecommendation: {
-          tabId: "leads",
-          actionTitle: "Review Hot Inquiries in CRM",
-          actionReason: "3 buyer leads are waiting on pre-approval qualification checks."
-        }
-      };
+      if (completed === 0) {
+        return {
+          headline: `Morning Pipeline Kickoff (${timeStr})`,
+          motivationalBadge: "Game Plan Ready — Shift just started, time to make the first move!",
+          whatDoneSummary: `Morning pipeline open: 0 of ${total} targets completed so far. Day is wide open to build early momentum.`,
+          managerPerspective: "Morning is pure offense. Don't touch admin or email clean-up yet; get 2 borrower contacts in before lunch to set your daily tone.",
+          topProducerTip: {
+            headline: "First 90-Minute Rule",
+            advice: "Top 1% loan originators spend their first 90 minutes dial-focused on buyers and realtors before ever touching loan conditions or inbox clutter.",
+            focusOutcome: "Lock in 1 live phone conversation or pre-qual scenario by 11 AM."
+          },
+          topPriorities: [
+            "Call 2 high-intent CRM buyer inquiries before 10:45 AM.",
+            "Review today's rate-lock expirations and file milestones.",
+            isAdmin 
+              ? "Check candidate recruiting pipeline & sync with branch originators." 
+              : "Generate pre-approval scenario draft for active weekend home tour shoppers."
+          ],
+          coachingQuote: "Speed-to-lead in the morning drives over 70% of downstream borrower conversions.",
+          nextActionRecommendation: {
+            tabId: "leads",
+            actionTitle: "Review Hot Inquiries in CRM",
+            actionReason: "Buyer leads respond at a 3x higher rate when contacted before 11:00 AM."
+          }
+        };
+      } else {
+        return {
+          headline: `Morning High-Gear (${timeStr})`,
+          motivationalBadge: `Quick Start! ${completed} of ${total} items already checked off (${pct}%)`,
+          whatDoneSummary: `Great early pace: ${completed} of ${total} daily targets completed (${pct}% completion). You've already got early traction.`,
+          managerPerspective: "Love the fast start. Keep this pace rolling through midday and you'll have the afternoon free for partner lunches and pipeline closing.",
+          topProducerTip: {
+            headline: "Stack Wins While Hot",
+            advice: "When you start fast, roll that energy straight into your toughest phone call. Momentum is the ultimate sales leverage.",
+            focusOutcome: "Convert this morning momentum into an active borrower pre-approval application."
+          },
+          topPriorities: [
+            "Follow up on newly submitted documents for files in processing.",
+            "Run 2-1 buydown comparison for active real estate agent listings.",
+            isAdmin 
+              ? "Review branch production numbers and LO target distribution." 
+              : "Verify borrower scenario drafts on Scenario Workbench for upcoming tours."
+          ],
+          coachingQuote: "Early morning wins create compound productivity for the entire afternoon.",
+          nextActionRecommendation: {
+            tabId: "scenario_workbench",
+            actionTitle: "Prepare Pre-Approval Comparison",
+            actionReason: "Capitalize on early morning momentum to lock in purchase buyers."
+          }
+        };
+      }
     } else if (phase === "midday") {
-      return {
-        headline: `Midday Partner & Production Pulse (${timeStr})`,
-        motivationalBadge: pct >= 50 ? "Ahead of schedule — fantastic mid-day pace!" : "Solid momentum — keep this rhythm rolling!",
-        whatDoneSummary: `Midday status: ${completed} of ${total} daily priorities knocked out (${pct}% completion rate). Pipeline touches logged.`,
-        topPriorities: [
-          "Connect with top Realtor partners (Sarah Jenkins & Marcus Vance) on active buyer pre-approvals.",
-          "Run 2-1 buydown cost analysis on listing properties with recent price adjustments.",
-          isAdmin
-            ? "Review team loan distribution and route newly arrived portal inquiries."
-            : "Finalize AUS documentation checklist for underwriting submission."
-        ],
-        coachingQuote: "Midday partner touchpoints solidify agent trust and keep your pre-approvals top-of-mind.",
-        nextActionRecommendation: {
-          tabId: "realtor_cobranding",
-          actionTitle: "Dispatch Open House Co-Marketing Asset",
-          actionReason: "Realtors finalize weekend open house marketing between 11 AM and 2 PM."
-        }
-      };
+      if (pct === 0) {
+        return {
+          headline: `Midday Reality Check & Reset (${timeStr})`,
+          motivationalBadge: "Midday Pivot — Zero checklist items logged, but the day is far from lost!",
+          whatDoneSummary: `Midday status: 0 of ${total} checklist items checked off (0%). You may have been on the phone or fighting fires, but let's regroup.`,
+          managerPerspective: "We all have mornings where incoming calls hijack the plan. Take a breath, reset, and let's conquer the 2 highest revenue tasks right now.",
+          topProducerTip: {
+            headline: "Top Producer Midday Rule of 2",
+            advice: "Forget the 10-item checklist. Pick the single hottest buyer lead and 1 top realtor partner to text. Winning those two turns an off-track day into a high-income day.",
+            focusOutcome: "Secure 1 realtor coffee or 1 buyer credit review by 2:30 PM."
+          },
+          topPriorities: [
+            "Call your top 1 warmest buyer lead to structure pre-approval.",
+            "Send a quick text or touch to Sarah Jenkins or Marcus Vance on active buyers.",
+            isAdmin 
+              ? "Check branch loan routing for any unassigned incoming inquiries." 
+              : "Clear 1 urgent underwriting condition holding up a conditional approval."
+          ],
+          coachingQuote: "Top producers don't fret about a slow morning — they adjust the target, take 2 high-impact actions, and finish strong.",
+          nextActionRecommendation: {
+            tabId: "leads",
+            actionTitle: "Direct Outreach to Top Hot Buyer",
+            actionReason: "A single live conversation will completely flip your daily rhythm and momentum."
+          }
+        };
+      } else if (pct < 50) {
+        return {
+          headline: `Midday Momentum Build (${timeStr})`,
+          motivationalBadge: `Building Pacing — ${completed} of ${total} done (${pct}%), prime time to surge!`,
+          whatDoneSummary: `Midday checkpoint: ${completed} of ${total} targets completed (${pct}% completion). Good foundation, time to accelerate.`,
+          managerPerspective: "You have points on the board. Now dial in the high-leverage revenue actions before underwriters go into afternoon review.",
+          topProducerTip: {
+            headline: "Midday Partner Sync",
+            advice: "Realtors are checking emails between showings right now. A quick property buydown analysis sent right now gets immediate attention.",
+            focusOutcome: "Share a customized flyer or comparison with an active partner."
+          },
+          topPriorities: [
+            "Connect with Realtor partner on weekend open house co-marketing.",
+            "Run 2-1 buydown cost analysis on listing properties with price drops.",
+            isAdmin 
+              ? "Review team loan distribution and audit LO pipeline velocity." 
+              : "Finalize AUS documentation checklist for underwriting submission."
+          ],
+          coachingQuote: "Midday partner touchpoints solidify agent trust and keep your pre-approvals top-of-mind.",
+          nextActionRecommendation: {
+            tabId: "realtor_cobranding",
+            actionTitle: "Dispatch Open House Co-Marketing Asset",
+            actionReason: "Agents finalize weekend marketing assets between 11:30 AM and 2:00 PM."
+          }
+        };
+      } else {
+        return {
+          headline: `Midday High-Flyer (${timeStr})`,
+          motivationalBadge: `Crushing It! ${completed} of ${total} items completed (${pct}%) — well ahead of pace!`,
+          whatDoneSummary: `Outstanding midday run: ${completed} of ${total} targets locked down (${pct}% completion rate). You are dominating today's queue.`,
+          managerPerspective: "You're operating like an elite producer today. Keep your eyes on high-value client conversions while you have total control of your day.",
+          topProducerTip: {
+            headline: "Leverage High Production",
+            advice: "When you're ahead of pace, reach out to an A-tier Realtor partner you've been meaning to prospect. Success confidence is contagious.",
+            focusOutcome: "Prospect a new top-producing agent partner for coffee this week."
+          },
+          topPriorities: [
+            "Reach out to an A-tier Realtor partner for coffee or lunch next week.",
+            "Review pipeline rate locks for files within 10 days of closing.",
+            isAdmin 
+              ? "Schedule branch coaching session with junior originators." 
+              : "Send proactive status video update to active under-contract borrowers."
+          ],
+          coachingQuote: "When you are ahead of schedule, you own the market instead of letting it own you.",
+          nextActionRecommendation: {
+            tabId: "realtor_cobranding",
+            actionTitle: "Create Co-Branded Flyer for Top Agent",
+            actionReason: "Proactively propose weekend open house co-marketing while ahead of schedule."
+          }
+        };
+      }
     } else if (phase === "afternoon") {
-      return {
-        headline: `Afternoon Momentum & Team Check (${timeStr})`,
-        motivationalBadge: pct >= 60 ? "Crushing your afternoon targets — finish strong!" : "Afternoon sprint — knock out remaining items!",
-        whatDoneSummary: `Afternoon check: ${completed} items cleared. Core afternoon focus is on clearing underwriting conditions and partner alignment.`,
-        topPriorities: [
-          "Clear remaining pending conditions for files currently under active underwriting review.",
-          "Review DPA & State Grant eligibility matrix for pending affordable loan applicants.",
-          isAdmin
-            ? "Check candidate recruiting pipeline: move interviewed LO candidates to Next Round."
-            : "Send evening pre-approval verification letters to active home shoppers."
-        ],
-        coachingQuote: "The 3:30 PM push is where top producers separate themselves from average loan originators.",
-        nextActionRecommendation: {
-          tabId: isAdmin ? "recruitment_pipeline" : "scenario_workbench",
-          actionTitle: isAdmin ? "Review High-Volume Recruits" : "Generate Comparison PDF",
-          actionReason: isAdmin ? "Recruiting candidates review afternoon messages after market close." : "Buyers need pre-approval letters before evening property showings."
-        }
-      };
+      if (pct === 0) {
+        return {
+          headline: `Afternoon Power Pivot (${timeStr})`,
+          motivationalBadge: "No Sugar-Coating: 0 tasks checked, but there is still time to win the day!",
+          whatDoneSummary: `Afternoon audit: 0 of ${total} checklist items checked off (0%). You're behind schedule on the checklist, but let's rescue the day right now.`,
+          managerPerspective: "Look, as your manager I'm not going to pretend 0% is where we want to be at 3 PM. But in mortgage sales, ONE converted purchase pre-approval or ONE locked deal makes today a $5,000+ win. Let's laser focus on what pays.",
+          topProducerTip: {
+            headline: "The 3 PM Emergency Two-Step",
+            advice: "Throw out all 5 administrative tasks. Pick just TWO things: 1) Call your top active pre-approved buyer to check their shopping status. 2) Text Sarah Jenkins to set a 15-min coffee. That rescues your entire workday.",
+            focusOutcome: "Lock in 1 realtor meeting or 1 active buyer application before 5 PM."
+          },
+          topPriorities: [
+            "Call your #1 hottest CRM buyer lead immediately — ask if they're touring this weekend.",
+            "Text top agent partner (Sarah Jenkins or Marcus Vance) to lock in coffee next Tuesday.",
+            isAdmin 
+              ? "Check high-urgency branch escalations or locks before market close." 
+              : "Clear the single most urgent underwriting file condition before 4:30 PM."
+          ],
+          coachingQuote: "One high-value revenue action at 3:30 PM can salvage an entire day of distractions.",
+          nextActionRecommendation: {
+            tabId: "leads",
+            actionTitle: "Call Top Priority Hot Lead",
+            actionReason: "Converting one hot buyer to an active application makes today an absolute victory."
+          }
+        };
+      } else if (pct < 50) {
+        return {
+          headline: `Afternoon Sprint Check (${timeStr})`,
+          motivationalBadge: `Sprint Mode: ${completed} of ${total} finished (${pct}%) — time for the 4 PM push!`,
+          whatDoneSummary: `Afternoon status: ${completed} of ${total} tasks completed (${pct}% completion). Several key items remaining before end of shift.`,
+          managerPerspective: "You've got some headway, but there's work left on the table. Strip away the non-essentials and focus purely on files that move to closing.",
+          topProducerTip: {
+            headline: "Clear Roadblocks First",
+            advice: "Underwriters and processors are wrapping their queues. Clearing conditions between 3:30 and 4:30 PM gets files into Clear-to-Close tomorrow morning.",
+            focusOutcome: "Submit remaining condition documents on files in active underwriting."
+          },
+          topPriorities: [
+            "Clear priority conditions on files currently in underwriting review.",
+            "Send updated pre-approval letters to buyers making weekend offers.",
+            isAdmin 
+              ? "Follow up with warm loan officer recruiting candidates." 
+              : "Review DPA & Down Payment Assistance grant matrices for income-eligible buyers."
+          ],
+          coachingQuote: "The late-afternoon push is where the best loan originators protect their closing dates.",
+          nextActionRecommendation: {
+            tabId: "scenario_workbench",
+            actionTitle: "Generate Weekend Pre-Approval Letter",
+            actionReason: "Borrowers need updated verification figures before evening home showings."
+          }
+        };
+      } else {
+        return {
+          headline: `Afternoon Championship Pace (${timeStr})`,
+          motivationalBadge: `High Producer Rhythm: ${completed} of ${total} knocked out (${pct}%)!`,
+          whatDoneSummary: `Great momentum: ${completed} of ${total} priorities finished (${pct}% achievement). Afternoon pipeline is in excellent health.`,
+          managerPerspective: "Strong execution today! You're working like a true professional. Finish up the final administrative wrap-up and set yourself up for tomorrow.",
+          topProducerTip: {
+            headline: "The 4 PM Setup Rule",
+            advice: "When you have high completion by 4 PM, spend 10 minutes setting up tomorrow's 3 big rocks. Tomorrow morning will be seamless.",
+            focusOutcome: "Queue up tomorrow's initial 3 calls before shutting down."
+          },
+          topPriorities: [
+            "Send confirmation notes to Realtors on borrower file milestones.",
+            "Verify all outgoing disclosures have been signed by applicants.",
+            isAdmin 
+              ? "Review branch funded volume pacing and team monthly production." 
+              : "Send evening scenario comparisons to pre-approved borrowers."
+          ],
+          coachingQuote: "Consistency in afternoon closing habits is the difference between an average LO and a Presidents Club producer.",
+          nextActionRecommendation: {
+            tabId: "realtor_cobranding",
+            actionTitle: "Dispatch Weekend Property Comparison",
+            actionReason: "Agents and buyers review weekend property flyers in the late afternoon."
+          }
+        };
+      }
     } else {
-      return {
-        headline: `End-of-Day Review & Wrap-Up (${timeStr})`,
-        motivationalBadge: pct >= 75 ? "Outstanding day! Daily goals crushed." : "Great effort today — strong foundation for tomorrow!",
-        whatDoneSummary: `Final EOD tally: ${completed} of ${total} items completed (${pct}% achievement). Inquiries and tasks logged.`,
-        topPriorities: [
-          "Verify all outbound SMS & email communications are compliant and logged in the CRM audit trail.",
-          "Set tomorrow morning's top 3 priority focus areas in Google Workspace.",
-          isAdmin
-            ? "Review branch daily funded volume pacing and team quota metrics."
-            : "Send wrap-up summary note to Realtor partners on active buyer status."
-        ],
-        coachingQuote: "A deliberate 10-minute end-of-day wrap-up guarantees effortless momentum tomorrow morning.",
-        nextActionRecommendation: {
-          tabId: "growth_dashboard",
-          actionTitle: "Review Branch & LO Production Trajectory",
-          actionReason: "Close out the day with clarity on your 30-day funded volume goals."
-        }
-      };
+      // end_of_day phase
+      if (pct === 0) {
+        return {
+          headline: `End-of-Day Candid Review (${timeStr})`,
+          motivationalBadge: "Honest EOD Audit: 0 tasks completed on the board — let's dissect & reset!",
+          whatDoneSummary: `End-of-day tally: 0 of ${total} checklist items checked off (0%). Real talk: the checklist didn't get done today, whether due to client emergencies or unexpected fires.`,
+          managerPerspective: "I'm going to be straight with you as your sales manager: seeing 0 out of 5 tasks at 5 PM isn't the standard we want. BUT beating yourself up does zero dollars in commission. If you had client emergencies or closed a deal off-system, that's selling. If the day just slipped away, let's take 5 minutes right now, pick 1 critical contact to make or schedule, and set tomorrow up so you hit the ground running.",
+          topProducerTip: {
+            headline: "Top Producer Reset: Convert or Schedule",
+            advice: "Top producers don't go to sleep defeated after an off-track day. Before you close your laptop, send 1 quick text to a Realtor partner ('Thinking about your listing on Oak St — let's grab coffee Tuesday') or leave 1 voicemail for a hot buyer. Turn a zero-task day into tomorrow's closed loan.",
+            focusOutcome: "Send 1 partner text message or schedule tomorrow morning's top 2 revenue calls right now."
+          },
+          topPriorities: [
+            "Text 1 top Realtor partner to lock in a 15-minute coffee or lunch next week.",
+            "Queue up tomorrow morning's #1 hottest borrower lead to call at 9:00 AM sharp.",
+            isAdmin 
+              ? "Review branch incoming inquiries and reassign any stagnant leads." 
+              : "Verify no rate locks are expiring tonight at midnight."
+          ],
+          coachingQuote: "The best loan officers aren't the ones who never have off days — they're the ones who bounce back the very next morning with fire.",
+          nextActionRecommendation: {
+            tabId: "leads",
+            actionTitle: "Queue Hot Lead for Tomorrow Morning",
+            actionReason: "A fast 9:00 AM touch tomorrow will immediately reset your production momentum."
+          }
+        };
+      } else if (pct < 50) {
+        return {
+          headline: `End-of-Day Review & Pacing (${timeStr})`,
+          motivationalBadge: `Partial Completion: ${completed} of ${total} finished (${pct}%) — solid effort, room to tighten!`,
+          whatDoneSummary: `EOD wrap-up: ${completed} of ${total} daily priorities completed (${pct}% completion). A productive effort with some tasks carrying over to tomorrow.`,
+          managerPerspective: "You got real work done today, but you left a few priorities on the table. Don't worry about finishing all 5 at 5 PM — prioritize the 1 that actually converts, roll the rest to tomorrow morning's top queue, and leave with a clear head.",
+          topProducerTip: {
+            headline: "Top Producer EOD Roll-Over",
+            advice: "Never leave open tasks in limbo. Mark the ones you completed, delete the low-value noise, and carry the top 2 highest-revenue tasks straight into tomorrow morning's 9 AM slot.",
+            focusOutcome: "Lock in tomorrow's top 2 priorities before closing your laptop."
+          },
+          topPriorities: [
+            "Log all CRM outbound touches and ensure borrower notes are up-to-date.",
+            "Select and queue tomorrow morning's top 2 revenue-generating actions.",
+            isAdmin 
+              ? "Review branch daily pipeline volume and lock desk submissions." 
+              : "Send quick wrap-up status email to active Realtor partners on mutual buyers."
+          ],
+          coachingQuote: "A deliberate 5-minute shutdown tonight guarantees an explosive, focused kickoff tomorrow.",
+          nextActionRecommendation: {
+            tabId: "growth_dashboard",
+            actionTitle: "Review Active Production Pipeline",
+            actionReason: "Close your day with full visibility on your monthly funded volume."
+          }
+        };
+      } else {
+        return {
+          headline: `End-of-Day Victory Lap (${timeStr})`,
+          motivationalBadge: `Outstanding Day! ${completed} of ${total} goals crushed (${pct}%)!`,
+          whatDoneSummary: `Dominant performance: ${completed} of ${total} daily targets locked in (${pct}% achievement). Inquiries touched, scenarios calculated, and pipeline moving!`,
+          managerPerspective: "Tremendous day of production! You held yourself accountable, hit your numbers, and drove real value. Enjoy your evening knowing you moved the needle on your business.",
+          topProducerTip: {
+            headline: "Celebrate & Protect the Standard",
+            advice: "Top producers celebrate consistent execution. You protected your daily standard today — that is exactly how seven-figure production books are built.",
+            focusOutcome: "Acknowledge today's win, shut down clean, and recharge for tomorrow."
+          },
+          topPriorities: [
+            "Verify all client text & email communications are compliant and logged in CRM.",
+            "Set tomorrow morning's top 3 priority focus areas in Google Workspace.",
+            isAdmin 
+              ? "Review branch daily funded volume pacing and team quota metrics." 
+              : "Send wrap-up summary note to Realtor partners on active buyer status."
+          ],
+          coachingQuote: "Excellence is not an accident — it is the consistent accumulation of days just like today.",
+          nextActionRecommendation: {
+            tabId: "growth_dashboard",
+            actionTitle: "Review Branch & LO Production Trajectory",
+            actionReason: "Close out the day with clarity on your 30-day funded volume goals."
+          }
+        };
+      }
     }
   };
 
@@ -1350,29 +1558,49 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
     const payload = req.body || {};
     const { loProfile, timePhase, currentTimeString, completedTasks, pendingTasks, stats, isAdmin } = payload;
 
-    try {
-      const prompt = `You are the executive AI Production Coach & Focus/Flow Instructor for mortgage loan officer ${loProfile?.name || "Mike Ford"}.
+    const completedList = Array.isArray(completedTasks) ? completedTasks : [];
+    const pendingList = Array.isArray(pendingTasks) ? pendingTasks : [];
+    const completedCount = completedList.length;
+    const pendingCount = pendingList.length;
+    const totalCount = completedCount + pendingCount;
+    const completionPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-Time Phase: ${timePhase || "morning"}
+    try {
+      const prompt = `You are an experienced, high-producing Mortgage Branch Sales Manager and Executive Coach talking directly to loan officer ${loProfile?.name || "Mike Ford"}.
+
+Shift Phase: ${timePhase || "morning"} (e.g. morning, midday, afternoon, end_of_day)
 Current Time: ${currentTimeString || "10:00 AM"}
 Role: ${isAdmin ? "Branch Manager & Producing Loan Officer" : "Producing Loan Officer"}
-Completed Tasks Today (${completedTasks?.length || 0}): ${(completedTasks || []).join("; ") || "None yet"}
-Remaining Pending Tasks (${pendingTasks?.length || 0}): ${(pendingTasks || []).join("; ") || "General daily queue"}
-Pipeline Stats: ${stats?.leadsCount || 0} active leads (${stats?.hotLeadsCount || 0} hot), ${stats?.candidatesCount || 0} recruitment candidates, ${stats?.recentTouchesCount || 0} recent communication touches.
+Task Completion Status: ${completedCount} of ${totalCount} completed (${completionPercent}%).
+- Completed Tasks (${completedCount}): ${completedList.join("; ") || "None completed so far today"}
+- Pending / Uncompleted Tasks (${pendingCount}): ${pendingList.join("; ") || "General daily queue"}
+Pipeline Stats: ${stats?.leadsCount || 0} active leads (${stats?.hotLeadsCount || 0} hot), ${stats?.candidatesCount || 0} recruitment candidates, ${stats?.recentTouchesCount || 0} recent communication touches logged.
 
-Provide an immediate, inspiring, and actionable Daily Review in valid JSON with these exact fields:
-- "headline": Short punchy review headline including time phase and time
-- "motivationalBadge": Brief high-energy cheer (e.g. "Ahead of schedule — fantastic mid-day pace!" or "Crushing your morning kickoff!")
-- "whatDoneSummary": 1-2 sentence objective recap of what has been accomplished so far today across the dashboard
-- "topPriorities": Array of exactly 3 realistic, high-leverage tasks to still accomplish before end of shift (aware of time of day and realistic bandwidth). ${isAdmin ? 'As a Branch Manager, you may include loan officer recruiting and team management tasks.' : 'CRITICAL: You are a Producing Loan Officer, NOT a manager. You MUST NOT include any loan officer recruiting, candidate follow-up, or team management tasks in your priorities.'}
-- "coachingQuote": 1 brief, punchy coaching insight
-- "nextActionRecommendation": Object with "tabId" (one of: "leads", "scenario_workbench", "realtor_cobranding"${isAdmin ? ', "recruitment_pipeline", "growth_dashboard"' : ''}, "buydown_2_1"), "actionTitle", and "actionReason"`;
+CRITICAL INSTRUCTIONS FOR SALES MANAGER PERSONA & TASK RATIO ACCURACY:
+1. ACCURACY FIRST: Under NO circumstances should you say "great job getting all your tasks done" or pretend tasks are finished if ${completedCount} tasks are completed or if the completion rate is low (${completionPercent}%). Explicitly acknowledge the real numbers (${completedCount}/${totalCount} completed).
+2. SALES MANAGER PERSONA: Speak with the authentic voice of a seasoned, empathetic, high-energy mortgage sales manager. Be humanistic, candid, and constructive.
+   - If completion is ZERO or LOW (especially midday, afternoon, or end-of-day): Acknowledge that they are behind schedule without beating them down. Give a positive, motivating "you got this" critique. Understand that in mortgage origination, a loan officer might get zero administrative checklist items done because they were busy fighting loan conditions, locked in client phone consults, or dealing with unexpected fires.
+   - Remind them that in mortgage sales, converting even ONE hot lead or locking in ONE realtor coffee meeting is an absolute home run and makes the day a huge win, even if no time was left for routine checklist items.
+   - Offer pragmatic "top producer" tips and tricks to get the day back on track and narrow their focus down to the 2-3 most important revenue-generating priorities to finish the shift strong.
+   - If completion is HIGH: Genuinely celebrate the high work volume and discipline, praise their consistency, and challenge them to leverage that momentum to prospect a new top agent or lock files.
+3. OUTPUT FORMAT: Respond in valid JSON with these exact fields:
+- "headline": Punchy, time-aware review headline (e.g. "End-of-Day Candid Review (5:15 PM)" or "Midday Reality Check & Reset (1:30 PM)")
+- "motivationalBadge": Honest status badge reflecting actual progress (e.g., if 0 completed at EOD: "Honest EOD Audit: 0 tasks completed — let's dissect & reset!"; if high: "Crushing It! 4 of 5 tasks completed (80%)")
+- "whatDoneSummary": 1-2 sentence honest, factual recap of today's actual numbers (${completedCount} of ${totalCount} tasks, ${completionPercent}%), noting whether they're on pace or behind.
+- "managerPerspective": 2-3 sentences of direct sales manager coaching. If behind or at zero, provide empathetic yet firm encouragement: acknowledge the chaos of mortgage days, remind them that 1 converted buyer or realtor meeting can make today a $5k+ win, and give them the confidence that they've got this.
+- "topProducerTip": An object with:
+    - "headline": Short catchy rule name (e.g. "The Top Producer Rule of 2", "Emergency 3 PM Two-Step", "First 90-Minute Rule")
+    - "advice": 1-2 sentences of tactical advice from top 1% loan officers on how to refocus on what moves the needle instead of getting bogged down.
+    - "focusOutcome": Specific high-leverage win to target (e.g. "Lock in 1 realtor coffee or 1 buyer pre-approval application").
+- "topPriorities": Array of exactly 3 realistic, highest-priority tasks to finish the shift strong or prepare for tomorrow. Focus on revenue (calling warm leads, texting top agents like Sarah Jenkins or Marcus Vance, clearing urgent conditions). ${isAdmin ? 'As Branch Manager, recruiting/team items are permitted.' : 'CRITICAL: Producing LO only — NO recruiting tasks.'}
+- "coachingQuote": 1 punchy, memorable sales quote.
+- "nextActionRecommendation": Object with "tabId" (one of: "leads", "scenario_workbench", "realtor_cobranding"${isAdmin ? ', "recruitment_pipeline", "growth_dashboard"' : ''}, "buydown_2_1"), "actionTitle", and "actionReason".`;
 
       const response = await generateWithModelFallback({
         preferredModel: "gemini-3.7-flash",
         contents: prompt,
         config: {
-          systemInstruction: `You are an elite Mortgage Branch Production Coach. You provide time-aware, realistic daily guidance that keeps loan officers and branch managers focused, motivated, and knocking out their high-priority tasks throughout the day. Always output valid JSON.`,
+          systemInstruction: `You are an elite Mortgage Branch Sales Manager and Performance Coach. You never give false praise when tasks are 0 or incomplete; instead you provide candid, humanistic, empathetic, and motivating sales coaching with top-producer tips that refocus the loan officer on the 2-3 highest-leverage revenue actions. Always output valid JSON.`,
           responseMimeType: "application/json",
           temperature: 0.3,
         },

@@ -17,7 +17,7 @@ import {
   Check,
   Copy
 } from "lucide-react";
-import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing } from "../types";
+import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing, CapturedLead } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 import { LocalProfessionalGuides } from "./LocalProfessionalGuides";
 import { CuratedHomesSection } from "./CuratedHomesSection";
@@ -30,6 +30,7 @@ interface HeroWebsiteProps {
   onOpenRoadmap: () => void;
   onOpenStep4?: () => void;
   onOpenLeadBot?: () => void;
+  onCaptureLead?: (lead: CapturedLead) => void;
   loanOfficer?: LoanOfficerProfile;
   activeAgent?: RealEstateAgentProfile;
   isCoBranded?: boolean;
@@ -45,6 +46,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
   onOpenRoadmap,
   onOpenStep4,
   onOpenLeadBot,
+  onCaptureLead,
   loanOfficer,
   activeAgent,
   isCoBranded = false,
@@ -472,6 +474,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
         properties={properties}
         onOpenDashboard={onOpenDashboard}
         onOpenLeadBot={onOpenLeadBot}
+        onCaptureLead={onCaptureLead}
         loanOfficer={loanOfficer}
         activeAgent={activeAgent}
       />

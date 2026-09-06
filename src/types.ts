@@ -311,6 +311,7 @@ export interface LoanOfficerProfile {
   passwordResetAuthorizedAt?: string;
   passwordResetPin?: string;
   lastLogin?: string;
+  themePreference?: 'dark' | 'light' | 'system';
   adSettings?: LoanOfficerAdSettings;
   bigPurpleDotId?: string;
   bigPurpleDotStatus?: 'synced' | 'pending' | 'error' | 'not_synced';
@@ -766,3 +767,137 @@ export interface CrmAuditLogEntry {
   leadId?: string;
   leadName?: string;
 }
+
+// DailyPulse AI Performance & Task Sentiment Persistence
+export type DailyPulsePhase = 'morning' | 'midday' | 'afternoon' | 'end_of_day';
+
+export interface DailyPulseTaskSnapshot {
+  id: string;
+  title: string;
+  completed: boolean;
+  category?: string;
+  isDefault?: boolean;
+}
+
+export type RatioCritiqueTier = 'zero_reset' | 'lagging_triage' | 'mid_flight_bubble' | 'high_tempo' | 'championship_pace';
+
+export interface DailySalesManagerCritique {
+  ratioTier: RatioCritiqueTier;
+  ratioLabel: string; // e.g. "0 of 5 Goals (0%)"
+  tone: string; // e.g. "Candid & Empathetic Reality Check", "Urgent High-Energy Triage"
+  diagnosis: string; // Surgical breakdown of why the ratio is lagging or high
+  tacticalPivot: string; // Prescriptive next action to take immediately
+  accountabilityCheck: string; // High-energy closing standard from the branch manager
+  conversionMathNote?: string; // Dollar impact note e.g. "1 closed purchase app = $4,500+"
+}
+
+export interface DailyPulseEntry {
+  id: string; // e.g. pulse_${loId}_${date}_${phase}
+  loId: string;
+  loName: string;
+  date: string; // YYYY-MM-DD
+  timePhase: DailyPulsePhase;
+  timeString: string; // e.g. "9:30 AM"
+  timestamp: string; // ISO 8601
+  totalTasks: number;
+  completedTasks: number;
+  completionPercent: number;
+  completedTitles: string[];
+  pendingTitles: string[];
+  allTasksSnapshot?: DailyPulseTaskSnapshot[];
+  reviewData: {
+    headline: string;
+    motivationalBadge: string;
+    whatDoneSummary: string;
+    managerPerspective?: string;
+    salesManagerCritique?: DailySalesManagerCritique;
+    topProducerTip?: {
+      headline: string;
+      advice: string;
+      focusOutcome: string;
+    };
+    topPriorities: string[];
+    coachingQuote: string;
+    nextActionRecommendation?: {
+      tabId: string;
+      actionTitle: string;
+      actionReason: string;
+    };
+  };
+  yesterdayHandoffSummary?: string;
+}
+
+// WeeklyPulse AI Performance & Week-over-Week Variance
+export interface WeeklyPulseReviewData {
+  headline: string;
+  performanceGrade: string; // e.g. "A - High Momentum", "B+ Solid Pacing"
+  weekOverWeekTrend: "improving" | "steady" | "needs_recalibration";
+  priorWeekComparisonSummary: string;
+  keyAccomplishments: string[];
+  topProducerPlaybookNextWeek: string[];
+  salesManagerWeeklyDirective: string;
+  recommendedFocusTab?: string;
+}
+
+export interface WeeklyPulseEntry {
+  id: string; // e.g. weekly_${loId}_${year}_W${weekNumber}
+  loId: string;
+  loName: string;
+  weekNumber: number;
+  year: number;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  weekLabel: string; // e.g. "Week 36 (Sep 1 - Sep 7, 2026)"
+  totalTasksTargeted: number;
+  totalTasksCompleted: number;
+  completionRate: number;
+  daysActive: number;
+  reviewData: WeeklyPulseReviewData;
+  timestamp: string;
+}
+
+// MonthlyHorizonPulse: 30-Day Lookback Retrospective & 30-Day Forward Production Roadmap
+export interface MonthlyHorizonMilestone {
+  weekLabel: string;
+  milestone: string;
+  focusArea: string;
+  status: "planned" | "in_progress" | "completed";
+}
+
+export interface MonthlyHorizonReviewData {
+  headline: string;
+  productivityScore: number; // 0 - 100
+  pacingStatus: "ahead_of_quota" | "on_track" | "needs_acceleration";
+  lookback30Days: {
+    totalDaysTracked: number;
+    averageDailyTaskCompletionRate: number;
+    pipelineVelocity: string;
+    retrospectiveSummary: string;
+    biggestWins: string[];
+    missedOpportunities: string[];
+  };
+  lookforward30Days: {
+    revenueGoalVolume: string;
+    recommendedFocus: string;
+    weeklyMilestones: MonthlyHorizonMilestone[];
+    topProducer30DayBlueprint: string;
+    executiveSalesManagerPrescription: string;
+  };
+}
+
+export interface MonthlyHorizonPulseEntry {
+  id: string; // e.g. monthly_${loId}_${yearMonth}
+  loId: string;
+  loName: string;
+  month: string; // YYYY-MM
+  monthLabel: string; // e.g. "September 2026"
+  timestamp: string;
+  reviewData: MonthlyHorizonReviewData;
+}
+
+export interface UserPreference {
+  userId: string;
+  themePreference: 'dark' | 'light' | 'system';
+  updatedAt?: string;
+}
+

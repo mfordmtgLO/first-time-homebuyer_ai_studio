@@ -37,6 +37,7 @@ import {
 import { FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
 import { analyzeRateTrends, TrendHorizon } from "../utils/rateTrends";
+import { ThemeToggle } from "./ThemeToggle";
 
 export interface NavItem {
   id: string;
@@ -191,9 +192,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="w-full bg-white/95 backdrop-blur-md border-b border-[#EAE7E0] text-[#2D362E]">
+    <header className="w-full bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-[#EAE7E0] dark:border-slate-800 text-[#2D362E] dark:text-slate-100 transition-colors duration-200">
       {/* Top micro-banner for dashboard users / public roadmap orientation for website visitors */}
-      <div className="hidden md:block bg-[#F1EFE9] px-3 sm:px-6 py-1.5 text-xs text-[#606C5D] border-b border-[#EAE7E0] relative z-50">
+      <div className="hidden md:block bg-[#F1EFE9] dark:bg-slate-900 px-3 sm:px-6 py-1.5 text-xs text-[#606C5D] dark:text-slate-400 border-b border-[#EAE7E0] dark:border-slate-800 relative z-50 transition-colors duration-200">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           
           {/* Left section: Arrow Trend + Horizon Selection + 1-Year Benchmark Match */}
@@ -471,7 +472,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Main Header Brand & Value Proposition Line (Moved to its own dedicated centered row) */}
-      <div className="border-b border-[#EAE7E0] bg-[#FAF9F5]/70 py-2.5 md:py-4 px-3 sm:px-6 lg:px-8">
+      <div className="border-b border-[#EAE7E0] dark:border-slate-800 bg-[#FAF9F5]/70 dark:bg-slate-900/70 py-2.5 md:py-4 px-3 sm:px-6 lg:px-8 transition-colors duration-200">
         <div className="max-w-7xl mx-auto flex flex-col items-start md:items-center text-left md:text-center relative">
           
           {/* Top Pill / Trust Hook for Renters */}
@@ -498,10 +499,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="w-8 h-8 md:w-10 md:h-10 bg-[#4A5D4E] rounded-2xl flex items-center justify-center text-white font-bold shadow-sm group-hover:bg-[#38463B] transition-colors shrink-0">
               <Compass className="w-4 h-4 md:w-6 md:h-6 text-white group-hover:rotate-45 transition-transform duration-300" />
             </div>
-            <h1 className="text-xl md:text-3xl lg:text-4xl font-serif font-black tracking-tight text-[#2D362E] drop-shadow-2xs text-left md:text-center leading-tight">
+            <h1 className="text-xl md:text-3xl lg:text-4xl font-serif font-black tracking-tight text-[#2D362E] dark:text-slate-100 drop-shadow-2xs text-left md:text-center leading-tight">
               First-Time <span className="hidden sm:inline">Homebuyer</span><br className="sm:hidden" />
-              <span className="sm:hidden text-[#4A5D4E] font-serif"> Homebuyer Roadmap</span>
-              <span className="hidden sm:inline text-[#4A5D4E] font-serif">Roadmap</span>
+              <span className="sm:hidden text-[#4A5D4E] dark:text-[#D4A373] font-serif"> Homebuyer Roadmap</span>
+              <span className="hidden sm:inline text-[#4A5D4E] dark:text-[#D4A373] font-serif">Roadmap</span>
             </h1>
           </button>
 
@@ -526,8 +527,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
 
-          {/* Absolute Top-Right Controls on Desktop (Prequal CTA + Fullscreen + Mobile Hamburger) */}
+          {/* Absolute Top-Right Controls on Desktop (Prequal CTA + Fullscreen + Theme + Mobile Hamburger) */}
           <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            <div className="hidden sm:flex">
+              <ThemeToggle />
+            </div>
+
             {onToggleFullScreen && (
               <button
                 id="navbar-fullscreen-toggle-btn"
@@ -596,7 +601,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* ======================================================== */}
       {/* FULL-WIDTH HORIZONTAL SCROLLING MENU WITH LEFT/RIGHT CONTROLS */}
       {/* ======================================================== */}
-      <div className="lg:hidden border-t border-[#EAE7E0] max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 bg-white">
+      <div className="lg:hidden border-t border-[#EAE7E0] dark:border-slate-800 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 bg-white dark:bg-slate-950 transition-colors duration-200">
         <div className="flex items-center justify-between gap-2">
           
           {/* Scroll Navigation Left Button */}
@@ -772,14 +777,14 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* MOBILE EXPANDED DRAWER MENU                             */}
       {/* ======================================================== */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-[#EAE7E0] px-4 pt-3 pb-6 space-y-4 shadow-xl animate-in slide-in-from-top duration-200 max-h-[85vh] overflow-y-auto">
+        <div className="md:hidden bg-white dark:bg-slate-950 border-b border-[#EAE7E0] dark:border-slate-800 px-4 pt-3 pb-6 space-y-4 shadow-xl animate-in slide-in-from-top duration-200 max-h-[85vh] overflow-y-auto transition-colors">
           {/* Quick Return to Start for Mobile */}
           <button
             onClick={() => {
               setActiveMode("website");
               handleNavClick("hero", "website");
             }}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#F1EFE9] text-[#4A5D4E] font-bold text-xs border border-[#EAE7E0]"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#F1EFE9] dark:bg-slate-900 text-[#4A5D4E] dark:text-slate-200 font-bold text-xs border border-[#EAE7E0] dark:border-slate-800"
           >
             <RotateCcw className="w-3.5 h-3.5 text-[#C18C5D]" />
             <span>Return to Start / Overview</span>
@@ -822,7 +827,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Quick Actions Footer inside Drawer */}
-          <div className="pt-3 border-t border-[#EAE7E0] space-y-2">
+          <div className="pt-3 border-t border-[#EAE7E0] dark:border-slate-800 space-y-2">
+            <div className="w-full flex items-center justify-between px-2 py-2 mb-2 border-b border-[#EAE7E0] dark:border-slate-800">
+              <span className="text-sm font-semibold text-[#606C5D] dark:text-slate-400">Appearance</span>
+              <ThemeToggle id="navbar-theme-toggle-btn-mobile" showLabel />
+            </div>
+
             {onOpenLeadBot && (
               <button
                 onClick={() => {

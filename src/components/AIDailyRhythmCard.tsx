@@ -11,11 +11,12 @@ import {
   Trash2, 
   ChevronDown, 
   ChevronUp, 
-  Zap, 
-  Clock,
-  Target
+  Zap,
+  Calendar,
+  BarChart3
 } from "lucide-react";
-import { LoanOfficerProfile, CapturedLead } from "../types";
+import { LoanOfficerProfile, CapturedLead, DailyPulsePhase } from "../types";
+import { fetchDailyPulse } from "../services/dailyPulseService";
 
 export type DailyTimePhase = "morning" | "midday" | "afternoon" | "end_of_day";
 
@@ -32,7 +33,7 @@ interface AIDailyRhythmCardProps {
   currentLo: LoanOfficerProfile;
   leads: CapturedLead[];
   isAdminUser: boolean;
-  onOpenDailyReview: () => void;
+  onOpenDailyReview: (horizon?: "daily" | "weekly" | "monthly") => void;
   onSelectTab: (tabId: any) => void;
 }
 
@@ -156,7 +157,32 @@ export const AIDailyRhythmCard: React.FC<AIDailyRhythmCardProps> = ({
     return initialTasks;
   });
 
-  // Persist tasks
+  // Cross-device hydration: check Firestore for today's pulse snapshot if opening on another device
+  useEffect(() => {
+    let isMounted = true;
+    async function hydrateFromFirestore() {
+      try {
+        const pulse = await fetchDailyPulse(currentLo.id, todayStr, timePhase as DailyPulsePhase);
+        if (pulse?.allTasksSnapshot && pulse.allTasksSnapshot.length > 0 && isMounted) {
+          const remoteTasks = pulse.allTasksSnapshot as DailyTaskItem[];
+          // Only hydrate if remote has completed tasks or difference
+          setTasks(prev => {
+            const hasLocalCompletions = prev.some(t => t.completed);
+            if (!hasLocalCompletions && remoteTasks.some(t => t.completed)) {
+              return remoteTasks;
+            }
+            return prev;
+          });
+        }
+      } catch {
+        // ignore
+      }
+    }
+    hydrateFromFirestore();
+    return () => { isMounted = false; };
+  }, [currentLo.id, todayStr, timePhase]);
+
+  // Persist tasks to localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem(storageKey, JSON.stringify(tasks));
@@ -361,7 +387,7 @@ export const AIDailyRhythmCard: React.FC<AIDailyRhythmCardProps> = ({
 
           {/* Quick AI Review Button */}
           <button
-            onClick={onOpenDailyReview}
+            onClick={() => onOpenDailyReview("daily")}
             className="w-full py-2 px-3 rounded-xl bg-[#2D362E] hover:bg-[#1E241F] text-white font-bold text-xs flex items-center justify-between transition-all cursor-pointer shadow-xs group"
           >
             <div className="flex items-center gap-1.5">
@@ -372,6 +398,26 @@ export const AIDailyRhythmCard: React.FC<AIDailyRhythmCardProps> = ({
               {phaseConfig.title.split(" ")[0]} Check
             </span>
           </button>
+
+          {/* Quick Weekly & 30-Day Pulse Horizons */}
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => onOpenDailyReview("weekly")}
+              className="py-1.5 px-2 rounded-lg bg-white border border-[#EAE7E0] hover:border-[#C18C5D] text-[#2D362E] text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+              title="Open Week-to-Week Comparative Pulse"
+            >
+              <Calendar className="w-3 h-3 text-[#C18C5D]" />
+              <span>Weekly Pulse</span>
+            </button>
+            <button
+              onClick={() => onOpenDailyReview("monthly")}
+              className="py-1.5 px-2 rounded-lg bg-white border border-[#EAE7E0] hover:border-[#4A5D4E] text-[#2D362E] text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+              title="Open 30-Day Productivity Horizon & Roadmap"
+            >
+              <BarChart3 className="w-3 h-3 text-emerald-600" />
+              <span>30-Day Horizon</span>
+            </button>
+          </div>
 
           {/* Task Checklist Items */}
           <div className="space-y-1 max-h-48 overflow-y-auto pr-1">

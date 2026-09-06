@@ -61,6 +61,9 @@
         },
         "lastLogin": {
           "type": "string"
+        },
+        "themePreference": {
+          "type": "string"
         }
       },
       "required": [
@@ -275,9 +278,96 @@
         "customPermissions": { "type": "object" }
       },
       "required": ["email", "role"]
+    },
+    "DailyPulse": {
+      "title": "DailyPulse",
+      "description": "3-part daily AI sentiment, task-to-goal tracking, and sales manager coaching memory for loan officers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "loId": { "type": "string" },
+        "loName": { "type": "string" },
+        "date": { "type": "string" },
+        "timePhase": { "type": "string" },
+        "timeString": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "totalTasks": { "type": "number" },
+        "completedTasks": { "type": "number" },
+        "completionPercent": { "type": "number" },
+        "completedTitles": { "type": "array" },
+        "pendingTitles": { "type": "array" },
+        "allTasksSnapshot": { "type": "array" },
+        "reviewData": { "type": "object" },
+        "yesterdayHandoffSummary": { "type": "string" }
+      },
+      "required": ["id", "loId", "date", "timePhase", "timestamp", "totalTasks", "completedTasks"]
+    },
+    "WeeklyPulse": {
+      "title": "WeeklyPulse",
+      "description": "Week-to-week loan officer performance pacing, task completion variance, and executive sales management directives",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "loId": { "type": "string" },
+        "loName": { "type": "string" },
+        "weekNumber": { "type": "number" },
+        "year": { "type": "number" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "totalTasksTargeted": { "type": "number" },
+        "totalTasksCompleted": { "type": "number" },
+        "completionRate": { "type": "number" },
+        "daysActive": { "type": "number" },
+        "weekOverWeekTrend": { "type": "string" },
+        "priorWeekComparisonSummary": { "type": "string" },
+        "executiveWeeklyReview": { "type": "object" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "loId", "weekNumber", "year", "startDate", "endDate", "timestamp"]
+    },
+    "MonthlyHorizonPulse": {
+      "title": "MonthlyHorizonPulse",
+      "description": "30-day lookback retrospective and 30-day lookforward production roadmap guidance for loan officers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "loId": { "type": "string" },
+        "loName": { "type": "string" },
+        "month": { "type": "string" },
+        "monthLabel": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "lookback30Days": { "type": "object" },
+        "lookforward30Days": { "type": "object" },
+        "productivityScore": { "type": "number" },
+        "pacingStatus": { "type": "string" }
+      },
+      "required": ["id", "loId", "month", "timestamp", "lookback30Days", "lookforward30Days"]
+    },
+    "UserPreference": {
+      "title": "UserPreference",
+      "description": "User specific interface preferences such as themePreference (light, dark, system)",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "themePreference": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["themePreference"]
     }
   },
   "firestore": {
+    "daily_pulses/{pulseId}": {
+      "schema": { "$ref": "#/entities/DailyPulse" },
+      "description": "Cross-session persistent daily AI reviews, task completion metrics, and performance coaching history"
+    },
+    "weekly_pulses/{pulseId}": {
+      "schema": { "$ref": "#/entities/WeeklyPulse" },
+      "description": "Week-to-week persistent AI retrospectives, task velocity, and sales manager directives"
+    },
+    "monthly_pulses/{pulseId}": {
+      "schema": { "$ref": "#/entities/MonthlyHorizonPulse" },
+      "description": "30-day lookback retrospective and 30-day lookforward production roadmap guidance"
+    },
     "whitelisted_emails/{emailId}": {
       "schema": { "$ref": "#/entities/WhitelistedEmail" },
       "description": "Whitelisted team emails and assigned RBAC roles for branch access control"
@@ -317,6 +407,10 @@
     "email_templates/{templateId}": {
       "schema": "EmailTemplate",
       "description": "Email templates created by loan officers"
+    },
+    "user_preferences/{userId}": {
+      "schema": { "$ref": "#/entities/UserPreference" },
+      "description": "Cross-device user interface preferences including light/dark theme preference"
     }
   }
 }

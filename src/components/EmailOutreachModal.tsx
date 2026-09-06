@@ -134,6 +134,69 @@ const PRESET_MARKETING_FLYERS: MarketingFlyer[] = [
 
 const MOCK_TEMPLATES: EmailTemplate[] = [
   {
+    id: "market-trends-solo",
+    title: "📈 Market Trends Lead - Low/No Down Payment (Solo LO)",
+    subject: "Your [City] Market Trends Report + Low/No Down Payment Home Loans",
+    body: `Hi [LeadName],
+
+Thank you for downloading the [City] Market Trends Report from our portal! It is critical to stay updated on inventory and pricing trends, especially as a first-time homebuyer.
+
+While the data shows you what the market is doing, the real key to buying right now is leveraging the right financing. Did you know that you might not need a massive down payment? There are several low or no down payment financing options available right now in [City]:
+- 100% USDA Rural Development (Zero Down)
+- Oregon Housing (OHCS) Targeted & Flex Lending FirstHome Grants
+- Fannie Mae HomeReady & Freddie Mac Home Possible (3% Down)
+- Lakeview National & FHA Down Payment Assistance (DPA)
+
+If you'd like to get a curated list of homes in [City] that are likely to qualify for these exact loan products, or if you'd just like to chat about how these numbers apply to your specific budget, please reply to this email or call me!
+
+Warm regards,
+
+[LoName]
+Your Trusted Local Guide & Senior Loan Officer
+NMLS #[LoNMLS]
+[MyPhone]`,
+    tags: ["Market Trends", "Solo LO", "Low Down Payment", "Lead Routing"],
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ownerId: "me"
+  },
+  {
+    id: "market-trends-cobrand",
+    title: "🤝 Market Trends Lead - Curated Homes List (LO + Agent Pair)",
+    subject: "Your [City] Market Trends Report + Curated Low/No Down Payment Homes",
+    body: `Hi [LeadName],
+
+Thank you for downloading the [City] Market Trends Report! We are Mike Ford and Kaandice McLean, your local lending and real estate experts, and we want to ensure you have everything you need to navigate this market.
+
+Understanding pricing trends is just the first step. The second step is matching the right property with the right financing. Many first-time buyers in [City] are shocked to learn they can purchase a home using low or no down payment programs, including:
+- 100% USDA Zero-Down Financing
+- Oregon (OHCS) Flex Lending FirstHome Grants
+- Fannie Mae HomeReady / Freddie Mac Home Possible (3% Down)
+- FHA Down Payment Assistance (DPA)
+
+Since you're actively monitoring the [City] market, we would love to send you a curated list of active home listings that likely qualify for these specific low and no down payment loan products. 
+
+Just reply to this email to let us know you'd like to see the list, or to schedule a quick 5-minute call to discuss your homebuying goals!
+
+Best regards,
+
+Your Trusted Local Guides,
+
+[LoName]
+Senior Loan Officer | NMLS #[LoNMLS]
+[MyPhone]
+
+[AgentName]
+Real Estate Specialist | [AgentBrokerage]
+[AgentPhone] | [AgentEmail]`,
+    tags: ["Market Trends", "Co-Branded", "Low Down Payment", "Curated List"],
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ownerId: "me"
+  },
+  {
     id: "lead-outreach-1",
     title: "Website Chatbot Lead: Low/No Down Homes List + Co-Branded Guide Plug",
     subject: "Your Requested Low/No Down Payment Home List for [City] + First-Time Buyer Blueprint",

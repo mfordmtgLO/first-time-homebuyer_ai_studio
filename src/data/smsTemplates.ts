@@ -1,6 +1,28 @@
 import { SmsTemplate } from "../types";
 
 export const DEFAULT_SMS_TEMPLATES: SmsTemplate[] = [
+  // Market Trends & Local Guides Hooks (New)
+  {
+    id: "sms-tpl-market-trends-solo",
+    title: "📈 Market Trends Hook - Low/No Down Payment (Solo LO)",
+    content: "Hi {{firstName}}, this is {{loName}}, your trusted Local Guide for home financing. I saw you just requested the latest Market Trends Report for {{location}}. If you want more info on first-time homebuyer low or no down payment options (like USDA, HomeReady, or State Grants) that fit this market, let me know! Reply STOP to opt out.",
+    category: "new_lead",
+    tags: ["Market Trends", "Low Down Payment", "Intro", "Solo LO"],
+    createdAt: "2026-09-06T15:00:00.000Z",
+    updatedAt: "2026-09-06T15:00:00.000Z",
+    ownerId: "system"
+  },
+  {
+    id: "sms-tpl-market-trends-cobrand",
+    title: "🤝 Market Trends Hook - Curated Homes (LO + Agent Pair)",
+    content: "Hi {{firstName}}, this is {{loName}} and your realtor partner {{agentName}}, your Local Guides! Thanks for downloading the {{location}} Market Trends Report. Would you like us to send you a curated list of homes in {{location}} that likely qualify for special low/no down payment programs (like OHCS Flex or FHA DPA)? Let us know! Reply STOP to opt out.",
+    category: "new_lead",
+    tags: ["Market Trends", "Curated List", "Co-Branded", "Low Down Payment"],
+    createdAt: "2026-09-06T15:00:00.000Z",
+    updatedAt: "2026-09-06T15:00:00.000Z",
+    ownerId: "system"
+  },
+  
   // 1. Speed to Lead / New Lead Intros
   {
     id: "sms-tpl-fast-intro",

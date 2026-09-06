@@ -684,10 +684,10 @@ export default function App() {
   // Access Verification Loading Screen (Wait for Auth & Firestore App Settings to resolve)
   if (isAuthChecking || isSettingsChecking) {
     return (
-      <div className="min-h-screen bg-[#F9F8F4] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F9F8F4] dark:bg-slate-950 flex items-center justify-center transition-colors duration-200">
         <div className="animate-pulse flex flex-col items-center">
-          <ShieldCheck className="w-12 h-12 text-[#4A5D4E] mb-4 opacity-50" />
-          <p className="text-[#606C5D] font-mono text-xs uppercase tracking-widest">Verifying access...</p>
+          <ShieldCheck className="w-12 h-12 text-[#4A5D4E] dark:text-[#C18C5D] mb-4 opacity-50" />
+          <p className="text-[#606C5D] dark:text-slate-400 font-mono text-xs uppercase tracking-widest">Verifying access...</p>
         </div>
       </div>
     );
@@ -700,7 +700,7 @@ export default function App() {
   }
 
   return (
-    <div className="h-[100dvh] w-full bg-[#F9F8F4] text-[#2D362E] flex flex-col selection:bg-[#C18C5D]/25 selection:text-[#2D362E] font-sans antialiased overflow-hidden relative">
+    <div className="h-[100dvh] w-full bg-[#F9F8F4] dark:bg-slate-950 text-[#2D362E] dark:text-slate-100 flex flex-col selection:bg-[#C18C5D]/25 dark:selection:bg-[#C18C5D]/40 selection:text-[#2D362E] dark:selection:text-white font-sans antialiased overflow-hidden relative transition-colors duration-200">
       
       {/* Top Navigation (Flex None - Pinned to Top - Hidden when Full-Screen Workspace is active) */}
       {!showLoPortal && !isFullScreen && (
@@ -768,7 +768,7 @@ export default function App() {
         {/* Desktop Only: Left Sidebar for Step Navigation & Tools Hub (Hidden in Full-Screen Workspace) */}
         {!showLoPortal && !isFullScreen && (
           <aside 
-            className={`hidden lg:flex flex-col shrink-0 border-r border-[#EAE7E0] bg-[#F9F8F4] z-30 self-start sticky top-0 transition-all duration-300 ease-in-out ${
+            className={`hidden lg:flex flex-col shrink-0 border-r border-[#EAE7E0] dark:border-slate-800 bg-[#F9F8F4] dark:bg-slate-950 z-30 self-start sticky top-0 transition-all duration-300 ease-in-out ${
               isSidebarCollapsed ? "w-16 sm:w-18 md:w-20 p-2" : "w-80 sm:w-84 xl:w-88 p-3 sm:p-4"
             }`}
             style={{ 
@@ -831,6 +831,7 @@ export default function App() {
                     onOpenRoadmap={() => handleNavigate("roadmap", "website")}
                     onOpenStep4={() => handleNavigate("step4_ai_plan", "dashboard")}
                     onOpenLeadBot={() => { setLeadBotSourceContext(undefined); setIsLeadBotOpen(true); }}
+                    onCaptureLead={handleSaveLead}
                     loanOfficer={guidesState.loanOfficer}
                     activeAgent={activeAgent}
                     isCoBranded={guidesState.isCoBranded}
@@ -972,7 +973,7 @@ export default function App() {
 
       {/* Footer (Hidden when Full-Screen Workspace is active) */}
       {!showLoPortal && !isFullScreen && (
-        <footer className="bg-[#F1EFE9] border-t border-[#EAE7E0] py-10 px-4 sm:px-6 lg:px-8 mt-16 text-xs text-[#606C5D]">
+        <footer className="bg-[#F1EFE9] dark:bg-slate-900 border-t border-[#EAE7E0] dark:border-slate-800 py-10 px-4 sm:px-6 lg:px-8 mt-16 text-xs text-[#606C5D] dark:text-slate-400 transition-colors duration-200">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <button
@@ -983,8 +984,8 @@ export default function App() {
                   <Compass className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <span className="font-bold text-[#2D362E] text-sm">First-Time Homebuyer Roadmap</span>
-                  <p className="text-[11px] text-[#9A9488]">Buy your first home with clarity and total confidence.</p>
+                  <span className="font-bold text-[#2D362E] dark:text-slate-200 text-sm">First-Time Homebuyer Roadmap</span>
+                  <p className="text-[11px] text-[#9A9488] dark:text-slate-500">Buy your first home with clarity and total confidence.</p>
                 </div>
               </button>
             </div>

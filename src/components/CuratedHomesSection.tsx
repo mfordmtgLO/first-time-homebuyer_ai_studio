@@ -18,9 +18,12 @@ import {
   Star,
   ExternalLink,
   AlertCircle,
-  Info
+  Info,
+  LineChart,
+  TrendingUp,
+  Lock
 } from "lucide-react";
-import { PropertyListing, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
+import { PropertyListing, LoanOfficerProfile, RealEstateAgentProfile, CapturedLead } from "../types";
 import { formatUSD, calculateMonthlyPI } from "../utils/mortgageMath";
 import { 
   isUsdaEligible, 
@@ -45,6 +48,7 @@ interface CuratedHomesSectionProps {
   properties: PropertyListing[];
   onOpenDashboard: () => void;
   onOpenLeadBot?: () => void;
+  onCaptureLead?: (lead: CapturedLead) => void;
   loanOfficer?: LoanOfficerProfile;
   activeAgent?: RealEstateAgentProfile;
 }
@@ -53,6 +57,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
   properties,
   onOpenDashboard,
   onOpenLeadBot,
+  onCaptureLead,
   loanOfficer,
   activeAgent,
 }) => {
@@ -67,6 +72,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
   const [displayCount, setDisplayCount] = useState<number>(12);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showComparison, setShowComparison] = useState(false);
+  const [showMarketReportModal, setShowMarketReportModal] = useState(false);
 
   // Extract all unique Oregon counties present in published listings
   const availableCounties = useMemo(() => {
@@ -229,6 +235,55 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
       ) : (
         /* Property Cards Grid */
         <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible hide-scrollbar">
+          {/* Market Trends Teaser Card */}
+          {searchQuery === "" && activeFilter === "all" && (
+            <div className="group rounded-2xl border border-[#EAE7E0] hover:border-[#C18C5D] bg-white transition-all duration-200 shadow-xs hover:shadow-md flex flex-col justify-between overflow-hidden relative min-w-[280px]">
+              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-10 filter blur-[2px]" />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/80 to-[#FAF9F5]/95" />
+              
+              <div className="relative p-6 flex flex-col h-full justify-between z-10 space-y-4">
+                <div className="space-y-3">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C18C5D]/10 text-[#C18C5D] text-[10px] font-bold uppercase tracking-wider border border-[#C18C5D]/20">
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    <span>Free Local Data</span>
+                  </div>
+                  <h4 className="font-serif font-bold text-xl text-[#2D362E] leading-tight">
+                    {selectedCounty !== "all" ? `${selectedCounty} County` : "Oregon"} Market Trends Report
+                  </h4>
+                  <p className="text-xs text-[#606C5D] leading-relaxed">
+                    Get instant access to real-time pricing data, inventory levels, and the Market Action Index for your desired area. Powered by Altos Research.
+                  </p>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-[#EAE7E0]">
+                  <div className="flex items-center gap-3 text-xs font-semibold text-[#4A5D4E]">
+                    <div className="flex -space-x-2">
+                      {loanOfficer && (
+                        <div className="w-8 h-8 rounded-full bg-[#4A5D4E] text-white flex items-center justify-center font-bold text-xs ring-2 ring-white">
+                          {loanOfficer.name.charAt(0)}
+                        </div>
+                      )}
+                      {activeAgent && (
+                        <div className="w-8 h-8 rounded-full bg-[#C18C5D] text-white flex items-center justify-center font-bold text-xs ring-2 ring-white">
+                          {activeAgent.name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <span>Curated by your local experts</span>
+                  </div>
+                  
+                  <button
+                    onClick={() => setShowMarketReportModal(true)}
+                    className="w-full flex items-center justify-center gap-2 bg-[#2D362E] hover:bg-[#4A5D4E] text-white py-3 rounded-xl text-sm font-bold transition-colors"
+                  >
+                    <Lock className="w-4 h-4" />
+                    <span>Unlock Free Report</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {visibleProperties.map(property => {
             const loanAmount = property.price * 0.965;
             const monthlyPI = calculateMonthlyPI(loanAmount, 6.5, 30);
@@ -499,7 +554,186 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
           onClose={() => setShowComparison(false)}
         />
       )}
-    </section>
 
+      {showMarketReportModal && (
+        <MarketReportLeadCaptureModal
+          onClose={() => setShowMarketReportModal(false)}
+          onCaptureLead={onCaptureLead}
+          loanOfficer={loanOfficer}
+          activeAgent={activeAgent}
+          county={selectedCounty !== "all" ? selectedCounty : "Coos"} 
+        />
+      )}
+    </section>
+  );
+};
+
+interface MarketReportLeadCaptureModalProps {
+  onClose: () => void;
+  onCaptureLead?: (lead: CapturedLead) => void;
+  loanOfficer?: LoanOfficerProfile;
+  activeAgent?: RealEstateAgentProfile;
+  county: string;
+}
+
+const MarketReportLeadCaptureModal: React.FC<MarketReportLeadCaptureModalProps> = ({
+  onClose,
+  onCaptureLead,
+  loanOfficer,
+  activeAgent,
+  county
+}) => {
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "", searchLocation: "" });
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onCaptureLead) {
+      const location = formData.searchLocation.trim() || county;
+      
+      onCaptureLead({
+        id: `lead-${Date.now()}`,
+        fullName: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        preferredContactTime: "Anytime",
+        timeline: "Just Browsing",
+        targetPriceRange: "Undecided",
+        targetMonthlyBudget: "Undecided",
+        downPaymentSavings: "Undecided",
+        grantInterest: true,
+        creditScoreTier: "Unknown",
+        preferredLocations: location,
+        propertyType: "Single Family",
+        assignedLoId: loanOfficer?.id || "unknown",
+        assignedAgentId: activeAgent?.id,
+        leadSource: "Local Market Trends Tool",
+        leadPathTag: "Market Trends Lead",
+        interactedSourceType: "property_listing",
+        intentScore: "warm",
+        status: "new",
+        notes: `Requested Market Trends Report for: ${location}. \n\nTags: LMI, Low/No Down Payment, USDA RD, OHCS Targeted, OHCS Flex Lending FirstHome, Lakeview National, Fannie Mae HomeReady 3%, Freddie Mac Home Possible 3%, FHA DPA.`,
+        createdAt: new Date().toISOString()
+      });
+    }
+    
+    // Redirect to the generic or specific Altos report URL
+    window.open("https://altos.re/r/ff11dccd-4a1e-402e-9f9a-bf86aae3d91f?mkt_tok=MzkzLVJFWS04NDcAAAGkFmvojC2n5sTxzKPtqWpUAAFLDLwvQJ2wgyap2kUmWm0SeqrGEY3861ES7txkXoQeyqOKFCnHmdsiVQcPH_ZHL0Ux_FpYwr99PiRZu0AsFqxR", "_blank");
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div 
+        className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl relative"
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 bg-black/5 hover:bg-black/10 rounded-full transition-colors z-10"
+        >
+          <X className="w-5 h-5 text-stone-600" />
+        </button>
+
+        <div className="bg-[#FAF9F5] p-6 text-center border-b border-[#EAE7E0] space-y-3 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-5">
+            <LineChart className="w-32 h-32" />
+          </div>
+          <div className="mx-auto w-12 h-12 bg-[#4A5D4E]/10 rounded-2xl flex items-center justify-center mb-2">
+            <LineChart className="w-6 h-6 text-[#4A5D4E]" />
+          </div>
+          <h3 className="text-2xl font-serif font-bold text-[#2D362E]">
+            Local Market Trends
+          </h3>
+          <p className="text-sm text-[#606C5D] leading-relaxed relative z-10">
+            Search any city or zip code in Oregon. Includes pricing trends, inventory, and the Market Action Index.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#2D362E]">Desired City or Zip Code (Oregon)</label>
+            <input
+              required
+              type="text"
+              value={formData.searchLocation}
+              onChange={e => setFormData({ ...formData, searchLocation: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] focus:outline-none focus:border-[#4A5D4E] focus:ring-1 focus:ring-[#4A5D4E] text-sm font-medium"
+              placeholder="e.g. Coos Bay, OR or 97420"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#2D362E]">Full Name</label>
+            <input
+              required
+              type="text"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] focus:outline-none focus:border-[#4A5D4E] focus:ring-1 focus:ring-[#4A5D4E] text-sm"
+              placeholder="e.g. Sarah Smith"
+            />
+          </div>
+          
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#2D362E]">Email Address</label>
+            <input
+              required
+              type="email"
+              value={formData.email}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] focus:outline-none focus:border-[#4A5D4E] focus:ring-1 focus:ring-[#4A5D4E] text-sm"
+              placeholder="e.g. sarah@example.com"
+            />
+          </div>
+          
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#2D362E]">Phone Number (Optional)</label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={e => setFormData({ ...formData, phone: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] focus:outline-none focus:border-[#4A5D4E] focus:ring-1 focus:ring-[#4A5D4E] text-sm"
+              placeholder="(555) 123-4567"
+            />
+          </div>
+
+          <div className="p-3 bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl flex gap-3 text-left">
+            <div className="flex -space-x-2 shrink-0">
+              <div className="w-8 h-8 rounded-full bg-[#4A5D4E] text-white flex items-center justify-center font-bold text-xs ring-2 ring-white">
+                {loanOfficer?.name?.charAt(0) || "L"}
+              </div>
+              {activeAgent && (
+                <div className="w-8 h-8 rounded-full bg-[#C18C5D] text-white flex items-center justify-center font-bold text-xs ring-2 ring-white">
+                  {activeAgent.name.charAt(0)}
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-[#2D362E]">Brought to you by your Local Guides:</p>
+              <p className="text-[10px] text-[#606C5D] leading-relaxed">
+                {loanOfficer?.name || "Mike Ford"} {activeAgent ? `and ${activeAgent.name}` : "and Kaandice McLean"}. For more information about first-time homebuyer low or no down payment financing options, contact us.
+              </p>
+              {activeAgent && (
+                <p className="text-[9px] text-[#9A9488] mt-1 pt-1 border-t border-[#EAE7E0]">
+                  Contact {activeAgent.name.split(' ')[0]}: {activeAgent.phone} | {activeAgent.email}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full mt-2 bg-[#4A5D4E] hover:bg-[#3A4A3D] text-white py-3.5 rounded-xl font-bold transition-colors shadow-md flex items-center justify-center gap-2"
+          >
+            <span>Unlock My Report</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          
+          <p className="text-[10px] text-center text-[#9A9488] px-4 pt-2">
+            By requesting this report, you agree to receive occasional updates about the local market.
+          </p>
+        </form>
+      </div>
+    </div>
   );
 };

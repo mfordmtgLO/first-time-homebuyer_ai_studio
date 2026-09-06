@@ -63,6 +63,12 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    match /user_preferences/{userId} {
+      // Cross-device user preferences (e.g., theme preference) accessible for reading and writing
+      allow read: if true;
+      allow write: if isSignedIn() || isValidId(userId);
+    }
+
     match /whitelisted_emails/{emailId} {
       allow read: if true;
       allow write: if true;
@@ -139,6 +145,55 @@ service cloud.firestore {
 
     match /user_integrations/{userId} {
       allow get, delete, create, update: if isSignedIn() && isValidId(userId) && (userId == request.auth.uid || isBranchManager());
+    }
+
+    match /daily_pulses/{pulseId} {
+      // Loan officers can read/write their own daily pulses; branch managers can view team pulses
+      allow get: if isSignedIn() && isValidId(pulseId) && (
+        isBranchManager() ||
+        (resource != null && resource.data.loId == request.auth.uid)
+      );
+      allow list: if isSignedIn() && (
+        isBranchManager() ||
+        resource.data.loId == request.auth.uid
+      );
+      allow create, update: if isSignedIn() && isValidId(pulseId) && (
+        isBranchManager() ||
+        (incoming().loId == request.auth.uid)
+      );
+      allow delete: if isBranchManager();
+    }
+
+    match /weekly_pulses/{pulseId} {
+      allow get: if isSignedIn() && isValidId(pulseId) && (
+        isBranchManager() ||
+        (resource != null && resource.data.loId == request.auth.uid)
+      );
+      allow list: if isSignedIn() && (
+        isBranchManager() ||
+        resource.data.loId == request.auth.uid
+      );
+      allow create, update: if isSignedIn() && isValidId(pulseId) && (
+        isBranchManager() ||
+        (incoming().loId == request.auth.uid)
+      );
+      allow delete: if isBranchManager();
+    }
+
+    match /monthly_pulses/{pulseId} {
+      allow get: if isSignedIn() && isValidId(pulseId) && (
+        isBranchManager() ||
+        (resource != null && resource.data.loId == request.auth.uid)
+      );
+      allow list: if isSignedIn() && (
+        isBranchManager() ||
+        resource.data.loId == request.auth.uid
+      );
+      allow create, update: if isSignedIn() && isValidId(pulseId) && (
+        isBranchManager() ||
+        (incoming().loId == request.auth.uid)
+      );
+      allow delete: if isBranchManager();
     }
 
     // Public co-branded guide profiles, published properties, and roadmap configuration

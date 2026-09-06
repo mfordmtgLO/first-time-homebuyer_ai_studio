@@ -1,14 +1,38 @@
 @import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
 
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-color: #F9F8F4;
-    color: #2D362E;
   }
 
   h1, h2, h3, .font-serif {
     font-family: 'Lora', Georgia, Cambria, 'Times New Roman', Times, serif;
+  }
+
+  /* Global Dark Mode Overrides for existing hex colors */
+  .dark {
+    color-scheme: dark;
+  }
+  .dark .bg-white {
+    background-color: #0f172a !important; /* slate-900 */
+    color: #f1f5f9 !important; /* slate-100 */
+    border-color: #1e293b !important; /* slate-800 */
+  }
+  .dark .bg-\[\#F9F8F4\] {
+    background-color: #020617 !important; /* slate-950 */
+  }
+  .dark .bg-\[\#F1EFE9\], .dark .bg-\[\#FAF9F5\] {
+    background-color: #0f172a !important; /* slate-900 */
+  }
+  .dark .text-\[\#2D362E\] {
+    color: #f8fafc !important; /* slate-50 */
+  }
+  .dark .text-\[\#606C5D\] {
+    color: #cbd5e1 !important; /* slate-300 */
+  }
+  .dark .border-\[\#EAE7E0\], .dark .border-\[\#DCD7CD\], .dark .border-\[\#DEDAD2\] {
+    border-color: #1e293b !important; /* slate-800 */
   }
 }
 
@@ -151,6 +175,28 @@
   .print-avoid-break {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
+  }
+
+  /* Property Card specific print formatting */
+  div[id^="property-card-"] {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    border: 1.5px solid #d1d5db !important;
+    box-shadow: none !important;
+    margin-bottom: 1.5rem !important;
+    background-color: #ffffff !important;
+  }
+
+  /* Hide interactive controls inside Property Cards for cleaner printing */
+  div[id^="property-card-"] .absolute.top-3.right-3,
+  div[id^="property-card-"] button,
+  div[id^="property-card-"] input[type="checkbox"] {
+    display: none !important;
+  }
+
+  /* Hide the action buttons footer completely in print */
+  div[id^="property-card-"] > div:last-child {
+    display: none !important;
   }
 
   @page {

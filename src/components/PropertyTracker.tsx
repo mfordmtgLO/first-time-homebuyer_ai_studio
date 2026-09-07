@@ -1517,36 +1517,80 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       {/* Google My Maps 1-Click Import Guide Modal */}
       {showMyMapsModal && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-lg w-full relative shadow-2xl animate-in zoom-in-95 duration-200 text-left">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-xl w-full relative shadow-2xl animate-in zoom-in-95 duration-200 text-left">
             <button onClick={() => setShowMyMapsModal(false)} className="absolute top-4 right-4 p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-full text-slate-600 dark:text-slate-300 transition-colors">
               <X className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-2xl flex items-center justify-center shrink-0">
                 <Compass className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-[#2D362E] dark:text-white">Google My Maps 1-Click Import</h3>
-                <p className="text-xs text-[#606C5D] dark:text-slate-400">Your curated KML file has downloaded to your device!</p>
+                <h3 className="text-xl font-bold text-[#2D362E] dark:text-white">Import My Properties (4-Step Guide)</h3>
+                <p className="text-xs text-[#606C5D] dark:text-slate-400">Your curated KML file is downloaded! Follow these visual steps to pin everything to Google Maps.</p>
               </div>
             </div>
 
-            <div className="space-y-4 text-sm text-[#606C5D] dark:text-slate-300 mb-6">
-              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-900/50 p-4 rounded-2xl">
-                <strong className="block text-purple-900 dark:text-purple-300 text-sm mb-2 font-bold">Follow these 3 easy steps in Google My Maps:</strong>
-                <ol className="list-decimal list-inside space-y-2 text-xs font-medium">
-                  <li>Click the button below to open <span className="underline font-bold">Google My Maps</span>.</li>
-                  <li>Click <span className="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-purple-200 font-bold">+ Create a new map</span>.</li>
-                  <li>Under the Untitled Layer, click <span className="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-purple-200 font-bold">Import</span> and select your downloaded <code className="text-purple-700 dark:text-purple-300 font-mono">.kml</code> file from your downloads!</li>
-                </ol>
+            {/* 4-Step Visual Carousel Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+              {/* Step 1 */}
+              <div className="bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 p-4 rounded-2xl flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-purple-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">1</div>
+                <div>
+                  <h4 className="text-xs font-bold text-purple-900 dark:text-purple-300 mb-1 flex items-center gap-1.5">
+                    <span>📥 KML File Saved</span>
+                  </h4>
+                  <p className="text-[11px] text-[#606C5D] dark:text-slate-300 leading-relaxed">
+                    Your customized property KML file has successfully downloaded to your device storage.
+                  </p>
+                </div>
               </div>
 
-              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 p-3 rounded-xl text-xs text-amber-800 dark:text-amber-300">
-                💡 <strong>Permanent Sync:</strong> Once imported, all property pins, monthly payments, USDA tags, and <strong>Mike Ford &amp; Kanndice McLean's</strong> contact details are permanently saved to your Google account for mobile &amp; desktop access anytime.
+              {/* Step 2 */}
+              <div className="bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 p-4 rounded-2xl flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-purple-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">2</div>
+                <div>
+                  <h4 className="text-xs font-bold text-purple-900 dark:text-purple-300 mb-1 flex items-center gap-1.5">
+                    <span>🗺️ Open My Maps</span>
+                  </h4>
+                  <p className="text-[11px] text-[#606C5D] dark:text-slate-300 leading-relaxed">
+                    Click the button below to open Google My Maps and sign in with your Google account.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 p-4 rounded-2xl flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-purple-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">3</div>
+                <div>
+                  <h4 className="text-xs font-bold text-purple-900 dark:text-purple-300 mb-1 flex items-center gap-1.5">
+                    <span>➕ Create New Map</span>
+                  </h4>
+                  <p className="text-[11px] text-[#606C5D] dark:text-slate-300 leading-relaxed">
+                    Click <strong className="text-purple-700 dark:text-purple-300">+ Create a new map</strong> on your Google My Maps dashboard.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 p-4 rounded-2xl flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-purple-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">4</div>
+                <div>
+                  <h4 className="text-xs font-bold text-purple-900 dark:text-purple-300 mb-1 flex items-center gap-1.5">
+                    <span>📂 Import .kml File</span>
+                  </h4>
+                  <p className="text-[11px] text-[#606C5D] dark:text-slate-300 leading-relaxed">
+                    Click <strong className="text-purple-700 dark:text-purple-300">Import</strong> under the layer and select your saved KML file!
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 p-3 rounded-xl text-xs text-amber-800 dark:text-amber-300 mb-6">
+              💡 <strong>Permanent Sync:</strong> All property pins, monthly payments, USDA/LMI tags, and <strong>Mike Ford &amp; Kanndice McLean's</strong> contact details are permanently saved to your Google account for mobile &amp; desktop access anytime.
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
               <button
                 onClick={() => {
                   if (lastExportedKmlUrl) {

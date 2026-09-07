@@ -12,9 +12,7 @@ import {
 import { SalesforceCsvExportModal } from "./SalesforceCsvExportModal";
 import { 
   CrmExportFormat,
-  triggerCrmCsvDownload,
-  triggerSalesforceCsvDownload,
-  triggerTotalExpertCsvDownload 
+  triggerCrmCsvDownload 
 } from "../services/crmLeadExportService";
 
 const performanceData = [

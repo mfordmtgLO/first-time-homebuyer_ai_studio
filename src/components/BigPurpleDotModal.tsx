@@ -1,3 +1,4 @@
+import { auth } from "../firebase";
 import React, { useState, useEffect } from "react";
 import { 
   X, CheckCircle2, ShieldCheck, Key, Lock, Radio, Copy, ExternalLink, 
@@ -95,8 +96,10 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
 
     const loadConfigAndEvents = async () => {
       try {
-        const user = auth.currentUser;
-        const token = user ? await user.getIdToken() : "";
+        
+        
+const user = auth.currentUser;
+const token = user ? await user.getIdToken() : "";
         const res = await fetch("/api/big-purple-dot/config", {
           headers: {
             "Authorization": `Bearer ${token}`
@@ -130,8 +133,10 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
   const fetchWebhookEvents = async () => {
     setIsLoadingEvents(true);
     try {
-      const user = auth.currentUser;
-      const token = user ? await user.getIdToken() : "";
+        
+      
+const user = auth.currentUser;
+const token = user ? await user.getIdToken() : "";
       const res = await fetch("/api/big-purple-dot/webhook/events", {
         headers: {
           "Authorization": `Bearer ${token}`
@@ -174,9 +179,11 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
     setIsTesting(true);
     setTestResult(null);
     try {
-      const { auth } = await import("../firebase");
-      const user = auth.currentUser;
-      const token = user ? await user.getIdToken() : "";
+      
+        
+      
+const user = auth.currentUser;
+const token = user ? await user.getIdToken() : "";
       
       let bpdVault = undefined;
       if (hasVault) {
@@ -241,8 +248,10 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
         setHasVault(true);
       }
 
-      const user = auth.currentUser;
-      const token = user ? await user.getIdToken() : "";
+        
+      
+const user = auth.currentUser;
+const token = user ? await user.getIdToken() : "";
 
       const saveRes = await fetch("/api/big-purple-dot/config", {
         method: "POST",
@@ -287,8 +296,10 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
   const handleSimulateWebhook = async () => {
     setIsSimulatingPing(true);
     try {
-      const user = auth.currentUser;
-      const token = user ? await user.getIdToken() : "";
+        
+      
+const user = auth.currentUser;
+const token = user ? await user.getIdToken() : "";
 
       const res = await fetch("/api/big-purple-dot/webhook/test-ping", {
         method: "POST",

@@ -1,3 +1,5 @@
+import { auth, db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { 
   Users, 
@@ -1598,7 +1600,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
   const handleSalesforceSync = async (lead: CapturedLead) => {
     try {
-      const user = auth.currentUser;
+      
       if (!user) throw new Error("Must be logged in");
       
       const idToken = await user.getIdToken();
@@ -1635,7 +1637,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
   const handleTotalExpertSync = async (lead: CapturedLead) => {
     try {
-      const user = auth.currentUser;
+      
       if (!user) throw new Error("Must be logged in");
       
       const idToken = await user.getIdToken();

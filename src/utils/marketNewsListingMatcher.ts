@@ -446,7 +446,7 @@ export function isListingInAgentLicensedGeographies(
   agent: RealEstateAgentProfile
 ): {
   isMatched: boolean;
-  matchType: 'GEOID_EXACT' | 'FIPS_COUNTY' | 'COUNTY_NAME' | 'CITY_BOUNDARY' | 'AGENT_OWNED' | 'NONE';
+  matchType: 'GEOID_EXACT' | 'FIPS_COUNTY' | 'COUNTY_NAME' | 'CITY_BOUNDARY' | 'AGENT_OWNED' | 'NONE' | 'FALLBACK';
   spatialInfo: ListingSpatialGeoidInfo;
 } {
   const isOwned = isSpotlightAgentListing(listing, agent);
@@ -570,7 +570,7 @@ export interface MatchedSpotlightListing {
   countyFips: string; // 5-digit Federal County FIPS (e.g., "41017")
   geoid: string; // 11-digit Federal GEOID (e.g., "41017001000")
   tractFormatted: string; // e.g. "Tract 10.00"
-  spatialMatchType: 'GEOID_EXACT' | 'FIPS_COUNTY' | 'COUNTY_NAME' | 'CITY_BOUNDARY' | 'AGENT_OWNED' | 'FALLBACK';
+  spatialMatchType: 'GEOID_EXACT' | 'FIPS_COUNTY' | 'COUNTY_NAME' | 'CITY_BOUNDARY' | 'AGENT_OWNED' | 'NONE' | 'FALLBACK';
   mlsZone: string;
   lowOrNoDownEligible: boolean;
   lowOrNoDownSummary: string;

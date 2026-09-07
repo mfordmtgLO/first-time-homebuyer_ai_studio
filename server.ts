@@ -124,9 +124,8 @@ try {
   const usdaRaw = fs.readFileSync(path.join(process.cwd(), 'data/geosphere/oregon-usda-tracts.json'), 'utf8');
   usdaFeatures = JSON.parse(usdaRaw).features || [];
   
-  const lmiRaw = fs.readFileSync(path.join(process.cwd(), 'data/geosphere/oregon-lmi-tracts.js'), 'utf8');
-  const lmiJsonStr = lmiRaw.replace('const oregonTractGeoJSON = ', '').replace(/;\s*$/, '');
-  lmiFeatures = JSON.parse(lmiJsonStr).features || [];
+  const lmiRaw = fs.readFileSync(path.join(process.cwd(), 'data/geosphere/oregon-lmi-tracts.json'), 'utf8');
+  lmiFeatures = JSON.parse(lmiRaw).features || [];
   
   console.log(`[GeoSphere] Loaded ${usdaFeatures.length} USDA polygons and ${lmiFeatures.length} LMI tracts.`);
 } catch (err) {

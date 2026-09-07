@@ -397,7 +397,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     const prop = properties.find(p => p.id === id);
     if (prop && !prop.isFavorite) {
       // It's being favorited
-      alert(`🤖 SYSTEM AUTOMATION: SMS SENT TO CO-BRANDED PARTNER\n\nTo: ${'Your Co-branded Agent'} (${'555-0199' || 'Agent'})\n\nMessage: "Hey ${'Your Co-branded Agent'.split(' ')[0]}, your buyer ${'The Client'.split(' ')[0]} just Favorited ${prop.title} on their portal. Their LO (Mike) has them pre-approved for up to ${(Math.round(prop.price * 1.2)).toLocaleString()}. Give them a call to schedule a tour!"`);
+      alert(`🤖 SYSTEM AUTOMATION: SMS SENT TO CO-BRANDED PARTNER\n\nTo: Your Co-branded Agent (555-0199)\n\nMessage: "Hey Your Co-branded Agent, your buyer just Favorited ${prop.title} on their portal. Give them a call to schedule a tour!"`);
     }
 
     setProperties(prev =>
@@ -502,6 +502,75 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   };
 
 
+
+  const [showMyMapsModal, setShowMyMapsModal] = useState(false);
+  const [lastExportedKmlUrl, setLastExportedKmlUrl] = useState<string | null>(null);
+
+  const handleExportKml = () => {
+    const listToExport = selectedPropertyIds.length > 0 
+      ? properties.filter(p => selectedPropertyIds.includes(p.id)) 
+      : filtered;
+
+    if (listToExport.length === 0) {
+      alert("No properties available to export.");
+      return;
+    }
+
+    // Build KML XML structure for Google My Maps
+    let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    kmlContent += `<kml xmlns="http://www.opengis.net/kml/2.2">\n`;
+    kmlContent += `  <Document>\n`;
+    kmlContent += `    <name>First-Time Homebuyer Curated Property Map</name>\n`;
+    kmlContent += `    <description>Curated properties with USDA/LMI eligibility, monthly payments, and co-branded loan officer contacts (Mike Ford &amp; Kanndice McLean).</description>\n`;
+
+    listToExport.forEach((p, idx) => {
+      const lat = p.lat || (45.5152 + (idx * 0.01));
+      const lng = p.lng || (-122.6784 + (idx * 0.01));
+
+      kmlContent += `    <Placemark>\n`;
+      kmlContent += `      <name><![CDATA[${p.title} - $${p.price.toLocaleString()}]]></name>\n`;
+      kmlContent += `      <description><![CDATA[\n`;
+      kmlContent += `        <b>Address:</b> ${p.address}, ${p.city}, ${p.state} ${p.zip}<br/>\n`;
+      kmlContent += `        <b>Price:</b> $${p.price.toLocaleString()}<br/>\n`;
+      kmlContent += `        <b>Est. Monthly P&I:</b> $${p.monthlyPayment || Math.round(p.price * 0.0065)}/mo<br/>\n`;
+      kmlContent += `        <b>Tour Grade:</b> ${p.tourGrade || 'B+'}<br/>\n`;
+      kmlContent += `        <hr/>\n`;
+      kmlContent += `        <b>Co-Branded Contact:</b><br/>\n`;
+      kmlContent += `        • Loan Officer: Mike Ford (fordmj@gmail.com / 555-0199)<br/>\n`;
+      kmlContent += `        • Real Estate Agent: Kanndice McLean<br/>\n`;
+      kmlContent += `        <br/>\n`;
+      kmlContent += `        <i>For more information on low or no down payment mortgage products matched for high confidence eligible areas, call Mike Ford. To get a personalized home search profile, reach out to Kanndice McLean.</i>\n`;
+      kmlContent += `      ]]></description>\n`;
+      kmlContent += `      <Point>\n`;
+      kmlContent += `        <coordinates>${lng},${lat},0</coordinates>\n`;
+      kmlContent += `      </Point>\n`;
+      kmlContent += `    </Placemark>\n`;
+    });
+
+    kmlContent += `  </Document>\n`;
+    kmlContent += `</kml>`;
+
+    const blob = new Blob([kmlContent], { type: "application/vnd.google-earth.kml+xml" });
+    const url = URL.createObjectURL(blob);
+    setLastExportedKmlUrl(url);
+
+    // Auto trigger download
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Homebuyer_Curated_Map_${Date.now()}.kml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    setShowMyMapsModal(true);
+
+    setToastMessage({
+      title: "Google My Maps KML Exported!",
+      body: `Successfully compiled ${listToExport.length} properties into a KML layer. Follow the 1-click import guide below.`,
+      type: "success"
+    });
+    setTimeout(() => setToastMessage(null), 7000);
+  };
 
   const deleteProperty = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -736,6 +805,14 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             >
               <MapPin className="w-4 h-4 text-indigo-300" />
               <span>Sync to Maps {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
+            </button>
+            <button
+              onClick={handleExportKml}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-purple-700 text-white hover:bg-purple-800 font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105"
+              title="Download KML file for instant Google My Maps import"
+            >
+              <Compass className="w-4 h-4 text-purple-200" />
+              <span>Export KML Maps {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
             </button>
             <button
               onClick={handleShareList}
@@ -1417,11 +1494,11 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
               <QrCode className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             </div>
-            <h3 className="text-xl font-bold text-[#2D362E] mb-2">Scan for Google Maps</h3>
-            <p className="text-sm text-[#606C5D] mb-6 leading-relaxed">
+            <h3 className="text-xl font-bold text-[#2D362E] dark:text-white mb-2">Scan for Google Maps</h3>
+            <p className="text-sm text-[#606C5D] dark:text-slate-300 mb-6 leading-relaxed">
               Point your phone's camera at this code to instantly open the custom Google Maps Layer containing your curated properties.
             </p>
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border-2 border-dashed border-slate-200 inline-block mb-6 shadow-sm">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 inline-block mb-6 shadow-sm">
               <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://maps.google.com/local?q=curated+property+list" alt="QR Code" className="w-48 h-48 mx-auto" />
             </div>
             <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-900/50 text-indigo-800 dark:text-indigo-300 text-xs p-4 rounded-xl font-medium text-left">
@@ -1432,6 +1509,69 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                 <li>✓ Affordability Match Tags</li>
                 <li>✓ Monthly Payment Estimates</li>
               </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Google My Maps 1-Click Import Guide Modal */}
+      {showMyMapsModal && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-lg w-full relative shadow-2xl animate-in zoom-in-95 duration-200 text-left">
+            <button onClick={() => setShowMyMapsModal(false)} className="absolute top-4 right-4 p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-full text-slate-600 dark:text-slate-300 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-2xl flex items-center justify-center shrink-0">
+                <Compass className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[#2D362E] dark:text-white">Google My Maps 1-Click Import</h3>
+                <p className="text-xs text-[#606C5D] dark:text-slate-400">Your curated KML file has downloaded to your device!</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 text-sm text-[#606C5D] dark:text-slate-300 mb-6">
+              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-900/50 p-4 rounded-2xl">
+                <strong className="block text-purple-900 dark:text-purple-300 text-sm mb-2 font-bold">Follow these 3 easy steps in Google My Maps:</strong>
+                <ol className="list-decimal list-inside space-y-2 text-xs font-medium">
+                  <li>Click the button below to open <span className="underline font-bold">Google My Maps</span>.</li>
+                  <li>Click <span className="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-purple-200 font-bold">+ Create a new map</span>.</li>
+                  <li>Under the Untitled Layer, click <span className="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-purple-200 font-bold">Import</span> and select your downloaded <code className="text-purple-700 dark:text-purple-300 font-mono">.kml</code> file from your downloads!</li>
+                </ol>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 p-3 rounded-xl text-xs text-amber-800 dark:text-amber-300">
+                💡 <strong>Permanent Sync:</strong> Once imported, all property pins, monthly payments, USDA tags, and <strong>Mike Ford &amp; Kanndice McLean's</strong> contact details are permanently saved to your Google account for mobile &amp; desktop access anytime.
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                onClick={() => {
+                  if (lastExportedKmlUrl) {
+                    const a = document.createElement("a");
+                    a.href = lastExportedKmlUrl;
+                    a.download = `Homebuyer_Curated_Map_${Date.now()}.kml`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }
+                }}
+                className="px-4 py-2.5 rounded-xl border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 text-xs font-bold transition-colors"
+              >
+                📥 Download KML Again
+              </button>
+              <a
+                href="https://www.google.com/maps/d/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setShowMyMapsModal(false)}
+                className="px-6 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-md transition-all inline-flex items-center gap-2"
+              >
+                <span>Open Google My Maps Now</span>
+                <ExternalLink className="w-4 h-4" />
+              </a>
             </div>
           </div>
         </div>

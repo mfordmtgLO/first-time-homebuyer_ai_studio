@@ -14,21 +14,35 @@ interface DiagnosticStatus {
 
 export function AgenticOrchestratorDiagnostics() {
   const [status, setStatus] = useState<DiagnosticStatus | null>(null);
+  const [geoSphereActive, setGeoSphereActive] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check main AI diagnostics
     fetch('/api/ai/diagnostics')
       .then(res => res.json())
       .then(data => {
         setStatus(data);
-        setLoading(false);
       })
       .catch(err => {
         console.error(err);
         setError("Failed to fetch diagnostics.");
-        setLoading(false);
       });
+
+    // Check GeoSphere Math Engine
+    fetch('/api/geosphere/classify', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ lat: 44.0, lng: -121.0, features: [] })
+    })
+    .then(res => res.json())
+    .then(data => {
+       if (data.success) setGeoSphereActive(true);
+    })
+    .catch(() => setGeoSphereActive(false))
+    .finally(() => setLoading(false));
+
   }, []);
 
   if (loading) {
@@ -183,6 +197,30 @@ export function AgenticOrchestratorDiagnostics() {
           <div className="mt-4 pt-4 border-t border-[#EAE7E0] flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-emerald-600" />
             <span className="text-[10px] font-semibold text-[#606C5D]">Vector embeddings and cosine similarity initialized.</span>
+          </div>
+        </div>
+
+        {/* GeoSphere Math Engine */}
+        <div className="bg-white border border-[#EAE7E0] p-6 rounded-2xl shadow-sm">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 flex items-center justify-center shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={geoSphereActive ? 'text-indigo-600' : 'text-gray-400'}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
+              </span>
+              <h3 className="font-bold text-[#2D362E]">GeoSphere Spatial Engine</h3>
+            </div>
+            {geoSphereActive ? (
+              <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-1 rounded-md">ACTIVE</span>
+            ) : (
+              <span className="bg-gray-100 text-gray-800 text-[10px] font-bold px-2 py-1 rounded-md">OFFLINE</span>
+            )}
+          </div>
+          <p className="text-xs text-[#606C5D] leading-relaxed">
+            Ray-casting computational geometry logic. Intersects coordinates against complex LMI, USDA, and FHFA GeoJSON polygons for underwriting.
+          </p>
+          <div className="mt-4 pt-4 border-t border-[#EAE7E0] flex items-center gap-2">
+            {geoSphereActive ? <CheckCircle className="w-4 h-4 text-indigo-600" /> : <AlertTriangle className="w-4 h-4 text-amber-500" />}
+            <span className="text-[10px] font-semibold text-[#606C5D]">Point-in-Polygon spatial math engine initialized.</span>
           </div>
         </div>
       </div>

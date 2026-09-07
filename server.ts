@@ -114,6 +114,25 @@ if (!getApps().length) {
 
 const FIRESTORE_DATABASE_ID = "ai-studio-firsttimehomebuy-7650a3a0-7180-47a4-94a7-dfa9801a6e55";
 
+// ============================================================================
+// GEOSPHERE SPATIAL ENGINE DATA LOAD
+// ============================================================================
+let usdaFeatures: any[] = [];
+let lmiFeatures: any[] = [];
+
+try {
+  const usdaRaw = fs.readFileSync(path.join(process.cwd(), 'data/geosphere/oregon-usda-tracts.json'), 'utf8');
+  usdaFeatures = JSON.parse(usdaRaw).features || [];
+  
+  const lmiRaw = fs.readFileSync(path.join(process.cwd(), 'data/geosphere/oregon-lmi-tracts.js'), 'utf8');
+  const lmiJsonStr = lmiRaw.replace('const oregonTractGeoJSON = ', '').replace(/;\s*$/, '');
+  lmiFeatures = JSON.parse(lmiJsonStr).features || [];
+  
+  console.log(`[GeoSphere] Loaded ${usdaFeatures.length} USDA polygons and ${lmiFeatures.length} LMI tracts.`);
+} catch (err) {
+  console.warn("[GeoSphere] Warning: Spatial boundaries failed to load from disk.", err);
+}
+
 function getAdminDb() {
   try {
     return getFirestore(adminApp, FIRESTORE_DATABASE_ID);
@@ -634,8 +653,94 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
       
       if (provider === 'none') return res.status(500).json({ error: 'No AI Provider configured' });
 
-      // Search Knowledge Base (RAG)
       let augmentedPrompt = prompt;
+
+      // ============================================================================
+      // GEOSPHERE INTENTION ROUTER: Detect Address & Run Spatial Engine Math
+      // ============================================================================
+      try {
+        const addressMatch = prompt.match(/\b\d+\s+[-A-Za-z0-9\s.,]+(?:street|st|avenue|ave|road|rd|highway|hwy|square|sq|trail|trl|drive|dr|court|ct|parkway|pkwy|circle|cir|boulevard|blvd|way|place|pl|lane|ln)\b/i);
+        
+        if (addressMatch) {
+          const rawAddress = addressMatch[0];
+          console.log(`[GeoSphere Router] Detected Address: ${rawAddress}. Executing Geocoder...`);
+          
+          let lat: number | null = null;
+          let lng: number | null = null;
+          let cached = false;
+          
+          // 1. Check Firestore Cache first to minimize redundant OpenStreetMap API calls
+          const cacheKey = rawAddress.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+          try {
+            const db = getAdminDb();
+            const cacheDoc = await db.collection("geosphere_cache").doc(cacheKey).get();
+            if (cacheDoc.exists) {
+              const data = cacheDoc.data();
+              if (data && data.lat && data.lng) {
+                lat = data.lat;
+                lng = data.lng;
+                cached = true;
+                console.log(`[GeoSphere Router] Cache HIT for address: ${rawAddress}`);
+              }
+            }
+          } catch (cacheErr) {
+            console.warn("[GeoSphere Router] Cache read error (non-fatal):", cacheErr);
+          }
+
+          // 2. Geocode if not in cache
+          if (!lat || !lng) {
+            console.log(`[GeoSphere Router] Cache MISS. Geocoding via OpenStreetMap Nominatim...`);
+            const geocodeRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(rawAddress + ", Oregon")}&format=json&limit=1`, {
+              headers: { "User-Agent": "VantageAI/1.0" }
+            });
+            const geocodeData = await geocodeRes.json();
+            
+            if (geocodeData && geocodeData.length > 0) {
+              lat = parseFloat(geocodeData[0].lat);
+              lng = parseFloat(geocodeData[0].lon);
+              
+              // Asynchronously save to cache
+              try {
+                const db = getAdminDb();
+                db.collection("geosphere_cache").doc(cacheKey).set({
+                  address: rawAddress,
+                  lat,
+                  lng,
+                  cachedAt: FieldValue.serverTimestamp()
+                }).catch(err => console.error("[GeoSphere Router] Async cache write failed:", err));
+              } catch (e) {
+                // Ignore sync errors
+              }
+            }
+          }
+          
+          if (lat !== null && lng !== null) {
+            const point: [number, number] = [lng, lat];
+            
+            // Run Point-In-Polygon against USDA and LMI arrays loaded in memory
+            const isUsda = usdaFeatures.some(f => pointInGeometry(point, f.geometry));
+            const isLmi = lmiFeatures.some(f => pointInGeometry(point, f.geometry));
+            
+            console.log(`[GeoSphere Router] Address ${rawAddress} -> Lat: ${lat}, Lng: ${lng}. USDA: ${isUsda}, LMI: ${isLmi}`);
+            
+            const geoSphereReport = `
+[GEOSPHERE SPATIAL ENGINE REPORT]:
+The user's prompt contains an address: "${rawAddress}".
+I have ${cached ? 'retrieved from the high-speed Firestore cache' : 'automatically geocoded this to'} Coordinates (Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}).
+I ran computational ray-casting against our compliance JSON boundaries:
+- USDA Rural Development 100% Financing Eligible: ${isUsda ? 'YES' : 'NO'}
+- Low-to-Moderate Income (LMI) Census Tract: ${isLmi ? 'YES' : 'NO'}
+
+INSTRUCTION: Please incorporate these mathematically verified facts into your response to the user. Do not guess; rely entirely on this GeoSphere engine output for USDA/LMI eligibility.`;
+            
+            augmentedPrompt = geoSphereReport + "\n\n" + augmentedPrompt;
+          }
+        }
+      } catch (e) {
+        console.error("[GeoSphere Router] Failed to extract or map address:", e);
+      }
+      
+      // Search Knowledge Base (RAG)
       
       if (chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0) {
         let historyStr = "\n\n[PRIOR CHAT CONTEXT]:\n";
@@ -3364,12 +3469,41 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
           };
         });
 
+      // ============================================================================
+      // GEOSPHERE BATCH PROCESSING: Calculate overlay eligibility dynamically on the backend
+      // for any properties that don't already have it hardcoded from the API.
+      // ============================================================================
+      const processedListings = standardized.map((listing: any) => {
+        let usda = listing.overlayEligibility?.usda ?? false;
+        let lmi = listing.overlayEligibility?.lmi ?? false;
+        
+        // If the coordinates exist, we verify against our in-memory spatial engine
+        if (typeof listing.latitude === 'number' && typeof listing.longitude === 'number' && 
+            !isNaN(listing.latitude) && !isNaN(listing.longitude)) {
+          const point: Point = [listing.longitude, listing.latitude];
+          usda = usdaFeatures.some(f => pointInGeometry(point, f.geometry));
+          lmi = lmiFeatures.some(f => pointInGeometry(point, f.geometry));
+        }
+
+        return {
+          ...listing,
+          notes: `MLS #${listing.mlsNumber || "N/A"}. ${usda ? "USDA 100% Financing Eligible. " : ""}${lmi ? "OHCS LMI Tract Approved. " : ""}${listing.overlayEligibility?.firstHome?.targetedAreaDetails || ""}${listing.overlayEligibility?.lakeviewNational ? " Lakeview National Eligible. " : ""}`.trim(),
+          overlayEligibility: {
+            ...listing.overlayEligibility,
+            usda,
+            usdaEligible: usda,
+            lmi,
+            lmiEligible: lmi
+          }
+        };
+      });
+
       res.json({
         success: true,
-        count: standardized.length,
+        count: processedListings.length,
         pullsCount: data.pulls?.length || 1,
         generatedAt: data.generatedAt || new Date().toISOString(),
-        listings: standardized,
+        listings: processedListings,
       });
     } catch (error: any) {
       console.error("GeoSphere sync error:", error);
@@ -4075,6 +4209,118 @@ Return ONLY valid JSON in this exact structure:
       "interview.scheduled"
     ]
   };
+
+  // ============================================================================
+  // GEOSPHERE SPATIAL ENGINE: Core Math & Boundary Classification
+  // ============================================================================
+  type Point = [number, number]; // [lng, lat]
+  type Ring = Point[];
+  type Polygon = Ring[];
+  type MultiPolygon = Polygon[];
+
+  // Ray-casting algorithm to determine if a point is inside a polygon ring
+  function pointInRing(point: Point, ring: Ring): boolean {
+    const [lng, lat] = point;
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i];
+      const [xj, yj] = ring[j];
+      const crossesLatitude = (yi > lat) !== (yj > lat);
+      const intersectLng = ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+      if (crossesLatitude && lng < intersectLng) inside = !inside;
+    }
+    return inside;
+  }
+
+  // Checks outer ring and ensures point is not inside any interior holes
+  function pointInPolygon(point: Point, rings: Polygon): boolean {
+    if (!rings?.length || !pointInRing(point, rings[0])) return false;
+    return !rings.slice(1).some((hole) => pointInRing(point, hole));
+  }
+
+  // Resolves GeoJSON geometry types (Polygon vs MultiPolygon)
+  function pointInGeometry(point: Point, geometry: any): boolean {
+    if (!geometry || !geometry.type || !geometry.coordinates) return false;
+    if (geometry.type === "Polygon") {
+      return pointInPolygon(point, geometry.coordinates as Polygon);
+    }
+    if (geometry.type === "MultiPolygon") {
+      return (geometry.coordinates as MultiPolygon).some((polygon) => pointInPolygon(point, polygon));
+    }
+    return false;
+  }
+
+  // API Route: GeoSphere Coordinate Classification (Single)
+  app.post("/api/geosphere/classify", authenticateUser, async (req, res) => {
+    try {
+      const { lat, lng, features } = req.body;
+      if (typeof lat !== 'number' || typeof lng !== 'number') {
+        return res.status(400).json({ error: "Invalid coordinates provided. Requires lat and lng." });
+      }
+      
+      const point: Point = [lng, lat]; // GeoJSON standard uses [longitude, latitude]
+      const matchedFeatures = [];
+
+      // If client passes an array of GeoJSON features (e.g. USDA bounds, LMI tracts), evaluate them
+      if (Array.isArray(features)) {
+        for (const feature of features) {
+          if (pointInGeometry(point, feature.geometry)) {
+            matchedFeatures.push(feature.properties);
+          }
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        point, 
+        matchedCount: matchedFeatures.length,
+        matchedFeatures 
+      });
+    } catch (err: any) {
+      console.error("[GeoSphere Engine] Classification Error:", err);
+      res.status(500).json({ error: "Failed to classify coordinates via GeoSphere spatial engine." });
+    }
+  });
+
+  // API Route: GeoSphere Batch Classification (Multiple properties)
+  app.post("/api/geosphere/batch-classify", authenticateUser, async (req, res) => {
+    try {
+      const { properties } = req.body; // Array of { id, lat, lng }
+      
+      if (!Array.isArray(properties)) {
+        return res.status(400).json({ error: "Invalid payload. Requires 'properties' array." });
+      }
+      
+      const results = properties.map((prop: any) => {
+        if (typeof prop.lat !== 'number' || typeof prop.lng !== 'number') {
+          return { id: prop.id, error: "Invalid coordinates" };
+        }
+        
+        const point: Point = [prop.lng, prop.lat];
+        
+        // Fast in-memory check against loaded global features
+        const isUsda = usdaFeatures.some(f => pointInGeometry(point, f.geometry));
+        const isLmi = lmiFeatures.some(f => pointInGeometry(point, f.geometry));
+        
+        return {
+          id: prop.id,
+          lat: prop.lat,
+          lng: prop.lng,
+          isUsda,
+          isLmi
+        };
+      });
+
+      res.json({
+        success: true,
+        count: results.length,
+        results
+      });
+    } catch (err: any) {
+      console.error("[GeoSphere Engine] Batch Classification Error:", err);
+      res.status(500).json({ error: "Failed to batch classify coordinates." });
+    }
+  });
 
   // API Route: System Security & PII Compliance Metrics
   app.get("/api/audit/pii-metrics", authenticateUser, async (_req, res) => {

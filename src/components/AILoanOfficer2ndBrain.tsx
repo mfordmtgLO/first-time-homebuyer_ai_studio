@@ -821,7 +821,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
                   placeholder={
                     activeLead
                       ? `Ask anything about ${activeLead.fullName}'s loan structure, DTI, IPC limits, or scripts...`
-                      : "Ask about AUS rules, DTI caps, 2-1 buydowns, Schedule C cash flow, or borrower scripts..."
+                      : "Type an address to check USDA/LMI eligibility, or ask about AUS rules, DTI caps, or cash flow..."
                   }
                   disabled={loading}
                   className="flex-1 bg-white border border-[#EAE7E0] rounded-xl px-4 py-3 text-xs text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:ring-2 focus:ring-[#4A5D4E]/30"

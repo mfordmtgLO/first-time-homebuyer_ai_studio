@@ -132,6 +132,7 @@ import { SourceBreakdownReportModal } from "./SourceBreakdownReportModal";
 import { BatchLeadRecommendations } from "./BatchLeadRecommendations";
 import { DailyMorningBriefing } from "./DailyMorningBriefing";
 import { TaskManagementPanel } from "./TaskManagementPanel";
+import { AgenticOrchestratorDiagnostics } from "./AgenticOrchestratorDiagnostics";
 import { SmsTemplateLibrary } from "./SmsTemplateLibrary";
 import { BulkSmsModal } from "./BulkSmsModal";
 import { DEFAULT_SMS_TEMPLATES } from "../data/smsTemplates";
@@ -2197,6 +2198,26 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   : "bg-emerald-100 text-emerald-800 border border-emerald-300"
               }`}>
                 Vantage Copilot
+              </span>
+            </button>
+
+            <button
+              data-tab-id="ai_diagnostics"
+              onClick={() => setActiveTab("ai_diagnostics")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                activeTab === "ai_diagnostics"
+                  ? "bg-[#2D362E] text-white shadow-xs"
+                  : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+              }`}
+            >
+              <Zap className="w-4 h-4 text-blue-500" />
+              <span>Agentic Orchestrator Status</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeTab === "ai_diagnostics"
+                  ? "bg-blue-500/30 text-blue-200 border border-blue-400/40"
+                  : "bg-blue-100 text-blue-800 border border-blue-300"
+              }`}>
+                Health
               </span>
             </button>
 
@@ -4353,6 +4374,11 @@ Best regards,`,
             }}
             onTriggerToast={triggerToast}
           />
+        )}
+
+        {/* Tab: Agentic Orchestrator Status */}
+        {activeTab === "ai_diagnostics" && (
+          <AgenticOrchestratorDiagnostics />
         )}
 
         {/* Tab: AI 2nd Brain Copilot */}

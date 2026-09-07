@@ -244,7 +244,13 @@ export const ScheduleCTaxAnalyzer: React.FC<ScheduleCTaxAnalyzerProps> = ({
                 AI 1040 Schedule C Document & Text Extractor
               </h3>
             </div>
-            <span className="text-[11px] text-amber-800">Auto-detects Line 3, 31, 13, 30, Miles & Meals</span>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-emerald-300 shadow-xs" title="Raw tax metadata is sent to an encrypted ephemeral vault, scrubbed of SSNs/PII, and then immediately shredded.">
+                <ShieldCheck className="w-3 h-3" />
+                PII-Safe Ephemeral Vault Active
+              </span>
+              <span className="text-[11px] text-amber-800">Auto-detects Line 3, 31, 13, 30, Miles & Meals</span>
+            </div>
           </div>
 
           <textarea

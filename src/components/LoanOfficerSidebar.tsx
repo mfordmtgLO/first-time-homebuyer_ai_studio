@@ -40,6 +40,7 @@ export type TabId =
   | "master_lead_journey"
   | "google_workspace" 
   | "ai_2nd_brain" 
+  | "ai_diagnostics"
   | "tax_schedule_c" 
   | "buydown_2_1" 
   | "realtor_cobranding" 
@@ -181,6 +182,13 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
           icon: <Brain className="w-4 h-4" />,
           badge: "Vantage",
           badgeColor: "bg-emerald-100 text-emerald-800"
+        },
+        {
+          id: "ai_diagnostics",
+          label: "Agentic Orchestrator Status",
+          icon: <Zap className="w-4 h-4" />,
+          badge: "Health",
+          badgeColor: "bg-blue-100 text-blue-800"
         },
         {
           id: "tax_schedule_c",

@@ -423,6 +423,18 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [showTeaser, setShowTeaser] = useState<boolean>(true);
+  const [aiProvider, setAiProvider] = useState<'deepseek' | 'gemini' | 'none'>('none');
+
+  useEffect(() => {
+    fetch('/api/ai/diagnostics')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.activeProvider) {
+          setAiProvider(data.activeProvider);
+        }
+      })
+      .catch(e => console.error("Failed to fetch AI diagnostics:", e));
+  }, []);
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -1861,12 +1873,19 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                 )}
               </button>
             </div>
-            <div className="flex items-center justify-between text-[10px] text-[#9A9488] px-1">
+            <div className="flex items-center justify-between text-[10px] text-[#9A9488] px-1 pt-0.5">
               <span className="flex items-center gap-1">
                 <Lock className="w-2.5 h-2.5 text-emerald-600" />
-                <span>No Credit Card or SSN Required</span>
+                <span>No SSN Required</span>
               </span>
-              <span>256-bit encrypted prequalification</span>
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded uppercase tracking-wider font-bold border ${
+                aiProvider === 'deepseek' ? 'bg-[#4A5D4E]/10 text-[#4A5D4E] border-[#4A5D4E]/20' :
+                aiProvider === 'gemini' ? 'bg-[#C18C5D]/10 text-[#C18C5D] border-[#C18C5D]/20' :
+                'bg-gray-100 text-gray-500 border-gray-200'
+              }`}>
+                <Bot className="w-2.5 h-2.5" />
+                AI Engine: {aiProvider === 'deepseek' ? 'DeepSeek' : aiProvider === 'gemini' ? 'Gemini' : 'Simulated'}
+              </span>
             </div>
           </div>
         </div>

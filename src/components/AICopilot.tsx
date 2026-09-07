@@ -53,6 +53,18 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [inputMessage, setInputMessage] = useState("");
   const [sendingChat, setSendingChat] = useState(false);
+  const [aiProvider, setAiProvider] = useState<'deepseek' | 'gemini' | 'none'>('none');
+
+  useEffect(() => {
+    fetch('/api/ai/diagnostics')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.activeProvider) {
+          setAiProvider(data.activeProvider);
+        }
+      })
+      .catch(e => console.error("Failed to fetch AI diagnostics:", e));
+  }, []);
 
   // Dynamic Horizontal Resize State for Chat Container
   const [chatContainerWidth, setChatContainerWidth] = useState<number | null>(() => {
@@ -793,23 +805,36 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
           </div>
 
           {/* Chat input box */}
-          <div className="p-4 bg-[#F1EFE9]/60 border-t border-[#EAE7E0] flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Ask about down payments, interest rates, inspection negotiation, escrow..."
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-              disabled={sendingChat}
-              className="flex-1 bg-white border border-[#EAE7E0] rounded-xl px-4 py-3 text-xs sm:text-sm text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:border-[#4A5D4E]"
-            />
-            <button
-              onClick={() => handleSendMessage()}
-              disabled={sendingChat || !inputMessage.trim()}
-              className="p-3 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold transition-all disabled:opacity-40 shadow-sm"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+          <div className="p-4 bg-[#F1EFE9]/60 border-t border-[#EAE7E0] flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Ask about down payments, interest rates, inspection negotiation, escrow..."
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                disabled={sendingChat}
+                className="flex-1 bg-white border border-[#EAE7E0] rounded-xl px-4 py-3 text-xs sm:text-sm text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:border-[#4A5D4E]"
+              />
+              <button
+                onClick={() => handleSendMessage()}
+                disabled={sendingChat || !inputMessage.trim()}
+                className="p-3 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold transition-all disabled:opacity-40 shadow-sm"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+            {/* AI Engine Status Badge */}
+            <div className="flex justify-end px-1">
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
+                aiProvider === 'deepseek' ? 'bg-[#4A5D4E]/10 text-[#4A5D4E] border-[#4A5D4E]/20' :
+                aiProvider === 'gemini' ? 'bg-[#C18C5D]/10 text-[#C18C5D] border-[#C18C5D]/20' :
+                'bg-gray-100 text-gray-500 border-gray-200'
+              }`}>
+                <Bot className="w-3 h-3" />
+                AI Engine: {aiProvider === 'deepseek' ? 'DeepSeek' : aiProvider === 'gemini' ? 'Gemini' : 'Simulated Fallback'}
+              </span>
+            </div>
           </div>
 
           {/* Draggable Horizontal Resize Handle on Right Edge */}

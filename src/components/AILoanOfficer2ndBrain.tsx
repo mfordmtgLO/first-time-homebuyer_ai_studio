@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { auth } from "../firebase";
+import { SecurityToast } from "./SecurityToast";
 import { 
   Brain, 
   Sparkles, 
@@ -73,6 +74,7 @@ export const AILoanOfficer2ndBrain: React.FC<AILoanOfficer2ndBrainProps> = ({
   const trainInputRef = useRef<HTMLInputElement>(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState("");
+  const [securityToast, setSecurityToast] = useState<{ isVisible: boolean; fileName: string }>({ isVisible: false, fileName: "" });
 
   // Handle URL Ingestion
   const handleUrlIngestion = async () => {
@@ -219,11 +221,20 @@ How can I assist your pipeline today? You can select any active borrower from yo
           throw new Error(data.error || "Failed to ingest knowledge");
         }
         
+        let successMessage = `**Successfully memorized!**\n\nI have added \`${file.name}\` to my Vector Database memory. I will now reference this case study and underwriting logic in future responses to ensure 100% accuracy tailored to your Oregon market.`;
+        
+        if (isVideo) {
+          successMessage = `**Video/Audio Upload Accepted!**\n\nI am processing \`${file.name}\` in the background. It will take a few minutes to transcribe and learn the product guidelines.`;
+        } else if (data.securityAudit) {
+           successMessage = `**Zero-Trust Ingestion Complete!**\n\nSuccessfully ingested \`${file.name}\` into the Vector Database memory.\n\n**🔒 Security Audit Log:**\n- **Vault Assigned ID:** \`${data.securityAudit.piiVaultAssignedId}\`\n- **PII Scrubbing:** \`${data.securityAudit.piiRedactionApplied ? "SUCCESS" : "FAILED"}\`\n- **Vault Status:** \`${data.securityAudit.vaultStorageStatus}\`\n- **Retention Time:** \`${data.securityAudit.ephemeralPersistence}\`\n\n*All SSN and Credit Card metadata was successfully shredded from the ephemeral PII-Safe Firestore collection. Only sanitized data was sent to the AI Memory.*`;
+           setSecurityToast({ isVisible: true, fileName: file.name });
+        }
+
         const botMsg: BrainMessage = {
           id: `copilot-train-${Date.now()}`,
           sender: "copilot",
           text: data.success 
-            ? (isVideo ? `**Video Upload Accepted!**\n\nI am processing \`${file.name}\` in the background. It will take a few minutes to transcribe and learn the product guidelines.` : `**Successfully memorized!**\n\nI have added \`${file.name}\` to my Vector Database memory. I will now reference this case study and underwriting logic in future responses to ensure 100% accuracy tailored to your Oregon market.`)
+            ? successMessage
             : `**Error:** Failed to ingest knowledge.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           category: "guidelines"
@@ -800,74 +811,89 @@ How can I assist your pipeline today? You can select any active borrower from yo
                 e.preventDefault();
                 handleSend();
               }}
-              className="flex items-center gap-2"
+              className="flex flex-col gap-2"
             >
-              <input
-                type="text"
-                value={inputQuery}
-                onChange={(e) => setInputQuery(e.target.value)}
-                placeholder={
-                  activeLead
-                    ? `Ask anything about ${activeLead.fullName}'s loan structure, DTI, IPC limits, or scripts...`
-                    : "Ask about AUS rules, DTI caps, 2-1 buydowns, Schedule C cash flow, or borrower scripts..."
-                }
-                disabled={loading}
-                className="flex-1 bg-white border border-[#EAE7E0] rounded-xl px-4 py-3 text-xs text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:ring-2 focus:ring-[#4A5D4E]/30"
-              />
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept=".txt,.csv,.json,.pdf"
-                className="hidden"
-              />
-              
-              <input
-                type="file"
-                ref={trainInputRef}
-                onChange={handleTrainUpload}
-                accept=".txt,.csv,.json,.pdf,video/mp4,video/webm,video/quicktime"
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => setShowUrlInput(!showUrlInput)}
-                disabled={loading}
-                title="Add Permanent URL to Memory"
-                className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => trainInputRef.current?.click()}
-                disabled={loading}
-                title="Train AI Memory (Add to Vector DB)"
-                className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
-              >
-                <Database className="w-4 h-4" />
-              </button>
-<button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={loading}
-                title="Upload Document for Analysis"
-                className="p-3 rounded-xl bg-white border border-[#EAE7E0] text-[#606C5D] hover:bg-[#F9F8F4] transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
-              >
-                <Paperclip className="w-4 h-4" />
-              </button>
-              <button
-                type="submit"
-                disabled={!inputQuery.trim() || loading}
-                className="px-5 py-3 rounded-xl bg-[#4A5D4E] text-white font-bold text-xs flex items-center gap-1.5 hover:bg-[#3d4d40] transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Ask Copilot</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={inputQuery}
+                  onChange={(e) => setInputQuery(e.target.value)}
+                  placeholder={
+                    activeLead
+                      ? `Ask anything about ${activeLead.fullName}'s loan structure, DTI, IPC limits, or scripts...`
+                      : "Ask about AUS rules, DTI caps, 2-1 buydowns, Schedule C cash flow, or borrower scripts..."
+                  }
+                  disabled={loading}
+                  className="flex-1 bg-white border border-[#EAE7E0] rounded-xl px-4 py-3 text-xs text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:ring-2 focus:ring-[#4A5D4E]/30"
+                />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept=".txt,.csv,.json,.pdf,.md,.markdown,.docx,.xlsx"
+                  className="hidden"
+                />
+                
+                <input
+                  type="file"
+                  ref={trainInputRef}
+                  onChange={handleTrainUpload}
+                  accept=".txt,.csv,.json,.pdf,.md,.markdown,.docx,.xlsx,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/wav,audio/m4a"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowUrlInput(!showUrlInput)}
+                  disabled={loading}
+                  title="Add Permanent URL to Memory"
+                  className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => trainInputRef.current?.click()}
+                  disabled={loading}
+                  title="Train AI Memory (Add to Vector DB)"
+                  className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
+                >
+                  <Database className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                  title="Upload Document for Analysis"
+                  className="p-3 rounded-xl bg-white border border-[#EAE7E0] text-[#606C5D] hover:bg-[#F9F8F4] transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+                <button
+                  type="submit"
+                  disabled={!inputQuery.trim() || loading}
+                  className="px-5 py-3 rounded-xl bg-[#4A5D4E] text-white font-bold text-xs flex items-center gap-1.5 hover:bg-[#3d4d40] transition-colors disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Ask Copilot</span>
+                </button>
+              </div>
+              <div className="flex items-center justify-between text-[10px] px-1">
+                <span className="text-[#9A9488]">File Uploads: Supported formats include PDF, TXT, CSV, JSON, MD, DOCX, XLSX, MP4, MP3. Max 50MB.</span>
+                <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-emerald-300 shadow-xs" title="Uploaded documents are split. Raw metadata is sent to an encrypted ephemeral Firestore vault, scrubbed of PII, and then shredded. Only sanitized content enters AI memory.">
+                  <ShieldCheck className="w-3 h-3" />
+                  Enhanced Secure Document Handling: PII-Safe Ephemeral Vault
+                </span>
+              </div>
             </form>
           </div>
         </div>
       </div>
+      
+      <SecurityToast 
+        isVisible={securityToast.isVisible} 
+        fileName={securityToast.fileName} 
+        onClose={() => setSecurityToast({ isVisible: false, fileName: "" })} 
+      />
     </div>
   );
 };

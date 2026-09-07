@@ -1,14 +1,12 @@
 const fs = require('fs');
-let content = fs.readFileSync('src/components/LoanOfficerPortal.tsx', 'utf8');
 
-content = content.replace(
-  "recruitmentStatus: (lo.recruitmentStatus === 'New' || !lo.recruitmentStatus) ? 'Contacted' : lo.recruitmentStatus,",
-  "recruitmentStatus: (lo.recruitmentStatus === 'Not Contacted' || lo.recruitmentStatus === 'New' || !lo.recruitmentStatus) ? 'In Outreach' : lo.recruitmentStatus,"
-);
+let c = fs.readFileSync('src/components/MasterLeadJourneyTab.tsx', 'utf8');
+if (!c.includes('BellRing')) {
+    c = c.replace('import {\\n  CheckCircle2,', 'import {\\n  BellRing,\\n  CheckCircle2,');
+}
+fs.writeFileSync('src/components/MasterLeadJourneyTab.tsx', c);
 
-content = content.replace(
-  "recruitmentStatus: (lo.recruitmentStatus === 'New' || !lo.recruitmentStatus) ? 'Contacted' : lo.recruitmentStatus,",
-  "recruitmentStatus: (lo.recruitmentStatus === 'Not Contacted' || lo.recruitmentStatus === 'New' || !lo.recruitmentStatus) ? 'In Outreach' : lo.recruitmentStatus,"
-);
+let c2 = fs.readFileSync('src/components/PropertyTracker.tsx', 'utf8');
+c2 = c2.replace('Compass,', 'Compass,\\n  Flame,');
+fs.writeFileSync('src/components/PropertyTracker.tsx', c2);
 
-fs.writeFileSync('src/components/LoanOfficerPortal.tsx', content);

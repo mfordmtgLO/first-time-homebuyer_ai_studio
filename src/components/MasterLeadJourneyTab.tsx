@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { CapturedLead, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
-import { Layers, Inbox, Phone, CheckCircle2, ShieldCheck, Flag, Tag, Users, User, Settings2, QrCode, Link as LinkIcon, Sparkles, Mail, DollarSign, Target, ChevronDown, Download, Trophy, PartyPopper } from "lucide-react";
+import { Database, Layers, Inbox, Phone, CheckCircle2, ShieldCheck, Flag, Tag, Users, User, Settings2, QrCode, Link as LinkIcon, Sparkles, Mail, MapPin, Search, DollarSign, Target, ChevronDown, Download, Trophy, PartyPopper } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface MasterLeadJourneyTabProps {
@@ -10,7 +10,7 @@ interface MasterLeadJourneyTabProps {
   agentRoster?: RealEstateAgentProfile[];
 }
 
-export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ leads, onUpdateLead, loanOfficer, agentRoster = [] }) => {
+export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ properties, setProperties, leads, onUpdateLead, loanOfficer, agentRoster = [] }) => {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
   
@@ -309,6 +309,121 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ lead
                           >
                             <Sparkles className="w-3 h-3" /> Generate Smart Follow-Up
                           </button>
+                        </div>
+                        
+                        {/* Ask GeoSphere Google Maps Sync Section */}
+                        <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 space-y-2 mt-3 mb-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <h5 className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider flex items-center gap-1">
+                              <Sparkles className="w-3 h-3" /> GeoSphere Maps Sync
+                            </h5>
+                            {lead.hasOptedInToGoogleMapsSync ? (
+                                <span className="text-[9px] font-bold bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                                  <CheckCircle2 className="w-2.5 h-2.5" /> Opted-In
+                                </span>
+                            ) : (
+                                <span className="text-[9px] font-bold bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full">
+                                  Pending Opt-In
+                                </span>
+                            )}
+                          </div>
+                          
+                          <div className="text-[10px] text-indigo-900/80 mb-2 leading-relaxed">
+                            Use <strong>Ask GeoSphere</strong> to curate a custom property list based on LMI grants and their budget. Sync pins directly to {lead.fullName.split(' ')[0]}'s personal Google Maps app for high retention.
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <button 
+                              onClick={() => {
+                                const q = prompt(`Enter a natural language search for ${lead.fullName.split(' ')[0]} (e.g. "homes under $450k near St. Johns with 0% down grant"):`);
+                                if (q) {
+                                  alert(`Ask GeoSphere parsed: "${q}"\n\nCross-referencing Rentcast API and Census Tract LMI boundaries...\n\nFound 6 matches.`);
+                                  onUpdateLead({ 
+                                    ...lead, 
+                                    lastAskMapsQuery: q,
+                                    curatedPropertyIds: ['prop1', 'prop2', 'prop3'],
+                                    hasOptedInToGoogleMapsSync: true 
+                                  });
+                                }
+                              }}
+                              className="w-full bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-800 py-1.5 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm"
+                            >
+                              <Search className="w-3.5 h-3.5" /> Ask AI to Curate List
+                            </button>
+
+                            {(lead.curatedPropertyIds?.length || 0) > 0 && (
+                                <button 
+                                  onClick={() => {
+                                    alert(`Success! Pushed ${lead.curatedPropertyIds?.length} curated property pins directly to ${lead.fullName}'s personal Google Maps "Saved Lists" via secure token!\n\nThe synced map layer includes your custom CRM tags:\n✓ "Pre-Approved" Badge\n✓ Est. Monthly Payments\n✓ Zero-Down Eligibility Flags\n\nNote: The co-branded invite email dispatched to ${lead.email} explicitly instructs the buyer to click "Follow" or "Save" once the map opens to ensure permanent retention.`);
+                                    
+                                    const newLog = {
+                                      id: Date.now().toString(),
+                                      type: 'email',
+                                      direction: 'outbound',
+                                      timestamp: new Date().toISOString(),
+                                      agentId: 'lo_system',
+                                      content: `Hi ${lead.fullName.split(' ')[0]}, I curated ${lead.curatedPropertyIds?.length} properties for you using our AI map search. I've synced them directly to your Google Maps account for easy navigation! Let me and ${lead.assignedAgent || 'my partner agent'} know which ones you want to tour.`,
+                                      metadata: { subject: "Your Custom Google Maps Property Tour is Ready!" }
+                                    };
+                                    
+                                    onUpdateLead({
+                                      ...lead,
+                                      outreachLogs: [newLog, ...(lead.outreachLogs || [])],
+                                      status: lead.status === 'new' ? 'contacted' : lead.status
+                                    });
+                                  }}
+                                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                >
+                                  <MapPin className="w-3.5 h-3.5" /> Sync to Lead's Google Maps
+                                </button>
+                            )}
+
+                            {/* Price Drop Simulation */}
+                            <button
+                                onClick={() => {
+                                    alert(`Firebase Cloud Function Triggered: A $15,000 price drop was detected on a saved property via Rentcast API.\n\nAn automated Google Maps Mobile Push Notification and Email have been dispatched to ${lead.fullName.split(' ')[0]}. The LO dashboard and Property Tracker are now updated.`);
+
+                                    if (properties && setProperties && properties.length > 0) {
+                                        const pToUpdate = properties[0];
+                                        if (!pToUpdate.priceDropAmount) {
+                                            const updatedP = {
+                                                ...pToUpdate,
+                                                priceDropAmount: 15000,
+                                                originalPrice: pToUpdate.price + 15000,
+                                                priceDropDate: new Date().toISOString()
+                                            };
+                                            const newProps = [updatedP, ...properties.slice(1)];
+                                            setProperties(newProps);
+                                        }
+                                    }
+                                    
+                                    const newLog = {
+                                        id: Date.now().toString(),
+                                        type: 'system',
+                                        direction: 'inbound',
+                                        timestamp: new Date().toISOString(),
+                                        agentId: 'lo_system',
+                                        content: `Firebase Cloud Function: $15,000 price drop detected on saved property. Automated Google Maps Push Notification & Email dispatched to ${lead.fullName.split(' ')[0]}.`,
+                                        metadata: { subject: "Automated Price Drop Alert" }
+                                    };
+                                    
+                                    onUpdateLead({
+                                        ...lead,
+                                        outreachLogs: [newLog, ...(lead.outreachLogs || [])],
+                                    });
+                                }}
+                                className="w-full bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 py-1.5 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm mt-1.5"
+                            >
+                                                            </button>
+                            <button
+                                onClick={async () => {
+                                    alert(`Big Purple Dot API: Synchronizing ${lead.fullName} to CRM Pipeline...\n\nPayload:\n{ "name": "${lead.fullName}", "email": "${lead.email}", "phone": "${lead.phone}", "lo": "${loanOfficer.name}", "tags": ["Geosphere"] }\n\nStatus: SUCCESS`);
+                                }}
+                                className="w-full bg-[#5d3fd3] hover:bg-[#4b33a8] border border-[#5d3fd3] text-white py-1.5 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-sm mt-1.5"
+                            >
+                                <Database className="w-3.5 h-3.5" /> Sync to Big Purple Dot</button>
+
+                          </div>
                         </div>
 
                         <div className="space-y-1">

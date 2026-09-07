@@ -1,3 +1,4 @@
+import { PropertyMapOverlay } from "./PropertyMapOverlay";
 import React, { useState, useMemo, useRef } from "react";
 import { 
   Layers, 
@@ -81,6 +82,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   const [selectedListingIds, setSelectedListingIds] = useState<string[]>([]);
   const [activeOverlayFilter, setActiveOverlayFilter] = useState<string>("all");
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"cards" | "map">("cards");
   const [countyFilter, setCountyFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "dom" | "sqft">("default");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -837,6 +839,32 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           </div>
         </div>
 
+        {/* Map / Cards Toggle */}
+        <div className="flex items-center gap-1.5 p-1 bg-[#F9F8F4] rounded-xl border border-[#EAE7E0] overflow-x-auto hide-scrollbar self-start sm:self-auto mb-3 sm:mb-0">
+            <button
+              onClick={() => setViewMode("map")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
+                viewMode === "map"
+                  ? "bg-[#4A5D4E] text-white shadow-2xs font-bold"
+                  : "text-[#606C5D] hover:text-[#2D362E]"
+              }`}
+            >
+              <Globe className="w-4 h-4 text-emerald-300" />
+              <span>Interactive Map View</span>
+            </button>
+            <button
+              onClick={() => setViewMode("cards")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
+                viewMode === "cards"
+                  ? "bg-[#4A5D4E] text-white shadow-2xs font-bold"
+                  : "text-[#606C5D] hover:text-[#2D362E]"
+              }`}
+            >
+              <Building className="w-4 h-4" />
+              <span>Curated List</span>
+            </button>
+          </div>
+
         {/* Batch Action Bar */}
         <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -894,7 +922,14 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
         </div>
 
         {/* Listings Grid */}
-        {filteredListings.length === 0 ? (
+        {viewMode === "map" ? (
+          <div className="mb-6">
+            <PropertyMapOverlay
+              properties={filteredListings}
+              onCloseMap={() => setViewMode("cards")}
+            />
+          </div>
+        ) : filteredListings.length === 0 ? (
           <div className="text-center py-12 space-y-3 bg-[#FAF9F5] rounded-2xl border border-dashed border-[#EAE7E0]">
             <Info className="w-8 h-8 text-[#C18C5D] mx-auto" />
             <h4 className="font-bold text-sm text-[#2D362E]">No properties match current overlay filter or search</h4>

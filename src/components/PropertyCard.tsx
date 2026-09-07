@@ -1,6 +1,8 @@
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence, PanInfo } from "motion/react";
 import { 
+  Navigation,
+  Flame,
   Star, 
   MapPin, 
   AlertCircle, 
@@ -15,16 +17,25 @@ import {
   BellRing,
   ChevronLeft,
   ChevronRight,
-  Camera
+  Camera,
+  GraduationCap,
+  ShoppingCart,
+  Bus,
+  TreePine,
+  Calculator
 } from "lucide-react";
 import { PropertyListing, FinancialProfile } from "../types";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
 import { calculateMockWalkScore } from "../utils/walkScoreUtils";
+import { calculateMockSchoolScore } from "../utils/schoolScoreUtils";
+import { hasAmenity } from "../utils/amenitiesUtils";
 import { 
   getListingOverlayBadges,
   getZillowUrl
 } from "../utils/overlayClassification";
 import { getPropertyOhcsPriceLimit } from "../utils/ohcsPurchaseLimits";
+import { calculateEstimatedMarketValue } from "../utils/marketValueUtils";
 
 /**
  * Curated high-resolution local architectural fallback photo suites.
@@ -141,6 +152,7 @@ export interface PropertyCardProps {
   onOpenScorecard: (property: PropertyListing) => void;
   onAskAiAboutProperty: (property: PropertyListing) => void;
   onToggleCompare: (id: string, e?: React.MouseEvent) => void;
+  onOpenCalculator?: (property: PropertyListing) => void;
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -154,7 +166,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   onDeleteProperty,
   onOpenScorecard,
   onAskAiAboutProperty,
-  onToggleCompare
+  onToggleCompare,
+  onOpenCalculator
 }) => {
   // Swipeable carousel state powered by Framer Motion drag gestures
   const images = getPropertyImageGallery(property);
@@ -168,7 +181,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const estMonthly = estPI + Math.round(property.propertyTaxAnnual / 12) + Math.round(profile.annualHomeInsurance / 12) + property.hoaMonthly;
 
   const badges = getListingOverlayBadges(property);
+  const marketVal = calculateEstimatedMarketValue(property.id, property.price);
   const walk = calculateMockWalkScore(property.address, property.city, property.zip, property.walkScore);
+  const school = calculateMockSchoolScore(property.address, property.city, property.zip);
   const priceInfo = getPropertyOhcsPriceLimit(
     property.price,
     property.overlayEligibility?.countyName || property.county,
@@ -262,7 +277,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
   return (
     <div 
-      className="bg-white rounded-2xl border border-[#EAE7E0] overflow-hidden flex flex-col justify-between hover:border-[#4A5D4E] transition-all shadow-sm group"
+      className="bg-white dark:bg-slate-900 rounded-2xl border border-[#EAE7E0] overflow-hidden flex flex-col justify-between hover:border-[#4A5D4E] transition-all shadow-sm group"
       id={`property-card-${property.id}`}
     >
       <div>
@@ -310,15 +325,15 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             <span
               className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shadow-xs backdrop-blur-md ${
                 property.status === "offered"
-                  ? "bg-[#C18C5D] text-white"
+                  ? "bg-[#C18C5D] dark:bg-amber-600 text-white"
                   : property.status === "touring"
-                  ? "bg-[#4A5D4E] text-white"
-                  : "bg-white/95 text-[#2D362E]"
+                  ? "bg-[#4A5D4E] dark:bg-emerald-600 text-white"
+                  : "bg-white dark:bg-slate-800 text-[#2D362E] dark:text-slate-100"
               }`}
             >
               {property.status}
             </span>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/95 text-[#606C5D] backdrop-blur-md shadow-xs">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white dark:bg-slate-900/95 text-[#606C5D] backdrop-blur-md shadow-xs">
               {property.propertyType}
             </span>
             {images.length > 1 && (
@@ -333,7 +348,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
             <input
               type="checkbox"
-              className="w-5 h-5 rounded text-[#4A5D4E] focus:ring-[#4A5D4E]/20 bg-white/90 border-white/60 cursor-pointer backdrop-blur-md shadow-sm"
+              className="w-5 h-5 rounded text-[#4A5D4E] focus:ring-[#4A5D4E]/20 bg-white dark:bg-slate-900/90 border-white/60 cursor-pointer backdrop-blur-md shadow-sm"
               checked={isSelected}
               onChange={(e) => {
                 e.stopPropagation();
@@ -347,14 +362,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               onClick={(e) => onTogglePriceAlert(property.id, e)}
               className={`p-2 rounded-xl backdrop-blur-md border transition-colors shadow-xs ${
                 property.priceAlertEnabled
-                  ? "bg-white text-emerald-600 border-emerald-500"
-                  : "bg-white/90 text-[#606C5D] border-white/60 hover:text-[#2D362E]"
+                  ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 border-emerald-500"
+                  : "bg-white dark:bg-slate-900/90 text-[#606C5D] border-white/60 hover:text-[#2D362E]"
               }`}
               title={property.priceAlertEnabled ? "Price alerts active" : "Enable price alerts"}
               aria-label="Toggle price alert"
             >
               {property.priceAlertEnabled ? (
-                <BellRing className="w-4 h-4 text-emerald-500" />
+                <BellRing className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
               ) : (
                 <Bell className="w-4 h-4" />
               )}
@@ -364,8 +379,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               onClick={(e) => onToggleFavorite(property.id, e)}
               className={`p-2 rounded-xl backdrop-blur-md border transition-colors shadow-xs ${
                 property.isFavorite
-                  ? "bg-white text-[#C18C5D] border-[#C18C5D]"
-                  : "bg-white/90 text-[#606C5D] border-white/60 hover:text-[#2D362E]"
+                  ? "bg-white dark:bg-slate-900 text-[#C18C5D] border-[#C18C5D]"
+                  : "bg-white dark:bg-slate-900/90 text-[#606C5D] border-white/60 hover:text-[#2D362E]"
               }`}
               title={property.isFavorite ? "Remove favorite" : "Save favorite"}
               aria-label="Toggle favorite"
@@ -375,7 +390,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             <button
               type="button"
               onClick={(e) => onDeleteProperty(property.id, e)}
-              className="p-2 rounded-xl bg-white/90 text-[#606C5D] hover:text-rose-600 border border-white/60 backdrop-blur-md transition-colors shadow-xs"
+              className="p-2 rounded-xl bg-white dark:bg-slate-900/90 text-[#606C5D] hover:text-rose-600 border border-white/60 backdrop-blur-md transition-colors shadow-xs"
               title="Remove property from pipeline"
               aria-label="Delete property"
             >
@@ -415,9 +430,16 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
 
             <div className="flex flex-col items-end gap-2">
-              <span className="text-xs font-semibold text-white bg-[#4A5D4E]/90 px-2.5 py-0.5 rounded-md shadow-2xs backdrop-blur-xs">
-                Est. {formatUSD(estMonthly)}/mo
-              </span>
+              {property.priceDropAmount ? (
+                <span className="text-xs font-bold text-white bg-red-600/90 px-2.5 py-0.5 rounded-md shadow-2xs backdrop-blur-xs flex items-center gap-1 animate-pulse">
+                  <Flame className="w-3 h-3" />
+                  Price Drop: -{formatUSD(property.priceDropAmount)}
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-white bg-[#4A5D4E]/90 px-2.5 py-0.5 rounded-md shadow-2xs backdrop-blur-xs">
+                  Est. {formatUSD(estMonthly)}/mo
+                </span>
+              )}
 
               {/* Pagination Dots */}
               {images.length > 1 && (
@@ -429,8 +451,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                       onClick={(e) => handleDotClick(idx, e)}
                       className={`transition-all rounded-full ${
                         idx === currentIdx
-                          ? "w-4 h-1.5 bg-white shadow-xs"
-                          : "w-1.5 h-1.5 bg-white/60 hover:bg-white"
+                          ? "w-4 h-1.5 bg-white dark:bg-slate-900 shadow-xs"
+                          : "w-1.5 h-1.5 bg-white dark:bg-slate-900/60 hover:bg-white dark:bg-slate-900"
                       }`}
                       aria-label={`Go to slide ${idx + 1}`}
                     />
@@ -452,20 +474,37 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               <span className="truncate">{property.address}, {property.city}, {property.state} {property.zip}</span>
             </p>
 
-            {/* Walk Score Quick Badge */}
-            <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-[#EAE7E0]/60">
-              <div className="flex items-center gap-1.5 text-xs text-[#606C5D]">
-                <Footprints className="w-3.5 h-3.5 text-[#4A5D4E] shrink-0" />
-                <span className="text-[11px] font-bold">Walk Score®</span>
+            {/* Neighborhood Ratings (Walk & School) */}
+            <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-[#EAE7E0]/60 dark:border-slate-700/60">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-xs text-[#606C5D] dark:text-slate-300">
+                  <Footprints className="w-3.5 h-3.5 text-[#4A5D4E] dark:text-emerald-400 shrink-0" />
+                  <span className="text-[11px] font-bold">Walk Score®</span>
+                </div>
+                <div 
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold border ${walk.badgeBg} ${walk.badgeText} ${walk.badgeBorder} cursor-help transition-all hover:scale-105`}
+                  title={`Walk Score® ${walk.score}/100: ${walk.description}`}
+                >
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shadow-2xs ${walk.badgePillBg}`}>
+                    {walk.score}
+                  </span>
+                  <span className="text-[10px] font-semibold">{walk.category}</span>
+                </div>
               </div>
-              <div 
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold border ${walk.badgeBg} ${walk.badgeText} ${walk.badgeBorder} cursor-help transition-all hover:scale-105`}
-                title={`Walk Score® ${walk.score}/100: ${walk.description}`}
-              >
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shadow-2xs ${walk.badgePillBg}`}>
-                  {walk.score}
-                </span>
-                <span className="text-[10px] font-semibold">{walk.category}</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-xs text-[#606C5D] dark:text-slate-300">
+                  <GraduationCap className="w-3.5 h-3.5 text-[#4A5D4E] dark:text-emerald-400 shrink-0" />
+                  <span className="text-[11px] font-bold">GreatSchools Rating</span>
+                </div>
+                <div 
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold border ${school.badgeBg} ${school.badgeText} ${school.badgeBorder} cursor-help transition-all hover:scale-105`}
+                  title={`GreatSchools Rating ${school.score}/10: ${school.description}`}
+                >
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold shadow-2xs ${school.badgePillBg}`}>
+                    {school.score}/10
+                  </span>
+                  <span className="text-[10px] font-semibold">{school.category}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -512,6 +551,38 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 <Footprints className="w-2.5 h-2.5 shrink-0 opacity-80" />
                 <span>Walk Score {walk.score}</span>
               </span>
+              <span 
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 shadow-2xs cursor-help ${
+                  marketVal.condition === 'underpriced' 
+                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                    : marketVal.condition === 'overpriced'
+                    ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                    : 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                }`}
+                title={`AI Estimated Market Value: ${formatUSD(marketVal.estimatedValue)} (${marketVal.variancePct}% vs list price based on recent neighborhood sales)`}
+              >
+                <Sparkles className="w-2.5 h-2.5 shrink-0" />
+                <span>Est. Value {formatUSD(marketVal.estimatedValue)}</span>
+              </span>
+              
+              {hasAmenity(property.id, "grocery") && (
+                <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
+                  <ShoppingCart className="w-2.5 h-2.5 shrink-0 opacity-80" />
+                  <span>Grocery Nearby</span>
+                </span>
+              )}
+              {hasAmenity(property.id, "transit") && (
+                <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
+                  <Bus className="w-2.5 h-2.5 shrink-0 opacity-80" />
+                  <span>Transit Hub</span>
+                </span>
+              )}
+              {hasAmenity(property.id, "parks") && (
+                <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
+                  <TreePine className="w-2.5 h-2.5 shrink-0 opacity-80" />
+                  <span>Parks Nearby</span>
+                </span>
+              )}
             </div>
 
             {/* OHCS Purchase Price Cap Status */}
@@ -531,7 +602,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             <div className="bg-[#F1EFE9] p-3 rounded-xl border border-[#EAE7E0] space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-[#606C5D]">On-Site Tour Grade:</span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white text-[#4A5D4E] border border-[#EAE7E0]">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 text-[#4A5D4E] border border-[#EAE7E0]">
                   Grade {property.scorecard.grade} ({property.scorecard.overallRating}/10)
                 </span>
               </div>
@@ -553,6 +624,37 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
           )}
 
+          {/* Price History Trend */}
+          {property.priceHistory && property.priceHistory.length > 0 && (
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold text-[#606C5D] dark:text-slate-400 uppercase tracking-wider">Price History</span>
+              </div>
+              <div className="h-16 w-full -ml-3">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={property.priceHistory} margin={{ top: 5, right: 5, bottom: 5, left: 10 }}>
+                    <XAxis dataKey="date" hide />
+                    <YAxis domain={['auto', 'auto']} hide />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#2D362E', borderColor: '#2D362E', borderRadius: '8px', color: '#fff', fontSize: '10px', padding: '4px 8px' }}
+                      itemStyle={{ color: '#fff' }}
+                      formatter={(value: number) => [formatUSD(value), 'Price']}
+                      labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="price" 
+                      stroke="#C18C5D" 
+                      strokeWidth={2} 
+                      dot={{ r: 3, fill: '#C18C5D', strokeWidth: 0 }} 
+                      activeDot={{ r: 4, strokeWidth: 0 }} 
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
           {/* Notes snippet */}
           {property.notes && (
             <p className="text-xs text-[#606C5D] italic line-clamp-2">
@@ -568,46 +670,90 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <button
             type="button"
             onClick={() => onOpenScorecard(property)}
-            className="flex-1 py-2 px-3 rounded-xl bg-white hover:bg-[#F1EFE9] text-[#2D362E] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-[#EAE7E0] cursor-pointer shadow-2xs"
+            className="flex-1 py-2 px-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-[#F1EFE9] text-[#2D362E] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-[#EAE7E0] cursor-pointer shadow-2xs"
           >
             <SlidersHorizontal className="w-3.5 h-3.5 text-[#4A5D4E]" />
-            <span>{property.scorecard ? "Scorecard" : "Tour Scorecard"}</span>
+            <span className="hidden sm:inline">{property.scorecard ? "Scorecard" : "Tour Scorecard"}</span>
+            <span className="sm:hidden">Tour</span>
           </button>
+          
+          {onOpenCalculator && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenCalculator(property);
+              }}
+              className="flex-1 py-2 px-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-indigo-200 dark:border-indigo-800/50 cursor-pointer shadow-2xs"
+              title="Run What-If Mortgage Scenario"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">What-If Math</span>
+              <span className="sm:hidden">Math</span>
+            </button>
+          )}
 
           <button
             type="button"
             onClick={() => onAskAiAboutProperty(property)}
-            className="py-2 px-2.5 rounded-xl bg-[#4A5D4E]/10 hover:bg-[#4A5D4E]/20 text-[#4A5D4E] text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-[#4A5D4E]/20 cursor-pointer"
+            className="flex-1 py-2 px-2 rounded-xl bg-[#4A5D4E]/10 hover:bg-[#4A5D4E]/20 text-[#4A5D4E] text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-[#4A5D4E]/20 cursor-pointer"
             title="Generate offer strategy with Gemini"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
             <span className="hidden sm:inline">Offer AI</span>
+            <span className="sm:hidden">AI</span>
           </button>
+
+          <button
+            type="button"
+            onClick={(e) => onToggleCompare(property.id, e)}
+            className={`p-2 rounded-xl border text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+              isSelectedForCompare
+                ? "bg-[#C18C5D] text-white border-[#C18C5D]"
+                : "bg-white dark:bg-slate-900 text-[#606C5D] border-[#EAE7E0] hover:text-[#2D362E]"
+            }`}
+            title={isSelectedForCompare ? "Remove from comparison" : "Add to comparison"}
+          >
+            <Layers className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zip)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 py-2 px-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:text-indigo-300 text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-indigo-200"
+            title="Get driving directions to this property via Google Maps"
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            <span>Directions</span>
+          </a>
+
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${property.lat},${property.lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 py-2 px-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-emerald-200"
+            title="Save this home to your personal Google Maps account. Remember to click 'Save' in Google Maps!"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            <span>Maps Sync</span>
+          </a>
 
           <a
             href={getZillowUrl(property)}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="py-2 px-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-blue-200"
+            className="py-2 px-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 hover:text-blue-900 text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-blue-200"
             title={`Open ${property.address} on Zillow.com in a new tab`}
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            <span>Zillow</span>
+            <span className="hidden sm:inline">Zillow</span>
           </a>
-
-          <button
-            type="button"
-            onClick={(e) => onToggleCompare(property.id, e)}
-            className={`p-2 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${
-              isSelectedForCompare
-                ? "bg-[#C18C5D] text-white border-[#C18C5D]"
-                : "bg-white text-[#606C5D] border-[#EAE7E0] hover:text-[#2D362E]"
-            }`}
-            title={isSelectedForCompare ? "Remove from comparison" : "Add to comparison"}
-          >
-            <Layers className="w-3.5 h-3.5" />
-          </button>
         </div>
 
         <div className="text-[10px] text-[#9A9488] flex items-center justify-between px-1">

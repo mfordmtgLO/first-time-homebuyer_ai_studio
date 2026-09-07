@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { normalizeRole, RbacRole } from "./rbac";
 
 const ADMIN_EMAIL = "fordmj@gmail.com";
+const COMPLIANCE_EMAIL = "auditor@yourcompany.com";
 
 export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admin"> {
   if (!user.email) throw new Error("No email found on user.");
@@ -18,6 +19,17 @@ export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admi
       lastLogin: serverTimestamp()
     }, { merge: true });
     return "branch_manager";
+  }
+
+  // 1.b Is this a compliance auditor?
+  if (email === COMPLIANCE_EMAIL.toLowerCase()) {
+    await setDoc(doc(db, "user_roles", user.uid), {
+      email,
+      role: "admin",
+      rbacRole: "compliance_auditor",
+      lastLogin: serverTimestamp()
+    }, { merge: true });
+    return "compliance_auditor" as RbacRole;
   }
 
   // 2. Are they in the whitelist?

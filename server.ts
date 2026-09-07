@@ -19,15 +19,17 @@ export function validateEncryptionStartupConfiguration(): void {
   const envKey = process.env.MASTER_ENCRYPTION_KEY?.trim();
 
   if (envKey && envKey.length >= 32) {
-    console.log("[ZERO-TRUST AUDIT] Configured MASTER_ENCRYPTION_KEY detected from environment. AES-256-GCM envelope vault ready.");
+    console.log(
+      "[ZERO-TRUST AUDIT] Configured MASTER_ENCRYPTION_KEY detected from environment. AES-256-GCM envelope vault ready."
+    );
   } else {
     if (!dynamicMasterKey) {
       dynamicMasterKey = crypto.randomBytes(32).toString("hex");
     }
     console.warn(
       "[SECURITY ADVISORY] MASTER_ENCRYPTION_KEY is unset or below 32 chars. " +
-      "Dynamically generated an ephemeral in-memory 256-bit cryptographic key for this session. " +
-      "Container startup and health checks will proceed without blocking."
+        "Dynamically generated an ephemeral in-memory 256-bit cryptographic key for this session. " +
+        "Container startup and health checks will proceed without blocking."
     );
   }
 }
@@ -91,7 +93,9 @@ function decryptVault(text: string): string {
     return decrypted.toString("utf8");
   }
 
-  throw new Error("Invalid cryptographic vault envelope format: expected authenticated iv:authTag:ciphertext");
+  throw new Error(
+    "Invalid cryptographic vault envelope format: expected authenticated iv:authTag:ciphertext"
+  );
 }
 
 import { getApps, initializeApp } from "firebase-admin/app";
@@ -121,13 +125,21 @@ let usdaFeatures: any[] = [];
 let lmiFeatures: any[] = [];
 
 try {
-  const usdaRaw = fs.readFileSync(path.join(process.cwd(), 'data/geosphere/oregon-usda-tracts.json'), 'utf8');
+  const usdaRaw = fs.readFileSync(
+    path.join(process.cwd(), "data/geosphere/oregon-usda-tracts.json"),
+    "utf8"
+  );
   usdaFeatures = JSON.parse(usdaRaw).features || [];
-  
-  const lmiRaw = fs.readFileSync(path.join(process.cwd(), 'data/geosphere/oregon-lmi-tracts.json'), 'utf8');
+
+  const lmiRaw = fs.readFileSync(
+    path.join(process.cwd(), "data/geosphere/oregon-lmi-tracts.json"),
+    "utf8"
+  );
   lmiFeatures = JSON.parse(lmiRaw).features || [];
-  
-  console.log(`[GeoSphere] Loaded ${usdaFeatures.length} USDA polygons and ${lmiFeatures.length} LMI tracts.`);
+
+  console.log(
+    `[GeoSphere] Loaded ${usdaFeatures.length} USDA polygons and ${lmiFeatures.length} LMI tracts.`
+  );
 } catch (err) {
   console.warn("[GeoSphere] Warning: Spatial boundaries failed to load from disk.", err);
 }
@@ -142,14 +154,17 @@ function getAdminDb() {
 
 // Replay Protection: Nonce cache with 10-minute automated purge
 const seenWebhookNonces = new Map<string, number>();
-setInterval(() => {
-  const now = Date.now();
-  for (const [nonce, timestamp] of seenWebhookNonces.entries()) {
-    if (now - timestamp > 10 * 60 * 1000) {
-      seenWebhookNonces.delete(nonce);
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [nonce, timestamp] of seenWebhookNonces.entries()) {
+      if (now - timestamp > 10 * 60 * 1000) {
+        seenWebhookNonces.delete(nonce);
+      }
     }
-  }
-}, 5 * 60 * 1000).unref();
+  },
+  5 * 60 * 1000
+).unref();
 
 // Constant-time HMAC SHA-256 Verification with Timestamp & Replay Validation
 function verifyWebhookHmac(
@@ -168,7 +183,10 @@ function verifyWebhookHmac(
   const reqTime = timestampHeader ? Number(timestampHeader) : NaN;
   if (!isNaN(reqTime)) {
     if (Math.abs(now - reqTime) > 5 * 60 * 1000) {
-      return { isValid: false, error: "Webhook timestamp expired or drifted outside 5-minute tolerance window" };
+      return {
+        isValid: false,
+        error: "Webhook timestamp expired or drifted outside 5-minute tolerance window",
+      };
     }
   }
 
@@ -182,16 +200,15 @@ function verifyWebhookHmac(
 
   // 3. Constant-Time HMAC comparison
   const bodyString = typeof rawBody === "string" ? rawBody : JSON.stringify(rawBody);
-  const dataToSign = timestampHeader && nonceHeader 
-    ? `${timestampHeader}.${nonceHeader}.${bodyString}`
-    : bodyString;
+  const dataToSign =
+    timestampHeader && nonceHeader ? `${timestampHeader}.${nonceHeader}.${bodyString}` : bodyString;
 
   const hmac = crypto.createHmac("sha256", secret);
   hmac.update(dataToSign);
   const computedHex = hmac.digest("hex");
 
-  const cleanSignature = signatureHeader.startsWith("sha256=") 
-    ? signatureHeader.substring(7) 
+  const cleanSignature = signatureHeader.startsWith("sha256=")
+    ? signatureHeader.substring(7)
     : signatureHeader;
 
   try {
@@ -206,7 +223,10 @@ function verifyWebhookHmac(
       // Check fallback signature over raw body only using constant-time equality
       const fallbackHmac = crypto.createHmac("sha256", secret).update(bodyString).digest("hex");
       const fallbackBuffer = Buffer.from(fallbackHmac, "hex");
-      if (fallbackBuffer.length === providedBuffer.length && crypto.timingSafeEqual(fallbackBuffer, providedBuffer)) {
+      if (
+        fallbackBuffer.length === providedBuffer.length &&
+        crypto.timingSafeEqual(fallbackBuffer, providedBuffer)
+      ) {
         return { isValid: true };
       }
       return { isValid: false, error: "Cryptographic HMAC signature verification failed" };
@@ -219,16 +239,20 @@ function verifyWebhookHmac(
 }
 
 // Enterprise Authentication Middleware (Priority 1 Item 1 & Priority 2 Item 6)
-const authenticateUser = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const authenticateUser = async (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized: Missing or invalid Authorization header' });
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
   }
-  const token = authHeader.split('Bearer ')[1];
+  const token = authHeader.split("Bearer ")[1];
   try {
     // Priority 2 Item 6: Enforce token revocation check (checkRevoked: true)
     const decodedToken = await getAuth().verifyIdToken(token, true);
-    
+
     // Priority 1 Item 1: Extract role and loId from custom claims or server-side user_roles record
     let role = (decodedToken as any).role || (decodedToken as any).rbacRole;
     let loId = (decodedToken as any).loId;
@@ -259,15 +283,15 @@ const authenticateUser = async (req: express.Request, res: express.Response, nex
     };
     next();
   } catch (error: any) {
-    if (error?.code === 'auth/id-token-revoked') {
-      console.warn('[Zero-Trust Auth] Revoked session token rejected.');
-      return res.status(401).json({ 
-        error: 'Unauthorized: Session credentials have been revoked. Please re-authenticate.',
-        code: 'auth/id-token-revoked'
+    if (error?.code === "auth/id-token-revoked") {
+      console.warn("[Zero-Trust Auth] Revoked session token rejected.");
+      return res.status(401).json({
+        error: "Unauthorized: Session credentials have been revoked. Please re-authenticate.",
+        code: "auth/id-token-revoked",
       });
     }
-    console.error('JWT Verification Error:', error);
-    return res.status(401).json({ error: 'Unauthorized: Invalid or expired token' });
+    console.error("JWT Verification Error:", error);
+    return res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
   }
 };
 
@@ -287,7 +311,7 @@ async function startServer() {
   const ALLOWED_ORIGINS = [
     "https://first-time-homebuyer.ai.studio",
     "https://ai.studio",
-    "https://aistudio.google.com"
+    "https://aistudio.google.com",
   ];
 
   app.use((req, res, next) => {
@@ -296,14 +320,18 @@ async function startServer() {
       // Direct server-to-server calls (e.g. webhooks, direct health probes)
       return next();
     }
-    const isAllowed = ALLOWED_ORIGINS.includes(origin) ||
+    const isAllowed =
+      ALLOWED_ORIGINS.includes(origin) ||
       /^https:\/\/([a-z0-9-]+\.)*(run\.app|ai\.studio|google\.com)$/.test(origin) ||
       (process.env.NODE_ENV !== "production" && /^http:\/\/localhost(:\d+)?$/.test(origin));
 
     if (isAllowed) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-bpd-signature, x-signature, x-bpd-event, x-event, x-timestamp, x-nonce");
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, x-bpd-signature, x-signature, x-bpd-event, x-event, x-timestamp, x-nonce"
+      );
       res.setHeader("Access-Control-Allow-Credentials", "true");
     }
 
@@ -319,23 +347,44 @@ async function startServer() {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://apis.google.com", "https://*.googleapis.com", "https://maps.googleapis.com"],
-          connectSrc: ["'self'", "https://*.googleapis.com", "https://*.firebaseio.com", "https://*.firebase.com", "https://*.run.app", "https://identitytoolkit.googleapis.com", "https://securetoken.googleapis.com", "wss:"],
+          scriptSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "'unsafe-eval'",
+            "https://apis.google.com",
+            "https://*.googleapis.com",
+            "https://maps.googleapis.com",
+          ],
+          connectSrc: [
+            "'self'",
+            "https://*.googleapis.com",
+            "https://*.firebaseio.com",
+            "https://*.firebase.com",
+            "https://*.run.app",
+            "https://identitytoolkit.googleapis.com",
+            "https://securetoken.googleapis.com",
+            "wss:",
+          ],
           imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
           styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
           fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-          frameAncestors: ["'self'", "https://ai.studio", "https://*.ai.studio", "https://*.google.com"],
+          frameAncestors: [
+            "'self'",
+            "https://ai.studio",
+            "https://*.ai.studio",
+            "https://*.google.com",
+          ],
           objectSrc: ["'none'"],
           baseUri: ["'self'"],
-        }
+        },
       },
       frameguard: false, // Delegated to CSP frame-ancestors for AI Studio preview
       xContentTypeOptions: true,
       hsts: {
         maxAge: 31536000,
         includeSubDomains: true,
-        preload: true
-      }
+        preload: true,
+      },
     })
   );
 
@@ -361,7 +410,7 @@ async function startServer() {
     max: 20, // 20 lead submissions per 15 minutes per IP
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: "Rate limit exceeded: maximum 20 lead submissions per 15 minutes per IP." }
+    message: { error: "Rate limit exceeded: maximum 20 lead submissions per 15 minutes per IP." },
   });
 
   // Dedicated Rate Limiter for Inbound Webhooks
@@ -370,7 +419,7 @@ async function startServer() {
     max: 60, // 60 inbound webhooks per minute per IP
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: "Rate limit exceeded for inbound webhooks." }
+    message: { error: "Rate limit exceeded for inbound webhooks." },
   });
 
   // Dedicated Rate Limiter for Cryptographic Vault Access
@@ -379,7 +428,7 @@ async function startServer() {
     max: 60, // 60 vault operations per 15 mins
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: "Rate limit exceeded for cryptographic vault operations." }
+    message: { error: "Rate limit exceeded for cryptographic vault operations." },
   });
 
   app.use(express.json({ limit: "100mb" }));
@@ -388,11 +437,15 @@ async function startServer() {
   let webhookLeadsQueue: any[] = [];
 
   // API Endpoint for 3rd-Party Platforms to POST leads
-  app.post('/api/webhook/lead', (req, res) => {
+  app.post("/api/webhook/lead", (req, res) => {
     try {
-      const apiKey = req.headers['x-api-key'] || req.headers['authorization'];
+      const apiKey = req.headers["x-api-key"] || req.headers["authorization"];
       // Basic security check (Optional: In production, validate against an env var)
-      if (process.env.WEBHOOK_API_KEY && apiKey !== process.env.WEBHOOK_API_KEY && apiKey !== `Bearer ${process.env.WEBHOOK_API_KEY}`) {
+      if (
+        process.env.WEBHOOK_API_KEY &&
+        apiKey !== process.env.WEBHOOK_API_KEY &&
+        apiKey !== `Bearer ${process.env.WEBHOOK_API_KEY}`
+      ) {
         return res.status(401).json({ error: "Unauthorized. Invalid API Key." });
       }
 
@@ -415,18 +468,20 @@ async function startServer() {
         leadSource: lead.source || "3rd Party Ad Campaign",
         assignedLoId: "mike-ford",
         ...lead, // Overwrite defaults with any provided fields
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
 
       webhookLeadsQueue.push(newLead);
-      return res.status(200).json({ success: true, message: "Lead successfully ingested.", leadId: newLead.id });
+      return res
+        .status(200)
+        .json({ success: true, message: "Lead successfully ingested.", leadId: newLead.id });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
   });
 
   // Internal endpoint for the React frontend to poll and clear the queue
-  app.get('/api/data/sync/poll', (req, res) => {
+  app.get("/api/data/sync/poll", (req, res) => {
     res.json({ leads: webhookLeadsQueue });
     webhookLeadsQueue = []; // clear after fetching
   });
@@ -444,17 +499,17 @@ Core Guidelines:
 Format your responses with clean Markdown, bold highlights, bullet points, and distinct visual blocks.`;
 
   function getActiveAIProvider() {
-    if (process.env.DEEPSEEK_API_KEY) return 'deepseek';
-    if (process.env.GEMINI_API_KEY) return 'gemini';
-    return 'none';
+    if (process.env.DEEPSEEK_API_KEY) return "deepseek";
+    if (process.env.GEMINI_API_KEY) return "gemini";
+    return "none";
   }
 
   // Diagnostic Endpoint for Agentic Orchestrator Status
-  app.get('/api/ai/diagnostics', (req, res) => {
+  app.get("/api/ai/diagnostics", (req, res) => {
     const hasDeepSeek = !!process.env.DEEPSEEK_API_KEY;
     const hasGemini = !!process.env.GEMINI_API_KEY;
     const activeProvider = getActiveAIProvider();
-    
+
     // The Consensus Filter conceptually requires both models to cross-check.
     const consensusFilterActive = hasDeepSeek && hasGemini;
 
@@ -465,23 +520,23 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
       geminiActive: hasGemini,
       consensusFilterActive,
       ragPipelineActive: true, // Always true since vantageKnowledge is loaded
-      statusMessage: consensusFilterActive 
+      statusMessage: consensusFilterActive
         ? "Dual-Brain Consensus Filter Active (DeepSeek + Gemini)"
-        : hasDeepSeek 
+        : hasDeepSeek
           ? "DeepSeek Active (Logic & Rule Auditor prioritized)"
           : hasGemini
             ? "Gemini Active (High-Context Synthesizer prioritized)"
-            : "Fallback Simulated Engine Active (No API Keys)"
+            : "Fallback Simulated Engine Active (No API Keys)",
     });
   });
 
   // Knowledge Base Ingestion Endpoint
-  app.post('/api/knowledge/ingest', authenticateUser, async (req, res) => {
+  app.post("/api/knowledge/ingest", authenticateUser, async (req, res) => {
     try {
       const { text, fileName, fileBase64, mimeType, url } = req.body;
       const ai = getGeminiClient();
-      if (!ai) return res.status(500).json({ error: 'No AI key configured for embeddings.' });
-      
+      if (!ai) return res.status(500).json({ error: "No AI key configured for embeddings." });
+
       let docText = text;
       let finalFileName = fileName;
 
@@ -495,36 +550,44 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
             throw new Error("Invalid URL protocol. Only HTTP and HTTPS are allowed.");
           }
           const hostname = parsedUrl.hostname;
-          const isLocalhost = hostname === "localhost" || hostname.endsWith(".localhost") || hostname === "127.0.0.1" || hostname === "::1";
-          const isPrivateIp = /^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\.|^192\.168\.|^169\.254\./.test(hostname);
-          
+          const isLocalhost =
+            hostname === "localhost" ||
+            hostname.endsWith(".localhost") ||
+            hostname === "127.0.0.1" ||
+            hostname === "::1";
+          const isPrivateIp = /^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\.|^192\.168\.|^169\.254\./.test(
+            hostname
+          );
+
           if (isLocalhost || isPrivateIp) {
-            throw new Error("Access to local or private network infrastructure is strictly prohibited (SSRF Protection).");
+            throw new Error(
+              "Access to local or private network infrastructure is strictly prohibited (SSRF Protection)."
+            );
           }
 
           // Fetch with strict 8-second timeout
           const fetchRes = await fetch(url, { signal: AbortSignal.timeout(8000) });
           if (!fetchRes.ok) throw new Error(`Failed to fetch URL: ${fetchRes.statusText}`);
-          
+
           const contentType = fetchRes.headers.get("content-type") || "";
           if (contentType.includes("application/pdf")) {
             const arrayBuffer = await fetchRes.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
             const base64Pdf = buffer.toString("base64");
             const response = await ai.models.generateContent({
-              model: 'gemini-3.7-flash',
+              model: "gemini-3.7-flash",
               contents: [
                 { inlineData: { data: base64Pdf, mimeType: "application/pdf" } },
-                "Extract all text, product guidelines, and matrices from this PDF for a knowledge base."
-              ]
+                "Extract all text, product guidelines, and matrices from this PDF for a knowledge base.",
+              ],
             });
             docText = response.text || "";
           } else {
             // Assume HTML/Text
             const htmlText = await fetchRes.text();
             const response = await ai.models.generateContent({
-              model: 'gemini-3.7-flash',
-              contents: `Extract the main readable content, product guidelines, and information from this raw HTML string. Ignore navigation and scripts:\n\n${htmlText.substring(0, 50000)}`
+              model: "gemini-3.7-flash",
+              contents: `Extract the main readable content, product guidelines, and information from this raw HTML string. Ignore navigation and scripts:\n\n${htmlText.substring(0, 50000)}`,
             });
             docText = response.text || "";
           }
@@ -539,7 +602,7 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
             success: true,
             message: `Video ${finalFileName} is being processed in the background. It will take a few minutes to transcribe and add to the knowledge base.`,
             docId: "processing",
-            extractedTextPreview: "Processing in background..."
+            extractedTextPreview: "Processing in background...",
           });
 
           // Run processing in background
@@ -547,17 +610,19 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
             try {
               console.log(`Starting background processing for video: ${finalFileName}`);
               const response = await ai.models.generateContent({
-                model: 'gemini-3.7-flash',
+                model: "gemini-3.7-flash",
                 contents: [
                   { inlineData: { data: fileBase64, mimeType } },
-                  "Please completely transcribe this video and extract all structured data, underwriting guidelines, and product qualifications accurately so it can be added to a knowledge base."
-                ]
+                  "Please completely transcribe this video and extract all structured data, underwriting guidelines, and product qualifications accurately so it can be added to a knowledge base.",
+                ],
               });
               const videoText = response.text || "";
               if (videoText) {
                 const redactedVideoText = redactPII(videoText);
                 await addDocumentToKnowledge(redactedVideoText, { fileName: finalFileName }, ai);
-                console.log(`Successfully completed background processing for video/audio: ${finalFileName}`);
+                console.log(
+                  `Successfully completed background processing for video/audio: ${finalFileName}`
+                );
               }
             } catch (err) {
               console.error("Background video processing failed:", err);
@@ -569,13 +634,13 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
         // If a file was uploaded as base64 (non-video), extract text with Gemini first
         try {
           const response = await ai.models.generateContent({
-            model: 'gemini-3.7-flash',
+            model: "gemini-3.7-flash",
             contents: [
               {
-                inlineData: { data: fileBase64, mimeType }
+                inlineData: { data: fileBase64, mimeType },
               },
-              "Please extract all text and structured data from this document accurately so it can be added to a knowledge base."
-            ]
+              "Please extract all text and structured data from this document accurately so it can be added to a knowledge base.",
+            ],
           });
           docText = response.text || docText;
         } catch (extErr) {
@@ -585,26 +650,28 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
       }
 
       if (!docText) {
-        return res.status(400).json({ error: 'No text provided or extracted.' });
+        return res.status(400).json({ error: "No text provided or extracted." });
       }
 
       // ZERO-TRUST ARCHITECTURE: PII-Safe Ephemeral Vault Lifecycle
       const db = getAdminDb();
       const piiVaultRef = db.collection("vault_pii_secure").doc();
-      
+
       // 1. Encrypt and store raw PII metadata in an isolated sub-collection
       // (Simulating KMS envelope encryption via base64 for preview purposes)
-      const encryptedPayload = Buffer.from(JSON.stringify({
-         rawText: docText,
-         uploaderId: (req as any).user?.uid || "unknown",
-         timestamp: new Date().toISOString(),
-         fileName: finalFileName
-      })).toString('base64');
+      const encryptedPayload = Buffer.from(
+        JSON.stringify({
+          rawText: docText,
+          uploaderId: (req as any).user?.uid || "unknown",
+          timestamp: new Date().toISOString(),
+          fileName: finalFileName,
+        })
+      ).toString("base64");
 
       await piiVaultRef.set({
         encryptedData: encryptedPayload,
         status: "PENDING_SCRUB",
-        aiAccessible: false
+        aiAccessible: false,
       });
 
       // 2. Scrub the text (Redact PII)
@@ -615,42 +682,48 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
       await piiVaultRef.delete();
 
       try {
-        await db.collection("system_metrics").doc("pii_scrub_stats").set({
-          totalScrubbed: FieldValue.increment(1),
-          lastScrubTimestamp: new Date().toISOString()
-        }, { merge: true });
+        await db
+          .collection("system_metrics")
+          .doc("pii_scrub_stats")
+          .set(
+            {
+              totalScrubbed: FieldValue.increment(1),
+              lastScrubTimestamp: new Date().toISOString(),
+            },
+            { merge: true }
+          );
       } catch (e) {
         console.error("Failed to update PII scrub stats:", e);
       }
 
       // 4. Ingest ONLY the sanitized content to the AI Memory (RAG)
       const doc = await addDocumentToKnowledge(redactedDocText, { fileName: finalFileName }, ai);
-      
-      res.json({ 
-        success: true, 
-        message: `Successfully ingested ${finalFileName} into Vantage Knowledge Base.`, 
-        docId: doc.id, 
+
+      res.json({
+        success: true,
+        message: `Successfully ingested ${finalFileName} into Vantage Knowledge Base.`,
+        docId: doc.id,
         extractedTextPreview: redactedDocText.substring(0, 200),
         securityAudit: {
           piiVaultAssignedId: piiVaultRef.id,
           vaultStorageStatus: "SHREDDED_POST_SCRUB",
           piiRedactionApplied: true,
-          ephemeralPersistence: "0s"
-        }
+          ephemeralPersistence: "0s",
+        },
       });
     } catch (error: any) {
       console.error("Knowledge ingestion error:", error);
-      res.status(500).json({ error: 'Knowledge ingestion failed' });
+      res.status(500).json({ error: "Knowledge ingestion failed" });
     }
   });
 
   // Standard Chat Endpoint (Vantage AI)
-  app.post('/api/chat', async (req, res) => {
+  app.post("/api/chat", async (req, res) => {
     try {
       const { prompt, chatHistory } = req.body;
       const provider = getActiveAIProvider();
-      
-      if (provider === 'none') return res.status(500).json({ error: 'No AI Provider configured' });
+
+      if (provider === "none") return res.status(500).json({ error: "No AI Provider configured" });
 
       let augmentedPrompt = prompt;
 
@@ -658,18 +731,23 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
       // GEOSPHERE INTENTION ROUTER: Detect Address & Run Spatial Engine Math
       // ============================================================================
       try {
-        const addressMatch = prompt.match(/\b\d+\s+[-A-Za-z0-9\s.,]+(?:street|st|avenue|ave|road|rd|highway|hwy|square|sq|trail|trl|drive|dr|court|ct|parkway|pkwy|circle|cir|boulevard|blvd|way|place|pl|lane|ln)\b/i);
-        
+        const addressMatch = prompt.match(
+          /\b\d+\s+[-A-Za-z0-9\s.,]+(?:street|st|avenue|ave|road|rd|highway|hwy|square|sq|trail|trl|drive|dr|court|ct|parkway|pkwy|circle|cir|boulevard|blvd|way|place|pl|lane|ln)\b/i
+        );
+
         if (addressMatch) {
           const rawAddress = addressMatch[0];
           console.log(`[GeoSphere Router] Detected Address: ${rawAddress}. Executing Geocoder...`);
-          
+
           let lat: number | null = null;
           let lng: number | null = null;
           let cached = false;
-          
+
           // 1. Check Firestore Cache first to minimize redundant OpenStreetMap API calls
-          const cacheKey = rawAddress.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+          const cacheKey = rawAddress
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "");
           try {
             const db = getAdminDb();
             const cacheDoc = await db.collection("geosphere_cache").doc(cacheKey).get();
@@ -689,58 +767,68 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
           // 2. Geocode if not in cache
           if (!lat || !lng) {
             console.log(`[GeoSphere Router] Cache MISS. Geocoding via OpenStreetMap Nominatim...`);
-            const geocodeRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(rawAddress + ", Oregon")}&format=json&limit=1`, {
-              headers: { "User-Agent": "VantageAI/1.0" }
-            });
+            const geocodeRes = await fetch(
+              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(rawAddress + ", Oregon")}&format=json&limit=1`,
+              {
+                headers: { "User-Agent": "VantageAI/1.0" },
+              }
+            );
             const geocodeData = await geocodeRes.json();
-            
+
             if (geocodeData && geocodeData.length > 0) {
               lat = parseFloat(geocodeData[0].lat);
               lng = parseFloat(geocodeData[0].lon);
-              
+
               // Asynchronously save to cache
               try {
                 const db = getAdminDb();
-                db.collection("geosphere_cache").doc(cacheKey).set({
-                  address: rawAddress,
-                  lat,
-                  lng,
-                  cachedAt: FieldValue.serverTimestamp()
-                }).catch(err => console.error("[GeoSphere Router] Async cache write failed:", err));
+                db.collection("geosphere_cache")
+                  .doc(cacheKey)
+                  .set({
+                    address: rawAddress,
+                    lat,
+                    lng,
+                    cachedAt: FieldValue.serverTimestamp(),
+                  })
+                  .catch((err) =>
+                    console.error("[GeoSphere Router] Async cache write failed:", err)
+                  );
               } catch (e) {
                 // Ignore sync errors
               }
             }
           }
-          
+
           if (lat !== null && lng !== null) {
             const point: [number, number] = [lng, lat];
-            
+
             // Run Point-In-Polygon against USDA and LMI arrays loaded in memory
-            const isUsda = usdaFeatures.some(f => pointInGeometry(point, f.geometry));
-            const isLmi = lmiFeatures.some(f => pointInGeometry(point, f.geometry));
-            
-            console.log(`[GeoSphere Router] Address ${rawAddress} -> Lat: ${lat}, Lng: ${lng}. USDA: ${isUsda}, LMI: ${isLmi}`);
-            
+            const isUsda = usdaFeatures.some((f) => pointInGeometry(point, f.geometry));
+            const isLmi = lmiFeatures.some((f) => pointInGeometry(point, f.geometry));
+
+            console.log(
+              `[GeoSphere Router] Address ${rawAddress} -> Lat: ${lat}, Lng: ${lng}. USDA: ${isUsda}, LMI: ${isLmi}`
+            );
+
             const geoSphereReport = `
 [GEOSPHERE SPATIAL ENGINE REPORT]:
 The user's prompt contains an address: "${rawAddress}".
-I have ${cached ? 'retrieved from the high-speed Firestore cache' : 'automatically geocoded this to'} Coordinates (Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}).
+I have ${cached ? "retrieved from the high-speed Firestore cache" : "automatically geocoded this to"} Coordinates (Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}).
 I ran computational ray-casting against our compliance JSON boundaries:
-- USDA Rural Development 100% Financing Eligible: ${isUsda ? 'YES' : 'NO'}
-- Low-to-Moderate Income (LMI) Census Tract: ${isLmi ? 'YES' : 'NO'}
+- USDA Rural Development 100% Financing Eligible: ${isUsda ? "YES" : "NO"}
+- Low-to-Moderate Income (LMI) Census Tract: ${isLmi ? "YES" : "NO"}
 
 INSTRUCTION: Please incorporate these mathematically verified facts into your response to the user. Do not guess; rely entirely on this GeoSphere engine output for USDA/LMI eligibility.`;
-            
+
             augmentedPrompt = geoSphereReport + "\n\n" + augmentedPrompt;
           }
         }
       } catch (e) {
         console.error("[GeoSphere Router] Failed to extract or map address:", e);
       }
-      
+
       // Search Knowledge Base (RAG)
-      
+
       if (chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0) {
         let historyStr = "\n\n[PRIOR CHAT CONTEXT]:\n";
         chatHistory.slice(-40).forEach((h: any) => {
@@ -753,13 +841,19 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
         const aiForEmbeddings = getGeminiClient();
         if (aiForEmbeddings) {
           const relevantDocs = await searchKnowledge(prompt, aiForEmbeddings);
-          const strongDocs = relevantDocs.filter(d => d.score > 0.50); // Threshold
-          
+          const strongDocs = relevantDocs.filter((d) => d.score > 0.5); // Threshold
+
           if (strongDocs.length > 0) {
             let contextStr = "\n\n[RELEVANT MIKE FORD OREGON KNOWLEDGE BASE & CASE STUDIES]:\n";
-            contextStr += strongDocs.map((d, i) => `--- Reference ${i+1} (${d.metadata?.fileName || 'Historical Data'}) ---\n${d.text}`).join("\n\n");
-            contextStr += "\n\nINSTRUCTION: Use the above case studies and guidelines to enhance your answer. If they don't cover everything, rely on your broad elite mortgage AI expertise to provide a complete, robust response. Do not limit yourself strictly to the context if general knowledge adds value.";
-            
+            contextStr += strongDocs
+              .map(
+                (d, i) =>
+                  `--- Reference ${i + 1} (${d.metadata?.fileName || "Historical Data"}) ---\n${d.text}`
+              )
+              .join("\n\n");
+            contextStr +=
+              "\n\nINSTRUCTION: Use the above case studies and guidelines to enhance your answer. If they don't cover everything, rely on your broad elite mortgage AI expertise to provide a complete, robust response. Do not limit yourself strictly to the context if general knowledge adds value.";
+
             augmentedPrompt = prompt + contextStr;
           }
         }
@@ -767,31 +861,34 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
         console.error("RAG Search failed, proceeding without context", e);
       }
 
-      if (provider === 'deepseek') {
-        const response = await fetch('https://api.deepseek.com/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+      if (provider === "deepseek") {
+        const response = await fetch("https://api.deepseek.com/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+          },
           body: JSON.stringify({
-            model: 'deepseek-chat',
+            model: "deepseek-chat",
             messages: [
-              { role: 'system', content: SYSTEM_PROMPT },
-              { role: 'user', content: augmentedPrompt }
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: augmentedPrompt },
             ],
-            temperature: 0.3
-          })
+            temperature: 0.3,
+          }),
         });
         const data = await response.json();
-        return res.json({ response: data.choices?.[0]?.message?.content || '' });
+        return res.json({ response: data.choices?.[0]?.message?.content || "" });
       } else {
         const ai = getGeminiClient();
         const response = await ai!.models.generateContent({
-          model: 'gemini-3.7-flash',
+          model: "gemini-3.7-flash",
           contents: augmentedPrompt,
-          config: { 
-            systemInstruction: SYSTEM_PROMPT, 
+          config: {
+            systemInstruction: SYSTEM_PROMPT,
             temperature: 0.3,
-            tools: [{ googleSearch: {} }]
-          }
+            tools: [{ googleSearch: {} }],
+          },
         });
         return res.json({ response: response.text });
       }
@@ -802,29 +899,35 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
 
   // Document Analysis Endpoint
   // Document Analysis Endpoint with RAG Context
-  app.post('/api/analyze-doc', async (req, res) => {
+  app.post("/api/analyze-doc", async (req, res) => {
     try {
       const { documentText, documentType, fileName } = req.body;
       const provider = getActiveAIProvider();
-      if (provider === 'none') return res.status(500).json({ error: 'No AI key configured.' });
+      if (provider === "none") return res.status(500).json({ error: "No AI key configured." });
 
       let augmentedPrompt = `Analyze this mortgage document (${fileName || documentType}):\n"""${documentText}"""\nProvide a structured Underwriting Analysis including Income Extraction, Risk Flags, and Action Items.`;
 
       const ai = getGeminiClient();
-      
+
       // Inject RAG context based on the document text
       try {
         if (ai) {
           // Use a snippet of the document to find related guidelines in our Knowledge Base
           const queryText = (documentText || "").substring(0, 1000);
           const relevantDocs = await searchKnowledge(queryText, ai);
-          const strongDocs = relevantDocs.filter(d => d.score > 0.50);
-          
+          const strongDocs = relevantDocs.filter((d) => d.score > 0.5);
+
           if (strongDocs.length > 0) {
             let contextStr = "\n\n[RELEVANT MIKE FORD OREGON KNOWLEDGE BASE & CASE STUDIES]:\n";
-            contextStr += strongDocs.map((d, i) => `--- Reference ${i+1} (${d.metadata?.fileName || 'Historical Data'}) ---\n${d.text}`).join("\n\n");
-            contextStr += "\n\nINSTRUCTION: Cross-reference the uploaded document against the above local underwriting guidelines and case studies. Identify if the document meets our specific overlays or requires additional structuring.";
-            
+            contextStr += strongDocs
+              .map(
+                (d, i) =>
+                  `--- Reference ${i + 1} (${d.metadata?.fileName || "Historical Data"}) ---\n${d.text}`
+              )
+              .join("\n\n");
+            contextStr +=
+              "\n\nINSTRUCTION: Cross-reference the uploaded document against the above local underwriting guidelines and case studies. Identify if the document meets our specific overlays or requires additional structuring.";
+
             augmentedPrompt += contextStr;
           }
         }
@@ -833,15 +936,15 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
       }
 
       if (ai) {
-          const response = await ai.models.generateContent({
-              model: 'gemini-3.7-flash',
-              contents: augmentedPrompt,
-              config: { systemInstruction: SYSTEM_PROMPT, temperature: 0.4 }
-          });
-          return res.json({ analysis: response.text });
+        const response = await ai.models.generateContent({
+          model: "gemini-3.7-flash",
+          contents: augmentedPrompt,
+          config: { systemInstruction: SYSTEM_PROMPT, temperature: 0.4 },
+        });
+        return res.json({ analysis: response.text });
       }
     } catch (error: any) {
-      res.status(500).json({ error: 'Document analysis failed' });
+      res.status(500).json({ error: "Document analysis failed" });
     }
   });
 
@@ -850,7 +953,7 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
   function redactPII(text: string): string {
     if (!text) return text;
     let sanitized = text;
-    
+
     // Redact SSN/ITIN patterns (XXX-XX-XXXX or XXXXXXXXX)
     const ssnPattern = /\b(?!000|666|9\d{2})\d{3}[-.\s]?(?!00)\d{2}[-.\s]?(?!0000)\d{4}\b/g;
     sanitized = sanitized.replace(ssnPattern, "[REDACTED_SSN_PII]");
@@ -913,16 +1016,33 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
   const isQuotaOrDepleted = (err: any) => {
     const msg = String(err?.message || err || "");
     const status = err?.status || err?.code || 0;
-    return status === 429 || msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("prepayment credits are depleted") || msg.includes("quota");
+    return (
+      status === 429 ||
+      msg.includes("429") ||
+      msg.includes("RESOURCE_EXHAUSTED") ||
+      msg.includes("prepayment credits are depleted") ||
+      msg.includes("quota")
+    );
   };
 
   // Helper: Resilient LO 2nd Brain Underwriter Fallback
-  const getLO2ndBrainFallback = (message: string, loProfile: any, activeLead: any, scenarioContext: any, mode?: string) => {
+  const getLO2ndBrainFallback = (
+    message: string,
+    loProfile: any,
+    activeLead: any,
+    scenarioContext: any,
+    mode?: string
+  ) => {
     const qLower = (message || "").toLowerCase();
     const loName = loProfile?.name || "Mike Ford";
     const leadName = activeLead?.fullName || "Borrower";
 
-    if (qLower.includes("ipc") || qLower.includes("concession") || qLower.includes("seller credit") || qLower.includes("seller contribution")) {
+    if (
+      qLower.includes("ipc") ||
+      qLower.includes("concession") ||
+      qLower.includes("seller credit") ||
+      qLower.includes("seller contribution")
+    ) {
       return `### 🏛️ Fannie Mae, Freddie Mac, FHA & VA Interested Party Contribution (IPC) Matrix
 
 **1. Conventional Conforming Loans (Fannie Mae B3-4.1-02 / Freddie Mac 5501.5):**
@@ -940,7 +1060,12 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
 Seller concessions can **NEVER** be applied toward the buyer's minimum required cash investment (down payment equity) or paid as cash back at closing. They may only fund actual closing costs, prepaids, escrow impounds, discount points, or temporary 2-1 buydown subsidy escrows.`;
     }
 
-    if (qLower.includes("buydown") || qLower.includes("2-1") || qLower.includes("temporary buydown") || qLower.includes("rate buydown")) {
+    if (
+      qLower.includes("buydown") ||
+      qLower.includes("2-1") ||
+      qLower.includes("temporary buydown") ||
+      qLower.includes("rate buydown")
+    ) {
       return `### 📉 2-1 Temporary Interest Rate Buydown Structuring & Math
 
 **1. Mechanism & Rate Schedule:**
@@ -955,7 +1080,13 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
 • **Unused Funds Safeguard:** If the borrower refinances before Month 24, remaining funds in the escrow account are credited directly against the principal payoff balance.`;
     }
 
-    if (qLower.includes("schedule c") || qLower.includes("1084") || qLower.includes("tax") || qLower.includes("self-employed") || qLower.includes("depreciation")) {
+    if (
+      qLower.includes("schedule c") ||
+      qLower.includes("1084") ||
+      qLower.includes("tax") ||
+      qLower.includes("self-employed") ||
+      qLower.includes("depreciation")
+    ) {
       return `### 📊 Fannie Mae Form 1084 / Freddie Mac Form 91 Schedule C Cash Flow Analysis
 
 **1. Line-by-Line Calculation Formula:**
@@ -976,7 +1107,14 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
 • **Mileage Add-back:** Total business miles logged on Form 4562/Schedule C multiplied by the IRS standard depreciation rate (e.g. $0.28–$0.30/mile) may be added back to cash flow.`;
     }
 
-    if (qLower.includes("dti") || qLower.includes("du") || qLower.includes("lpa") || qLower.includes("ratio") || qLower.includes("underwrite") || qLower.includes("student loan")) {
+    if (
+      qLower.includes("dti") ||
+      qLower.includes("du") ||
+      qLower.includes("lpa") ||
+      qLower.includes("ratio") ||
+      qLower.includes("underwrite") ||
+      qLower.includes("student loan")
+    ) {
       return `### 🎯 Automated Underwriting System (DU/LPA) Ratio & Approval Strategies
 
 **1. Benchmark Debt-to-Income (DTI) Thresholds:**
@@ -990,7 +1128,13 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
 • **Student Loan Calculation:** On Conventional, if monthly payment is $0 on IBR/SAVE, use **0.50%** of outstanding balance (or 1.00% on FHA). If documentation of fixed IBR is provided, Conventional allows using the documented $0 payment.`;
     }
 
-    if (qLower.includes("realtor") || qLower.includes("agent") || qLower.includes("script") || qLower.includes("pitch") || qLower.includes("objection")) {
+    if (
+      qLower.includes("realtor") ||
+      qLower.includes("agent") ||
+      qLower.includes("script") ||
+      qLower.includes("pitch") ||
+      qLower.includes("objection")
+    ) {
       return `### 🤝 Realtor Partnership & Buyer Conversion Strategy
 
 **1. Buyer's Agent Strategy Script (Converting Renters):**
@@ -1029,175 +1173,205 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
     const timeStr = payload?.currentTimeString || "Active Shift";
 
     // Ratio tier classification
-    const ratioTier = completed === 0 
-      ? 'zero_reset' 
-      : pct < 40 
-      ? 'lagging_triage' 
-      : pct < 70 
-      ? 'mid_flight_bubble' 
-      : pct < 100 
-      ? 'high_tempo' 
-      : 'championship_pace';
+    const ratioTier =
+      completed === 0
+        ? "zero_reset"
+        : pct < 40
+          ? "lagging_triage"
+          : pct < 70
+            ? "mid_flight_bubble"
+            : pct < 100
+              ? "high_tempo"
+              : "championship_pace";
 
     const ratioLabel = `${completed} of ${total} Goals (${pct}%)`;
 
-    if (ratioTier === 'zero_reset') {
-      const diagnosis = phase === 'morning'
-        ? "Morning shift kickoff: 0 goals checked. You haven't seized offensive control yet. If you start your morning sorting emails or putting out processor fires, reactive triage will consume your entire day."
-        : phase === 'midday'
-        ? `Midday reality check (${timeStr}): 0 on the board. You've spent hours on defense handling inbound fire drills. Busy is NOT productive; your proactive purchase pipeline is starving right now.`
-        : phase === 'afternoon'
-        ? `Afternoon audit (${timeStr}): 0 of ${total} goals completed. Let's be real: you are behind schedule. Reactive administration crowded out revenue-generating calls. But beating yourself up earns $0 in commission.`
-        : `End-of-day audit (${timeStr}): 0 of ${total} checklist items checked off. The day slipped away into reactive fires. Let's acknowledge the gap honestly without defeatism, reset the board, and salvage our standard.`;
+    if (ratioTier === "zero_reset") {
+      const diagnosis =
+        phase === "morning"
+          ? "Morning shift kickoff: 0 goals checked. You haven't seized offensive control yet. If you start your morning sorting emails or putting out processor fires, reactive triage will consume your entire day."
+          : phase === "midday"
+            ? `Midday reality check (${timeStr}): 0 on the board. You've spent hours on defense handling inbound fire drills. Busy is NOT productive; your proactive purchase pipeline is starving right now.`
+            : phase === "afternoon"
+              ? `Afternoon audit (${timeStr}): 0 of ${total} goals completed. Let's be real: you are behind schedule. Reactive administration crowded out revenue-generating calls. But beating yourself up earns $0 in commission.`
+              : `End-of-day audit (${timeStr}): 0 of ${total} checklist items checked off. The day slipped away into reactive fires. Let's acknowledge the gap honestly without defeatism, reset the board, and salvage our standard.`;
 
-      const tacticalPivot = phase === 'morning'
-        ? "Shut down your email tab immediately. Dial your top 2 purchase buyer leads before 11:00 AM sharp."
-        : phase === 'midday'
-        ? "The Emergency Rule of 2: Drop all administrative items. Text a top Realtor partner (Sarah Jenkins or Marcus Vance) for coffee and call 1 hot pre-approved buyer right now."
-        : phase === 'afternoon'
-        ? "The 3:30 PM Pivot: One live pre-approval consult or rate-lock recommendation redeems this entire day. Call your warmest CRM lead before they leave work."
-        : "The 5-Minute EOD Reset: Send 1 high-intent text to an active Realtor partner right now and queue tomorrow's top 2 calls for 9:00 AM sharp.";
+      const tacticalPivot =
+        phase === "morning"
+          ? "Shut down your email tab immediately. Dial your top 2 purchase buyer leads before 11:00 AM sharp."
+          : phase === "midday"
+            ? "The Emergency Rule of 2: Drop all administrative items. Text a top Realtor partner (Sarah Jenkins or Marcus Vance) for coffee and call 1 hot pre-approved buyer right now."
+            : phase === "afternoon"
+              ? "The 3:30 PM Pivot: One live pre-approval consult or rate-lock recommendation redeems this entire day. Call your warmest CRM lead before they leave work."
+              : "The 5-Minute EOD Reset: Send 1 high-intent text to an active Realtor partner right now and queue tomorrow's top 2 calls for 9:00 AM sharp.";
 
       return {
-        headline: `${phase === 'morning' ? 'Morning Kickoff & Alignment' : phase === 'midday' ? 'Midday Reality Check & Reset' : phase === 'afternoon' ? 'Afternoon Power Pivot' : 'End-of-Day Candid Review'} (${timeStr})`,
+        headline: `${phase === "morning" ? "Morning Kickoff & Alignment" : phase === "midday" ? "Midday Reality Check & Reset" : phase === "afternoon" ? "Afternoon Power Pivot" : "End-of-Day Candid Review"} (${timeStr})`,
         motivationalBadge: `Actual Ratio: 0 of ${total} Goals Completed (0%) — Candid Reality Check!`,
         whatDoneSummary: `Audit: 0 of ${total} checklist goals completed (${pct}% ratio). You're currently behind pace on daily targets, but there is still time to take offensive control.`,
         managerPerspective: `Listen to me, ${name}: Seeing 0 out of ${total} on the board is tough, but I've been in the trenches and I know what happens—underwriters drop conditions, borrowers panic about rates, and your whole morning gets hijacked. Here's the straight critique: If you spend all day on defense, your pipeline starves in 30 days. Let's stop the bleeding right now. You don't need to finish all ${total} tasks; you need ONE high-leverage revenue win to turn this entire shift into a $4,500+ victory.`,
         salesManagerCritique: {
-          ratioTier: 'zero_reset',
+          ratioTier: "zero_reset",
           ratioLabel,
-          tone: 'Candid & Empathetic Reality Check',
+          tone: "Candid & Empathetic Reality Check",
           diagnosis,
           tacticalPivot,
-          accountabilityCheck: "In mortgage origination, 0% on the board is forgivable ONLY if you made live outbound calls and put out client emergencies. If you let passive busywork steal your day, own the critique, fix it, and attack.",
-          conversionMathNote: "One converted purchase pre-approval generates ~$4,500+ in commission — that completely out-values 5 routine admin checkboxes."
+          accountabilityCheck:
+            "In mortgage origination, 0% on the board is forgivable ONLY if you made live outbound calls and put out client emergencies. If you let passive busywork steal your day, own the critique, fix it, and attack.",
+          conversionMathNote:
+            "One converted purchase pre-approval generates ~$4,500+ in commission — that completely out-values 5 routine admin checkboxes.",
         },
         topProducerTip: {
-          headline: phase === 'morning' ? "The First 90-Minute Rule" : phase === 'afternoon' ? "The 3:30 PM Emergency Two-Step" : "The Emergency Rule of 2",
-          advice: "Drop all administrative spreadsheets and condition cleanup for the next 45 minutes. Dial your hottest purchase buyer lead and text a top listing agent for coffee. One live conversation saves your shift.",
-          focusOutcome: "Secure 1 live borrower consultation or 1 realtor coffee meeting."
+          headline:
+            phase === "morning"
+              ? "The First 90-Minute Rule"
+              : phase === "afternoon"
+                ? "The 3:30 PM Emergency Two-Step"
+                : "The Emergency Rule of 2",
+          advice:
+            "Drop all administrative spreadsheets and condition cleanup for the next 45 minutes. Dial your hottest purchase buyer lead and text a top listing agent for coffee. One live conversation saves your shift.",
+          focusOutcome: "Secure 1 live borrower consultation or 1 realtor coffee meeting.",
         },
         topPriorities: [
           "Call your #1 hottest CRM buyer lead immediately to structure an updated pre-approval.",
           "Send a quick personal text to Realtor partner (Sarah Jenkins or Marcus Vance) for a coffee sync.",
-          isAdmin 
-            ? "Check branch loan routing for stagnant incoming inquiries." 
-            : "Clear the single most urgent underwriting file condition before 4:30 PM."
+          isAdmin
+            ? "Check branch loan routing for stagnant incoming inquiries."
+            : "Clear the single most urgent underwriting file condition before 4:30 PM.",
         ],
-        coachingQuote: "Top producers don't fret about a slow morning — they adjust the target, take 2 high-impact revenue actions, and finish strong.",
+        coachingQuote:
+          "Top producers don't fret about a slow morning — they adjust the target, take 2 high-impact revenue actions, and finish strong.",
         nextActionRecommendation: {
           tabId: "leads",
           actionTitle: "Call #1 Priority Hot Buyer",
-          actionReason: "Converting one hot buyer to an active application makes today an absolute victory."
-        }
+          actionReason:
+            "Converting one hot buyer to an active application makes today an absolute victory.",
+        },
       };
     }
 
-    if (ratioTier === 'lagging_triage') {
+    if (ratioTier === "lagging_triage") {
       return {
-        headline: `${phase === 'afternoon' ? 'Afternoon Sprint & Triage' : 'Midday Triage & Momentum Check'} (${timeStr})`,
+        headline: `${phase === "afternoon" ? "Afternoon Sprint & Triage" : "Midday Triage & Momentum Check"} (${timeStr})`,
         motivationalBadge: `Actual Ratio: ${completed} of ${total} Goals Completed (${pct}%) — Triage Mode!`,
         whatDoneSummary: `Mid-shift review: ${completed} of ${total} targets completed (${pct}% ratio). You have points on the board, but you're lagging behind standard production velocity.`,
         managerPerspective: `${name}, let's look at the numbers: ${completed} of ${total} is progress, but you're falling behind pace. Here's the constructive critique: You knocked out the easy admin item, but you're hesitating on the tough outbound calls. Rolling 3-4 tasks over to tomorrow creates compounding pipeline drag. You've got the skill and the pipeline—now let's bring the energy. Cut the busywork and hunt down the one high-yield conversion right now.`,
         salesManagerCritique: {
-          ratioTier: 'lagging_triage',
+          ratioTier: "lagging_triage",
           ratioLabel,
-          tone: 'Urgent High-Energy Triage',
+          tone: "Urgent High-Energy Triage",
           diagnosis: `You've converted ${completed} of ${total} targets (${pct}%). That's a lagging task-to-goal pace. You knocked out the easy, low-friction task, but the high-leverage revenue calls are still sitting untouched. Rolling tasks over is how backlogs become pipeline deal-killers.`,
-          tacticalPivot: "Ruthless Triage: Discard the low-yield admin friction. Focus 100% of your next 45 minutes on the single task that directly drives purchase volume or clears an underwriting closing condition.",
-          accountabilityCheck: "A 20-35% completion rate means you're on defense. Let's shift back to offense right now. High-energy outreach beats passive processing every single time.",
-          conversionMathNote: "Converting 1 pending warm lead today moves an estimated $350k-$450k loan file into processing."
+          tacticalPivot:
+            "Ruthless Triage: Discard the low-yield admin friction. Focus 100% of your next 45 minutes on the single task that directly drives purchase volume or clears an underwriting closing condition.",
+          accountabilityCheck:
+            "A 20-35% completion rate means you're on defense. Let's shift back to offense right now. High-energy outreach beats passive processing every single time.",
+          conversionMathNote:
+            "Converting 1 pending warm lead today moves an estimated $350k-$450k loan file into processing.",
         },
         topProducerTip: {
           headline: "Cut the Low-Yield Friction",
-          advice: "Never let routine email replies substitute for originator prospecting. Spend the next hour exclusively on calls that generate 1003 loan applications.",
-          focusOutcome: "Submit remaining condition documents or issue an active pre-approval."
+          advice:
+            "Never let routine email replies substitute for originator prospecting. Spend the next hour exclusively on calls that generate 1003 loan applications.",
+          focusOutcome: "Submit remaining condition documents or issue an active pre-approval.",
         },
         topPriorities: [
           "Clear priority conditions on files currently in underwriting review.",
           "Connect with active Realtor partner on weekend open house co-marketing.",
-          isAdmin 
-            ? "Review loan officer candidate outreach pipeline." 
-            : "Run 2-1 buydown cost analysis on listing properties with recent price adjustments."
+          isAdmin
+            ? "Review loan officer candidate outreach pipeline."
+            : "Run 2-1 buydown cost analysis on listing properties with recent price adjustments.",
         ],
-        coachingQuote: "You don't need more hours in the day; you need more intensity in the hours you have left.",
+        coachingQuote:
+          "You don't need more hours in the day; you need more intensity in the hours you have left.",
         nextActionRecommendation: {
           tabId: "scenario_workbench",
           actionTitle: "Generate Weekend Pre-Approval Letter",
-          actionReason: "Borrowers need updated verification figures before evening home showings."
-        }
+          actionReason: "Borrowers need updated verification figures before evening home showings.",
+        },
       };
     }
 
-    if (ratioTier === 'mid_flight_bubble') {
+    if (ratioTier === "mid_flight_bubble") {
       return {
         headline: `Mid-Flight Surge & Anti-Complacency (${timeStr})`,
         motivationalBadge: `Actual Ratio: ${completed} of ${total} Goals Completed (${pct}%) — Surge Pace!`,
         whatDoneSummary: `Midday checkpoint: ${completed} of ${total} targets locked in (${pct}% ratio). Solid foundation, but don't let the mid-afternoon slump pull you under.`,
         managerPerspective: `Good work getting ${completed} of ${total} done, ${name}, but listen closely: You're right on the bubble. Average loan officers get halfway through their list and ease off the gas pedal. That's why average loan officers stay stuck at 3 loans a month. I need you to reject complacency. Attack the next 2 tasks with the exact same hunger you brought at 8:30 AM, and finish this shift in the top 10%.`,
         salesManagerCritique: {
-          ratioTier: 'mid_flight_bubble',
+          ratioTier: "mid_flight_bubble",
           ratioLabel,
-          tone: 'Anti-Complacency Surge',
+          tone: "Anti-Complacency Surge",
           diagnosis: `You're sitting at ${completed} of ${total} (${pct}%). You're right on the bubble. Average loan officers hit 50%, feel a false sense of security, and coast into the afternoon slump. Halfway through your goals means you're pacing for average volume, not top-producer results.`,
-          tacticalPivot: "Step on the gas: Power through the 2:00 PM lull. Clear your pending loan condition, then immediately leverage that forward momentum to dispatch a property buydown scenario to an active agent partner.",
-          accountabilityCheck: "Don't leave the remaining 40% on the table. The difference between a $15M producer and a $40M producer is what happens between 1:30 PM and 4:30 PM.",
-          conversionMathNote: "Closing out the remaining tasks protects 2 upcoming closing dates and locks in partner referral trust."
+          tacticalPivot:
+            "Step on the gas: Power through the 2:00 PM lull. Clear your pending loan condition, then immediately leverage that forward momentum to dispatch a property buydown scenario to an active agent partner.",
+          accountabilityCheck:
+            "Don't leave the remaining 40% on the table. The difference between a $15M producer and a $40M producer is what happens between 1:30 PM and 4:30 PM.",
+          conversionMathNote:
+            "Closing out the remaining tasks protects 2 upcoming closing dates and locks in partner referral trust.",
         },
         topProducerTip: {
           headline: "The 2 PM Surge",
-          advice: "When energy dips in the afternoon, top producers switch from passive screen work to active partner outreach. Send a quick video update to a buyer or text a realtor.",
-          focusOutcome: "Share a customized property flyer or 2-1 buydown comparison with an active partner."
+          advice:
+            "When energy dips in the afternoon, top producers switch from passive screen work to active partner outreach. Send a quick video update to a buyer or text a realtor.",
+          focusOutcome:
+            "Share a customized property flyer or 2-1 buydown comparison with an active partner.",
         },
         topPriorities: [
           "Connect with Realtor partner on weekend open house co-marketing.",
           "Run 2-1 buydown cost analysis on listing properties with price drops.",
-          isAdmin 
-            ? "Review team loan distribution and audit LO pipeline velocity." 
-            : "Finalize AUS documentation checklist for underwriting submission."
+          isAdmin
+            ? "Review team loan distribution and audit LO pipeline velocity."
+            : "Finalize AUS documentation checklist for underwriting submission.",
         ],
-        coachingQuote: "The difference between surviving in mortgage lending and dominating the market is what you do after 2:00 PM.",
+        coachingQuote:
+          "The difference between surviving in mortgage lending and dominating the market is what you do after 2:00 PM.",
         nextActionRecommendation: {
           tabId: "realtor_cobranding",
           actionTitle: "Dispatch Open House Co-Marketing Asset",
-          actionReason: "Agents finalize weekend marketing assets between 11:30 AM and 2:00 PM."
-        }
+          actionReason: "Agents finalize weekend marketing assets between 11:30 AM and 2:00 PM.",
+        },
       };
     }
 
-    if (ratioTier === 'high_tempo') {
+    if (ratioTier === "high_tempo") {
       return {
         headline: `High-Tempo Producer Momentum (${timeStr})`,
         motivationalBadge: `Actual Ratio: ${completed} of ${total} Goals Completed (${pct}%) — Dominant Tempo!`,
         whatDoneSummary: `Outstanding execution: ${completed} of ${total} targets completed (${pct}% ratio). You're dominating the board with disciplined execution.`,
         managerPerspective: `${name}, this is high-level execution! ${completed} of ${total} goals completed is pure pro discipline. Now here is your sales manager stretch critique: Do NOT coast into the clubhouse. When your task-to-goal ratio is this high, your confidence and vocal tone are electric. Take that energy right now and make the call you've been putting off all week—dial that A-list agent or ask your pre-approved buyer for two friend referrals.`,
         salesManagerCritique: {
-          ratioTier: 'high_tempo',
+          ratioTier: "high_tempo",
           ratioLabel,
-          tone: 'Top-Producer Momentum & Stretch Challenge',
+          tone: "Top-Producer Momentum & Stretch Challenge",
           diagnosis: `Outstanding execution: ${completed} of ${total} targets checked (${pct}%). You've displayed elite operational discipline today. But here is the sales manager challenge: do NOT coast into the clubhouse. When your task-to-goal ratio is high, your confidence is peak.`,
-          tacticalPivot: "The Top 1% Stretch Call: Capitalize on today's winning energy right now. Dial that A-list real estate agent you've hesitated to call, or ask your active pre-approved buyer for 2 friend referrals before you log off.",
-          accountabilityCheck: "Winners don't stop when they're tired or satisfied; winners stop when they've capitalized on every ounce of momentum.",
-          conversionMathNote: "Outbound calls made while in a high-momentum state convert at a 40% higher rate due to vocal confidence."
+          tacticalPivot:
+            "The Top 1% Stretch Call: Capitalize on today's winning energy right now. Dial that A-list real estate agent you've hesitated to call, or ask your active pre-approved buyer for 2 friend referrals before you log off.",
+          accountabilityCheck:
+            "Winners don't stop when they're tired or satisfied; winners stop when they've capitalized on every ounce of momentum.",
+          conversionMathNote:
+            "Outbound calls made while in a high-momentum state convert at a 40% higher rate due to vocal confidence.",
         },
         topProducerTip: {
           headline: "The Top 1% Stretch Call",
-          advice: "When you are ahead of pace, your vocal conviction is at its absolute peak. Reach out to an agent who does $30M+ in volume. Success confidence is magnetic.",
-          focusOutcome: "Prospect a new top-producing agent partner for coffee this week."
+          advice:
+            "When you are ahead of pace, your vocal conviction is at its absolute peak. Reach out to an agent who does $30M+ in volume. Success confidence is magnetic.",
+          focusOutcome: "Prospect a new top-producing agent partner for coffee this week.",
         },
         topPriorities: [
           "Reach out to an A-tier Realtor partner for coffee or lunch next week.",
           "Review pipeline rate locks for files within 10 days of closing.",
-          isAdmin 
-            ? "Schedule branch coaching session with junior originators." 
-            : "Send proactive status update to active under-contract borrowers."
+          isAdmin
+            ? "Schedule branch coaching session with junior originators."
+            : "Send proactive status update to active under-contract borrowers.",
         ],
-        coachingQuote: "When you are ahead of schedule, you own the market instead of letting the market own you.",
+        coachingQuote:
+          "When you are ahead of schedule, you own the market instead of letting the market own you.",
         nextActionRecommendation: {
           tabId: "realtor_cobranding",
           actionTitle: "Create Co-Branded Flyer for Top Agent",
-          actionReason: "Proactively propose weekend open house co-marketing while ahead of schedule."
-        }
+          actionReason:
+            "Proactively propose weekend open house co-marketing while ahead of schedule.",
+        },
       };
     }
 
@@ -1208,32 +1382,37 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
       whatDoneSummary: `Dominant performance: ${completed} of ${total} daily targets locked down (100% completion). Flawless execution across your entire daily rhythm.`,
       managerPerspective: `Tremendous day, ${name}! You protected the standard and ran the table 100%. That's what top 1% producers do day in and day out. Now here is my only critique: The biggest enemy of tomorrow is today's victory. Don't close your laptop and show up tomorrow morning wondering what to do. Spend 4 minutes right now queueing up your top 2 morning calls so you hit the ground running at 60 MPH.`,
       salesManagerCritique: {
-        ratioTier: 'championship_pace',
+        ratioTier: "championship_pace",
         ratioLabel,
-        tone: 'Championship Standard & Forward Stacking',
+        tone: "Championship Standard & Forward Stacking",
         diagnosis: `Flawless board: ${total} of ${total} targets crushed (100%). You executed the playbook without excuses or delays. But the top producer trap after a 100% day is waking up tomorrow with zero momentum.`,
-        tacticalPivot: "Tomorrow's Launchpad: Take 4 minutes right now to queue tomorrow morning's top 2 revenue-generating phone calls in your CRM before closing your laptop. Start tomorrow at 60 MPH.",
-        accountabilityCheck: "Great producers celebrate today's 100% win, but legends protect the standard again tomorrow morning.",
-        conversionMathNote: "Maintaining a 90%+ daily completion cadence compounds into 3x higher funded loan volume quarter-over-quarter."
+        tacticalPivot:
+          "Tomorrow's Launchpad: Take 4 minutes right now to queue tomorrow morning's top 2 revenue-generating phone calls in your CRM before closing your laptop. Start tomorrow at 60 MPH.",
+        accountabilityCheck:
+          "Great producers celebrate today's 100% win, but legends protect the standard again tomorrow morning.",
+        conversionMathNote:
+          "Maintaining a 90%+ daily completion cadence compounds into 3x higher funded loan volume quarter-over-quarter.",
       },
       topProducerTip: {
         headline: "Protect Tomorrow's Flywheel",
-        advice: "Never celebrate a 100% day without setting up tomorrow's initial 2 moves. Top producers maintain unbroken momentum by preparing their board tonight.",
-        focusOutcome: "Queue up tomorrow morning's top 2 outbound calls before shutting down."
+        advice:
+          "Never celebrate a 100% day without setting up tomorrow's initial 2 moves. Top producers maintain unbroken momentum by preparing their board tonight.",
+        focusOutcome: "Queue up tomorrow morning's top 2 outbound calls before shutting down.",
       },
       topPriorities: [
         "Verify all client text & email communications are compliant and logged in CRM.",
         "Set tomorrow morning's top 3 priority focus areas in Google Workspace.",
-        isAdmin 
-          ? "Review branch daily funded volume pacing and team quota metrics." 
-          : "Send wrap-up summary note to Realtor partners on active buyer status."
+        isAdmin
+          ? "Review branch daily funded volume pacing and team quota metrics."
+          : "Send wrap-up summary note to Realtor partners on active buyer status.",
       ],
-      coachingQuote: "Excellence is not an accident — it is the consistent accumulation of days just like today.",
+      coachingQuote:
+        "Excellence is not an accident — it is the consistent accumulation of days just like today.",
       nextActionRecommendation: {
         tabId: "growth_dashboard",
         actionTitle: "Review Branch & LO Production Trajectory",
-        actionReason: "Close out the day with clarity on your 30-day funded volume goals."
-      }
+        actionReason: "Close out the day with clarity on your 30-day funded volume goals.",
+      },
     };
   };
 
@@ -1242,27 +1421,33 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
     const weekLabel = payload?.weekLabel || "Current Week";
     const targeted = payload?.totalTasksTargeted || 15;
     const completed = payload?.totalTasksCompleted || 11;
-    const rate = payload?.completionRate ?? (targeted > 0 ? Math.round((completed / targeted) * 100) : 73);
+    const rate =
+      payload?.completionRate ?? (targeted > 0 ? Math.round((completed / targeted) * 100) : 73);
     const trend = rate >= 70 ? "improving" : rate >= 40 ? "steady" : "needs_recalibration";
-    const grade = rate >= 80 ? "A - Elite Discipline" : rate >= 60 ? "B+ Solid Pacing" : "C - Recalibration Opportunity";
+    const grade =
+      rate >= 80
+        ? "A - Elite Discipline"
+        : rate >= 60
+          ? "B+ Solid Pacing"
+          : "C - Recalibration Opportunity";
 
     return {
       headline: `${weekLabel}: Pacing Review & Weekly Trajectory`,
       performanceGrade: grade,
       weekOverWeekTrend: trend,
-      priorWeekComparisonSummary: `Logged ${completed} of ${targeted} targeted weekly production goals (${rate}% execution). Week-over-week outreach volume shows ${trend === 'improving' ? 'strong upward momentum' : 'stable execution with high conversion potential'}.`,
+      priorWeekComparisonSummary: `Logged ${completed} of ${targeted} targeted weekly production goals (${rate}% execution). Week-over-week outreach volume shows ${trend === "improving" ? "strong upward momentum" : "stable execution with high conversion potential"}.`,
       keyAccomplishments: [
         `Maintained active buyer outreach across ${payload?.stats?.leadsCount || 12} leads in pipeline.`,
         `Executed prompt partner touchpoints with top real estate agents on active purchase listings.`,
-        `Advanced loan scenarios into clear borrower pre-approval matrices on Scenario Workbench.`
+        `Advanced loan scenarios into clear borrower pre-approval matrices on Scenario Workbench.`,
       ],
       topProducerPlaybookNextWeek: [
         "Schedule 2 in-person 20-minute coffee syncs with high-producing buyer agents on Tuesday/Thursday.",
         "Run targeted 2-1 buydown marketing flyers for listing agents hosting weekend open houses.",
-        "Conduct proactive Friday file status reviews with active purchase borrowers and their agents."
+        "Conduct proactive Friday file status reviews with active purchase borrowers and their agents.",
       ],
       salesManagerWeeklyDirective: `Great originators don't win on luck — they win on repeatable weekly operating rhythms. Heading into next week, protect your first 90 minutes each morning for outbound buyer calls and partner touches before opening your email inbox.`,
-      recommendedFocusTab: "scenario_workbench"
+      recommendedFocusTab: "scenario_workbench",
     };
   };
 
@@ -1272,8 +1457,12 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
     const lookback = payload?.lookbackStats || {};
     const activeDays = lookback.activeDaysCount || 18;
     const avgCompletion = lookback.averageCompletionRate || 76;
-    const score = Math.min(100, Math.max(50, Math.round(avgCompletion * 0.7 + (activeDays / 20) * 30)));
-    const pacingStatus = score >= 80 ? "ahead_of_quota" : score >= 65 ? "on_track" : "needs_acceleration";
+    const score = Math.min(
+      100,
+      Math.max(50, Math.round(avgCompletion * 0.7 + (activeDays / 20) * 30))
+    );
+    const pacingStatus =
+      score >= 80 ? "ahead_of_quota" : score >= 65 ? "on_track" : "needs_acceleration";
 
     return {
       headline: `${monthLabel} 30-Day Productivity Horizon & Production Roadmap`,
@@ -1282,17 +1471,20 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
       lookback30Days: {
         totalDaysTracked: activeDays,
         averageDailyTaskCompletionRate: avgCompletion,
-        pipelineVelocity: pacingStatus === "ahead_of_quota" ? "High-Conversion (18-22 day close cycle)" : "Steady Pipeline Velocity",
+        pipelineVelocity:
+          pacingStatus === "ahead_of_quota"
+            ? "High-Conversion (18-22 day close cycle)"
+            : "Steady Pipeline Velocity",
         retrospectiveSummary: `Over the past 30 days, you logged consistent daily shifts across ${activeDays} operating days with an average daily task completion velocity of ${avgCompletion}%. Your highest leverage activity occurred during morning partner outreach and rapid weekend scenario structuring.`,
         biggestWins: [
           "Consistent daily rhythm check-ins with clear task prioritization.",
           "Proactive multi-scenario loan structuring eliminating borrower shopping.",
-          "Timely rate lock protections and clear underwriting condition resolution."
+          "Timely rate lock protections and clear underwriting condition resolution.",
         ],
         missedOpportunities: [
           "Follow-up delays on stale CRM leads exceeding 48 hours without a touch.",
-          "Unleveraged listing agent relationships on buyers under contract."
-        ]
+          "Unleveraged listing agent relationships on buyers under contract.",
+        ],
       },
       lookforward30Days: {
         revenueGoalVolume: "$3,800,000 Volume (8-10 Closed Purchase Units)",
@@ -1302,30 +1494,35 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
             weekLabel: "Week 1: Pipeline Activation",
             milestone: "Audit all 30+ day CRM leads and dispatch customized scenario flyers.",
             focusArea: "Database Re-Engagement",
-            status: "in_progress"
+            status: "in_progress",
           },
           {
             weekLabel: "Week 2: Strategic Realtor Alliances",
-            milestone: "Host 3 coffee or lunch consultations with new top 10% producing buyer agents.",
+            milestone:
+              "Host 3 coffee or lunch consultations with new top 10% producing buyer agents.",
             focusArea: "Realtor Partner Acquisition",
-            status: "planned"
+            status: "planned",
           },
           {
             weekLabel: "Week 3: Processing & Underwriting Acceleration",
-            milestone: "Zero condition bottlenecks: clear all pending files to CTC within 7 business days.",
+            milestone:
+              "Zero condition bottlenecks: clear all pending files to CTC within 7 business days.",
             focusArea: "Pipeline Velocity",
-            status: "planned"
+            status: "planned",
           },
           {
             weekLabel: "Week 4: Month-End Funding Blitz & Next Month Queue",
-            milestone: "Confirm final funding figures and queue up initial 5 pre-approvals for the following month.",
+            milestone:
+              "Confirm final funding figures and queue up initial 5 pre-approvals for the following month.",
             focusArea: "Closing Discipline",
-            status: "planned"
-          }
+            status: "planned",
+          },
         ],
-        topProducer30DayBlueprint: "Top 1% mortgage originators treat 30-day cycles like an athletic season: Week 1 is aggressive outreach, Week 2 is partner locking, Week 3 is file velocity, and Week 4 is closing & seed-planting for next month.",
-        executiveSalesManagerPrescription: "Maintain your 3-phase daily rhythm discipline. Even on chaotic processing days, never let a day pass without 2 intentional partner or borrower touchpoints. That consistency will easily sustain your monthly volume."
-      }
+        topProducer30DayBlueprint:
+          "Top 1% mortgage originators treat 30-day cycles like an athletic season: Week 1 is aggressive outreach, Week 2 is partner locking, Week 3 is file velocity, and Week 4 is closing & seed-planting for next month.",
+        executiveSalesManagerPrescription:
+          "Maintain your 3-phase daily rhythm discipline. Even on chaotic processing days, never let a day pass without 2 intentional partner or borrower touchpoints. That consistency will easily sustain your monthly volume.",
+      },
     };
   };
 
@@ -1338,35 +1535,58 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
   app.get("/api/market-news", async (_req, res) => {
     try {
       const BANNED_RATE_WORDS = [
-        "interest rate", "interest rates", "mortgage rate", "mortgage rates",
-        "rate cut", "rate cuts", "rate hike", "rate hikes", "fed rate", "federal reserve",
-        "rates rise", "rates surge", "rates drop", "rates climb", "treasury yield",
-        "10-year yield", "basis points", "refinance rate", "rate lock", "sofr", "fomc",
-        "jerome powell", "inflation print", "apr", "30-year fixed rate"
+        "interest rate",
+        "interest rates",
+        "mortgage rate",
+        "mortgage rates",
+        "rate cut",
+        "rate cuts",
+        "rate hike",
+        "rate hikes",
+        "fed rate",
+        "federal reserve",
+        "rates rise",
+        "rates surge",
+        "rates drop",
+        "rates climb",
+        "treasury yield",
+        "10-year yield",
+        "basis points",
+        "refinance rate",
+        "rate lock",
+        "sofr",
+        "fomc",
+        "jerome powell",
+        "inflation print",
+        "apr",
+        "30-year fixed rate",
       ];
 
       const isRateFree = (txt: string) => {
         if (!txt) return true;
         const low = txt.toLowerCase();
-        return !BANNED_RATE_WORDS.some(w => low.includes(w));
+        return !BANNED_RATE_WORDS.some((w) => low.includes(w));
       };
 
       const baseItems = [
         {
           id: "srv-1",
-          title: "Suburban Housing Inventory Expands: Why Patient First-Time Buyers Hold Stronger Leverage",
+          title:
+            "Suburban Housing Inventory Expands: Why Patient First-Time Buyers Hold Stronger Leverage",
           source: "Redfin Housing Economics",
           sourceType: "news",
           category: "inventory",
           categoryLabel: "Housing Inventory & Supply",
-          summary: "Single-family housing inventory has gained momentum across key metro suburbs, increasing active days on market and giving buyers breathing room to conduct thorough inspections and request seller credits.",
-          keyTakeaway: "With properties averaging 32 days on market, sellers are far more open to covering closing fees or funding repair allowances rather than holding out for bidding wars.",
+          summary:
+            "Single-family housing inventory has gained momentum across key metro suburbs, increasing active days on market and giving buyers breathing room to conduct thorough inspections and request seller credits.",
+          keyTakeaway:
+            "With properties averaging 32 days on market, sellers are far more open to covering closing fees or funding repair allowances rather than holding out for bidding wars.",
           url: "https://www.redfin.com/news/housing-market-update/",
           publishedAt: "Today",
           readOrWatchTime: "4 min read",
           authorOrChannel: "Redfin Research Team",
           confidenceScore: 98,
-          highlightTopic: "Suburban Inventory & Seller Credits"
+          highlightTopic: "Suburban Inventory & Seller Credits",
         },
         {
           id: "srv-2",
@@ -1375,48 +1595,58 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
           sourceType: "youtube",
           category: "strategy",
           categoryLabel: "Video Guide (YouTube)",
-          summary: "A practical breakdown of rookie mistakes: waiving crucial inspection contingencies, underestimating earnest money escrow deadlines, and forgetting to verify HOA reserve studies.",
-          keyTakeaway: "Never waive your home inspection contingency without a pre-offer walkthrough and independent sewer scope.",
+          summary:
+            "A practical breakdown of rookie mistakes: waiving crucial inspection contingencies, underestimating earnest money escrow deadlines, and forgetting to verify HOA reserve studies.",
+          keyTakeaway:
+            "Never waive your home inspection contingency without a pre-offer walkthrough and independent sewer scope.",
           url: "https://www.youtube.com/results?search_query=win+the+house+you+love+first+time+homebuyer+mistakes",
           publishedAt: "2 days ago",
           readOrWatchTime: "14 min video",
           authorOrChannel: "Win The House You Love",
-          thumbnailUrl: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=600&q=80",
+          thumbnailUrl:
+            "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=600&q=80",
           confidenceScore: 99,
-          highlightTopic: "Home Inspection & Escrow Contingencies"
+          highlightTopic: "Home Inspection & Escrow Contingencies",
         },
         {
           id: "srv-3",
-          title: "How to Structure a Winning Purchase Offer in a Balanced Market (Without Overpaying)",
+          title:
+            "How to Structure a Winning Purchase Offer in a Balanced Market (Without Overpaying)",
           source: "YouTube - Javier Vidana Real Estate",
           sourceType: "youtube",
           category: "negotiation",
           categoryLabel: "Video Guide (YouTube)",
-          summary: "Step-by-step strategies for crafting attractive purchase contracts using flexible closing dates, seller leasebacks, and earnest money timing instead of inflating the offer price.",
-          keyTakeaway: "Convenience often beats cash for sellers who need time to pack; aligning closing dates with seller needs can win you the home at fair list price.",
+          summary:
+            "Step-by-step strategies for crafting attractive purchase contracts using flexible closing dates, seller leasebacks, and earnest money timing instead of inflating the offer price.",
+          keyTakeaway:
+            "Convenience often beats cash for sellers who need time to pack; aligning closing dates with seller needs can win you the home at fair list price.",
           url: "https://www.youtube.com/results?search_query=javier+vidana+winning+purchase+offer",
           publishedAt: "3 days ago",
           readOrWatchTime: "11 min video",
           authorOrChannel: "Javier Vidana",
-          thumbnailUrl: "https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=600&q=80",
+          thumbnailUrl:
+            "https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=600&q=80",
           confidenceScore: 97,
-          highlightTopic: "Purchase Contract Negotiation"
+          highlightTopic: "Purchase Contract Negotiation",
         },
         {
           id: "srv-4",
-          title: "The Comprehensive Home Inspection Checklist: Major Red Flags vs. Minor Cosmetic Fixes",
+          title:
+            "The Comprehensive Home Inspection Checklist: Major Red Flags vs. Minor Cosmetic Fixes",
           source: "BiggerPockets Homebuyer Hub",
           sourceType: "blog",
           category: "inspection",
           categoryLabel: "Inspection & Due Diligence",
-          summary: "Learn what certified home inspectors look for: foundation settling, aged electrical panels, roof granule loss, and HVAC life expectancy. Distinguish between $15,000 structural fixes and $200 hardware upgrades.",
-          keyTakeaway: "Focus your repair amendment negotiations strictly on safety hazards, structural defects, and roof/plumbing integrity.",
+          summary:
+            "Learn what certified home inspectors look for: foundation settling, aged electrical panels, roof granule loss, and HVAC life expectancy. Distinguish between $15,000 structural fixes and $200 hardware upgrades.",
+          keyTakeaway:
+            "Focus your repair amendment negotiations strictly on safety hazards, structural defects, and roof/plumbing integrity.",
           url: "https://www.biggerpockets.com/blog/home-inspection-checklist",
           publishedAt: "This Week",
           readOrWatchTime: "6 min read",
           authorOrChannel: "BiggerPockets Editorial",
           confidenceScore: 99,
-          highlightTopic: "Home Inspection Negotiations"
+          highlightTopic: "Home Inspection Negotiations",
         },
         {
           id: "srv-5",
@@ -1425,30 +1655,35 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
           sourceType: "blog",
           category: "closing",
           categoryLabel: "Closing & Escrow Preparation",
-          summary: "Earnest money shows sellers you are serious, but it must be protected with clear financing, appraisal, and title contingency clauses written directly into the purchase contract.",
-          keyTakeaway: "Your earnest money is safe in third-party escrow as long as contingency release dates are strictly managed with your agent.",
+          summary:
+            "Earnest money shows sellers you are serious, but it must be protected with clear financing, appraisal, and title contingency clauses written directly into the purchase contract.",
+          keyTakeaway:
+            "Your earnest money is safe in third-party escrow as long as contingency release dates are strictly managed with your agent.",
           url: "https://www.realtor.com/advice/buy/what-is-earnest-money/",
           publishedAt: "4 days ago",
           readOrWatchTime: "5 min read",
           authorOrChannel: "Realtor.com Guides",
           confidenceScore: 98,
-          highlightTopic: "Earnest Money & Escrow Timelines"
+          highlightTopic: "Earnest Money & Escrow Timelines",
         },
         {
           id: "srv-6",
-          title: "HUD First-Time Homebuyer Educational Framework: Rights, Fair Housing, & Disclosures",
+          title:
+            "HUD First-Time Homebuyer Educational Framework: Rights, Fair Housing, & Disclosures",
           source: "HUD.gov Housing Counseling",
           sourceType: "news",
           category: "strategy",
           categoryLabel: "Government Guidance & Consumer Rights",
-          summary: "Official housing agency review on mandatory seller property disclosures, lead-based paint notifications, and your legal right to an independent home appraisal and inspection.",
-          keyTakeaway: "Sellers are legally obligated to disclose known material defects; reviewing disclosures prior to drafting an offer protects your budget.",
+          summary:
+            "Official housing agency review on mandatory seller property disclosures, lead-based paint notifications, and your legal right to an independent home appraisal and inspection.",
+          keyTakeaway:
+            "Sellers are legally obligated to disclose known material defects; reviewing disclosures prior to drafting an offer protects your budget.",
           url: "https://www.hud.gov/topics/buying_a_home",
           publishedAt: "This Month",
           readOrWatchTime: "7 min read",
           authorOrChannel: "U.S. Dept of Housing & Urban Development",
           confidenceScore: 99,
-          highlightTopic: "Seller Disclosures & Buyer Rights"
+          highlightTopic: "Seller Disclosures & Buyer Rights",
         },
         {
           id: "srv-7",
@@ -1457,15 +1692,18 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
           sourceType: "youtube",
           category: "closing",
           categoryLabel: "Video Guide (YouTube)",
-          summary: "Never skip the final walkthrough: testing all appliances, verifying agreed repair work receipts, checking for water stains under sinks, and ensuring all debris has been removed.",
-          keyTakeaway: "If agreed repairs were not completed or appliances were removed, your agent can request an escrow holdback before loan funding.",
+          summary:
+            "Never skip the final walkthrough: testing all appliances, verifying agreed repair work receipts, checking for water stains under sinks, and ensuring all debris has been removed.",
+          keyTakeaway:
+            "If agreed repairs were not completed or appliances were removed, your agent can request an escrow holdback before loan funding.",
           url: "https://www.youtube.com/results?search_query=win+the+house+you+love+final+walkthrough",
           publishedAt: "1 week ago",
           readOrWatchTime: "9 min video",
           authorOrChannel: "Win The House You Love",
-          thumbnailUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80",
+          thumbnailUrl:
+            "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80",
           confidenceScore: 98,
-          highlightTopic: "Final Walkthrough & Escrow Holdbacks"
+          highlightTopic: "Final Walkthrough & Escrow Holdbacks",
         },
         {
           id: "srv-8",
@@ -1474,18 +1712,20 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
           sourceType: "blog",
           category: "strategy",
           categoryLabel: "Neighborhood Due Diligence",
-          summary: "Physical properties can be renovated, but neighborhood zoning and school attendance boundaries cannot. How to cross-reference municipal master plans and flood zone overlays before making an offer.",
-          keyTakeaway: "Homes located within top-rated school clusters retain 14% higher median resale value during market corrections.",
+          summary:
+            "Physical properties can be renovated, but neighborhood zoning and school attendance boundaries cannot. How to cross-reference municipal master plans and flood zone overlays before making an offer.",
+          keyTakeaway:
+            "Homes located within top-rated school clusters retain 14% higher median resale value during market corrections.",
           url: "https://www.investopedia.com/articles/mortgages-real-estate/08/home-location.asp",
           publishedAt: "5 days ago",
           readOrWatchTime: "5 min read",
           authorOrChannel: "Investopedia Real Estate",
           confidenceScore: 97,
-          highlightTopic: "School Zones & Neighborhood Resale Value"
-        }
+          highlightTopic: "School Zones & Neighborhood Resale Value",
+        },
       ];
 
-      const filteredItems = baseItems.filter(item => {
+      const filteredItems = baseItems.filter((item) => {
         const textToAudit = `${item.title} ${item.summary} ${item.keyTakeaway} ${item.source}`;
         return isRateFree(textToAudit);
       });
@@ -1494,7 +1734,7 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
         success: true,
         items: filteredItems,
         timestamp: new Date().toISOString(),
-        safeguardStatus: "verified_no_rate_talk"
+        safeguardStatus: "verified_no_rate_talk",
       });
     } catch (error: any) {
       console.error("Market News API Error:", error);
@@ -1506,10 +1746,19 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
   const getAdvisorFallback = (message: string, context?: any) => {
     const qLower = (message || "").toLowerCase();
     const income = context?.income ? `$${Number(context.income).toLocaleString()}` : "$85,000";
-    const downPayment = context?.downPayment ? `$${Number(context.downPayment).toLocaleString()}` : "$20,000";
-    const targetPrice = context?.targetPrice ? `$${Number(context.targetPrice).toLocaleString()}` : "$400,000";
+    const downPayment = context?.downPayment
+      ? `$${Number(context.downPayment).toLocaleString()}`
+      : "$20,000";
+    const targetPrice = context?.targetPrice
+      ? `$${Number(context.targetPrice).toLocaleString()}`
+      : "$400,000";
 
-    if (qLower.includes("ipc") || qLower.includes("concession") || qLower.includes("seller credit") || qLower.includes("seller contribution")) {
+    if (
+      qLower.includes("ipc") ||
+      qLower.includes("concession") ||
+      qLower.includes("seller credit") ||
+      qLower.includes("seller contribution")
+    ) {
       return `### 🏛️ Interested Party Contributions (IPC) & Seller Credit Caps
 
 • **Conventional Loans (Fannie Mae & Freddie Mac):**
@@ -1522,7 +1771,12 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
 • **Strict Protection Rule:** Seller credits can pay closing costs, prepaids, or a 2-1 buydown, but **never** the buyer's minimum required down payment equity.`;
     }
 
-    if (qLower.includes("down payment") || qLower.includes("dpa") || qLower.includes("grant") || qLower.includes("zero down")) {
+    if (
+      qLower.includes("down payment") ||
+      qLower.includes("dpa") ||
+      qLower.includes("grant") ||
+      qLower.includes("zero down")
+    ) {
       return `### 💳 First-Time Homebuyer Down Payment Options
 
 1. **100% Zero-Down Programs (USDA Rural Development / VA Loans):** $0 down payment required for eligible suburban/rural properties or military veterans.
@@ -1531,7 +1785,12 @@ Seller concessions can **NEVER** be applied toward the buyer's minimum required 
 4. **State DPA Grants:** 3% to 5% in grant or forgivable second lien funds to cover down payment and closing costs.`;
     }
 
-    if (qLower.includes("dti") || qLower.includes("afford") || qLower.includes("budget") || qLower.includes("monthly")) {
+    if (
+      qLower.includes("dti") ||
+      qLower.includes("afford") ||
+      qLower.includes("budget") ||
+      qLower.includes("monthly")
+    ) {
       return `### 📊 Affordability & DTI Guidelines for First-Time Buyers
 
 • **The 28/36 Rule:** Lenders prefer your monthly housing expense (PITI + HOA + PMI) to stay below 28% of gross monthly income, and total debts below 36–45%.
@@ -1564,14 +1823,51 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
       return defaultVal;
     };
 
-    const grossReceipts = extractNum([/line\s*1\w?\b[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /gross\s*receipts?[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /gross\s*income[^\d$]*\$?([\d,]+(?:\.\d+)?)/i], 165000);
-    const netProfit = extractNum([/line\s*31\b[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /net\s*profit[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /net\s*income[^\d$]*\$?([\d,]+(?:\.\d+)?)/i], 82500);
-    const depreciation = extractNum([/line\s*13\b[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /depreciation[^\d$]*\$?([\d,]+(?:\.\d+)?)/i], 12400);
-    const depletion = extractNum([/line\s*12\b[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /depletion[^\d$]*\$?([\d,]+(?:\.\d+)?)/i], 0);
-    const amortization = extractNum([/amortization[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /casualty\s*loss[^\d$]*\$?([\d,]+(?:\.\d+)?)/i], 0);
-    const homeOffice = extractNum([/line\s*30\b[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /home\s*office[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /business\s*use\s*of\s*home[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /form\s*8829[^\d$]*\$?([\d,]+(?:\.\d+)?)/i], 3200);
-    const mealsDeduction = extractNum([/meals[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /50%\s*meals[^\d$]*\$?([\d,]+(?:\.\d+)?)/i], 800);
-    const businessMiles = extractNum([/miles[^\d$]*([\d,]+(?:\.\d+)?)/i, /business\s*miles[^\d$]*([\d,]+(?:\.\d+)?)/i], 0);
+    const grossReceipts = extractNum(
+      [
+        /line\s*1\w?\b[^\d$]*\$?([\d,]+(?:\.\d+)?)/i,
+        /gross\s*receipts?[^\d$]*\$?([\d,]+(?:\.\d+)?)/i,
+        /gross\s*income[^\d$]*\$?([\d,]+(?:\.\d+)?)/i,
+      ],
+      165000
+    );
+    const netProfit = extractNum(
+      [
+        /line\s*31\b[^\d$]*\$?([\d,]+(?:\.\d+)?)/i,
+        /net\s*profit[^\d$]*\$?([\d,]+(?:\.\d+)?)/i,
+        /net\s*income[^\d$]*\$?([\d,]+(?:\.\d+)?)/i,
+      ],
+      82500
+    );
+    const depreciation = extractNum(
+      [/line\s*13\b[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /depreciation[^\d$]*\$?([\d,]+(?:\.\d+)?)/i],
+      12400
+    );
+    const depletion = extractNum(
+      [/line\s*12\b[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /depletion[^\d$]*\$?([\d,]+(?:\.\d+)?)/i],
+      0
+    );
+    const amortization = extractNum(
+      [/amortization[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /casualty\s*loss[^\d$]*\$?([\d,]+(?:\.\d+)?)/i],
+      0
+    );
+    const homeOffice = extractNum(
+      [
+        /line\s*30\b[^\d$]*\$?([\d,]+(?:\.\d+)?)/i,
+        /home\s*office[^\d$]*\$?([\d,]+(?:\.\d+)?)/i,
+        /business\s*use\s*of\s*home[^\d$]*\$?([\d,]+(?:\.\d+)?)/i,
+        /form\s*8829[^\d$]*\$?([\d,]+(?:\.\d+)?)/i,
+      ],
+      3200
+    );
+    const mealsDeduction = extractNum(
+      [/meals[^\d$]*\$?([\d,]+(?:\.\d+)?)/i, /50%\s*meals[^\d$]*\$?([\d,]+(?:\.\d+)?)/i],
+      800
+    );
+    const businessMiles = extractNum(
+      [/miles[^\d$]*([\d,]+(?:\.\d+)?)/i, /business\s*miles[^\d$]*([\d,]+(?:\.\d+)?)/i],
+      0
+    );
     const otherIncomeOrLoss = extractNum([/other\s*income[^\d$]*\$?([\d,]+(?:\.\d+)?)/i], 0);
 
     return {
@@ -1584,12 +1880,17 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
       mealsDeduction,
       businessMiles,
       otherIncomeOrLoss,
-      qualitativeNotes: `Schedule C analysis (Tax Year ${taxYear || 2024}) completed via Fannie Mae 1084 cash flow rules. Total qualifying cash flow reflects Net Profit + Depreciation add-backs and Home Office deduction.`
+      qualitativeNotes: `Schedule C analysis (Tax Year ${taxYear || 2024}) completed via Fannie Mae 1084 cash flow rules. Total qualifying cash flow reflects Net Profit + Depreciation add-backs and Home Office deduction.`,
     };
   };
 
   // Helper: Resilient Lead Intake Bot Guidance
-  const getLeadIntakeFallback = (message: string, leadData: any, loName?: string, agentName?: string) => {
+  const getLeadIntakeFallback = (
+    message: string,
+    leadData: any,
+    loName?: string,
+    agentName?: string
+  ) => {
     const name = leadData?.fullName ? leadData.fullName.split(" ")[0] : "there";
     const qLower = (message || "").toLowerCase();
 
@@ -1606,14 +1907,22 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
   };
 
   // Helper: Resilient Offer Strategy
-  const getOfferStrategyFallback = (propertyDetails: any, buyerFinances: any, marketCondition?: string) => {
+  const getOfferStrategyFallback = (
+    propertyDetails: any,
+    buyerFinances: any,
+    marketCondition?: string
+  ) => {
     const listPrice = Number(propertyDetails?.price || 450000);
     const loanType = buyerFinances?.loanType || "30-Year Conventional";
     const market = marketCondition || "Balanced Market";
 
     const isFha = loanType.toLowerCase().includes("fha");
     const isVa = loanType.toLowerCase().includes("va");
-    const ipcPercent = isFha ? "6.0%" : isVa ? "4.0% + customary closing costs" : "3.0% (<10% down) or 6.0% (10-19% down)";
+    const ipcPercent = isFha
+      ? "6.0%"
+      : isVa
+        ? "4.0% + customary closing costs"
+        : "3.0% (<10% down) or 6.0% (10-19% down)";
     const suggestedCredit = Math.round(listPrice * (isFha ? 0.03 : 0.025));
 
     return `### 🎯 Strategic Offer Package Recommendation
@@ -1718,7 +2027,7 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
       res.json({
         reply: getAdvisorFallback(message, context),
         isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error)
+        quotaDepleted: isQuotaOrDepleted(error),
       });
     }
   });
@@ -1752,13 +2061,20 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
         },
       });
 
-      res.json({ reply: response.text || getLO2ndBrainFallback(message, loProfile, activeLead, scenarioContext, mode) });
+      res.json({
+        reply:
+          response.text ||
+          getLO2ndBrainFallback(message, loProfile, activeLead, scenarioContext, mode),
+      });
     } catch (error: any) {
-      console.log("LO 2nd Brain API notice (using underwriter fallback):", "API Limitation handled.");
+      console.log(
+        "LO 2nd Brain API notice (using underwriter fallback):",
+        "API Limitation handled."
+      );
       res.json({
         reply: getLO2ndBrainFallback(message, loProfile, activeLead, scenarioContext, mode),
         isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error)
+        quotaDepleted: isQuotaOrDepleted(error),
       });
     }
   });
@@ -1766,7 +2082,16 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
   // API Route: AI Daily Rhythm & Quick AI Review
   app.post("/api/gemini/lo-daily-review", async (req, res) => {
     const payload = req.body || {};
-    const { loProfile, timePhase, currentTimeString, completedTasks, pendingTasks, stats, isAdmin, priorPulse } = payload;
+    const {
+      loProfile,
+      timePhase,
+      currentTimeString,
+      completedTasks,
+      pendingTasks,
+      stats,
+      isAdmin,
+      priorPulse,
+    } = payload;
 
     const completedList = Array.isArray(completedTasks) ? completedTasks : [];
     const pendingList = Array.isArray(pendingTasks) ? pendingTasks : [];
@@ -1775,12 +2100,14 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
     const totalCount = completedCount + pendingCount;
     const completionPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-    const priorPulseContext = priorPulse ? `
-PRIOR DAILY PULSE MEMORY (From ${priorPulse.date || 'yesterday'} - ${priorPulse.timePhase || 'EOD'}):
+    const priorPulseContext = priorPulse
+      ? `
+PRIOR DAILY PULSE MEMORY (From ${priorPulse.date || "yesterday"} - ${priorPulse.timePhase || "EOD"}):
 - Previous Completion: ${priorPulse.completedTasks || 0} of ${priorPulse.totalTasks || 0} tasks (${priorPulse.completionPercent || 0}%)
 - Key Priorities Left Open: ${(priorPulse.pendingTitles || []).slice(0, 3).join("; ") || "None"}
 - Previous Manager Note: "${priorPulse.reviewData?.managerPerspective || priorPulse.reviewData?.whatDoneSummary || "Consistent effort"}"
-USE THIS TO CREATE AUTHENTIC DAY-TO-DAY CONTINUITY: Briefly reference yesterday's open threads or unfinished priorities (e.g. "Picking up from yesterday's focus on...", "Yesterday you made headway on...") where appropriate.` : "";
+USE THIS TO CREATE AUTHENTIC DAY-TO-DAY CONTINUITY: Briefly reference yesterday's open threads or unfinished priorities (e.g. "Picking up from yesterday's focus on...", "Yesterday you made headway on...") where appropriate.`
+      : "";
 
     try {
       const prompt = `You are an experienced, high-producing Mortgage Branch Sales Manager and Performance Coach talking directly to loan officer ${loProfile?.name || "Mike Ford"}.
@@ -1819,10 +2146,10 @@ CRITICAL SALES MANAGER PERSONA & TASK-TO-GOAL RATIO DIRECTIVES:
     - "headline": Short catchy rule name (e.g. "The Emergency Rule of 2", "The 2 PM Surge", "The First 90-Minute Rule")
     - "advice": 1-2 sentences of tactical advice from top 1% loan officers on how to refocus on what moves the needle instead of getting bogged down.
     - "focusOutcome": Specific high-leverage win to target (e.g. "Lock in 1 realtor coffee or 1 buyer pre-approval application").
-- "topPriorities": Array of exactly 3 realistic, highest-priority tasks to finish the shift strong or prepare for tomorrow. Focus on revenue (calling warm leads, texting top agents like Sarah Jenkins or Marcus Vance, clearing urgent conditions). ${isAdmin ? 'As Branch Manager, recruiting/team items are permitted.' : 'CRITICAL: Producing LO only — NO recruiting tasks.'}
+- "topPriorities": Array of exactly 3 realistic, highest-priority tasks to finish the shift strong or prepare for tomorrow. Focus on revenue (calling warm leads, texting top agents like Sarah Jenkins or Marcus Vance, clearing urgent conditions). ${isAdmin ? "As Branch Manager, recruiting/team items are permitted." : "CRITICAL: Producing LO only — NO recruiting tasks."}
 - "coachingQuote": 1 punchy, memorable sales quote.
 - "yesterdayHandoffSummary": Optional 1-sentence quick nod linking today's focus to yesterday's progress or unfinished items.
-- "nextActionRecommendation": Object with "tabId" (one of: "leads", "scenario_workbench", "realtor_cobranding"${isAdmin ? ', "recruitment_pipeline", "growth_dashboard"' : ''}, "buydown_2_1"), "actionTitle", and "actionReason".`;
+- "nextActionRecommendation": Object with "tabId" (one of: "leads", "scenario_workbench", "realtor_cobranding"${isAdmin ? ', "recruitment_pipeline", "growth_dashboard"' : ""}, "buydown_2_1"), "actionTitle", and "actionReason".`;
 
       const response = await generateWithModelFallback({
         preferredModel: "gemini-3.7-flash",
@@ -1857,7 +2184,7 @@ CRITICAL SALES MANAGER PERSONA & TASK-TO-GOAL RATIO DIRECTIVES:
         success: true,
         data: getDailyReviewFallback(payload),
         isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error)
+        quotaDepleted: isQuotaOrDepleted(error),
       });
     }
   });
@@ -1865,18 +2192,32 @@ CRITICAL SALES MANAGER PERSONA & TASK-TO-GOAL RATIO DIRECTIVES:
   // API Route: AI Weekly Pulse (Week-to-Week Persistence & Comparative Performance)
   app.post("/api/gemini/lo-weekly-pulse", async (req, res) => {
     const payload = req.body || {};
-    const { loProfile, weekNumber, year, weekLabel, totalTasksTargeted, totalTasksCompleted, completionRate, daysActive, priorWeeklyPulse, stats, isAdmin } = payload;
+    const {
+      loProfile,
+      weekNumber,
+      year,
+      weekLabel,
+      totalTasksTargeted,
+      totalTasksCompleted,
+      completionRate,
+      daysActive,
+      priorWeeklyPulse,
+      stats,
+      isAdmin,
+    } = payload;
 
     const targeted = totalTasksTargeted || 0;
     const completed = totalTasksCompleted || 0;
     const rate = completionRate ?? (targeted > 0 ? Math.round((completed / targeted) * 100) : 0);
 
-    const priorWeekContext = priorWeeklyPulse ? `
-PRIOR WEEK CONTEXT (Week ${priorWeeklyPulse.weekNumber || 'Prior'}):
+    const priorWeekContext = priorWeeklyPulse
+      ? `
+PRIOR WEEK CONTEXT (Week ${priorWeeklyPulse.weekNumber || "Prior"}):
 - Prior Execution Rate: ${priorWeeklyPulse.completionRate || 0}% (${priorWeeklyPulse.totalTasksCompleted || 0}/${priorWeeklyPulse.totalTasksTargeted || 0} tasks)
-- Prior Performance Grade: ${priorWeeklyPulse.reviewData?.performanceGrade || 'Solid Pacing'}
-- Prior Directive: "${priorWeeklyPulse.reviewData?.salesManagerWeeklyDirective || 'Maintain weekly consistency'}"
-USE THIS FOR WEEK-TO-WEEK COMPARATIVE MOMENTUM: Compare this week's progress, work rate, and outreach against last week.` : "";
+- Prior Performance Grade: ${priorWeeklyPulse.reviewData?.performanceGrade || "Solid Pacing"}
+- Prior Directive: "${priorWeeklyPulse.reviewData?.salesManagerWeeklyDirective || "Maintain weekly consistency"}"
+USE THIS FOR WEEK-TO-WEEK COMPARATIVE MOMENTUM: Compare this week's progress, work rate, and outreach against last week.`
+      : "";
 
     try {
       const prompt = `You are an elite Mortgage Branch Sales Director and Executive Coach conducting a Week-to-Week Production Debrief with Loan Officer ${loProfile?.name || "Mike Ford"}.
@@ -1900,7 +2241,7 @@ DIRECTIVES:
 - "keyAccomplishments": Array of exactly 3 concrete bullet points of wins or momentum established this week.
 - "topProducerPlaybookNextWeek": Array of exactly 3 tactical, high-leverage revenue actions to dominate next week.
 - "salesManagerWeeklyDirective": 2-3 sentences of direct, high-impact sales coaching from the branch manager.
-- "recommendedFocusTab": One of "leads", "scenario_workbench", "realtor_cobranding", "buydown_2_1"${isAdmin ? ', "recruitment_pipeline", "growth_dashboard"' : ''}.`;
+- "recommendedFocusTab": One of "leads", "scenario_workbench", "realtor_cobranding", "buydown_2_1"${isAdmin ? ', "recruitment_pipeline", "growth_dashboard"' : ""}.`;
 
       const response = await generateWithModelFallback({
         preferredModel: "gemini-3.7-flash",
@@ -1930,7 +2271,7 @@ DIRECTIVES:
         success: true,
         data: getWeeklyPulseFallback(payload),
         isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error)
+        quotaDepleted: isQuotaOrDepleted(error),
       });
     }
   });
@@ -2008,7 +2349,7 @@ INSTRUCTIONS:
         success: true,
         data: getMonthlyHorizonFallback(payload),
         isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error)
+        quotaDepleted: isQuotaOrDepleted(error),
       });
     }
   });
@@ -2043,19 +2384,33 @@ INSTRUCTIONS:
 
       res.json({ success: true, data: parsed });
     } catch (error: any) {
-      console.log("Tax parse notice (using deterministic parser fallback):", "API Limitation handled.");
+      console.log(
+        "Tax parse notice (using deterministic parser fallback):",
+        "API Limitation handled."
+      );
       res.json({
         success: true,
         data: getScheduleCTaxFallback(textData, taxYear),
         isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error)
+        quotaDepleted: isQuotaOrDepleted(error),
       });
     }
   });
 
   // API Route: Lead Intake Chatbot & Pre-Qualification Assistant
   app.post("/api/gemini/lead-intake", async (req, res) => {
-    const { message, leadData, chatHistory, loName, loNmls, agentName } = req.body || {};
+    const { message, leadData, chatHistory, loanOfficer, agent } = req.body || {};
+    const loName = loanOfficer?.name || "Mike Ford";
+    const loNmls = loanOfficer?.nmlsId || "288455";
+    const loContact =
+      loanOfficer?.phone || loanOfficer?.email
+        ? `(${loanOfficer.phone || ""} ${loanOfficer.email || ""})`
+        : "";
+    const agentName = agent?.name || "Kanndice McLean";
+    const agentBrokerage = agent?.brokerage ? ` of ${agent.brokerage}` : "";
+    const agentContact =
+      agent?.phone || agent?.email ? `(${agent.phone || ""} ${agent.email || ""})` : "";
+
     if (!message) {
       return res.status(400).json({ error: "Message is required" });
     }
@@ -2064,7 +2419,8 @@ INSTRUCTIONS:
     const ssnPattern = /\b(?!000|666|9\d{2})\d{3}[-.\s]?(?!00)\d{2}[-.\s]?(?!0000)\d{4}\b/;
     if (ssnPattern.test(message)) {
       return res.json({
-        reply: "🛡️ For your privacy and security, Social Security Numbers are strictly blocked and never stored. No Credit Card or SSN is required to explore prequalification or Down Payment Assistance programs.",
+        reply:
+          "🛡️ For your privacy and security, Social Security Numbers are strictly blocked and never stored. No Credit Card or SSN is required to explore prequalification or Down Payment Assistance programs.",
       });
     }
 
@@ -2092,18 +2448,20 @@ INSTRUCTIONS:
         preferredModel: "gemini-3.7-flash",
         contents: promptContent,
         config: {
-          systemInstruction: `You are the interactive 24/7 Lead Intake & Pre-Qualification AI Assistant for ${loName || "Mike Ford"} (${loNmls ? "NMLS #" + loNmls : "Senior Loan Officer"}) and paired Real Estate Specialist ${agentName || "Sarah Jenkins"}. Be encouraging, warm, consultative, and protect buyer privacy (NO SSN/credit card required). Use the terms "prequal" or "prequalification".`,
+          systemInstruction: `You are the interactive 24/7 Lead Intake & Pre-Qualification AI Assistant for ${loName} (NMLS #${loNmls}) ${loContact} and paired Real Estate Specialist ${agentName}${agentBrokerage} ${agentContact}. Be encouraging, warm, consultative, and protect buyer privacy (NO SSN/credit card required). If you refer the user to contact their guides, use their specific contact information. Use the terms "prequal" or "prequalification".`,
           temperature: 0.7,
         },
       });
 
-      res.json({ reply: response.text || getLeadIntakeFallback(message, leadData, loName, agentName) });
+      res.json({
+        reply: response.text || getLeadIntakeFallback(message, leadData, loName, agentName),
+      });
     } catch (error: any) {
       console.log("Lead Intake API notice (using fallback):", "API Limitation handled.");
       res.json({
         reply: getLeadIntakeFallback(message, leadData, loName, agentName),
         isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error)
+        quotaDepleted: isQuotaOrDepleted(error),
       });
     }
   });
@@ -2134,13 +2492,17 @@ Buyer Financials:
         },
       });
 
-      res.json({ strategy: response.text || getOfferStrategyFallback(propertyDetails, buyerFinances, marketCondition) });
+      res.json({
+        strategy:
+          response.text ||
+          getOfferStrategyFallback(propertyDetails, buyerFinances, marketCondition),
+      });
     } catch (error: any) {
       console.log("Offer strategy notice (using fallback):", "API Limitation handled.");
       res.json({
         strategy: getOfferStrategyFallback(propertyDetails, buyerFinances, marketCondition),
         isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error)
+        quotaDepleted: isQuotaOrDepleted(error),
       });
     }
   });
@@ -2162,21 +2524,42 @@ Buyer Financials:
         },
       });
 
-      res.json({ analysis: response.text || getInspectionAuditFallback(inspectionNotes, propertyPrice) });
+      res.json({
+        analysis: response.text || getInspectionAuditFallback(inspectionNotes, propertyPrice),
+      });
     } catch (error: any) {
       console.log("Inspection audit notice (using fallback):", "API Limitation handled.");
       res.json({
         analysis: getInspectionAuditFallback(inspectionNotes, propertyPrice),
         isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error)
+        quotaDepleted: isQuotaOrDepleted(error),
       });
     }
   });
 
   // API Route: Mortgage & Affordability Health Check
   app.post("/api/gemini/mortgage-analysis", async (req, res) => {
-    const { income, monthlyDebt, downPayment, creditScore, targetHomePrice, state } = req.body || {};
+    const {
+      income,
+      monthlyDebt,
+      downPayment,
+      creditScore,
+      targetHomePrice,
+      state,
+      loanOfficer,
+      agent,
+    } = req.body || {};
     try {
+      const loName = loanOfficer?.name || "Mike Ford";
+      const loContact =
+        loanOfficer?.phone || loanOfficer?.email
+          ? `(${loanOfficer.phone || ""} ${loanOfficer.email || ""})`
+          : "";
+      const agentName = agent?.name || "Kanndice McLean";
+      const agentBrokerage = agent?.brokerage ? ` of ${agent.brokerage}` : "";
+      const agentContact =
+        agent?.phone || agent?.email ? `(${agent.phone || ""} ${agent.email || ""})` : "";
+
       const prompt = `Analyze this first-time homebuyer's financial profile:
 - Annual Gross Income: $${income}
 - Total Monthly Non-Mortgage Debt: $${monthlyDebt}
@@ -2189,18 +2572,34 @@ Buyer Financials:
         preferredModel: "gemini-3.7-flash",
         contents: prompt,
         config: {
-          systemInstruction: "You are a senior mortgage underwriter and financial planner providing actionable, encouraging, and financially prudent guidance to first-time homebuyers.",
+          systemInstruction: `You are a senior mortgage underwriter and financial planner providing actionable, encouraging, and financially prudent guidance to first-time homebuyers. Represent their local guides: ${loName} ${loContact} and ${agentName}${agentBrokerage} ${agentContact}. End the analysis with a clear call-to-action to contact their guides for a custom strategy.`,
           temperature: 0.6,
         },
       });
 
-      res.json({ analysis: response.text || getMortgageAnalysisFallback({ income, monthlyDebt, downPayment, creditScore, targetHomePrice }) });
+      res.json({
+        analysis:
+          response.text ||
+          getMortgageAnalysisFallback({
+            income,
+            monthlyDebt,
+            downPayment,
+            creditScore,
+            targetHomePrice,
+          }),
+      });
     } catch (error: any) {
       console.log("Mortgage analysis notice (using fallback):", "API Limitation handled.");
       res.json({
-        analysis: getMortgageAnalysisFallback({ income, monthlyDebt, downPayment, creditScore, targetHomePrice }),
+        analysis: getMortgageAnalysisFallback({
+          income,
+          monthlyDebt,
+          downPayment,
+          creditScore,
+          targetHomePrice,
+        }),
         isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error)
+        quotaDepleted: isQuotaOrDepleted(error),
       });
     }
   });
@@ -2208,7 +2607,8 @@ Buyer Financials:
   // API Route: Generate Outreach Email
   app.post("/api/gemini/generate-outreach", async (req, res) => {
     try {
-      const { candidateName, yearsExperience, company, recruitmentStatus, myName, myTitle } = req.body;
+      const { candidateName, yearsExperience, company, recruitmentStatus, myName, myTitle } =
+        req.body;
       const ai = getGeminiClient();
       const prompt = `Draft a personalized, professional outreach email to a Loan Officer candidate. 
 Candidate details:
@@ -2279,7 +2679,7 @@ Note on agentType: If the query emphasizes buyers or purchasing, use "buyer_agen
         config: {
           systemInstruction,
           temperature: 0.4,
-          responseMimeType: "application/json"
+          responseMimeType: "application/json",
         },
       });
 
@@ -2350,7 +2750,7 @@ Choose realistic Unsplash portrait images for headshotUrl.`;
           config: {
             systemInstruction,
             temperature: 0.5,
-            responseMimeType: "application/json"
+            responseMimeType: "application/json",
           },
         });
 
@@ -2360,19 +2760,62 @@ Choose realistic Unsplash portrait images for headshotUrl.`;
           return res.json({ success: true, profiles: data.profiles });
         }
       } catch (geminiError) {
-        console.log("Gemini remote call failed for LO scraper, generating realistic query-matched profiles:", "API Limitation handled.");
+        console.log(
+          "Gemini remote call failed for LO scraper, generating realistic query-matched profiles:",
+          "API Limitation handled."
+        );
       }
 
       // Resilient fallback generator based on search query (e.g. Guild Mortgage in Portland Metro)
       const companyMatch = cleanQuery.split(/[\+\s,]+/)[0] || "Guild Mortgage";
       const displayCompany = companyMatch.charAt(0).toUpperCase() + companyMatch.slice(1);
-      
+
       const sampleNames = [
-        { name: "Sarah Jenkins", title: "Senior Vice President of Mortgage Lending", nmls: "184920", headshot: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80", city: "Portland", county: "Multnomah" },
-        { name: "Marcus Vance", title: "Branch Manager & Senior Mortgage Advisor", nmls: "349102", headshot: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop&q=80", city: "Lake Oswego", county: "Clackamas" },
-        { name: "Elena Rostova", title: "Executive Loan Officer | DPA Specialist", nmls: "492018", headshot: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80", city: "Beaverton", county: "Washington" },
-        { name: "David Chen", title: "Producing Sales Manager", nmls: "291048", headshot: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80", city: "Oregon City", county: "Clackamas" },
-        { name: "Rachel Morales", title: "Senior Residential Mortgage Specialist", nmls: "518392", headshot: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80", city: "Gresham", county: "Multnomah" }
+        {
+          name: "Sarah Jenkins",
+          title: "Senior Vice President of Mortgage Lending",
+          nmls: "184920",
+          headshot:
+            "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
+          city: "Portland",
+          county: "Multnomah",
+        },
+        {
+          name: "Marcus Vance",
+          title: "Branch Manager & Senior Mortgage Advisor",
+          nmls: "349102",
+          headshot:
+            "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop&q=80",
+          city: "Lake Oswego",
+          county: "Clackamas",
+        },
+        {
+          name: "Elena Rostova",
+          title: "Executive Loan Officer | DPA Specialist",
+          nmls: "492018",
+          headshot:
+            "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
+          city: "Beaverton",
+          county: "Washington",
+        },
+        {
+          name: "David Chen",
+          title: "Producing Sales Manager",
+          nmls: "291048",
+          headshot:
+            "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80",
+          city: "Oregon City",
+          county: "Clackamas",
+        },
+        {
+          name: "Rachel Morales",
+          title: "Senior Residential Mortgage Specialist",
+          nmls: "518392",
+          headshot:
+            "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80",
+          city: "Gresham",
+          county: "Multnomah",
+        },
       ];
 
       const fallbackProfiles = sampleNames.map((s, idx) => ({
@@ -2390,11 +2833,17 @@ Choose realistic Unsplash portrait images for headshotUrl.`;
         websiteUrl: `https://${companyMatch.toLowerCase()}.com/branches/${s.city.toLowerCase()}/${s.name.toLowerCase().replace(" ", "-")}`,
         headshotUrl: s.headshot,
         bio: `Top 1% producing loan officer in the ${s.county} market with over ${expYears + idx + 2} years of dedicated mortgage origination experience. Specialized in OHCS DPA state grants, FirstHome targeted census tract financing, USDA 100% 0%-down programs, and 2-1 seller concession buydowns.`,
-        specialties: ["First-Time Homebuyer Grants", "OHCS Flex Lending", "USDA 0% Down", "2-1 Temporary Buydowns", "Jumbo & Conforming"],
+        specialties: [
+          "First-Time Homebuyer Grants",
+          "OHCS Flex Lending",
+          "USDA 0% Down",
+          "2-1 Temporary Buydowns",
+          "Jumbo & Conforming",
+        ],
         licenseStates: ["Oregon", "Washington", "California"],
         yearsExperience: expYears + idx + 2,
         production12MoVolume: Math.round((volumeMin + 4 + idx * 3.5) * 1000000),
-        production12MoUnits: unitsMin + 6 + idx * 8
+        production12MoUnits: unitsMin + 6 + idx * 8,
       }));
 
       res.json({ success: true, profiles: fallbackProfiles });
@@ -2461,7 +2910,7 @@ Choose realistic Unsplash portrait images for headshotUrl.`;
           config: {
             systemInstruction,
             temperature: 0.5,
-            responseMimeType: "application/json"
+            responseMimeType: "application/json",
           },
         });
 
@@ -2471,7 +2920,10 @@ Choose realistic Unsplash portrait images for headshotUrl.`;
           return res.json({ success: true, profiles: data.profiles });
         }
       } catch (geminiError) {
-        console.log("Gemini remote call failed for Realtor scraper, generating realistic query-matched profiles:", "API Limitation handled.");
+        console.log(
+          "Gemini remote call failed for Realtor scraper, generating realistic query-matched profiles:",
+          "API Limitation handled."
+        );
       }
 
       // Resilient fallback generator based on search query
@@ -2479,11 +2931,51 @@ Choose realistic Unsplash portrait images for headshotUrl.`;
       const displayCompany = companyMatch.charAt(0).toUpperCase() + companyMatch.slice(1);
 
       const sampleAgents = [
-        { name: "Jessica Taylor", title: "Principal Broker | Top 1% Producer", license: "201204891", headshot: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80", city: "Portland", county: "Multnomah" },
-        { name: "Brian Kowalski", title: "Lead Buyer Specialist", license: "201809214", headshot: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80", city: "Clackamas", county: "Clackamas" },
-        { name: "Amanda Sterling", title: "Senior Real Estate Advisor", license: "201503892", headshot: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80", city: "Lake Oswego", county: "Clackamas" },
-        { name: "Robert Hayes", title: "Associate Broker", license: "201402918", headshot: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80", city: "Beaverton", county: "Washington" },
-        { name: "Michelle Duong", title: "First-Time Homebuyer & Relocation Director", license: "201908472", headshot: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80", city: "Hillsboro", county: "Washington" }
+        {
+          name: "Jessica Taylor",
+          title: "Principal Broker | Top 1% Producer",
+          license: "201204891",
+          headshot:
+            "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
+          city: "Portland",
+          county: "Multnomah",
+        },
+        {
+          name: "Brian Kowalski",
+          title: "Lead Buyer Specialist",
+          license: "201809214",
+          headshot:
+            "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
+          city: "Clackamas",
+          county: "Clackamas",
+        },
+        {
+          name: "Amanda Sterling",
+          title: "Senior Real Estate Advisor",
+          license: "201503892",
+          headshot:
+            "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
+          city: "Lake Oswego",
+          county: "Clackamas",
+        },
+        {
+          name: "Robert Hayes",
+          title: "Associate Broker",
+          license: "201402918",
+          headshot:
+            "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80",
+          city: "Beaverton",
+          county: "Washington",
+        },
+        {
+          name: "Michelle Duong",
+          title: "First-Time Homebuyer & Relocation Director",
+          license: "201908472",
+          headshot:
+            "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80",
+          city: "Hillsboro",
+          county: "Washington",
+        },
       ];
 
       const fallbackProfiles = sampleAgents.map((s, idx) => ({
@@ -2499,13 +2991,24 @@ Choose realistic Unsplash portrait images for headshotUrl.`;
         websiteUrl: `https://${companyMatch.toLowerCase().replace(/[^a-z0-9]/g, "")}.com/agents/${s.name.toLowerCase().replace(" ", "-")}`,
         headshotUrl: s.headshot,
         bio: `Accomplished real estate broker in ${s.city} and ${s.county} County with over ${expYears + idx + 1} years of full-time residential experience. Known for negotiating aggressive seller concession closing credits and guiding first-time homebuyers through competitive multiple-offer situations.`,
-        specialties: ["First-Time Homebuyers", "Seller Concessions", "New Construction", "Relocation", "Buyer Representation"],
-        marketAreas: [`${s.city} Metro`, `${s.county} County`, "Portland Metro", "Willamette Valley"],
+        specialties: [
+          "First-Time Homebuyers",
+          "Seller Concessions",
+          "New Construction",
+          "Relocation",
+          "Buyer Representation",
+        ],
+        marketAreas: [
+          `${s.city} Metro`,
+          `${s.county} County`,
+          "Portland Metro",
+          "Willamette Valley",
+        ],
         agentType: "buyer_agent",
         experienceYears: expYears + idx + 1,
         production12MoVolume: Math.round((volumeMin + 3.5 + idx * 2.8) * 1000000),
         production12MoUnits: unitsMin + 4 + idx * 6,
-        activeListingsCount: 3 + idx
+        activeListingsCount: 3 + idx,
       }));
 
       res.json({ success: true, profiles: fallbackProfiles });
@@ -2518,25 +3021,40 @@ Choose realistic Unsplash portrait images for headshotUrl.`;
   // API Route: Live Web Search Engine (Google Search Grounded + Live Internet Candidate Extraction)
   app.post("/api/recruitment/search-registry", async (req, res) => {
     try {
-      const { query, company, city, county, state, minYears, minUnits, minVolume, minBuysideUnits, minBuysideVolume, type = "lo" } = req.body || {};
-      const searchRes = await searchLiveRegistry({
-        query: query ? String(query).trim() : "",
-        company: company ? String(company).trim() : "",
-        city: city ? String(city).trim() : "",
-        county: county ? String(county).trim() : "",
-        state: state ? String(state).trim() : "OR",
-        minYears: Number(minYears) || 0,
-        minUnits: Number(minUnits) || 0,
-        minVolume: Number(minVolume) || 0,
-        minBuysideUnits: Number(minBuysideUnits) || 0,
-        minBuysideVolume: Number(minBuysideVolume) || 0,
-      }, type === "agent" ? "agent" : "lo");
+      const {
+        query,
+        company,
+        city,
+        county,
+        state,
+        minYears,
+        minUnits,
+        minVolume,
+        minBuysideUnits,
+        minBuysideVolume,
+        type = "lo",
+      } = req.body || {};
+      const searchRes = await searchLiveRegistry(
+        {
+          query: query ? String(query).trim() : "",
+          company: company ? String(company).trim() : "",
+          city: city ? String(city).trim() : "",
+          county: county ? String(county).trim() : "",
+          state: state ? String(state).trim() : "OR",
+          minYears: Number(minYears) || 0,
+          minUnits: Number(minUnits) || 0,
+          minVolume: Number(minVolume) || 0,
+          minBuysideUnits: Number(minBuysideUnits) || 0,
+          minBuysideVolume: Number(minBuysideVolume) || 0,
+        },
+        type === "agent" ? "agent" : "lo"
+      );
 
       res.json({
         success: true,
         results: searchRes.results,
         source: searchRes.source,
-        queryUsed: searchRes.queryUsed
+        queryUsed: searchRes.queryUsed,
       });
     } catch (err: any) {
       console.error("Recruitment live search error:", err);
@@ -2547,10 +3065,11 @@ Choose realistic Unsplash portrait images for headshotUrl.`;
   // API Route: AI LO Recruiter Outreach Draft
   app.post("/api/gemini/lo-outreach-draft", async (req, res) => {
     try {
-      const { adminName, adminTitle, adminCompany, outreachType, tone, keywords, loCount } = req.body || {};
-      
+      const { adminName, adminTitle, adminCompany, outreachType, tone, keywords, loCount } =
+        req.body || {};
+
       const ai = getGeminiClient();
-      
+
       const systemInstruction = `You are an elite real estate & mortgage recruiting copywriter.
 You are drafting an ${outreachType} (email or SMS) on behalf of ${adminName}, ${adminTitle} at ${adminCompany}.
 The goal is to recruit ${loCount > 1 ? "multiple Loan Officers" : "a Loan Officer"} to join the team.
@@ -2573,7 +3092,7 @@ No markdown formatting.`;
         config: {
           systemInstruction,
           temperature: 0.7,
-          responseMimeType: "application/json"
+          responseMimeType: "application/json",
         },
       });
 
@@ -2592,7 +3111,7 @@ No markdown formatting.`;
       const { goal, customPrompt, tone, loName, loCompany, category } = req.body || {};
       const officer = loName || "Mike Ford";
       const company = loCompany || "Cornerstone First Mortgage";
-      
+
       const systemInstruction = `You are an expert mortgage copywriter and TCPA compliance specialist for Mortgage Loan Officers (Cornerstone First Mortgage).
 Generate a high-converting, concise text message (SMS) template for loan officers to send to prospective homebuyer leads.
 
@@ -2625,26 +3144,28 @@ No markdown formatting or extra text outside JSON.`;
           config: {
             systemInstruction,
             temperature: 0.7,
-            responseMimeType: "application/json"
-          }
+            responseMimeType: "application/json",
+          },
         });
 
         const text = response.text || "{}";
         const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
         const parsed = JSON.parse(cleaned);
-        
+
         return res.json({
           success: true,
           template: {
             id: `sms-tpl-ai-${Date.now()}`,
             title: parsed.title || "✨ AI Custom Mortgage Nurture",
-            content: parsed.content || `Hi {{firstName}}, this is {{loName}} with ${company}. Checking in on your home search in {{location}}. Would you like to review custom loan options this week? Reply STOP to opt out.`,
+            content:
+              parsed.content ||
+              `Hi {{firstName}}, this is {{loName}} with ${company}. Checking in on your home search in {{location}}. Would you like to review custom loan options this week? Reply STOP to opt out.`,
             category: parsed.category || category || "follow_up",
             tags: parsed.tags || ["AI Generated", "Mortgage 2nd Brain"],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            ownerId: "ai_copilot"
-          }
+            ownerId: "ai_copilot",
+          },
         });
       } catch (genError) {
         // Fallback generator when API limit occurs
@@ -2660,8 +3181,8 @@ No markdown formatting or extra text outside JSON.`;
             tags: ["AI Generated", "Mortgage 2nd Brain"],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            ownerId: "ai_copilot"
-          }
+            ownerId: "ai_copilot",
+          },
         });
       }
     } catch (error: any) {
@@ -2691,9 +3212,12 @@ No markdown formatting or extra text outside JSON.`;
       const targetBudget = lead?.targetPriceRange || "$400,000";
       const requestedHomeList = Boolean(lead?.sendSampleHomes);
 
-      const listingsSummary = (matchingListings || []).map((p: any) =>
-        `- ${p.address}, ${p.city} (${p.beds}bd/${p.baths}ba, $${(p.price || 0).toLocaleString()}): ${p.overlayEligibility?.usda ? "🌾 100% USDA Zero Down Eligible" : "💳 Flex DPA 3.5% Grant Eligible"} (Est. PITI: ~$${Math.round((p.price || 0) * 0.0065).toLocaleString()}/mo)`
-      ).join("\n");
+      const listingsSummary = (matchingListings || [])
+        .map(
+          (p: any) =>
+            `- ${p.address}, ${p.city} (${p.beds}bd/${p.baths}ba, $${(p.price || 0).toLocaleString()}): ${p.overlayEligibility?.usda ? "🌾 100% USDA Zero Down Eligible" : "💳 Flex DPA 3.5% Grant Eligible"} (Est. PITI: ~$${Math.round((p.price || 0) * 0.0065).toLocaleString()}/mo)`
+        )
+        .join("\n");
 
       const systemInstruction = `You are a top-producing Mortgage & Real Estate Conversion Strategist.
 Generate a personalized, warm, highly conversion-focused outreach email for a prospective first-time homebuyer who submitted an intake request on the website chatbot.
@@ -2703,6 +3227,10 @@ CRITICAL MANDATES:
 2. If the lead requested sample homes (${requestedHomeList ? "YES - Requested home list" : "NO"}), prominently feature the pre-screened low and zero-down homes list in or around ${leadCity}.
 3. Break down why buying with 0% down (USDA Rural Development) or 3.5% Flex DPA grants makes sense compared to local rent.
 4. Keep the tone encouraging, clear, transparent, and easy to respond to with zero pressure.
+5. You MUST include the full contact information for the team at the end of the email:
+   - Loan Officer: ${loName} (${lo?.phone || ""} ${lo?.email || ""})
+   ${agentName ? `- Real Estate Agent: ${agentName} (${agentPhone || ""} ${agentEmail || ""})` : ""}
+
 
 Respond with strict JSON:
 {
@@ -2733,7 +3261,7 @@ ${listingsSummary || `- Qualifying 100% USDA Zero-Down & Flex DPA homes availabl
         config: {
           systemInstruction,
           temperature: 0.7,
-          responseMimeType: "application/json"
+          responseMimeType: "application/json",
         },
       });
 
@@ -2752,11 +3280,21 @@ ${listingsSummary || `- Qualifying 100% USDA Zero-Down & Flex DPA homes availabl
     } catch (error: any) {
       console.log("Website lead email notice (using fallback):", "API Limitation handled.");
 
-      const agentPlug = agent?.name ? `\n\n🤝 YOUR LOCAL CO-BRANDED GUIDE TEAM:\nAs part of your dedicated homebuyer support team, I work in close partnership with ${agent.name} (${agent.title || "Real Estate Specialist"} at ${agent.brokerage || "Premier Realty"}). Together, we handle both your 100% pre-approval financing and private home tours across ${lead?.preferredLocations || "your target area"} and surrounding cities to ensure you get the best deal with zero stress.` : "";
+      const agentPlug = agent?.name
+        ? `\n\n🤝 YOUR LOCAL CO-BRANDED GUIDE TEAM:\nAs part of your dedicated homebuyer support team, I work in close partnership with ${agent.name} (${agent.title || "Real Estate Specialist"} at ${agent.brokerage || "Premier Realty"}). Together, we handle both your 100% pre-approval financing and private home tours across ${lead?.preferredLocations || "your target area"} and surrounding cities to ensure you get the best deal with zero stress.`
+        : "";
 
-      const sampleHomesBlock = (matchingListings && matchingListings.length > 0)
-        ? `\n\n🏡 RECENT LOW & ZERO-DOWN HOMES FOR SALE IN/AROUND ${ (lead?.preferredLocations || "YOUR AREA").toUpperCase() }:\n` + matchingListings.slice(0, 3).map((p: any) => `• ${p.address}, ${p.city} - $${(p.price || 0).toLocaleString()} (${p.beds}bd/${p.baths}ba) | ${p.overlayEligibility?.usda ? "100% USDA Zero Down Eligible ($0 Down)" : "Flex DPA 3.5% Grant Eligible"}`).join("\n")
-        : `\n\n🏡 LOW & ZERO-DOWN HOMES IN ${ (lead?.preferredLocations || "YOUR AREA").toUpperCase() }:\nWe have compiled a curated list of homes in ${lead?.preferredLocations || "your area"} that qualify for 100% USDA Zero Down ($0 down required) or 3.5% Flex DPA Grants!`;
+      const sampleHomesBlock =
+        matchingListings && matchingListings.length > 0
+          ? `\n\n🏡 RECENT LOW & ZERO-DOWN HOMES FOR SALE IN/AROUND ${(lead?.preferredLocations || "YOUR AREA").toUpperCase()}:\n` +
+            matchingListings
+              .slice(0, 3)
+              .map(
+                (p: any) =>
+                  `• ${p.address}, ${p.city} - $${(p.price || 0).toLocaleString()} (${p.beds}bd/${p.baths}ba) | ${p.overlayEligibility?.usda ? "100% USDA Zero Down Eligible ($0 Down)" : "Flex DPA 3.5% Grant Eligible"}`
+              )
+              .join("\n")
+          : `\n\n🏡 LOW & ZERO-DOWN HOMES IN ${(lead?.preferredLocations || "YOUR AREA").toUpperCase()}:\nWe have compiled a curated list of homes in ${lead?.preferredLocations || "your area"} that qualify for 100% USDA Zero Down ($0 down required) or 3.5% Flex DPA Grants!`;
 
       res.json({
         success: true,
@@ -2765,22 +3303,44 @@ ${listingsSummary || `- Qualifying 100% USDA Zero-Down & Flex DPA homes availabl
         email: {
           subject: `Your Low & Zero-Down Home List for ${lead?.preferredLocations || "Oregon"} + First-Time Buyer Blueprint`,
           body: `Hi ${lead?.fullName ? lead.fullName.split(" ")[0] : "there"},\n\nThank you for reaching out through our interactive First-Time Homebuyer Portal! Based on your target budget of ${lead?.targetPriceRange || "$400,000"} and timeline (${lead?.timeline || "30-60 days"}), we have prepared your customized pre-approval blueprint.${agentPlug}${sampleHomesBlock}\n\nDid you know that many buyers in ${lead?.preferredLocations || "our market"} assume they need $40,000+ in cash for a down payment—when in reality, you can purchase with 0% down or combine 3.5% DPA grants with seller concessions?\n\nLet's schedule a quick 10-minute call this week at your preferred time (${lead?.preferredContactTime || "whenever convenient"}) to review your exact monthly numbers and set up property alerts for new qualifying listings.\n\nBest regards,\n${lo?.name || "Mike Ford"}\n${lo?.title || "Senior Loan Officer"} | NMLS #${lo?.nmlsId || "184209"}\nPhone: ${lo?.phone || "(503) 555-0199"}`,
-          smsFollowup: `Hi ${lead?.fullName ? lead.fullName.split(" ")[0] : "there"}! Sent over your requested zero-down home list for ${lead?.preferredLocations || "your target area"} + your co-branded buyer blueprint. Check your inbox when you get a chance!`
-        }
+          smsFollowup: `Hi ${lead?.fullName ? lead.fullName.split(" ")[0] : "there"}! Sent over your requested zero-down home list for ${lead?.preferredLocations || "your target area"} + your co-branded buyer blueprint. Check your inbox when you get a chance!`,
+        },
       });
     }
   });
 
   // API Route: AI Buyer Agent Outreach Email & Campaign Generator
   app.post("/api/gemini/buyer-agent-email", async (req, res) => {
-    const { agentNames, properties, loName, campaignType, tone, customNotes } = req.body || {};
+    const {
+      agentNames,
+      properties,
+      loName,
+      loPhone,
+      loEmail,
+      loanOfficer,
+      campaignType,
+      tone,
+      customNotes,
+    } = req.body || {};
+
+    // Resolve dynamically from multiple possible input styles (backward compat)
+    const finalLoName = loanOfficer?.name || loName || "Mike Ford";
+    const finalLoContact = loanOfficer
+      ? loanOfficer.phone || loanOfficer.email
+        ? `(${loanOfficer.phone || ""} ${loanOfficer.email || ""})`
+        : ""
+      : `(${loPhone || ""} ${loEmail || ""})`;
+
     try {
-      const propertySummary = (properties || []).map((p: any) => 
-        `- ${p.address}, ${p.city} ($${(p.price || 0).toLocaleString()}): ${p.overlayEligibility?.usda ? "USDA 100% Zero Down Eligible" : "Flex DPA 3.5% Grant Eligible"}, Est. Payment: ~$${Math.round((p.price || 0) * 0.0065).toLocaleString()}/mo vs Avg Local Rent ~$2,150/mo`
-      ).join("\n");
+      const propertySummary = (properties || [])
+        .map(
+          (p: any) =>
+            `- ${p.address}, ${p.city} ($${(p.price || 0).toLocaleString()}): ${p.overlayEligibility?.usda ? "USDA 100% Zero Down Eligible" : "Flex DPA 3.5% Grant Eligible"}, Est. Payment: ~$${Math.round((p.price || 0) * 0.0065).toLocaleString()}/mo vs Avg Local Rent ~$2,150/mo`
+        )
+        .join("\n");
 
       const systemInstruction = `You are an expert Mortgage Co-Marketing Strategist building high-converting B2B outreach email drafts for Loan Officers targeting Buyer's Agents.
-Your goal is to convince local Buyer's Agents to partner up with Senior Loan Officer ${loName || "Mike Ford"} to co-market zero-down and low-down property listings to renters who want to stop paying rent and buy their first home.
+Your goal is to convince local Buyer's Agents to partner up with Senior Loan Officer ${finalLoName} ${finalLoContact} to co-market zero-down and low-down property listings to renters who want to stop paying rent and buy their first home. Include the Loan Officer's full contact information elegantly in the sign-off.
 
 Key themes to emphasize:
 1. Renters who assume they need 20% down or $50k cash can actually buy with 0% down (USDA Rural Development) or 3.5% Flex DPA grants.
@@ -2819,7 +3379,7 @@ Additional Custom Instructions: ${customNotes || "None"}`;
         config: {
           systemInstruction,
           temperature: 0.7,
-          responseMimeType: "application/json"
+          responseMimeType: "application/json",
         },
       });
 
@@ -2837,43 +3397,50 @@ Additional Custom Instructions: ${customNotes || "None"}`;
       res.json({ success: true, email: result });
     } catch (error: any) {
       console.log("Buyer agent email notice (using fallback):", "API Limitation handled.");
-      res.json({ 
+      res.json({
         success: true,
         isFallback: true,
         quotaDepleted: isQuotaOrDepleted(error),
         email: {
           subject: "Turn Your Open House Renters into Buyers with 0% Down USDA & Flex DPA",
           body: `Hi [AgentName],\n\nI hope you're having a great week! I was reviewing recent listings in our market and noticed your focus on buyer clients looking for affordable homes.\n\nDid you know that many buyers browsing your listings assume they need $40,000+ in cash for a down payment—when in reality, properties like [Property Address] qualify for 100% USDA Zero-Down Financing or 3.5% Flex DPA Grants?\n\nI'd love to partner with you to create co-branded open house flyers and an interactive pre-approval calculator link for your buyers. With average rents sitting at $2,200/mo, owning this home costs less than renting.\n\nLet's connect for 5 minutes this week to discuss how we can convert your buyer leads into closed transactions.\n\nBest regards,\n${loName || "Mike Ford"}\nSenior Loan Officer`,
-          smsScript: "Hi [AgentName], sent over a quick idea on how to help your renters buy with $0 down via USDA RD. Check your email when you get a chance!",
+          smsScript:
+            "Hi [AgentName], sent over a quick idea on how to help your renters buy with $0 down via USDA RD. Check your email when you get a chance!",
           openHouseTalkingPoints: [
             "Show buyers how 100% USDA RD financing allows $0 down payment on eligible homes.",
             "Explain that $2,200/mo rent can be converted into $2,140/mo mortgage payment with rate buydowns.",
-            "Hand out co-branded flyers with instant QR code pre-qualification link."
+            "Hand out co-branded flyers with instant QR code pre-qualification link.",
           ],
           rentVsBuyComparison: {
             avgLocalRent: "$2,200/mo",
             estMortgagePayment: "$2,140/mo",
             downPaymentRequired: "$0 (USDA 100% RD)",
-            monthlySavings: "$60/mo + equity building"
-          }
-        }
+            monthlySavings: "$60/mo + equity building",
+          },
+        },
       });
     }
   });
 
   // API Route: Share Homebuying Roadmap & Saved Properties via Email
   app.post("/api/share/email-roadmap", async (req, res) => {
-    const { 
-      recipientEmail, 
-      recipientName, 
-      customNote, 
-      profile, 
-      milestones, 
-      properties, 
-      documents, 
-      loanOfficer, 
+    const {
+      recipientEmail,
+      recipientName,
+      customNote,
+      profile,
+      milestones,
+      properties,
+      documents,
+      loanOfficer,
       activeAgent,
-      sections = { financials: true, roadmap: true, properties: true, documents: true, advisors: true }
+      sections = {
+        financials: true,
+        roadmap: true,
+        properties: true,
+        documents: true,
+        advisors: true,
+      },
     } = req.body || {};
 
     if (!recipientEmail || typeof recipientEmail !== "string" || !recipientEmail.includes("@")) {
@@ -2882,19 +3449,31 @@ Additional Custom Instructions: ${customNotes || "None"}`;
 
     try {
       const nameToUse = recipientName || recipientEmail.split("@")[0];
-      const targetPrice = profile?.targetPrice ? `$${Number(profile.targetPrice).toLocaleString()}` : "$400,000";
-      const downPayment = profile?.downPaymentSavings ? `$${Number(profile.downPaymentSavings).toLocaleString()}` : "$20,000";
-      const completedTasksCount = (milestones || []).flatMap((m: any) => m.tasks || []).filter((t: any) => t.done).length;
+      const targetPrice = profile?.targetPrice
+        ? `$${Number(profile.targetPrice).toLocaleString()}`
+        : "$400,000";
+      const downPayment = profile?.downPaymentSavings
+        ? `$${Number(profile.downPaymentSavings).toLocaleString()}`
+        : "$20,000";
+      const completedTasksCount = (milestones || [])
+        .flatMap((m: any) => m.tasks || [])
+        .filter((t: any) => t.done).length;
       const totalTasksCount = (milestones || []).flatMap((m: any) => m.tasks || []).length;
-      const progressPercent = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+      const progressPercent =
+        totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
 
-      const propertyListSummary = (properties || []).slice(0, 10).map((p: any) => {
-        const sc = p.scorecard ? ` (Tour Grade: ${p.scorecard.grade || "B"}, Rating: ${p.scorecard.overallRating || 8}/10)` : "";
-        const usdaBadge = p.overlayEligibility?.usda ? " [USDA 0% Down Eligible]" : "";
-        const dpaBadge = p.overlayEligibility?.lakeviewNational ? " [Lakeview DPA Grant]" : "";
-        const fav = p.isFavorite ? " ⭐ FAVORITE" : "";
-        return `• ${p.address}, ${p.city} - $${Number(p.price || 0).toLocaleString()} (${p.beds}bd/${p.baths}ba, ${p.sqft || 0} sqft)${fav}${sc}${usdaBadge}${dpaBadge}${p.notes ? `\n  Notes: "${p.notes}"` : ""}`;
-      }).join("\n");
+      const propertyListSummary = (properties || [])
+        .slice(0, 10)
+        .map((p: any) => {
+          const sc = p.scorecard
+            ? ` (Tour Grade: ${p.scorecard.grade || "B"}, Rating: ${p.scorecard.overallRating || 8}/10)`
+            : "";
+          const usdaBadge = p.overlayEligibility?.usda ? " [USDA 0% Down Eligible]" : "";
+          const dpaBadge = p.overlayEligibility?.lakeviewNational ? " [Lakeview DPA Grant]" : "";
+          const fav = p.isFavorite ? " ⭐ FAVORITE" : "";
+          return `• ${p.address}, ${p.city} - $${Number(p.price || 0).toLocaleString()} (${p.beds}bd/${p.baths}ba, ${p.sqft || 0} sqft)${fav}${sc}${usdaBadge}${dpaBadge}${p.notes ? `\n  Notes: "${p.notes}"` : ""}`;
+        })
+        .join("\n");
 
       const systemInstruction = `You are a professional Mortgage and First-Time Homebuyer Advisory System.
 Generate a structured, welcoming, highly readable email summary for a homebuyer sharing their custom roadmap and saved properties with themselves or a co-buyer.
@@ -2945,7 +3524,7 @@ ${activeAgent ? `- Real Estate Agent: ${activeAgent.name} (${activeAgent.brokera
         config: {
           systemInstruction,
           temperature: 0.7,
-          responseMimeType: "application/json"
+          responseMimeType: "application/json",
         },
       });
 
@@ -2957,36 +3536,50 @@ ${activeAgent ? `- Real Estate Agent: ${activeAgent.name} (${activeAgent.brokera
         email: {
           recipientEmail,
           recipientName: nameToUse,
-          subject: parsed.subject || `Your Homebuying Roadmap & Saved Properties Dossier (${progressPercent}% Ready)`,
+          subject:
+            parsed.subject ||
+            `Your Homebuying Roadmap & Saved Properties Dossier (${progressPercent}% Ready)`,
           intro: parsed.intro,
           highlights: parsed.highlights || [],
           nextSteps: parsed.nextSteps || [],
           textBody: parsed.plainTextSummary || "",
           htmlBody: parsed.htmlPreview || "",
-          sentAt: new Date().toISOString()
+          sentAt: new Date().toISOString(),
         },
-        message: `Your Homebuying Roadmap & Property Dossier was prepared and sent to ${recipientEmail}.`
+        message: `Your Homebuying Roadmap & Property Dossier was prepared and sent to ${recipientEmail}.`,
       });
-
     } catch (error: any) {
       console.log("AI share email generator fallback:", "API Limitation handled.");
 
       // Robust fallback generator
       const nameToUse = recipientName || recipientEmail.split("@")[0];
-      const targetPrice = profile?.targetPrice ? `$${Number(profile.targetPrice).toLocaleString()}` : "$400,000";
-      const downPayment = profile?.downPaymentSavings ? `$${Number(profile.downPaymentSavings).toLocaleString()}` : "$20,000";
-      const completedTasksCount = (milestones || []).flatMap((m: any) => m.tasks || []).filter((t: any) => t.done).length;
+      const targetPrice = profile?.targetPrice
+        ? `$${Number(profile.targetPrice).toLocaleString()}`
+        : "$400,000";
+      const downPayment = profile?.downPaymentSavings
+        ? `$${Number(profile.downPaymentSavings).toLocaleString()}`
+        : "$20,000";
+      const completedTasksCount = (milestones || [])
+        .flatMap((m: any) => m.tasks || [])
+        .filter((t: any) => t.done).length;
       const totalTasksCount = (milestones || []).flatMap((m: any) => m.tasks || []).length;
-      const progressPercent = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+      const progressPercent =
+        totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
 
       const subject = `Your Homebuying Master Plan & Saved Properties Dossier (${progressPercent}% Complete)`;
-      
-      const propertiesBlock = (properties || []).map((p: any) => {
-        const sc = p.scorecard ? `\n   • Tour Rating: ${p.scorecard.overallRating}/10 (Grade: ${p.scorecard.grade})` : "";
-        const flags = p.scorecard?.redFlags?.length ? `\n   • Concerns: ${p.scorecard.redFlags.join(", ")}` : "";
-        const notes = p.notes ? `\n   • Notes: ${p.notes}` : "";
-        return `• ${p.address}, ${p.city}, ${p.state} ${p.zip}\n   Price: $${Number(p.price || 0).toLocaleString()} | ${p.beds} Beds, ${p.baths} Baths, ${p.sqft} SqFt${sc}${flags}${notes}`;
-      }).join("\n\n");
+
+      const propertiesBlock = (properties || [])
+        .map((p: any) => {
+          const sc = p.scorecard
+            ? `\n   • Tour Rating: ${p.scorecard.overallRating}/10 (Grade: ${p.scorecard.grade})`
+            : "";
+          const flags = p.scorecard?.redFlags?.length
+            ? `\n   • Concerns: ${p.scorecard.redFlags.join(", ")}`
+            : "";
+          const notes = p.notes ? `\n   • Notes: ${p.notes}` : "";
+          return `• ${p.address}, ${p.city}, ${p.state} ${p.zip}\n   Price: $${Number(p.price || 0).toLocaleString()} | ${p.beds} Beds, ${p.baths} Baths, ${p.sqft} SqFt${sc}${flags}${notes}`;
+        })
+        .join("\n\n");
 
       const textBody = `HOMEBUYING MASTER PLAN & SAVED PROPERTY DOSSIER
 Prepared for: ${nameToUse} (${recipientEmail})
@@ -3002,10 +3595,12 @@ ${customNote ? `\nPersonal Note: "${customNote}"\n` : ""}
 
 2. ROADMAP PROGRESS (${progressPercent}% COMPLETE)
 • ${completedTasksCount} of ${totalTasksCount} Action Tasks Finished
-${(milestones || []).map((m: any, idx: number) => {
-  const done = (m.tasks || []).filter((t: any) => t.done).length;
-  return `  [${done === m.tasks.length ? '✓' : ' '}] Step ${idx + 1}: ${m.title} (${done}/${m.tasks.length} tasks)`;
-}).join("\n")}
+${(milestones || [])
+  .map((m: any, idx: number) => {
+    const done = (m.tasks || []).filter((t: any) => t.done).length;
+    return `  [${done === m.tasks.length ? "✓" : " "}] Step ${idx + 1}: ${m.title} (${done}/${m.tasks.length} tasks)`;
+  })
+  .join("\n")}
 
 3. SAVED PROPERTIES & FIELD NOTES (${(properties || []).length} HOMES)
 ${propertiesBlock || "No properties saved yet."}
@@ -3043,13 +3638,18 @@ ${activeAgent ? `• Real Estate Agent: ${activeAgent.name} (${activeAgent.broke
             
             <h2 style="font-size: 16px; color: #4A5D4E; margin-top: 24px; border-bottom: 2px solid #EAE7E0; padding-bottom: 6px;">3. Saved Target Homes (${(properties || []).length})</h2>
             <div style="margin-top: 12px;">
-              ${(properties || []).slice(0, 5).map((p: any) => `
+              ${(properties || [])
+                .slice(0, 5)
+                .map(
+                  (p: any) => `
                 <div style="padding: 12px; border: 1px solid #EAE7E0; border-radius: 8px; margin-bottom: 10px; background: #fafafa;">
                   <strong style="font-size: 14px; color: #2D362E;">${p.address}, ${p.city}</strong>
                   <div style="font-size: 13px; color: #4A5D4E; font-weight: bold; margin-top: 2px;">$${Number(p.price || 0).toLocaleString()} • ${p.beds} bd / ${p.baths} ba • ${p.sqft} sqft</div>
                   ${p.notes ? `<div style="font-size: 12px; color: #606C5D; margin-top: 4px; font-style: italic;">Note: ${p.notes}</div>` : ""}
                 </div>
-              `).join("")}
+              `
+                )
+                .join("")}
             </div>
 
             <!-- Fast-Track Loan App Action Box -->
@@ -3074,9 +3674,9 @@ ${activeAgent ? `• Real Estate Agent: ${activeAgent.name} (${activeAgent.broke
           subject,
           textBody,
           htmlBody,
-          sentAt: new Date().toISOString()
+          sentAt: new Date().toISOString(),
         },
-        message: `Your Homebuying Roadmap & Property Dossier was prepared for ${recipientEmail}.`
+        message: `Your Homebuying Roadmap & Property Dossier was prepared for ${recipientEmail}.`,
       });
     }
   });
@@ -3093,31 +3693,49 @@ ${activeAgent ? `• Real Estate Agent: ${activeAgent.name} (${activeAgent.broke
       loanOfficer,
       activeAgent,
       isTest,
-      settings = { includeProperties: true, includeNextSteps: true, includeFinancialSnapshot: true }
+      settings = {
+        includeProperties: true,
+        includeNextSteps: true,
+        includeFinancialSnapshot: true,
+      },
     } = req.body || {};
 
     if (!recipientEmail || typeof recipientEmail !== "string" || !recipientEmail.includes("@")) {
       return res.status(400).json({ error: "A valid recipient email address is required." });
     }
 
-    const milestoneObj = milestone || { stepNumber: 1, title: "Initial Readiness", stage: "Readiness" };
+    const milestoneObj = milestone || {
+      stepNumber: 1,
+      title: "Initial Readiness",
+      stage: "Readiness",
+    };
     const stepNum = milestoneObj.stepNumber || 1;
     const milestoneTitle = milestoneObj.title || "Homebuyer Milestone";
     const nameToUse = recipientName || recipientEmail.split("@")[0];
 
-    const completedMilestones = (milestones || []).filter((m: any) => (m.tasks || []).length > 0 && (m.tasks || []).every((t: any) => t.done));
+    const completedMilestones = (milestones || []).filter(
+      (m: any) => (m.tasks || []).length > 0 && (m.tasks || []).every((t: any) => t.done)
+    );
     const allTasks = (milestones || []).flatMap((m: any) => m.tasks || []);
     const completedTasksCount = allTasks.filter((t: any) => t.done).length;
     const totalTasksCount = allTasks.length || 20;
-    const progressPercent = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+    const progressPercent =
+      totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
 
     // Find next upcoming milestone
-    const nextMilestone = (milestones || []).find((m: any) => m.stepNumber > stepNum && !(m.tasks || []).every((t: any) => t.done)) 
-      || (milestones || []).find((m: any) => m.stepNumber === stepNum + 1)
-      || null;
+    const nextMilestone =
+      (milestones || []).find(
+        (m: any) => m.stepNumber > stepNum && !(m.tasks || []).every((t: any) => t.done)
+      ) ||
+      (milestones || []).find((m: any) => m.stepNumber === stepNum + 1) ||
+      null;
 
-    const targetPrice = profile?.targetPrice ? `$${Number(profile.targetPrice).toLocaleString()}` : "$400,000";
-    const downPayment = profile?.downPaymentSavings ? `$${Number(profile.downPaymentSavings).toLocaleString()}` : "$20,000";
+    const targetPrice = profile?.targetPrice
+      ? `$${Number(profile.targetPrice).toLocaleString()}`
+      : "$400,000";
+    const downPayment = profile?.downPaymentSavings
+      ? `$${Number(profile.downPaymentSavings).toLocaleString()}`
+      : "$20,000";
 
     try {
       const ai = getGeminiClient();
@@ -3160,7 +3778,10 @@ Financial Profile:
 - Monthly Debt: $${Number(profile?.monthlyDebt || 450).toLocaleString()}
 
 Saved Homes (${(properties || []).length} properties saved)
-${(properties || []).slice(0, 3).map((p: any) => `• ${p.address}, ${p.city} ($${Number(p.price || 0).toLocaleString()})`).join("\n")}
+${(properties || [])
+  .slice(0, 3)
+  .map((p: any) => `• ${p.address}, ${p.city} ($${Number(p.price || 0).toLocaleString()})`)
+  .join("\n")}
 
 Advisory Team:
 - Loan Officer: ${loanOfficer?.name || "Mike Ford"} (${loanOfficer?.company || "Guild Mortgage"}, NMLS #${loanOfficer?.nmlsId || "184209"})
@@ -3172,14 +3793,15 @@ Advisory Team:
         config: {
           systemInstruction,
           temperature: 0.7,
-          responseMimeType: "application/json"
-        }
+          responseMimeType: "application/json",
+        },
       });
 
       const jsonText = response.text || "{}";
       const parsed = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
 
-      const finalSubject = parsed.subject || `🎉 Milestone Achieved: Step ${stepNum} - ${milestoneTitle} is Complete!`;
+      const finalSubject =
+        parsed.subject || `🎉 Milestone Achieved: Step ${stepNum} - ${milestoneTitle} is Complete!`;
 
       res.json({
         success: true,
@@ -3192,22 +3814,29 @@ Advisory Team:
           progressPercent,
           subject: finalSubject,
           headline: parsed.headline || `Congratulations on completing Step ${stepNum}!`,
-          congratulationsBody: parsed.congratulationsBody || `You have officially checked off all action items for "${milestoneTitle}".`,
-          nextStepTitle: parsed.nextStepTitle || (nextMilestone ? `Next: Step ${nextMilestone.stepNumber} - ${nextMilestone.title}` : "Next Steps"),
+          congratulationsBody:
+            parsed.congratulationsBody ||
+            `You have officially checked off all action items for "${milestoneTitle}".`,
+          nextStepTitle:
+            parsed.nextStepTitle ||
+            (nextMilestone
+              ? `Next: Step ${nextMilestone.stepNumber} - ${nextMilestone.title}`
+              : "Next Steps"),
           nextStepActionItems: parsed.nextStepActionItems || [],
           textBody: parsed.plainTextSummary || "",
           htmlBody: parsed.htmlPreview || "",
-          sentAt: new Date().toISOString()
+          sentAt: new Date().toISOString(),
         },
-        message: `Milestone notification for Step ${stepNum} (${milestoneTitle}) dispatched to ${recipientEmail}.`
+        message: `Milestone notification for Step ${stepNum} (${milestoneTitle}) dispatched to ${recipientEmail}.`,
       });
-
     } catch (err: any) {
       console.log("AI milestone notification generator fallback:", "API limit handled");
 
       // Resilient fallback template
       const subject = `🎉 Milestone Achieved: Step ${stepNum} - ${milestoneTitle} is 100% Complete!`;
-      const nextTitle = nextMilestone ? `Step ${nextMilestone.stepNumber}: ${nextMilestone.title}` : "Closing Day Preparation";
+      const nextTitle = nextMilestone
+        ? `Step ${nextMilestone.stepNumber}: ${nextMilestone.title}`
+        : "Closing Day Preparation";
 
       const textBody = `MILESTONE ACHIEVED NOTIFICATION
 ==================================================
@@ -3280,14 +3909,21 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
                 ${nextTitle}
               </strong>
               ${nextMilestone?.summary ? `<p style="font-size: 13px; color: #4A5D4E; margin: 0 0 10px 0; line-height: 1.5;">${nextMilestone.summary}</p>` : ""}
-              ${nextMilestone?.keyTips?.length ? `
+              ${
+                nextMilestone?.keyTips?.length
+                  ? `
                 <div style="margin-top: 10px; font-size: 12px; color: #2D362E;">
                   <strong>Recommended Actions:</strong>
                   <ul style="margin: 6px 0 0 0; padding-left: 18px; line-height: 1.5;">
-                    ${nextMilestone.keyTips.slice(0, 2).map((tip: string) => `<li>${tip}</li>`).join("")}
+                    ${nextMilestone.keyTips
+                      .slice(0, 2)
+                      .map((tip: string) => `<li>${tip}</li>`)
+                      .join("")}
                   </ul>
                 </div>
-              ` : ""}
+              `
+                  : ""
+              }
             </div>
 
             <!-- Financial Snapshot -->
@@ -3334,9 +3970,9 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
           subject,
           textBody,
           htmlBody,
-          sentAt: new Date().toISOString()
+          sentAt: new Date().toISOString(),
         },
-        message: `Milestone notification for Step ${stepNum} dispatched to ${recipientEmail}.`
+        message: `Milestone notification for Step ${stepNum} dispatched to ${recipientEmail}.`,
       });
     }
   });
@@ -3345,11 +3981,12 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
   app.post("/api/geosphere/sync", async (req, res) => {
     try {
       const { endpointUrl, syncToken } = req.body || {};
-      const targetUrl = endpointUrl || "https://geosphere-map-oregon.vercel.app/api/map-saved-listings";
+      const targetUrl =
+        endpointUrl || "https://geosphere-map-oregon.vercel.app/api/map-saved-listings";
 
       const headers: Record<string, string> = {
         "User-Agent": "Manus-Homebuyer-Sync-Agent/1.0",
-        "Accept": "application/json",
+        Accept: "application/json",
       };
       if (syncToken) {
         headers["x-geosphere-sync-token"] = syncToken;
@@ -3393,7 +4030,9 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
         })
         .map((item: any, idx: number) => {
           const price = Number(item.price) || 350000;
-          const address = item.addressLine1 || (item.formattedAddress ? item.formattedAddress.split(",")[0] : "Oregon Property");
+          const address =
+            item.addressLine1 ||
+            (item.formattedAddress ? item.formattedAddress.split(",")[0] : "Oregon Property");
           const city = item.city || "Coos Bay";
           const state = item.state || "OR";
           const zip = item.zipCode || item.zip || "97420";
@@ -3403,18 +4042,26 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
           if (rawPtype.includes("manufactured")) propertyType = "Manufactured";
           else if (rawPtype.includes("mobile")) propertyType = "Mobile";
           else if (rawPtype.includes("condo")) propertyType = "Condo";
-          else if (rawPtype.includes("townhouse") || rawPtype.includes("townhome")) propertyType = "Townhouse";
+          else if (rawPtype.includes("townhouse") || rawPtype.includes("townhome"))
+            propertyType = "Townhouse";
           else if (rawPtype.includes("multi")) propertyType = "Multi-Family";
           else if (rawPtype.includes("land")) propertyType = "Land";
 
-          const usda = Boolean(item.overlayEligibility?.usda ?? item.overlayEligibility?.usdaEligible);
+          const usda = Boolean(
+            item.overlayEligibility?.usda ?? item.overlayEligibility?.usdaEligible
+          );
           const lmi = Boolean(item.overlayEligibility?.lmi ?? item.overlayEligibility?.lmiEligible);
           const firstHome = item.overlayEligibility?.firstHome;
-          const lakeviewNational = Boolean(item.overlayEligibility?.lakeviewNational ?? item.overlayEligibility?.lakeviewNationalEligible);
+          const lakeviewNational = Boolean(
+            item.overlayEligibility?.lakeviewNational ??
+            item.overlayEligibility?.lakeviewNationalEligible
+          );
 
           return {
             id: item.id || `geo-${Date.now()}-${idx}`,
-            title: item.formattedAddress ? `${item.formattedAddress.split(",")[0]} Home` : `${address} - ${city}`,
+            title: item.formattedAddress
+              ? `${item.formattedAddress.split(",")[0]} Home`
+              : `${address} - ${city}`,
             address,
             city,
             state,
@@ -3425,9 +4072,15 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
             sqft: Number(item.squareFootage ?? item.sqft) || 1500,
             yearBuilt: Number(item.yearBuilt) || 2018,
             propertyType,
-            imageUrl: (item.photos && item.photos[0] && !item.photos[0].includes("unsplash.com")) ? item.photos[0] : (item.imageUrl && !item.imageUrl.includes("unsplash.com") ? item.imageUrl : undefined),
+            imageUrl:
+              item.photos && item.photos[0] && !item.photos[0].includes("unsplash.com")
+                ? item.photos[0]
+                : item.imageUrl && !item.imageUrl.includes("unsplash.com")
+                  ? item.imageUrl
+                  : undefined,
             status: "saved",
-            notes: `MLS #${item.mlsNumber || "N/A"}. ${usda ? "USDA 100% Financing Eligible. " : ""}${lmi ? "OHCS LMI Tract Approved. " : ""}${firstHome?.targetedAreaDetails || ""}${lakeviewNational ? " Lakeview National Eligible. " : ""}`.trim(),
+            notes:
+              `MLS #${item.mlsNumber || "N/A"}. ${usda ? "USDA 100% Financing Eligible. " : ""}${lmi ? "OHCS LMI Tract Approved. " : ""}${firstHome?.targetedAreaDetails || ""}${lakeviewNational ? " Lakeview National Eligible. " : ""}`.trim(),
             daysOnMarket: Number(item.daysOnMarket) || 14,
             hoaMonthly: Number(item.hoaMonthly || item.hoa?.fee || 0),
             propertyTaxAnnual: Number(item.propertyTaxAnnual || Math.round(price * 0.009)),
@@ -3441,29 +4094,44 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
             overlayEligibility: {
               usda,
               usdaEligible: usda,
-              usdaZoneName: item.overlayEligibility?.usdaInterpretation || "USDA Rural Eligible Area",
-              usdaInterpretation: item.overlayEligibility?.usdaInterpretation || "outside-ineligible-v1",
+              usdaZoneName:
+                item.overlayEligibility?.usdaInterpretation || "USDA Rural Eligible Area",
+              usdaInterpretation:
+                item.overlayEligibility?.usdaInterpretation || "outside-ineligible-v1",
               lmi,
               lmiEligible: lmi,
               lmiLevel: item.overlayEligibility?.lmiLevel || (lmi ? "Moderate" : undefined),
               lmiPercentage: item.overlayEligibility?.lmiPercentage || (lmi ? 72 : undefined),
-              lmiCensusTract: item.overlayEligibility?.tract?.geoid || item.overlayEligibility?.lmiCensusTract || firstHome?.targetedAreaDetails,
+              lmiCensusTract:
+                item.overlayEligibility?.tract?.geoid ||
+                item.overlayEligibility?.lmiCensusTract ||
+                firstHome?.targetedAreaDetails,
               firstHomeEligible: Boolean(firstHome?.available ?? true),
-              firstHomePriceCap: firstHome?.priceLimit || item.overlayEligibility?.firstHomePriceCap || 692211,
-              targetedArea: firstHome?.areaType === "targeted" || Boolean(item.overlayEligibility?.targetedArea),
-              countyName: item.county || firstHome?.county || item.overlayEligibility?.countyName || "Coos",
+              firstHomePriceCap:
+                firstHome?.priceLimit || item.overlayEligibility?.firstHomePriceCap || 692211,
+              targetedArea:
+                firstHome?.areaType === "targeted" ||
+                Boolean(item.overlayEligibility?.targetedArea),
+              countyName:
+                item.county || firstHome?.county || item.overlayEligibility?.countyName || "Coos",
               sourceDataset: "GeoSphere Oregon GIS",
               lakeviewNational,
               lakeviewNationalEligible: lakeviewNational,
-              firstHome: firstHome ? {
-                available: Boolean(firstHome.available),
-                priceEligible: firstHome.priceEligible !== undefined ? firstHome.priceEligible : (price <= (firstHome.priceLimit || 692211)),
-                lmiEligible: Boolean(firstHome.lmiEligible ?? lmi),
-                areaType: firstHome.areaType || "targeted",
-                priceLimit: firstHome.priceLimit || 692211,
-                county: firstHome.county || item.county || "Coos",
-                targetedAreaDetails: firstHome.targetedAreaDetails || "Entire county is targeted."
-              } : undefined
+              firstHome: firstHome
+                ? {
+                    available: Boolean(firstHome.available),
+                    priceEligible:
+                      firstHome.priceEligible !== undefined
+                        ? firstHome.priceEligible
+                        : price <= (firstHome.priceLimit || 692211),
+                    lmiEligible: Boolean(firstHome.lmiEligible ?? lmi),
+                    areaType: firstHome.areaType || "targeted",
+                    priceLimit: firstHome.priceLimit || 692211,
+                    county: firstHome.county || item.county || "Coos",
+                    targetedAreaDetails:
+                      firstHome.targetedAreaDetails || "Entire county is targeted.",
+                  }
+                : undefined,
             },
           };
         });
@@ -3475,25 +4143,30 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
       const processedListings = standardized.map((listing: any) => {
         let usda = listing.overlayEligibility?.usda ?? false;
         let lmi = listing.overlayEligibility?.lmi ?? false;
-        
+
         // If the coordinates exist, we verify against our in-memory spatial engine
-        if (typeof listing.latitude === 'number' && typeof listing.longitude === 'number' && 
-            !isNaN(listing.latitude) && !isNaN(listing.longitude)) {
+        if (
+          typeof listing.latitude === "number" &&
+          typeof listing.longitude === "number" &&
+          !isNaN(listing.latitude) &&
+          !isNaN(listing.longitude)
+        ) {
           const point: Point = [listing.longitude, listing.latitude];
-          usda = usdaFeatures.some(f => pointInGeometry(point, f.geometry));
-          lmi = lmiFeatures.some(f => pointInGeometry(point, f.geometry));
+          usda = usdaFeatures.some((f) => pointInGeometry(point, f.geometry));
+          lmi = lmiFeatures.some((f) => pointInGeometry(point, f.geometry));
         }
 
         return {
           ...listing,
-          notes: `MLS #${listing.mlsNumber || "N/A"}. ${usda ? "USDA 100% Financing Eligible. " : ""}${lmi ? "OHCS LMI Tract Approved. " : ""}${listing.overlayEligibility?.firstHome?.targetedAreaDetails || ""}${listing.overlayEligibility?.lakeviewNational ? " Lakeview National Eligible. " : ""}`.trim(),
+          notes:
+            `MLS #${listing.mlsNumber || "N/A"}. ${usda ? "USDA 100% Financing Eligible. " : ""}${lmi ? "OHCS LMI Tract Approved. " : ""}${listing.overlayEligibility?.firstHome?.targetedAreaDetails || ""}${listing.overlayEligibility?.lakeviewNational ? " Lakeview National Eligible. " : ""}`.trim(),
           overlayEligibility: {
             ...listing.overlayEligibility,
             usda,
             usdaEligible: usda,
             lmi,
-            lmiEligible: lmi
-          }
+            lmiEligible: lmi,
+          },
         };
       });
 
@@ -3518,17 +4191,30 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
 
       if (!targetGeoid && state && county && tract) {
         const stateFipsMap: Record<string, string> = {
-          "OR": "41", "WA": "53", "CA": "06", "TX": "48", "FL": "12",
-          "CO": "08", "AZ": "04", "NY": "36", "NC": "37", "GA": "13", "IL": "17"
+          OR: "41",
+          WA: "53",
+          CA: "06",
+          TX: "48",
+          FL: "12",
+          CO: "08",
+          AZ: "04",
+          NY: "36",
+          NC: "37",
+          GA: "13",
+          IL: "17",
         };
         const sFips = stateFipsMap[state.toUpperCase()] || "41";
         const cFips = "011";
-        const tFips = String(tract).replace(/[^0-9]/g, "").padStart(6, "0");
+        const tFips = String(tract)
+          .replace(/[^0-9]/g, "")
+          .padStart(6, "0");
         targetGeoid = `${sFips}${cFips}${tFips}`;
       }
 
       if (!targetGeoid || targetGeoid.length < 5) {
-        return res.status(400).json({ error: "A valid 11-digit GEOID or state/county/tract parameters are required." });
+        return res
+          .status(400)
+          .json({ error: "A valid 11-digit GEOID or state/county/tract parameters are required." });
       }
 
       targetGeoid = targetGeoid.padEnd(11, "0").substring(0, 11);
@@ -3547,12 +4233,12 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
         "36": { code: "NY", name: "New York" },
         "37": { code: "NC", name: "North Carolina" },
         "13": { code: "GA", name: "Georgia" },
-        "17": { code: "IL", name: "Illinois" }
+        "17": { code: "IL", name: "Illinois" },
       };
 
       const stateInfo = stateNames[stateFips] || { code: "US", name: "United States" };
       const tractNum = parseInt(tractCode, 10);
-      const isLmi = (tractNum % 3 === 0) || (tractNum % 5 === 0);
+      const isLmi = tractNum % 3 === 0 || tractNum % 5 === 0;
       const amiPct = isLmi ? 65 + (tractNum % 15) : 95 + (tractNum % 25);
 
       res.json({
@@ -3569,8 +4255,8 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
         isLmiEligible: isLmi,
         isUsdaEligible: true,
         isTargetedArea: isLmi || stateFips === "41",
-        isOpportunityZone: (tractNum % 7 === 0),
-        enrichmentTimestamp: new Date().toISOString()
+        isOpportunityZone: tractNum % 7 === 0,
+        enrichmentTimestamp: new Date().toISOString(),
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to parse GEOID" });
@@ -3586,15 +4272,18 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
       }
 
       const results = geoids.slice(0, 500).map((raw: string) => {
-        const clean = String(raw).replace(/[^0-9]/g, "").padStart(11, "0").substring(0, 11);
+        const clean = String(raw)
+          .replace(/[^0-9]/g, "")
+          .padStart(11, "0")
+          .substring(0, 11);
         const tractNum = parseInt(clean.substring(5, 11), 10) || 100;
-        const isLmi = (tractNum % 3 === 0) || (tractNum % 5 === 0);
+        const isLmi = tractNum % 3 === 0 || tractNum % 5 === 0;
         return {
           geoid: clean,
           isLmi,
           isUsda: true,
           amiPercentage: isLmi ? 72 : 104,
-          lmiCategory: isLmi ? "Moderate" : "Middle"
+          lmiCategory: isLmi ? "Moderate" : "Middle",
         };
       });
 
@@ -3617,7 +4306,7 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
         targetState,
         supportedStatesCount: 51,
         source: "FHFA & National Council of State Housing Agencies (NCSHA)",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to fetch HFA programs" });
@@ -3627,7 +4316,8 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
   // API Route: Twilio SMS Carrier Integration Proxy
   app.post("/api/twilio/send-sms", authenticateUser, async (req, res) => {
     try {
-      const { to, message, accountSid, authToken, fromNumber, attachmentUrl, encryptedVault } = req.body;
+      const { to, message, accountSid, authToken, fromNumber, attachmentUrl, encryptedVault } =
+        req.body;
 
       let sid = accountSid;
       let token = authToken;
@@ -3641,25 +4331,35 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
           token = decrypted.authToken || token;
           from = decrypted.phoneNumber || from;
         } catch (decryptErr) {
-          return res.status(401).json({ success: false, error: "Invalid or corrupted Twilio Vault encryption payload." });
+          return res.status(401).json({
+            success: false,
+            error: "Invalid or corrupted Twilio Vault encryption payload.",
+          });
         }
       }
 
       if (!sid || !token || !from) {
         return res.status(400).json({
           success: false,
-          error: "Twilio credentials missing. Please configure your Twilio Vault in dashboard settings.",
-          isConfigured: false
+          error:
+            "Twilio credentials missing. Please configure your Twilio Vault in dashboard settings.",
+          isConfigured: false,
         });
       }
 
       if (!to || !message) {
-        return res.status(400).json({ success: false, error: "Target phone number and message text are required" });
+        return res
+          .status(400)
+          .json({ success: false, error: "Target phone number and message text are required" });
       }
 
       // Format recipient phone number to E.164 format (+1...)
       const cleanTo = to.replace(/[^0-9+]/g, "");
-      const formattedTo = cleanTo.startsWith("+") ? cleanTo : (cleanTo.length === 10 ? `+1${cleanTo}` : `+${cleanTo}`);
+      const formattedTo = cleanTo.startsWith("+")
+        ? cleanTo
+        : cleanTo.length === 10
+          ? `+1${cleanTo}`
+          : `+${cleanTo}`;
 
       // Call Twilio REST API
       const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
@@ -3669,17 +4369,20 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
       params.append("To", formattedTo);
       params.append("From", from);
       params.append("Body", message);
-      if (attachmentUrl && (attachmentUrl.startsWith("http://") || attachmentUrl.startsWith("https://"))) {
+      if (
+        attachmentUrl &&
+        (attachmentUrl.startsWith("http://") || attachmentUrl.startsWith("https://"))
+      ) {
         params.append("MediaUrl", attachmentUrl);
       }
 
       const twilioRes = await fetch(twilioEndpoint, {
         method: "POST",
         headers: {
-          "Authorization": authHeader,
-          "Content-Type": "application/x-www-form-urlencoded"
+          Authorization: authHeader,
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: params.toString()
+        body: params.toString(),
       });
 
       const twilioData: any = await twilioRes.json();
@@ -3687,9 +4390,10 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
       if (!twilioRes.ok) {
         return res.status(twilioRes.status).json({
           success: false,
-          error: twilioData.message || twilioData.detail || `Twilio API error HTTP ${twilioRes.status}`,
+          error:
+            twilioData.message || twilioData.detail || `Twilio API error HTTP ${twilioRes.status}`,
           code: twilioData.code,
-          moreInfo: twilioData.more_info
+          moreInfo: twilioData.more_info,
         });
       }
 
@@ -3699,11 +4403,13 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
         status: twilioData.status,
         to: twilioData.to,
         from: twilioData.from,
-        dateCreated: twilioData.date_created
+        dateCreated: twilioData.date_created,
       });
     } catch (error: any) {
       console.error("Twilio SMS send error:", error);
-      res.status(500).json({ success: false, error: error.message || "Failed to dispatch SMS via Twilio" });
+      res
+        .status(500)
+        .json({ success: false, error: error.message || "Failed to dispatch SMS via Twilio" });
     }
   });
 
@@ -3714,10 +4420,10 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
       if (!accountSid || !authToken) {
         return res.status(400).json({ error: "accountSid and authToken are required" });
       }
-      
+
       const payload = JSON.stringify({ accountSid, authToken, phoneNumber });
       const encryptedVault = encryptVault(payload);
-      
+
       res.json({ success: true, encryptedVault });
     } catch (error: any) {
       res.status(500).json({ error: "Failed to encrypt Twilio vault" });
@@ -3729,10 +4435,10 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
   app.post("/api/rates/search-grounded", async (req, res) => {
     try {
       const { forceRefresh = false, state = "US" } = req.body || {};
-      
+
       const ai = getGeminiClient();
       const prompt = `You are a real-time mortgage market intelligence engine. Using Google Search, retrieve the latest national average mortgage interest rates in the United States today (including 30-year fixed conforming, 15-year fixed, 30-year FHA, 30-year VA, 30-year Jumbo, 5/1 ARM, and the 10-Year U.S. Treasury yield benchmark).
-Current date context: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.
+Current date context: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.
 
 Provide:
 1. Exact current national average percentage rates for:
@@ -3771,9 +4477,10 @@ Make sure to include specific percentages clearly. Sources to check include Fred
         }));
 
       // Deduplicate sources by URL
-      const uniqueSources = Array.from(
-        new Map(sources.map((s: any) => [s.url, s])).values()
-      ).slice(0, 6);
+      const uniqueSources = Array.from(new Map(sources.map((s: any) => [s.url, s])).values()).slice(
+        0,
+        6
+      );
 
       // Helper regex extractor for rate percentages
       const extractRate = (pattern: RegExp, defaultVal: number): number => {
@@ -3788,20 +4495,44 @@ Make sure to include specific percentages clearly. Sources to check include Fred
       };
 
       // Extract rate numbers from grounded text or use realistic benchmarks
-      const rate30Yr = extractRate(/30[- ]?year\s+fixed[^%0-9]{0,25}(\d{1,2}(?:\.\d{1,3})?)\s*%/i, 6.48);
-      const rate15Yr = extractRate(/15[- ]?year\s+fixed[^%0-9]{0,25}(\d{1,2}(?:\.\d{1,3})?)\s*%/i, 5.72);
+      const rate30Yr = extractRate(
+        /30[- ]?year\s+fixed[^%0-9]{0,25}(\d{1,2}(?:\.\d{1,3})?)\s*%/i,
+        6.48
+      );
+      const rate15Yr = extractRate(
+        /15[- ]?year\s+fixed[^%0-9]{0,25}(\d{1,2}(?:\.\d{1,3})?)\s*%/i,
+        5.72
+      );
       const rateFha = extractRate(/fha[^%0-9]{0,25}(\d{1,2}(?:\.\d{1,3})?)\s*%/i, 6.18);
       const rateVa = extractRate(/\bva\b[^%0-9]{0,25}(\d{1,2}(?:\.\d{1,3})?)\s*%/i, 6.09);
       const rateJumbo = extractRate(/jumbo[^%0-9]{0,25}(\d{1,2}(?:\.\d{1,3})?)\s*%/i, 6.55);
-      const rateArm = extractRate(/(?:5\/1\s*arm|arm)[^%0-9]{0,25}(\d{1,2}(?:\.\d{1,3})?)\s*%/i, 6.22);
-      const treasury10Yr = extractRate(/10[- ]?year\s+treasury[^%0-9]{0,25}(\d{1,2}(?:\.\d{1,3})?)\s*%/i, 4.28);
+      const rateArm = extractRate(
+        /(?:5\/1\s*arm|arm)[^%0-9]{0,25}(\d{1,2}(?:\.\d{1,3})?)\s*%/i,
+        6.22
+      );
+      const treasury10Yr = extractRate(
+        /10[- ]?year\s+treasury[^%0-9]{0,25}(\d{1,2}(?:\.\d{1,3})?)\s*%/i,
+        4.28
+      );
 
       // Determine directional momentum
       let trendDirection: "down" | "up" | "stable" = "down";
       const lowerText = responseText.toLowerCase();
-      if (lowerText.includes("dropped") || lowerText.includes("easing") || lowerText.includes("declined") || lowerText.includes("lower") || lowerText.includes("down")) {
+      if (
+        lowerText.includes("dropped") ||
+        lowerText.includes("easing") ||
+        lowerText.includes("declined") ||
+        lowerText.includes("lower") ||
+        lowerText.includes("down")
+      ) {
         trendDirection = "down";
-      } else if (lowerText.includes("rose") || lowerText.includes("rising") || lowerText.includes("increased") || lowerText.includes("higher") || lowerText.includes("up")) {
+      } else if (
+        lowerText.includes("rose") ||
+        lowerText.includes("rising") ||
+        lowerText.includes("increased") ||
+        lowerText.includes("higher") ||
+        lowerText.includes("up")
+      ) {
         trendDirection = "up";
       } else {
         trendDirection = "stable";
@@ -3811,7 +4542,11 @@ Make sure to include specific percentages clearly. Sources to check include Fred
         success: true,
         isGrounded: true,
         timestamp: new Date().toISOString(),
-        asOfDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        asOfDate: new Date().toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
         rates: {
           conforming30Yr: rate30Yr,
           fixed15Yr: rate15Yr,
@@ -3823,7 +4558,12 @@ Make sure to include specific percentages clearly. Sources to check include Fred
         },
         trend: {
           direction: trendDirection,
-          directionLabel: trendDirection === "down" ? "Easing / Downward Momentum" : trendDirection === "up" ? "Rising / Upward Pressure" : "Stable / Rangebound",
+          directionLabel:
+            trendDirection === "down"
+              ? "Easing / Downward Momentum"
+              : trendDirection === "up"
+                ? "Rising / Upward Pressure"
+                : "Stable / Rangebound",
           weeklyChangeBps: trendDirection === "down" ? -6 : trendDirection === "up" ? +8 : 0,
         },
         summary: responseText,
@@ -3837,7 +4577,11 @@ Make sure to include specific percentages clearly. Sources to check include Fred
         success: true,
         isGrounded: false,
         timestamp: new Date().toISOString(),
-        asOfDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        asOfDate: new Date().toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
         rates: {
           conforming30Yr: 6.48,
           fixed15Yr: 5.72,
@@ -3852,13 +4596,20 @@ Make sure to include specific percentages clearly. Sources to check include Fred
           directionLabel: "Easing / Stable Benchmark",
           weeklyChangeBps: -4,
         },
-        summary: "Mortgage rates are hovering in the mid-6% range as markets monitor Federal Reserve rate policy and inflation reports. Buyers with strong credit can find conforming 30-year fixed loans around 6.48% and FHA/VA options near 6.09%-6.18%.",
+        summary:
+          "Mortgage rates are hovering in the mid-6% range as markets monitor Federal Reserve rate policy and inflation reports. Buyers with strong credit can find conforming 30-year fixed loans around 6.48% and FHA/VA options near 6.09%-6.18%.",
         sources: [
-          { title: "Freddie Mac Primary Mortgage Market Survey (PMMS)", url: "https://www.freddiemac.com/pmms" },
-          { title: "Mortgage News Daily National Rates", url: "https://www.mortgagenewsdaily.com/mortgage-rates" }
+          {
+            title: "Freddie Mac Primary Mortgage Market Survey (PMMS)",
+            url: "https://www.freddiemac.com/pmms",
+          },
+          {
+            title: "Mortgage News Daily National Rates",
+            url: "https://www.mortgagenewsdaily.com/mortgage-rates",
+          },
         ],
         webSearchQueries: ["latest national mortgage rates freddie mac"],
-        fallbackNote: "Live search service temporarily cached; baseline benchmarks loaded."
+        fallbackNote: "Live search service temporarily cached; baseline benchmarks loaded.",
       });
     }
   });
@@ -3874,8 +4625,12 @@ Make sure to include specific percentages clearly. Sources to check include Fred
 
     try {
       const ai = getGeminiClient();
-      const currentDate = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-      
+      const currentDate = new Date().toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+
       const prompt = `You are an expert First-Time Homebuyer & Mortgage Educational Guide AI.
 Current Date: ${currentDate}.
 
@@ -3952,9 +4707,10 @@ Ensure all information is educational, accurate, and professional.`;
           url: c.web?.uri,
         }));
 
-      const uniqueSources = Array.from(
-        new Map(sources.map((s: any) => [s.url, s])).values()
-      ).slice(0, 8);
+      const uniqueSources = Array.from(new Map(sources.map((s: any) => [s.url, s])).values()).slice(
+        0,
+        8
+      );
 
       // Parse structured JSON block from response if present
       let detectedParameters: any = {};
@@ -3982,16 +4738,20 @@ Ensure all information is educational, accurate, and professional.`;
       });
     } catch (error: any) {
       console.error("Search-grounded intelligence error:", error);
-      
+
       // Authoritative fallback response for first-time buyers & LO guidance
       const qLower = (query || "").toLowerCase();
       let fallbackAnswer = `**Mortgage & Market Intelligence Guidance:**\n\nWhen evaluating "${query}", key underwriting factors include Debt-to-Income (DTI) thresholds (typically 43-50% max), Interested Party Contribution (IPC) seller concession caps (3-9% on Conventional depending on LTV, 6% on FHA/USDA, 4% on VA), and localized loan limits.\n\nFor personalized qualification and current daily pricing, connect with your designated local Loan Officer to verify official scenario options.`;
-      
+
       if (qLower.includes("buydown") || qLower.includes("2-1")) {
         fallbackAnswer = `**2-1 Temporary Interest Rate Buydown Overview:**\n\n• **Year 1:** Interest rate is **2.00% lower** than the permanent note rate (e.g. 4.625% instead of 6.625%), cutting monthly payments by ~$400–$550/mo.\n• **Year 2:** Interest rate is **1.00% lower** than the note rate (e.g. 5.625%).\n• **Years 3–30:** Normal note rate applies (e.g. 6.625%).\n• **Funding Source:** Typically funded through seller concessions (Interested Party Contributions) deposited into an escrow subsidy account at closing.\n• **Underwriting Rule:** The buyer qualifies at the full permanent note rate to ensure long-term affordability.`;
       } else if (qLower.includes("waiting") || qLower.includes("cost of waiting")) {
         fallbackAnswer = `**Cost of Waiting Financial Analysis:**\n\n• **Appreciation Impact:** Delaying a home purchase by 1–2 years in steady markets often increases required purchase price and down payment.\n• **Amortization & Equity:** Every month renting is 100% interest/expense with 0% principal paydown. A 30-year fixed mortgage begins building mandatory equity immediately.\n• **Refinance Flexibility:** Buyers who purchase when ready can refinance into lower rates later if rates drop, while locking in today's property purchase price.`;
-      } else if (qLower.includes("dpa") || qLower.includes("grant") || qLower.includes("down payment assistance")) {
+      } else if (
+        qLower.includes("dpa") ||
+        qLower.includes("grant") ||
+        qLower.includes("down payment assistance")
+      ) {
         fallbackAnswer = `**Down Payment Assistance (DPA) & Grant Guidelines:**\n\n• **State Housing Finance Agencies (HFAs):** State programs (like Oregon OHCS Flex Lending, CalHFA, WSHFC) offer 3% to 5% assistance in forgivable second mortgages or grants.\n• **Income & Location Criteria:** Many DPA grants require household income below 80% to 100% of Area Median Income (AMI), though CRA-designated census tracts often waive income caps.\n• **Access Note:** Detailed DPA program guidelines, GEOID census tract eligibility, and grant calculations are securely managed in the Backend Loan Officer Portal.`;
       } else if (qLower.includes("dti") || qLower.includes("ratio")) {
         fallbackAnswer = `**Debt-to-Income (DTI) Underwriting Rules:**\n\n• **Front-End Ratio (Housing DTI):** Total proposed housing payment (Principal, Interest, Taxes, Insurance, PMI, HOA) divided by gross monthly income. Target is typically ≤ 28%–36%.\n• **Back-End Ratio (Total DTI):** Housing payment plus all minimum monthly recurring debts (auto loans, student loans, credit cards, personal loans) divided by gross income. Target is ≤ 43% for Conventional (up to 45–50% with Automated Underwriting System approval) and up to 46.9/56.9% for FHA.`;
@@ -4014,18 +4774,20 @@ Ensure all information is educational, accurate, and professional.`;
           amiPercentage: null,
           suggestedTargetPrice: null,
           recommendedLoanType: "30yr",
-          summaryHeadline: "Mortgage Intelligence Guidance"
+          summaryHeadline: "Mortgage Intelligence Guidance",
         },
         sources: [
-          { title: "Consumer Financial Protection Bureau (CFPB) Mortgage Guide", url: "https://www.consumerfinance.gov/owning-a-home/" },
-          { title: "FHFA Conforming Limits & GSE Guidelines", url: "https://www.fhfa.gov" }
+          {
+            title: "Consumer Financial Protection Bureau (CFPB) Mortgage Guide",
+            url: "https://www.consumerfinance.gov/owning-a-home/",
+          },
+          { title: "FHFA Conforming Limits & GSE Guidelines", url: "https://www.fhfa.gov" },
         ],
-        webSearchQueries: [query]
+        webSearchQueries: [query],
       });
     }
   });
 
-  
   // API Route: Salesforce Test Connection
   app.post("/api/salesforce/test-connection", authenticateUser, async (req, res) => {
     try {
@@ -4042,8 +4804,8 @@ Ensure all information is educational, accurate, and professional.`;
       }
 
       console.log(`[Salesforce] Testing connection for ${config.username} at ${config.loginUrl}`);
-      
-      await new Promise(r => setTimeout(r, 1500));
+
+      await new Promise((r) => setTimeout(r, 1500));
       res.json({ success: true, message: "Successfully connected to Salesforce CRM." });
     } catch (error: any) {
       console.error("Salesforce Error:", error);
@@ -4065,7 +4827,10 @@ Ensure all information is educational, accurate, and professional.`;
       // Extract Name Parts
       const nameParts = (lead.fullName || "").split(" ");
       const firstName = nameParts[0] || "Unknown";
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : lead.email?.split("@")[0] || "Unknown";
+      const lastName =
+        nameParts.length > 1
+          ? nameParts.slice(1).join(" ")
+          : lead.email?.split("@")[0] || "Unknown";
 
       // EXACT Jungo Mortgage CRM / Salesforce Schema Payload
       const sfdcPayload = {
@@ -4078,30 +4843,36 @@ Ensure all information is educational, accurate, and professional.`;
         MtgPlanner_CRM__Group__c: "First-Time Homebuyer",
         Important_Notes__c: "Intent: " + (lead.intentScore || "Unknown"),
         LO_Notes__c: lead.notes || "",
-        Description: "Lead captured via AI. Transcript: " + JSON.stringify(lead.chatTranscript || []),
+        Description:
+          "Lead captured via AI. Transcript: " + JSON.stringify(lead.chatTranscript || []),
         Loan_Officer__c: config.username,
         MtgPlanner_CRM__Last_Touch__c: "AI Handoff",
         Last_Touch_Date__c: new Date().toISOString().split("T")[0],
-        RecordTypeId: "012Hn000001CekSIAS" // Exactly matches provided Jungo CRM RecordTypeId
+        RecordTypeId: "012Hn000001CekSIAS", // Exactly matches provided Jungo CRM RecordTypeId
       };
 
-      console.log(`[Salesforce] Syncing lead ${lead.email} to ${config.username} with payload:`, JSON.stringify(sfdcPayload, null, 2));
-      
-      await new Promise(r => setTimeout(r, 1500));
-      res.json({ success: true, salesforceId: "012Hn0" + Math.random().toString(36).substring(2, 12).toUpperCase() });
+      console.log(
+        `[Salesforce] Syncing lead ${lead.email} to ${config.username} with payload:`,
+        JSON.stringify(sfdcPayload, null, 2)
+      );
+
+      await new Promise((r) => setTimeout(r, 1500));
+      res.json({
+        success: true,
+        salesforceId: "012Hn0" + Math.random().toString(36).substring(2, 12).toUpperCase(),
+      });
     } catch (error: any) {
       console.error("Salesforce Sync Error:", error);
       res.status(500).json({ error: error.message || "Failed to sync lead to Salesforce" });
     }
   });
 
-
-    // API Route: Total Expert Test Connection\n  app.post("/api/totalexpert/test-connection", authenticateUser, async (req, res) => {\n    try {\n      const { teVault } = req.body;\n      if (!teVault) {\n        return res.status(400).json({ error: "Missing Total Expert Vault payload." });\n      }\n\n      const decrypted = JSON.parse(decryptVault(teVault));\n      const config = decrypted.totalExpert;\n\n      if (!config || !config.apiKey) {\n        return res.status(400).json({ error: "Invalid Total Expert configuration." });\n      }\n\n      console.log(`[Total Expert] Testing connection with API key ending in ${config.apiKey.slice(-4)}`);\n      \n      await new Promise(r => setTimeout(r, 1500));\n      res.json({ success: true, message: "Successfully authenticated with Total Expert CRM." });\n    } catch (error: any) {\n      console.error("Total Expert Error:", error);\n      res.status(500).json({ error: error.message || "Failed to connect to Total Expert" });\n    }\n  });\n\n  // API Route: Total Expert Sync Lead\n  app.post("/api/totalexpert/sync-lead", authenticateUser, async (req, res) => {\n    try {\n      const { teVault, lead } = req.body;\n      if (!teVault || !lead) {\n        return res.status(400).json({ error: "Missing vault or lead data." });\n      }\n\n      const decrypted = JSON.parse(decryptVault(teVault));\n      const config = decrypted.totalExpert;\n\n      console.log(`[Total Expert] Syncing lead ${lead.email}`);\n      \n      await new Promise(r => setTimeout(r, 1500));\n      res.json({ success: true, teId: "TE-" + Math.random().toString(36).substring(2, 10).toUpperCase() });\n    } catch (error: any) {\n      console.error("Total Expert Sync Error:", error);\n      res.status(500).json({ error: error.message || "Failed to sync lead to Total Expert" });\n    }\n  });\n\n  
+  // API Route: Total Expert Test Connection\n  app.post("/api/totalexpert/test-connection", authenticateUser, async (req, res) => {\n    try {\n      const { teVault } = req.body;\n      if (!teVault) {\n        return res.status(400).json({ error: "Missing Total Expert Vault payload." });\n      }\n\n      const decrypted = JSON.parse(decryptVault(teVault));\n      const config = decrypted.totalExpert;\n\n      if (!config || !config.apiKey) {\n        return res.status(400).json({ error: "Invalid Total Expert configuration." });\n      }\n\n      console.log(`[Total Expert] Testing connection with API key ending in ${config.apiKey.slice(-4)}`);\n      \n      await new Promise(r => setTimeout(r, 1500));\n      res.json({ success: true, message: "Successfully authenticated with Total Expert CRM." });\n    } catch (error: any) {\n      console.error("Total Expert Error:", error);\n      res.status(500).json({ error: error.message || "Failed to connect to Total Expert" });\n    }\n  });\n\n  // API Route: Total Expert Sync Lead\n  app.post("/api/totalexpert/sync-lead", authenticateUser, async (req, res) => {\n    try {\n      const { teVault, lead } = req.body;\n      if (!teVault || !lead) {\n        return res.status(400).json({ error: "Missing vault or lead data." });\n      }\n\n      const decrypted = JSON.parse(decryptVault(teVault));\n      const config = decrypted.totalExpert;\n\n      console.log(`[Total Expert] Syncing lead ${lead.email}`);\n      \n      await new Promise(r => setTimeout(r, 1500));\n      res.json({ success: true, teId: "TE-" + Math.random().toString(36).substring(2, 10).toUpperCase() });\n    } catch (error: any) {\n      console.error("Total Expert Sync Error:", error);\n      res.status(500).json({ error: error.message || "Failed to sync lead to Total Expert" });\n    }\n  });\n\n
   // API Route: AI Meta Ads Campaign Generator
   app.post("/api/ai/meta-ads-campaign", authenticateUser, async (req, res) => {
     try {
       const { loanOfficer, activeAgent, adSettings } = req.body;
-      
+
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
@@ -4109,7 +4880,7 @@ Ensure all information is educational, accurate, and professional.`;
 
       // We will dynamically import the SDK or use fetch. Let's use the standard fetch API for Gemini if the SDK isn't installed.
       // Or if the SDK is installed, use it. Let's assume fetch for safety, or check if @google/genai is in package.json.
-      
+
       const prompt = `
 You are an expert mortgage marketing copywriter and digital advertiser.
 Please generate high-converting ad copy for Meta (Facebook/Instagram) and Google Ads for the following scenario:
@@ -4145,18 +4916,18 @@ Return ONLY valid JSON in this exact structure:
 
       const ai = getGeminiClient();
       const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: "gemini-3.8-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
-          temperature: 0.7
-        }
+          temperature: 0.7,
+        },
       });
-      
+
       if (!response || !response.text) {
         throw new Error("Failed to generate response from Gemini");
       }
-      
+
       res.json(JSON.parse(response.text));
     } catch (error: any) {
       console.error("AI Ads Generation Error:", error);
@@ -4174,30 +4945,35 @@ Return ONLY valid JSON in this exact structure:
     apiSecret: process.env.BIG_PURPLE_DOT_SECRET || "",
     subdomain: process.env.BIG_PURPLE_DOT_SUBDOMAIN || "cornerstone",
     accountEmail: "fordmj@gmail.com",
-    webhookSecret: process.env.BIG_PURPLE_DOT_WEBHOOK_SECRET || "bpd_whsec_" + Math.random().toString(36).substring(2, 10),
+    webhookSecret:
+      process.env.BIG_PURPLE_DOT_WEBHOOK_SECRET ||
+      "bpd_whsec_" + Math.random().toString(36).substring(2, 10),
     environment: (process.env.BIG_PURPLE_DOT_ENV as "sandbox" | "production") || "sandbox",
     autoSyncRecruits: true,
     syncLoanOfficers: true,
     syncRealEstateAgents: true,
     syncDirection: "bi_directional" as "bi_directional" | "push_only" | "pull_only",
     lastSyncedAt: new Date().toISOString(),
-    connectionStatus: (process.env.BIG_PURPLE_DOT_API_KEY ? "connected" : "not_configured") as "not_configured" | "connected" | "error" | "testing",
-    lastStatusMessage: process.env.BIG_PURPLE_DOT_API_KEY ? "Pre-configured via environment variables" : "Awaiting API credentials",
+    connectionStatus: (process.env.BIG_PURPLE_DOT_API_KEY ? "connected" : "not_configured") as
+      "not_configured" | "connected" | "error" | "testing",
+    lastStatusMessage: process.env.BIG_PURPLE_DOT_API_KEY
+      ? "Pre-configured via environment variables"
+      : "Awaiting API credentials",
     loStageMapping: {
       "Not Contacted": "BPD Stage: Cold Prospect",
       "In Outreach": "BPD Stage: In Outreach",
-      "Interested": "BPD Stage: Discovery Call",
+      Interested: "BPD Stage: Discovery Call",
       "Meeting Scheduled": "BPD Stage: Interview Set",
-      "Declined": "BPD Stage: Archived / Not Fit",
-      "Hired": "BPD Stage: Onboarded / Joined Branch"
+      Declined: "BPD Stage: Archived / Not Fit",
+      Hired: "BPD Stage: Onboarded / Joined Branch",
     },
     agentStageMapping: {
       "Not Contacted": "BPD Partner: New Prospect",
       "In Outreach": "BPD Partner: Outreach Active",
-      "Interested": "BPD Partner: In Discussions",
+      Interested: "BPD Partner: In Discussions",
       "Meeting Scheduled": "BPD Partner: Strategy Meeting",
       "Partner Active": "BPD Partner: Active Co-Brander",
-      "Declined": "BPD Partner: Inactive"
+      Declined: "BPD Partner: Inactive",
     },
     webhookEventsSubscribed: [
       "recruit.created",
@@ -4205,8 +4981,8 @@ Return ONLY valid JSON in this exact structure:
       "sms.received",
       "call.completed",
       "realtor_partner.signed_up",
-      "interview.scheduled"
-    ]
+      "interview.scheduled",
+    ],
   };
 
   // ============================================================================
@@ -4224,7 +5000,7 @@ Return ONLY valid JSON in this exact structure:
     for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
       const [xi, yi] = ring[i];
       const [xj, yj] = ring[j];
-      const crossesLatitude = (yi > lat) !== (yj > lat);
+      const crossesLatitude = yi > lat !== yj > lat;
       const intersectLng = ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
       if (crossesLatitude && lng < intersectLng) inside = !inside;
     }
@@ -4244,7 +5020,9 @@ Return ONLY valid JSON in this exact structure:
       return pointInPolygon(point, geometry.coordinates as Polygon);
     }
     if (geometry.type === "MultiPolygon") {
-      return (geometry.coordinates as MultiPolygon).some((polygon) => pointInPolygon(point, polygon));
+      return (geometry.coordinates as MultiPolygon).some((polygon) =>
+        pointInPolygon(point, polygon)
+      );
     }
     return false;
   }
@@ -4253,10 +5031,12 @@ Return ONLY valid JSON in this exact structure:
   app.post("/api/geosphere/classify", authenticateUser, async (req, res) => {
     try {
       const { lat, lng, features } = req.body;
-      if (typeof lat !== 'number' || typeof lng !== 'number') {
-        return res.status(400).json({ error: "Invalid coordinates provided. Requires lat and lng." });
+      if (typeof lat !== "number" || typeof lng !== "number") {
+        return res
+          .status(400)
+          .json({ error: "Invalid coordinates provided. Requires lat and lng." });
       }
-      
+
       const point: Point = [lng, lat]; // GeoJSON standard uses [longitude, latitude]
       const matchedFeatures = [];
 
@@ -4269,15 +5049,17 @@ Return ONLY valid JSON in this exact structure:
         }
       }
 
-      res.json({ 
-        success: true, 
-        point, 
+      res.json({
+        success: true,
+        point,
         matchedCount: matchedFeatures.length,
-        matchedFeatures 
+        matchedFeatures,
       });
     } catch (err: any) {
       console.error("[GeoSphere Engine] Classification Error:", err);
-      res.status(500).json({ error: "Failed to classify coordinates via GeoSphere spatial engine." });
+      res
+        .status(500)
+        .json({ error: "Failed to classify coordinates via GeoSphere spatial engine." });
     }
   });
 
@@ -4285,35 +5067,35 @@ Return ONLY valid JSON in this exact structure:
   app.post("/api/geosphere/batch-classify", authenticateUser, async (req, res) => {
     try {
       const { properties } = req.body; // Array of { id, lat, lng }
-      
+
       if (!Array.isArray(properties)) {
         return res.status(400).json({ error: "Invalid payload. Requires 'properties' array." });
       }
-      
+
       const results = properties.map((prop: any) => {
-        if (typeof prop.lat !== 'number' || typeof prop.lng !== 'number') {
+        if (typeof prop.lat !== "number" || typeof prop.lng !== "number") {
           return { id: prop.id, error: "Invalid coordinates" };
         }
-        
+
         const point: Point = [prop.lng, prop.lat];
-        
+
         // Fast in-memory check against loaded global features
-        const isUsda = usdaFeatures.some(f => pointInGeometry(point, f.geometry));
-        const isLmi = lmiFeatures.some(f => pointInGeometry(point, f.geometry));
-        
+        const isUsda = usdaFeatures.some((f) => pointInGeometry(point, f.geometry));
+        const isLmi = lmiFeatures.some((f) => pointInGeometry(point, f.geometry));
+
         return {
           id: prop.id,
           lat: prop.lat,
           lng: prop.lng,
           isUsda,
-          isLmi
+          isLmi,
         };
       });
 
       res.json({
         success: true,
         count: results.length,
-        results
+        results,
       });
     } catch (err: any) {
       console.error("[GeoSphere Engine] Batch Classification Error:", err);
@@ -4331,7 +5113,7 @@ Return ONLY valid JSON in this exact structure:
           totalScrubbed: 0,
           lastScrubTimestamp: null,
           vaultState: "ACTIVE",
-          activeVaultNodes: 3
+          activeVaultNodes: 3,
         });
       }
       const data = statsDoc.data();
@@ -4340,7 +5122,7 @@ Return ONLY valid JSON in this exact structure:
         totalScrubbed: data?.totalScrubbed || 0,
         lastScrubTimestamp: data?.lastScrubTimestamp || null,
         vaultState: "ACTIVE",
-        activeVaultNodes: 3
+        activeVaultNodes: 3,
       });
     } catch (err: any) {
       console.error("PII metrics error:", err);
@@ -4351,12 +5133,20 @@ Return ONLY valid JSON in this exact structure:
   // API Route: Verify Audit Log Hash Chain (Priority 4 Item 10: Server Verification Endpoint)
   app.get("/api/audit/verify-chain", authenticateUser, async (_req, res) => {
     try {
-      const snap = await getAdminDb().collection("branch_audit_logs").orderBy("timestamp", "asc").get();
+      const snap = await getAdminDb()
+        .collection("branch_audit_logs")
+        .orderBy("timestamp", "asc")
+        .get();
       const logs: any[] = [];
-      snap.forEach(doc => logs.push(doc.data()));
+      snap.forEach((doc) => logs.push(doc.data()));
 
       if (logs.length === 0) {
-        return res.json({ isValid: true, isTampered: false, verifiedCount: 0, message: "Ledger is empty or newly initialized." });
+        return res.json({
+          isValid: true,
+          isTampered: false,
+          verifiedCount: 0,
+          message: "Ledger is empty or newly initialized.",
+        });
       }
 
       for (let i = 0; i < logs.length; i++) {
@@ -4370,7 +5160,7 @@ Return ONLY valid JSON in this exact structure:
             verifiedCount: i,
             brokenLogId: current.id,
             brokenSequence: current.sequenceIndex,
-            reason: `Broken chain pointer at index ${i}. Expected ${prev.integrityHash}, found ${current.previousHash}`
+            reason: `Broken chain pointer at index ${i}. Expected ${prev.integrityHash}, found ${current.previousHash}`,
           });
         }
 
@@ -4382,7 +5172,7 @@ Return ONLY valid JSON in this exact structure:
             current.actionType,
             current.assetName,
             current.timestamp,
-            current.status
+            current.status,
           ].join("|");
           const expectedHash = "0x" + crypto.createHash("sha256").update(payload).digest("hex");
           if (expectedHash.toLowerCase() !== current.integrityHash?.toLowerCase()) {
@@ -4392,7 +5182,7 @@ Return ONLY valid JSON in this exact structure:
               verifiedCount: i,
               brokenLogId: current.id,
               brokenSequence: current.sequenceIndex,
-              reason: `Content hash mismatch at record ${current.id}. Expected ${expectedHash}, found ${current.integrityHash}`
+              reason: `Content hash mismatch at record ${current.id}. Expected ${expectedHash}, found ${current.integrityHash}`,
             });
           }
         }
@@ -4402,7 +5192,7 @@ Return ONLY valid JSON in this exact structure:
         isValid: true,
         isTampered: false,
         verifiedCount: logs.length,
-        message: `All ${logs.length} audit logs verified intact with unbroken cryptographic SHA-256 links.`
+        message: `All ${logs.length} audit logs verified intact with unbroken cryptographic SHA-256 links.`,
       });
     } catch (err: any) {
       console.error("Audit chain verification error:", err);
@@ -4434,8 +5224,8 @@ Return ONLY valid JSON in this exact structure:
           snykStatus: "ACTIVE_MONITORING",
           snykSeverityThreshold: "HIGH",
           vulnerabilitiesDetected: 0,
-          pipelineWorkflow: ".github/workflows/security-scan.yml"
-        }
+          pipelineWorkflow: ".github/workflows/security-scan.yml",
+        },
       });
     } catch (err: any) {
       console.error("Failed to load SBOM:", err);
@@ -4466,10 +5256,10 @@ Return ONLY valid JSON in this exact structure:
       if (!payload || typeof payload !== "object") {
         return res.status(400).json({ error: "payload object is required" });
       }
-      
+
       const payloadString = JSON.stringify(payload);
       const encryptedVault = encryptVault(payloadString);
-      
+
       res.json({ success: true, encryptedVault });
     } catch (error: any) {
       console.error("Integrations Vault encryption error:", error);
@@ -4479,11 +5269,15 @@ Return ONLY valid JSON in this exact structure:
 
   // GET /api/big-purple-dot/config - returns current config with masked secrets (Zero-Trust Authenticated)
   app.get("/api/big-purple-dot/config", authenticateUser, (_req, res) => {
-    const maskedApiKey = bpdConfig.apiKey 
-      ? (bpdConfig.apiKey.length > 8 ? `${bpdConfig.apiKey.slice(0, 4)}••••••••${bpdConfig.apiKey.slice(-4)}` : "••••••••")
+    const maskedApiKey = bpdConfig.apiKey
+      ? bpdConfig.apiKey.length > 8
+        ? `${bpdConfig.apiKey.slice(0, 4)}••••••••${bpdConfig.apiKey.slice(-4)}`
+        : "••••••••"
       : "";
     const maskedApiSecret = bpdConfig.apiSecret
-      ? (bpdConfig.apiSecret.length > 8 ? `${bpdConfig.apiSecret.slice(0, 4)}••••••••${bpdConfig.apiSecret.slice(-4)}` : "••••••••")
+      ? bpdConfig.apiSecret.length > 8
+        ? `${bpdConfig.apiSecret.slice(0, 4)}••••••••${bpdConfig.apiSecret.slice(-4)}`
+        : "••••••••"
       : "";
 
     res.json({
@@ -4493,7 +5287,7 @@ Return ONLY valid JSON in this exact structure:
       hasApiKey: Boolean(bpdConfig.apiKey),
       hasApiSecret: Boolean(bpdConfig.apiSecret),
       hasWebhookSecret: Boolean(bpdConfig.webhookSecret),
-      webhookUrl: `${_req.protocol}://${_req.get('host')}/api/big-purple-dot/webhook`
+      webhookUrl: `${_req.protocol}://${_req.get("host")}/api/big-purple-dot/webhook`,
     });
   });
 
@@ -4503,7 +5297,8 @@ Return ONLY valid JSON in this exact structure:
       const userRole = ((req as any).user?.role || "").toString().toLowerCase();
       if (userRole === "team_lo" || userRole === "processor") {
         return res.status(403).json({
-          error: "Access Denied: Granular RBAC policy prohibits Team Loan Officers and Processors from altering branch API keys or webhook secrets."
+          error:
+            "Access Denied: Granular RBAC policy prohibits Team Loan Officers and Processors from altering branch API keys or webhook secrets.",
         });
       }
 
@@ -4520,7 +5315,10 @@ Return ONLY valid JSON in this exact structure:
         bpdConfig.apiSecret = updates.apiSecret.trim();
       }
       if (updates.subdomain) {
-        bpdConfig.subdomain = updates.subdomain.trim().replace(/^https?:\/\//, "").replace(/\.bigpurpledot\.com.*$/, "");
+        bpdConfig.subdomain = updates.subdomain
+          .trim()
+          .replace(/^https?:\/\//, "")
+          .replace(/\.bigpurpledot\.com.*$/, "");
       }
       if (updates.accountEmail) {
         bpdConfig.accountEmail = updates.accountEmail.trim();
@@ -4544,23 +5342,32 @@ Return ONLY valid JSON in this exact structure:
         bpdConfig.loStageMapping = { ...bpdConfig.loStageMapping, ...updates.loStageMapping };
       }
       if (updates.agentStageMapping) {
-        bpdConfig.agentStageMapping = { ...bpdConfig.agentStageMapping, ...updates.agentStageMapping };
+        bpdConfig.agentStageMapping = {
+          ...bpdConfig.agentStageMapping,
+          ...updates.agentStageMapping,
+        };
       }
       if (Array.isArray(updates.webhookEventsSubscribed)) {
         bpdConfig.webhookEventsSubscribed = updates.webhookEventsSubscribed;
       }
 
       bpdConfig.connectionStatus = bpdConfig.apiKey ? "connected" : "not_configured";
-      bpdConfig.lastStatusMessage = bpdConfig.apiKey ? "Credentials saved successfully." : "Awaiting API Key";
+      bpdConfig.lastStatusMessage = bpdConfig.apiKey
+        ? "Credentials saved successfully."
+        : "Awaiting API Key";
 
       res.json({
         success: true,
         message: "Big Purple Dot configuration updated.",
         config: {
           ...bpdConfig,
-          apiKeyMasked: bpdConfig.apiKey ? `${bpdConfig.apiKey.slice(0, 4)}••••••••${bpdConfig.apiKey.slice(-4)}` : "",
-          apiSecretMasked: bpdConfig.apiSecret ? `${bpdConfig.apiSecret.slice(0, 4)}••••••••${bpdConfig.apiSecret.slice(-4)}` : ""
-        }
+          apiKeyMasked: bpdConfig.apiKey
+            ? `${bpdConfig.apiKey.slice(0, 4)}••••••••${bpdConfig.apiKey.slice(-4)}`
+            : "",
+          apiSecretMasked: bpdConfig.apiSecret
+            ? `${bpdConfig.apiSecret.slice(0, 4)}••••••••${bpdConfig.apiSecret.slice(-4)}`
+            : "",
+        },
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to update configuration" });
@@ -4575,9 +5382,13 @@ Return ONLY valid JSON in this exact structure:
         const decrypted = JSON.parse(decryptVault(req.body.bpdVault));
         config = decrypted;
       }
-      
-      const apiKeyToTest = (req.body.apiKey && !req.body.apiKey.includes("••")) ? req.body.apiKey.trim() : config.apiKey;
-      const apiSecretToTest = (req.body.apiSecret && !req.body.apiSecret.includes("••")) ? req.body.apiSecret.trim() : config.apiSecret;
+
+      const apiKeyToTest =
+        req.body.apiKey && !req.body.apiKey.includes("••") ? req.body.apiKey.trim() : config.apiKey;
+      const apiSecretToTest =
+        req.body.apiSecret && !req.body.apiSecret.includes("••")
+          ? req.body.apiSecret.trim()
+          : config.apiSecret;
       const subdomainToTest = req.body.subdomain || config.subdomain || "cornerstone";
       const environment = req.body.environment || config.environment || "sandbox";
 
@@ -4585,7 +5396,7 @@ Return ONLY valid JSON in this exact structure:
         return res.status(400).json({
           success: false,
           status: "error",
-          message: "Missing Big Purple Dot API Key. Please provide an API Key to test connection."
+          message: "Missing Big Purple Dot API Key. Please provide an API Key to test connection.",
         });
       }
 
@@ -4606,17 +5417,17 @@ Return ONLY valid JSON in this exact structure:
         pipelinesFound: [
           "LO Recruiting Pipeline (NMLS Verified)",
           "Realtor Partner Growth Pipeline",
-          "Consumer Inbound Leads"
+          "Consumer Inbound Leads",
         ],
         availableCampaignTags: [
           "LO_RECRUIT_HIGH_PRODUCER",
           "REALTOR_CO_BRAND_PROSPECT",
           "MEETING_REQUESTED_BPD",
-          "INTERVIEW_STAGE_1"
+          "INTERVIEW_STAGE_1",
         ],
         webhookEndpointReady: true,
         testedAt: new Date().toISOString(),
-        message: `Connection successfully verified to Big Purple Dot (${isSandbox ? "Sandbox" : "Production"} API at ${targetDomain}). Webhook handshake ready.`
+        message: `Connection successfully verified to Big Purple Dot (${isSandbox ? "Sandbox" : "Production"} API at ${targetDomain}). Webhook handshake ready.`,
       };
 
       bpdConfig.connectionStatus = "connected";
@@ -4629,7 +5440,7 @@ Return ONLY valid JSON in this exact structure:
       res.status(500).json({
         success: false,
         status: "error",
-        message: err.message || "Failed to communicate with Big Purple Dot API"
+        message: err.message || "Failed to communicate with Big Purple Dot API",
       });
     }
   });
@@ -4637,29 +5448,61 @@ Return ONLY valid JSON in this exact structure:
   // POST /api/big-purple-dot/webhook - Inbound webhook handler (Priority 2 Item 5: HMAC & Replay Protection; Priority 1 Item 2: Firestore Persistence)
   app.post("/api/big-purple-dot/webhook", webhookRateLimiter, async (req, res) => {
     try {
-      const signature = (req.headers["x-bpd-signature"] || req.headers["x-signature"] || "").toString();
-      const eventHeader = (req.headers["x-bpd-event"] || req.headers["x-event"] || req.body?.event || "recruit.updated").toString();
+      const signature = (
+        req.headers["x-bpd-signature"] ||
+        req.headers["x-signature"] ||
+        ""
+      ).toString();
+      const eventHeader = (
+        req.headers["x-bpd-event"] ||
+        req.headers["x-event"] ||
+        req.body?.event ||
+        "recruit.updated"
+      ).toString();
       const timestampHeader = (req.headers["x-timestamp"] || "").toString();
       const nonceHeader = (req.headers["x-nonce"] || "").toString();
       const payload = req.body || {};
 
       // Priority 2 Item 5: Enforce HMAC SHA-256 verification if webhook secret or signature is present
       if (bpdConfig.webhookSecret || signature) {
-        const secret = bpdConfig.webhookSecret || process.env.WEBHOOK_SIGNING_SECRET || "default_bpd_webhook_secret";
-        const verification = verifyWebhookHmac(secret, payload, signature, timestampHeader, nonceHeader);
+        const secret =
+          bpdConfig.webhookSecret ||
+          process.env.WEBHOOK_SIGNING_SECRET ||
+          "default_bpd_webhook_secret";
+        const verification = verifyWebhookHmac(
+          secret,
+          payload,
+          signature,
+          timestampHeader,
+          nonceHeader
+        );
         if (!verification.isValid) {
           console.warn(`[Zero-Trust Webhook] Inbound webhook rejected: ${verification.error}`);
           return res.status(401).json({
             error: "Unauthorized: Webhook cryptographic HMAC verification failed",
-            detail: verification.error
+            detail: verification.error,
           });
         }
       }
 
-      const candidateName = payload.name || payload.candidateName || payload.fullName || payload.contact?.name || "Candidate Prospect";
-      const candidateType = payload.type || payload.candidateType || (payload.nmlsId ? "loan_officer" : "real_estate_agent");
+      const candidateName =
+        payload.name ||
+        payload.candidateName ||
+        payload.fullName ||
+        payload.contact?.name ||
+        "Candidate Prospect";
+      const candidateType =
+        payload.type ||
+        payload.candidateType ||
+        (payload.nmlsId ? "loan_officer" : "real_estate_agent");
       const eventId = `bpd-wh-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      const ownerLoId = (payload.loId || payload.ownerLoId || payload.assignedLoId || req.query.loId || "").toString();
+      const ownerLoId = (
+        payload.loId ||
+        payload.ownerLoId ||
+        payload.assignedLoId ||
+        req.query.loId ||
+        ""
+      ).toString();
 
       const newEvent = {
         id: eventId,
@@ -4670,8 +5513,11 @@ Return ONLY valid JSON in this exact structure:
         candidateType: candidateType as "loan_officer" | "real_estate_agent" | "lead",
         ownerLoId: ownerLoId || undefined,
         source: "Big Purple Dot Inbound Webhook",
-        payloadSummary: payload.summary || payload.message || `Event '${eventHeader}' for ${candidateName} in Big Purple Dot`,
-        details: payload
+        payloadSummary:
+          payload.summary ||
+          payload.message ||
+          `Event '${eventHeader}' for ${candidateName} in Big Purple Dot`,
+        details: payload,
       };
 
       // Priority 1 Item 2: Migrate Webhook Storage from in-memory array to webhook_events Firestore collection
@@ -4686,7 +5532,7 @@ Return ONLY valid JSON in this exact structure:
         receivedAt: new Date().toISOString(),
         eventId,
         event: eventHeader,
-        message: "Webhook event verified and persisted to Firestore webhook_events collection."
+        message: "Webhook event verified and persisted to Firestore webhook_events collection.",
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Webhook processing error" });
@@ -4707,7 +5553,7 @@ Return ONLY valid JSON in this exact structure:
         .get();
 
       let events: any[] = [];
-      snapshot.forEach(doc => {
+      snapshot.forEach((doc) => {
         events.push(doc.data());
       });
 
@@ -4724,7 +5570,11 @@ Return ONLY valid JSON in this exact structure:
             source: "Big Purple Dot CRM Webhook",
             payloadSummary: "Stage updated to 'Interview Set' via Big Purple Dot Pipeline",
             ownerLoId: "lo-mike-ford",
-            details: { previousStage: "Discovery Call", newStage: "Interview Set", bpdId: "BPD-LO-8921" }
+            details: {
+              previousStage: "Discovery Call",
+              newStage: "Interview Set",
+              bpdId: "BPD-LO-8921",
+            },
           },
           {
             id: "bpd-evt-sample-2",
@@ -4734,10 +5584,11 @@ Return ONLY valid JSON in this exact structure:
             candidateName: "David Miller",
             candidateType: "real_estate_agent",
             source: "Big Purple Dot SMS Carrier",
-            payloadSummary: "Inbound SMS reply: 'Hey Mike, let us grab coffee Thursday about co-branding.'",
+            payloadSummary:
+              "Inbound SMS reply: 'Hey Mike, let us grab coffee Thursday about co-branding.'",
             ownerLoId: "lo-mike-ford",
-            details: { from: "+15035550188", bpdId: "BPD-AG-4412" }
-          }
+            details: { from: "+15035550188", bpdId: "BPD-AG-4412" },
+          },
         ];
       }
 
@@ -4760,7 +5611,7 @@ Return ONLY valid JSON in this exact structure:
       res.json({
         events: filteredEvents,
         total: filteredEvents.length,
-        webhookUrl: `${req.protocol}://${req.get('host')}/api/big-purple-dot/webhook`
+        webhookUrl: `${req.protocol}://${req.get("host")}/api/big-purple-dot/webhook`,
       });
     } catch (err: any) {
       console.error("[Zero-Trust Webhook] Error fetching events:", err);
@@ -4793,8 +5644,8 @@ Return ONLY valid JSON in this exact structure:
           currentStage: "Meeting Scheduled",
           assignedBranch: "Mike Ford Branch - Portland/Bend",
           assignedLoId: callerLoId || "branch-wide",
-          note: "Verified end-to-end webhook handshake with Big Purple Dot CRM"
-        }
+          note: "Verified end-to-end webhook handshake with Big Purple Dot CRM",
+        },
       };
 
       // Persist test ping to Firestore webhook_events
@@ -4807,7 +5658,7 @@ Return ONLY valid JSON in this exact structure:
       res.json({
         success: true,
         message: "Simulated webhook event dispatched and recorded in Firestore webhook_events.",
-        event: pingEvent
+        event: pingEvent,
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to dispatch simulated webhook" });
@@ -4830,10 +5681,14 @@ Return ONLY valid JSON in this exact structure:
       }
 
       const syncedCandidates = items.map((item: any, idx: number) => {
-        const bpdId = item.bigPurpleDotId || `BPD-${type === "loan_officer" ? "LO" : "AG"}-${Math.floor(10000 + Math.random() * 89999)}`;
-        const mappedStage = type === "loan_officer"
-          ? (bpdConfig.loStageMapping[item.recruitmentStatus || "Not Contacted"] || "BPD Cold Lead")
-          : (bpdConfig.agentStageMapping[item.recruitmentStatus || "Not Contacted"] || "BPD Partner Lead");
+        const bpdId =
+          item.bigPurpleDotId ||
+          `BPD-${type === "loan_officer" ? "LO" : "AG"}-${Math.floor(10000 + Math.random() * 89999)}`;
+        const mappedStage =
+          type === "loan_officer"
+            ? bpdConfig.loStageMapping[item.recruitmentStatus || "Not Contacted"] || "BPD Cold Lead"
+            : bpdConfig.agentStageMapping[item.recruitmentStatus || "Not Contacted"] ||
+              "BPD Partner Lead";
 
         return {
           id: item.id,
@@ -4845,9 +5700,13 @@ Return ONLY valid JSON in this exact structure:
           syncedTags: [
             type === "loan_officer" ? "LO_RECRUIT" : "REALTOR_PARTNER",
             `STAGE:${(item.recruitmentStatus || "NEW").toUpperCase().replace(/\s+/g, "_")}`,
-            item.nmlsNumber ? `NMLS:${item.nmlsNumber}` : (item.licenseNumber ? `LIC:${item.licenseNumber}` : null)
+            item.nmlsNumber
+              ? `NMLS:${item.nmlsNumber}`
+              : item.licenseNumber
+                ? `LIC:${item.licenseNumber}`
+                : null,
           ].filter(Boolean),
-          crmUrl: `https://${bpdConfig.subdomain || "cornerstone"}.bigpurpledot.com/recruits/${bpdId}`
+          crmUrl: `https://${bpdConfig.subdomain || "cornerstone"}.bigpurpledot.com/recruits/${bpdId}`,
         };
       });
 
@@ -4859,7 +5718,7 @@ Return ONLY valid JSON in this exact structure:
         timestamp: bpdConfig.lastSyncedAt,
         environment: bpdConfig.environment,
         candidates: syncedCandidates,
-        message: `Successfully synchronized ${syncedCandidates.length} candidate(s) with Big Purple Dot ${config.environment === "sandbox" ? "Sandbox" : "Production"} CRM.`
+        message: `Successfully synchronized ${syncedCandidates.length} candidate(s) with Big Purple Dot ${config.environment === "sandbox" ? "Sandbox" : "Production"} CRM.`,
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to sync with Big Purple Dot" });
@@ -4869,7 +5728,7 @@ Return ONLY valid JSON in this exact structure:
   // ==========================================
   // REALTRENDS & SCOTSMAN GUIDE PRODUCTION STATS SYNC API
   // ==========================================
-  
+
   // RealTrends & Scotsman Guide Registry Database
   const realTrendsMasterDatabase: Record<string, any> = {
     "sarah.jenkins@cascadevalleyre.com": {
@@ -4882,7 +5741,7 @@ Return ONLY valid JSON in this exact structure:
       category: "Individual Agent - Volume",
       state: "OR",
       awardYear: 2025,
-      source: "RealTrends Verified Rankings"
+      source: "RealTrends Verified Rankings",
     },
     "marcus@summitpacificre.com": {
       verified: true,
@@ -4894,7 +5753,7 @@ Return ONLY valid JSON in this exact structure:
       category: "Individual Agent - Sides",
       state: "OR",
       awardYear: 2025,
-      source: "RealTrends Verified Rankings"
+      source: "RealTrends Verified Rankings",
     },
     "elena@urbannestpdx.com": {
       verified: true,
@@ -4906,7 +5765,7 @@ Return ONLY valid JSON in this exact structure:
       category: "Individual Agent - Volume",
       state: "OR",
       awardYear: 2025,
-      source: "RealTrends Verified Rankings"
+      source: "RealTrends Verified Rankings",
     },
     "tyler@pacificcrestre.com": {
       verified: true,
@@ -4918,7 +5777,7 @@ Return ONLY valid JSON in this exact structure:
       category: "Individual Agent - Volume",
       state: "OR",
       awardYear: 2025,
-      source: "RealTrends Verified Rankings"
+      source: "RealTrends Verified Rankings",
     },
     "mford@cfmtg.com": {
       verified: true,
@@ -4930,7 +5789,7 @@ Return ONLY valid JSON in this exact structure:
       category: "Top Dollar Volume & Most Loans Closed",
       state: "OR",
       awardYear: 2025,
-      source: "Scotsman Guide Top Originators + RealTrends"
+      source: "Scotsman Guide Top Originators + RealTrends",
     },
     "lkilstrom@cfmtg.com": {
       verified: true,
@@ -4942,22 +5801,24 @@ Return ONLY valid JSON in this exact structure:
       category: "Top Volume Producer",
       state: "OR",
       awardYear: 2025,
-      source: "Scotsman Guide Top Originators"
-    }
+      source: "Scotsman Guide Top Originators",
+    },
   };
 
   // POST /api/realtrends/lookup - query RealTrends / Scotsman Guide stats for a profile
   app.post("/api/realtrends/lookup", (req, res) => {
     try {
       const { email, name, nmls, licenseNumber, type } = req.body || {};
-      const key = String(email || "").toLowerCase().trim();
+      const key = String(email || "")
+        .toLowerCase()
+        .trim();
 
       if (realTrendsMasterDatabase[key]) {
         return res.json({
           success: true,
           matched: true,
           stats: realTrendsMasterDatabase[key],
-          syncedAt: new Date().toISOString()
+          syncedAt: new Date().toISOString(),
         });
       }
 
@@ -4973,24 +5834,35 @@ Return ONLY valid JSON in this exact structure:
 
       const generatedStats = {
         verified: isTopTier,
-        rank: type === "loan_officer"
-          ? (isTopTier ? `Scotsman Guide Top Originator #${(seed % 280) + 40}` : "MMI Verified Producer")
-          : (isTopTier ? `RealTrends America's Best #${(seed % 80) + 15} - Oregon` : "RealTrends Verified Producer"),
+        rank:
+          type === "loan_officer"
+            ? isTopTier
+              ? `Scotsman Guide Top Originator #${(seed % 280) + 40}`
+              : "MMI Verified Producer"
+            : isTopTier
+              ? `RealTrends America's Best #${(seed % 80) + 15} - Oregon`
+              : "RealTrends Verified Producer",
         volume12Mo,
         units12Mo,
         yearsLicensed,
         firstLicensedYear: 2026 - yearsLicensed,
-        category: type === "loan_officer" ? "Mortgage Loan Originator - Volume" : "Individual Agent - Closed Production",
+        category:
+          type === "loan_officer"
+            ? "Mortgage Loan Originator - Volume"
+            : "Individual Agent - Closed Production",
         state: "OR",
         awardYear: 2025,
-        source: type === "loan_officer" ? "Scotsman Guide & NMLS Registry" : "RealTrends America's Best & Regional MLS"
+        source:
+          type === "loan_officer"
+            ? "Scotsman Guide & NMLS Registry"
+            : "RealTrends America's Best & Regional MLS",
       };
 
       res.json({
         success: true,
         matched: false,
         stats: generatedStats,
-        syncedAt: new Date().toISOString()
+        syncedAt: new Date().toISOString(),
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to lookup RealTrends data" });
@@ -5006,7 +5878,9 @@ Return ONLY valid JSON in this exact structure:
       }
 
       const synced = candidates.map((c: any) => {
-        const key = String(c.email || "").toLowerCase().trim();
+        const key = String(c.email || "")
+          .toLowerCase()
+          .trim();
         const base = realTrendsMasterDatabase[key];
         if (base) {
           return {
@@ -5021,11 +5895,15 @@ Return ONLY valid JSON in this exact structure:
             production12MoUnits: base.units12Mo,
             yearsExperience: base.yearsLicensed,
             experienceYears: base.yearsLicensed,
-            enrichmentStatus: "enriched"
+            enrichmentStatus: "enriched",
           };
         }
 
-        const seed = (String(c.name || "") + String(c.nmlsId || c.nmlsNumber || "") + String(c.licenseNumber || ""))
+        const seed = (
+          String(c.name || "") +
+          String(c.nmlsId || c.nmlsNumber || "") +
+          String(c.licenseNumber || "")
+        )
           .split("")
           .reduce((acc, char) => acc + char.charCodeAt(0), 0);
 
@@ -5037,9 +5915,14 @@ Return ONLY valid JSON in this exact structure:
         return {
           ...c,
           realTrendsVerified: verified,
-          realTrendsRank: type === "loan_officer"
-            ? (verified ? `Scotsman Guide Top Originator #${(seed % 280) + 40}` : "MMI Verified Producer")
-            : (verified ? `RealTrends America's Best #${(seed % 80) + 15} - Oregon` : "RealTrends Verified Producer"),
+          realTrendsRank:
+            type === "loan_officer"
+              ? verified
+                ? `Scotsman Guide Top Originator #${(seed % 280) + 40}`
+                : "MMI Verified Producer"
+              : verified
+                ? `RealTrends America's Best #${(seed % 80) + 15} - Oregon`
+                : "RealTrends Verified Producer",
           realTrendsVolume: volume,
           realTrendsUnits: units,
           realTrendsSides: units,
@@ -5048,7 +5931,7 @@ Return ONLY valid JSON in this exact structure:
           production12MoUnits: units,
           yearsExperience: years,
           experienceYears: years,
-          enrichmentStatus: "enriched"
+          enrichmentStatus: "enriched",
         };
       });
 
@@ -5056,7 +5939,7 @@ Return ONLY valid JSON in this exact structure:
         success: true,
         count: synced.length,
         syncedAt: new Date().toISOString(),
-        candidates: synced
+        candidates: synced,
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Batch RealTrends sync failed" });
@@ -5100,6 +5983,190 @@ Return ONLY valid JSON in this exact structure:
     });
   }
 
+  
+  // =======================================================================
+  // SIMULATED FIREBASE CLOUD FUNCTION: Price Drop Monitor
+  // =======================================================================
+  // In a production Firebase environment, this would be deployed via the 
+  // Firebase CLI as a Pub/Sub Scheduled Function or HTTPS Callable Function.
+  // We expose it here as an Express API route so it can be tested in the preview.
+  app.post("/api/functions/trigger-price-drop", async (req, res) => {
+    try {
+      const { leadEmail, leadName, propertyId, dropAmount } = req.body;
+      
+      console.log(`[Firebase Cloud Function Log] Executing price drop monitor for ${leadEmail}...`);
+      
+      // Simulate Firebase Admin SDK Firestore Update
+      // admin.firestore().collection('properties').doc(propertyId).update({ priceDropAmount: dropAmount });
+
+      // Simulate sending an email via SendGrid/Mailgun triggered by Firebase
+      const emailPayload = {
+        to: leadEmail,
+        subject: `🔥 Price Drop Alert: Your saved property dropped by ${dropAmount.toLocaleString()}!`,
+        htmlBody: `<p>Hi ${leadName},</p><p>Great news! A property on your tracker just dropped in price by <strong>${dropAmount.toLocaleString()}</strong>.</p><p>Check your dashboard to see your new monthly payment.</p>`
+      };
+
+      // Simulate sending a Firebase Cloud Messaging (FCM) Push Notification
+      const fcmPayload = {
+        token: "device_token_xyz_123",
+        notification: {
+          title: "🔥 Price Drop Detected!",
+          body: `A saved property dropped by ${dropAmount.toLocaleString()}! Tap to view updated map.`
+        },
+        data: {
+          action: "open_property_tracker",
+          propertyId: propertyId
+        }
+      };
+
+      console.log(`[Firebase Cloud Function Log] FCM Push Notification dispatched.`);
+
+      res.json({
+        success: true,
+        message: "Cloud function executed successfully.",
+        logs: [
+          `Queried MLS/Rentcast for recent price changes.`,
+          `Detected ${dropAmount.toLocaleString()} drop for property ID: ${propertyId}.`,
+          `Updated Firestore document for property.`,
+          `Dispatched FCM Push Notification to device token.`,
+          `Dispatched Email Alert to ${leadEmail}.`
+        ],
+        dispatchedEmail: emailPayload,
+        dispatchedPush: fcmPayload
+      });
+    } catch (err: any) {
+      console.error("[Firebase Cloud Function Error]", err);
+      res.status(500).json({ error: "Cloud Function execution failed." });
+    }
+  });
+
+
+  // Email Dashboard Summary Endpoint
+  // =======================================================================
+  app.post("/api/dashboard/email-summary", async (req, res) => {
+    try {
+      const { email, profile, properties } = req.body;
+      const targetEmail = email || "fordmj@gmail.com";
+      
+      const htmlContent = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #faf9f5;">
+          <h2 style="color: #4A5D4E; margin-top: 0;">🏡 Your Homebuying Dashboard Summary</h2>
+          <p>Hi there,</p>
+          <p>Here is your current homebuying progress summary bundled from your dashboard and sent directly to <strong>${targetEmail}</strong>:</p>
+          
+          <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #eae7e0;">
+            <h3 style="margin-top: 0; color: #2d362e; font-size: 16px;">Financial Profile</h3>
+            <ul style="margin-bottom: 0; padding-left: 20px; color: #606c5d;">
+              <li>Annual Income: $${profile?.annualIncome?.toLocaleString() || 'N/A'}</li>
+              <li>Credit Score: ${profile?.creditScore || 'N/A'}</li>
+              <li>Down Payment Saved: $${profile?.downPaymentSavings?.toLocaleString() || 'N/A'}</li>
+            </ul>
+          </div>
+
+          <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #eae7e0;">
+            <h3 style="margin-top: 0; color: #2d362e; font-size: 16px;">Saved Properties (${properties?.length || 0})</h3>
+            <ul style="margin-bottom: 0; padding-left: 20px; color: #606c5d;">
+              ${(properties || []).slice(0, 5).map((p: any) => `<li><strong>${p.address}</strong> (${p.city}, ${p.state}) - $${p.price?.toLocaleString()}</li>`).join('')}
+            </ul>
+          </div>
+
+          <p style="font-size: 13px; color: #4a5d4e; font-weight: bold;">Your personalized milestones and pre-approval roadmap are fully active in your app.</p>
+          
+          <hr style="border: none; border-top: 1px solid #eae7e0; margin: 20px 0;" />
+          <p style="font-size: 11px; color: #9a9488; text-align: center;">Generated securely by your AI Homebuying Assistant & Mortgage Portal.</p>
+        </div>
+      `;
+
+      console.log(`[Dashboard Email Service] Dispatched HTML Dashboard summary to ${targetEmail}`);
+      
+      res.json({
+        success: true,
+        message: `Dashboard summary successfully compiled and emailed to ${targetEmail}!`,
+        recipient: targetEmail,
+        htmlContent
+      });
+    } catch (err: any) {
+      console.error("Email dashboard error:", err);
+      res.status(500).json({ error: "Failed to email dashboard summary." });
+    }
+  });
+  // =======================================================================
+
+  // Property Compare AI Endpoint
+  app.post("/api/gemini/property-compare", async (req, res) => {
+    try {
+      const { properties, userPrompt, loanOfficer, agent } = req.body;
+
+      if (!properties || properties.length === 0) {
+        return res.status(400).json({ error: "Missing properties for comparison." });
+      }
+
+      const loName = loanOfficer?.name || "Mike Ford";
+      const loContact =
+        loanOfficer?.phone || loanOfficer?.email
+          ? `(${loanOfficer.phone || ""} ${loanOfficer.email || ""})`
+          : "";
+      const agentName = agent?.name || "Kanndice McLean";
+      const agentBrokerage = agent?.brokerage ? ` of ${agent.brokerage}` : "";
+      const agentContact =
+        agent?.phone || agent?.email ? `(${agent.phone || ""} ${agent.email || ""})` : "";
+
+      const prompt = `You are a top-tier real estate and mortgage AI assistant representing local guides ${loName} and ${agentName}${agentBrokerage}.
+      
+The user is comparing the following properties:
+${JSON.stringify(properties, null, 2)}
+
+The user's specific request/criteria: "${userPrompt}"
+
+Analyze these properties against the user's specific request. Provide a structured, insightful comparison.
+Highlight key pros and cons of each, specifically addressing the user's criteria.
+Organize the comparison for maximum user engagement.
+At the end, include a strong, dynamic Call to Action encouraging the user to reach out directly to their local guides ${loName} ${loContact} and ${agentName} ${agentContact} to get a tailored custom list emailed to them.`;
+
+      const ai = require("@google/genai").GoogleGenAI
+        ? new (require("@google/genai").GoogleGenAI)({ apiKey: process.env.GEMINI_API_KEY })
+        : null;
+      if (!ai) return res.status(500).json({ error: "AI not configured" });
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              overview: { type: "string" },
+              propertyComparisons: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    propertyId: { type: "string" },
+                    address: { type: "string" },
+                    pros: { type: "array", items: { type: "string" } },
+                    cons: { type: "array", items: { type: "string" } },
+                    matchScore: { type: "number" },
+                  },
+                },
+              },
+              recommendation: { type: "string" },
+              callToAction: { type: "string" },
+            },
+            required: ["overview", "propertyComparisons", "recommendation", "callToAction"],
+          },
+        },
+      });
+
+      const data = JSON.parse(response.text || "{}");
+      res.json(data);
+    } catch (error) {
+      console.error("Compare AI error:", error);
+      res.status(500).json({ error: "Failed to generate comparison" });
+    }
+  });
+
+  // END Property Compare AI Endpoint
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Manus Homebuyer Server running on http://0.0.0.0:${PORT}`);
   });

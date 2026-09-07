@@ -88,6 +88,9 @@ export interface PropertyListing {
   state: string;
   zip: string;
   price: number;
+  originalPrice?: number;
+  priceDropAmount?: number;
+  priceDropDate?: string;
   beds: number;
   baths: number;
   sqft: number;
@@ -149,6 +152,7 @@ export interface PropertyListing {
     email?: string;
     website?: string;
   };
+  priceHistory?: { date: string; price: number; event: string }[];
 }
 
 export interface GrantProgram {
@@ -521,6 +525,12 @@ export interface SavedScenario {
 }
 
 export interface CapturedLead {
+  // Conversational Ask Maps / Google Maps Sync
+  savedGoogleMapsToken?: string;
+  curatedPropertyIds?: string[];
+  lastAskMapsQuery?: string;
+  hasOptedInToGoogleMapsSync?: boolean;
+
   id: string;
   fullName: string;
   email: string;

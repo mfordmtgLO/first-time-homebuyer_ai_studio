@@ -1,25 +1,25 @@
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  MessageSquare, 
-  X, 
-  Send, 
-  Sparkles, 
-  CheckCircle2, 
-  Phone, 
-  Calendar, 
-  ChevronRight, 
+import {
+  MessageSquare,
+  X,
+  Send,
+  Sparkles,
+  CheckCircle2,
+  Phone,
+  Calendar,
+  ChevronRight,
   ChevronDown,
   ChevronUp,
-  User, 
-  Bot, 
-  DollarSign, 
-  ShieldCheck, 
-  Home, 
-  Clock, 
-  HelpCircle, 
-  Maximize2, 
-  Minimize2, 
-  Check, 
+  User,
+  Bot,
+  DollarSign,
+  ShieldCheck,
+  Home,
+  Clock,
+  HelpCircle,
+  Maximize2,
+  Minimize2,
+  Check,
   ArrowRight,
   Download,
   Flame,
@@ -29,15 +29,17 @@ import {
   CheckSquare,
   Square,
   Loader2,
+  Mic,
+  MicOff,
   Lock,
-  AlertTriangle
+  AlertTriangle,
 } from "lucide-react";
 import confetti from "canvas-confetti";
-import { 
-  LoanOfficerProfile, 
-  RealEstateAgentProfile, 
-  CapturedLead, 
-  FinancialProfile 
+import {
+  LoanOfficerProfile,
+  RealEstateAgentProfile,
+  CapturedLead,
+  FinancialProfile,
 } from "../types";
 import { HeadshotAvatar } from "./HeadshotAvatar";
 import { formatUSD } from "../utils/mortgageMath";
@@ -278,7 +280,7 @@ export const OREGON_CITIES: string[] = [
   "Woodburn",
   "Yachats",
   "Yamhill",
-  "Yoncalla"
+  "Yoncalla",
 ];
 
 interface LeadIntakeChatbotProps {
@@ -290,7 +292,7 @@ interface LeadIntakeChatbotProps {
   sourceCampaignName?: string;
   sourcePropertyId?: string;
   sourcePropertyAddress?: string;
-  initialSourceType?: 'campaign' | 'property_listing' | 'chatbot' | 'flyer' | 'calculator';
+  initialSourceType?: "campaign" | "property_listing" | "chatbot" | "flyer" | "calculator";
   initialLeadSource?: string;
   initialIntent?: "chat_listings" | "blueprint_download" | "buying_power";
   onSaveLead: (lead: CapturedLead) => void;
@@ -315,8 +317,12 @@ const INTAKE_STEPS: IntakeStep[] = [
       { label: "Ready Now (30-60 Days)", value: "Ready in 30-60 Days", sub: "Actively searching" },
       { label: "3 to 6 Months Out", value: "3 to 6 Months Out", sub: "Planning & saving" },
       { label: "6 to 12 Months", value: "6 to 12 Months", sub: "Exploring options" },
-      { label: "Found a Home Already!", value: "Found a House / In Escrow Soon", sub: "Need fast prequalification" },
-    ]
+      {
+        label: "Found a Home Already!",
+        value: "Found a House / In Escrow Soon",
+        sub: "Need fast prequalification",
+      },
+    ],
   },
   {
     id: "budget",
@@ -326,19 +332,39 @@ const INTAKE_STEPS: IntakeStep[] = [
       { label: "$300k - $450k", value: "$300,000 - $450,000", sub: "Est. $2,200 - $3,100/mo" },
       { label: "$450k - $600k", value: "$450,000 - $600,000", sub: "Est. $3,100 - $4,100/mo" },
       { label: "$600k - $800k", value: "$600,000 - $800,000", sub: "Est. $4,100 - $5,400/mo" },
-      { label: "Keep Under $2,500/mo", value: "Keep monthly under $2,500/mo", sub: "Based on rent budget" },
-    ]
+      {
+        label: "Keep Under $2,500/mo",
+        value: "Keep monthly under $2,500/mo",
+        sub: "Based on rent budget",
+      },
+    ],
   },
   {
     id: "downPayment",
     question: "How much do you estimate having available for down payment & closing costs?",
     field: "downPaymentSavings",
     options: [
-      { label: "3% to 5% Down ($12k - $25k)", value: "3% - 5% Down ($12k - $25k)", sub: "Conventional 97 / FHA" },
-      { label: "10% to 20% Down ($45k+)", value: "10% - 20%+ Down ($45k+)", sub: "Lower monthly PMI" },
-      { label: "Seeking Down Payment Assistance", value: "Need Down Payment Assistance (DPA)", sub: "State & local assistance programs" },
-      { label: "$0 Down (VA / USDA Rural)", value: "$0 Down (VA / USDA Eligible)", sub: "Zero down payment" },
-    ]
+      {
+        label: "3% to 5% Down ($12k - $25k)",
+        value: "3% - 5% Down ($12k - $25k)",
+        sub: "Conventional 97 / FHA",
+      },
+      {
+        label: "10% to 20% Down ($45k+)",
+        value: "10% - 20%+ Down ($45k+)",
+        sub: "Lower monthly PMI",
+      },
+      {
+        label: "Seeking Down Payment Assistance",
+        value: "Need Down Payment Assistance (DPA)",
+        sub: "State & local assistance programs",
+      },
+      {
+        label: "$0 Down (VA / USDA Rural)",
+        value: "$0 Down (VA / USDA Eligible)",
+        sub: "Zero down payment",
+      },
+    ],
   },
   {
     id: "creditTier",
@@ -348,38 +374,43 @@ const INTAKE_STEPS: IntakeStep[] = [
       { label: "Excellent (740+)", value: "740+ Excellent", sub: "Best interest rates" },
       { label: "Good (680 - 739)", value: "680 - 739 Good", sub: "Strong conventional terms" },
       { label: "Fair (620 - 679)", value: "620 - 679 Fair", sub: "FHA & DPA eligible" },
-      { label: "Rebuilding / Need Advice", value: "Rebuilding / Need Credit Advice", sub: "Free plan to improve" },
-    ]
+      {
+        label: "Rebuilding / Need Advice",
+        value: "Rebuilding / Need Credit Advice",
+        sub: "Free plan to improve",
+      },
+    ],
   },
   {
     id: "annualIncome",
     question: "What is your approximate gross annual household income before taxes?",
     field: "annualIncome",
-    options: [] // Custom interactive slider ($0 - $1,000,000) and currency formatted input
+    options: [], // Custom interactive slider ($0 - $1,000,000) and currency formatted input
   },
   {
     id: "location",
     question: "Which cities are you most excited to explore?",
     field: "preferredLocations",
-    options: [] // Replaced by the comprehensive Oregon cities dropdown selector
+    options: [], // Replaced by the comprehensive Oregon cities dropdown selector
   },
   {
     id: "sampleHomes",
-    question: "Would you like us to send you a few recently available homes for sale in your desired city or surrounding areas that have potential for low or no down payment financing options?",
+    question:
+      "Would you like us to send you a few recently available homes for sale in your desired city or surrounding areas that have potential for low or no down payment financing options?",
     field: "sendSampleHomesOption",
     options: [
-      { 
-        label: "YES", 
-        value: "YES - Please send available homes with low/no down payment options", 
-        sub: "Curated listings in my target Oregon areas" 
+      {
+        label: "YES",
+        value: "YES - Please send available homes with low/no down payment options",
+        sub: "Curated listings in my target Oregon areas",
       },
-      { 
-        label: "NO", 
-        value: "NO - Just send my Prequalification Blueprint", 
-        sub: "Only my customized blueprint for now" 
-      }
-    ]
-  }
+      {
+        label: "NO",
+        value: "NO - Just send my Prequalification Blueprint",
+        sub: "Only my customized blueprint for now",
+      },
+    ],
+  },
 ];
 
 export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
@@ -401,18 +432,21 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 }) => {
   const showAgent = isCoBranded && !!agent;
 
-  const [messages, setMessages] = useState<{ id: string; sender: 'user' | 'advisor'; text: string; time: string }[]>(() => {
-    const partnerInfo = (isCoBranded && agent)
-      ? `working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage})`
-      : `working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId})`;
+  const [messages, setMessages] = useState<
+    { id: string; sender: "user" | "advisor"; text: string; time: string }[]
+  >(() => {
+    const partnerInfo =
+      isCoBranded && agent
+        ? `working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) and ${agent.name} (${agent.brokerage})`
+        : `working alongside ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId})`;
 
     return [
       {
         id: "intro-1",
         sender: "advisor",
         text: `👋 Hi there! I'm your 24/7 Homebuyer Intake & Prequalification Guide, ${partnerInfo}.\n\n🔒 **No Credit Card or SSN Required** — Let's calculate your true monthly budget, check Down Payment Assistance (DPA) options, and build your custom Prequalification Blueprint in under 2 minutes.\n\n${INTAKE_STEPS[0].question}`,
-        time: "Just now"
-      }
+        time: "Just now",
+      },
     ];
   });
 
@@ -423,27 +457,82 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [showTeaser, setShowTeaser] = useState<boolean>(true);
-  const [aiProvider, setAiProvider] = useState<'deepseek' | 'gemini' | 'none'>('none');
+  const [aiProvider, setAiProvider] = useState<"deepseek" | "gemini" | "none">("none");
+
+  // Web Speech API State
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const [speechSupported, setSpeechSupported] = useState<boolean>(false);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    fetch('/api/ai/diagnostics')
-      .then(res => res.json())
-      .then(data => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setSpeechSupported(true);
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+
+      recognitionRef.current.onresult = (event: any) => {
+        let finalTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          setInputText((prev) => (prev ? prev + " " + finalTranscript : finalTranscript));
+        }
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) return;
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (err) {
+        console.error("Failed to start speech recognition:", err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetch("/api/ai/diagnostics")
+      .then((res) => res.json())
+      .then((data) => {
         if (data && data.activeProvider) {
           setAiProvider(data.activeProvider);
         }
       })
-      .catch(e => console.error("Failed to fetch AI diagnostics:", e));
+      .catch((e) => console.error("Failed to fetch AI diagnostics:", e));
   }, []);
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  
   // Fast-track contact form for contextual intents
   useEffect(() => {
     if (isOpen && initialIntent) {
       if (initialIntent === "chat_listings") {
-        setLeadState(prev => ({ ...prev, sendSampleHomesOption: "YES - Please send available homes with low/no down payment options" }));
+        setLeadState((prev) => ({
+          ...prev,
+          sendSampleHomesOption:
+            "YES - Please send available homes with low/no down payment options",
+        }));
       }
       setCurrentStepIndex(INTAKE_STEPS.length);
     }
@@ -454,27 +543,34 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     if (isOpen && initialIntent) {
       let msgText = "";
       if (initialIntent === "blueprint_download") {
-        msgText = "Great! Let's get your personalized Homebuyer Journey Blueprint sent over immediately. Where should we send it?";
+        msgText =
+          "Great! Let's get your personalized Homebuyer Journey Blueprint sent over immediately. Where should we send it?";
       } else if (initialIntent === "chat_listings") {
-        msgText = "Awesome! We will compile a curated list of low and no down payment homes in your target area. Who should we send it to?";
+        msgText =
+          "Awesome! We will compile a curated list of low and no down payment homes in your target area. Who should we send it to?";
       } else if (initialIntent === "buying_power") {
-        msgText = "Great! I have your Buying Power results ready to send. What is the best Name and Email to send your customized report to?";
+        msgText =
+          "Great! I have your Buying Power results ready to send. What is the best Name and Email to send your customized report to?";
       }
-      
-      setMessages([{
-        id: `msg-initial-${Date.now()}`,
-        sender: "advisor",
-        text: msgText,
-        time: "Just now"
-      }]);
+
+      setMessages([
+        {
+          id: `msg-initial-${Date.now()}`,
+          sender: "advisor",
+          text: msgText,
+          time: "Just now",
+        },
+      ]);
     } else if (isOpen && currentStepIndex === 0 && messages.length === 0) {
       // Original initial greeting
-      setMessages([{
-        id: "msg-initial",
-        sender: "advisor",
-        text: `Hi there! I'm ${loanOfficer.name}'s AI assistant. Ready to build your customized First-Time Homebuyer Blueprint?`,
-        time: "Just now"
-      }]);
+      setMessages([
+        {
+          id: "msg-initial",
+          sender: "advisor",
+          text: `Hi there! I'm ${loanOfficer.name}'s AI assistant. Ready to build your customized First-Time Homebuyer Blueprint?`,
+          time: "Just now",
+        },
+      ]);
     }
   }, [isOpen, initialIntent]);
 
@@ -505,7 +601,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     preferredContactTime: "Weekday Evenings",
     propertyType: "Single Family Home",
     notes: "",
-    smsConsentAuthorized: true
+    smsConsentAuthorized: true,
   });
 
   // Oregon Cities selection state
@@ -562,7 +658,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     assignedAgentId: showAgent && agent ? agent.id : undefined,
     leadSource: "Website AI Intake Chatbot",
     intentScore: "hot",
-    status: "new"
+    status: "new",
   });
 
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
@@ -573,13 +669,13 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   const scrollToActiveMessage = (msgId?: string) => {
     if (!chatContainerRef.current) return;
     const container = chatContainerRef.current;
-    
+
     let targetEl: HTMLElement | null = null;
     if (msgId && messageElementsRef.current[msgId]) {
       targetEl = messageElementsRef.current[msgId];
     } else if (messages.length > 0) {
       // Find the latest advisor message or the last message in general
-      const lastAdvisorMsg = [...messages].reverse().find(m => m.sender === "advisor");
+      const lastAdvisorMsg = [...messages].reverse().find((m) => m.sender === "advisor");
       const lastMsg = lastAdvisorMsg || messages[messages.length - 1];
       if (lastMsg && messageElementsRef.current[lastMsg.id]) {
         targetEl = messageElementsRef.current[lastMsg.id];
@@ -593,20 +689,20 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       const currentScroll = container.scrollTop;
 
       const totalBlockHeight = optionsRect.bottom - elemRect.top;
-      
+
       if (totalBlockHeight <= containerRect.height - 28) {
         // Fits comfortably: align to top of message
         const targetScroll = currentScroll + (elemRect.top - containerRect.top) - 12;
         container.scrollTo({
           top: Math.max(0, targetScroll),
-          behavior: "smooth"
+          behavior: "smooth",
         });
       } else {
         // Taller than viewport: scroll so the interactive options / question controls are fully visible in view
         const targetScroll = currentScroll + (optionsRect.bottom - containerRect.bottom) + 20;
         container.scrollTo({
           top: Math.max(0, targetScroll),
-          behavior: "smooth"
+          behavior: "smooth",
         });
       }
     } else if (targetEl) {
@@ -616,12 +712,12 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       const targetScroll = currentScroll + (elemRect.top - containerRect.top) - 12;
       container.scrollTo({
         top: Math.max(0, targetScroll),
-        behavior: "smooth"
+        behavior: "smooth",
       });
     } else {
       container.scrollTo({
         top: container.scrollHeight,
-        behavior: "smooth"
+        behavior: "smooth",
       });
     }
   };
@@ -647,8 +743,8 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   const handleRevisitStep = (stepIndex: number) => {
     setCurrentStepIndex(stepIndex);
     setIsCompleted(false);
-    const targetCount = 1 + (stepIndex * 2);
-    setMessages(prev => prev.slice(0, Math.min(prev.length, targetCount)));
+    const targetCount = 1 + stepIndex * 2;
+    setMessages((prev) => prev.slice(0, Math.min(prev.length, targetCount)));
     if (INTAKE_STEPS[stepIndex]?.id === "annualIncome") {
       if (leadState.annualIncome) {
         const digits = leadState.annualIncome.replace(/[^0-9]/g, "");
@@ -662,15 +758,18 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     if (INTAKE_STEPS[stepIndex]?.id === "location") {
       setIsCityDropdownOpen(true);
       if (leadState.preferredLocations) {
-        const parsed = leadState.preferredLocations.split(",").map(c => c.trim()).filter(Boolean);
+        const parsed = leadState.preferredLocations
+          .split(",")
+          .map((c) => c.trim())
+          .filter(Boolean);
         setSelectedCities(parsed);
       }
     }
   };
 
   const handleToggleCity = (city: string) => {
-    setSelectedCities(prev => {
-      const next = prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city];
+    setSelectedCities((prev) => {
+      const next = prev.includes(city) ? prev.filter((c) => c !== city) : [...prev, city];
       return next;
     });
     // Ensure the confirm button / bottom is scrolled into view when selecting cities
@@ -693,7 +792,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   const handleSelectOption = (step: IntakeStep, optionValue: string) => {
     const updatedLead = {
       ...leadState,
-      [step.field]: optionValue
+      [step.field]: optionValue,
     };
     if (step.id === "location" || step.field === "preferredLocations") {
       updatedLead.taggedCityArea = optionValue;
@@ -715,7 +814,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       id: `usr-${Date.now()}`,
       sender: "user" as const,
       text: optionValue,
-      time: "Just now"
+      time: "Just now",
     };
 
     const nextIndex = currentStepIndex + 1;
@@ -727,18 +826,18 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
         id: `bot-${Date.now() + 1}`,
         sender: "advisor" as const,
         text: `Got it! ${nextStep.question}`,
-        time: "Just now"
+        time: "Just now",
       };
-      setMessages(prev => [...prev, userMsg, botMsg]);
+      setMessages((prev) => [...prev, userMsg, botMsg]);
     } else {
       // Step 6: Request Contact Info for Blueprint Delivery
       const botMsg = {
         id: `bot-${Date.now() + 1}`,
         sender: "advisor" as const,
         text: `🎉 Excellent! Based on your answers, you have strong prequalification potential for FHA & Conventional 97 financing with Down Payment Assistance (DPA). Who should ${loanOfficer.name} send your custom Prequalification Blueprint to?`,
-        time: "Just now"
+        time: "Just now",
       };
-      setMessages(prev => [...prev, userMsg, botMsg]);
+      setMessages((prev) => [...prev, userMsg, botMsg]);
     }
   };
 
@@ -749,14 +848,16 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 
     // Strict SSN Detection & Hardcoded Rejection Rule
     if (containsSSN(rawQuery)) {
-      setInputError("⚠️ For your security, Social Security Numbers (SSN) are blocked and never accepted here. No SSN or Credit Card is required.");
+      setInputError(
+        "⚠️ For your security, Social Security Numbers (SSN) are blocked and never accepted here. No SSN or Credit Card is required."
+      );
       const warningBotMsg = {
         id: `bot-ssn-${Date.now()}`,
         sender: "advisor" as const,
         text: "🛡️ **Security Alert: Social Security Numbers are never accepted here.**\n\nNo SSN, credit check, or credit card is required to explore prequalification or Down Payment Assistance. Please do not share sensitive identifiers.",
-        time: "Just now"
+        time: "Just now",
       };
-      setMessages(prev => [...prev, warningBotMsg]);
+      setMessages((prev) => [...prev, warningBotMsg]);
       setInputText("");
       setTimeout(() => {
         setInputError("");
@@ -771,14 +872,20 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       id: `usr-${Date.now()}`,
       sender: "user" as const,
       text: query,
-      time: "Just now"
+      time: "Just now",
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInputText("");
     setIsSubmittingQuery(true);
 
     try {
+      telemetry.addBreadcrumb({
+        category: "security",
+        message: "AI Payload Sanitized & Dispatched",
+        level: "info",
+        data: { endpoint: "/api/gemini/lead-intake", payloadSize: query.length, piiRedacted: true },
+      });
       const res = await fetch("/api/gemini/lead-intake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -786,9 +893,8 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           message: query,
           leadData: leadState,
           chatHistory: messages.slice(-4),
-          loName: loanOfficer.name,
-          loNmls: loanOfficer.nmlsId,
-          agentName: agent.name
+          loanOfficer: loanOfficer,
+          agent: agent,
         }),
       });
 
@@ -796,19 +902,22 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       const botMsg = {
         id: `bot-${Date.now()}`,
         sender: "advisor" as const,
-        text: data.reply || data.fallback || "I can help guide your prequalification steps and Down Payment Assistance (DPA) options!",
-        time: "Just now"
+        text:
+          data.reply ||
+          data.fallback ||
+          "I can help guide your prequalification steps and Down Payment Assistance (DPA) options!",
+        time: "Just now",
       };
-      setMessages(prev => [...prev, botMsg]);
+      setMessages((prev) => [...prev, botMsg]);
     } catch (e) {
       console.error(e);
       const botMsg = {
         id: `bot-${Date.now()}`,
         sender: "advisor" as const,
         text: "I've noted that! We are ready to structure your customized loan options. Please let us know how best to connect.",
-        time: "Just now"
+        time: "Just now",
       };
-      setMessages(prev => [...prev, botMsg]);
+      setMessages((prev) => [...prev, botMsg]);
     } finally {
       setIsSubmittingQuery(false);
     }
@@ -823,39 +932,50 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     }
 
     // Check if user accidentally inputted an SSN in any contact field
-    if (containsSSN(contactForm.fullName) || containsSSN(contactForm.email) || containsSSN(contactForm.phone)) {
-      alert("⚠️ For your privacy and security, Social Security Numbers are strictly blocked and never accepted. Please remove any SSN to proceed.");
+    if (
+      containsSSN(contactForm.fullName) ||
+      containsSSN(contactForm.email) ||
+      containsSSN(contactForm.phone)
+    ) {
+      alert(
+        "⚠️ For your privacy and security, Social Security Numbers are strictly blocked and never accepted. Please remove any SSN to proceed."
+      );
       return;
     }
 
-    const finalSourceType = initialSourceType || (sourcePropertyAddress ? 'property_listing' : sourceCampaignName ? 'campaign' : 'chatbot');
-    const computedLeadSource = initialLeadSource || (
-      sourcePropertyAddress 
-        ? `Listing: ${sourcePropertyAddress}` 
-        : sourceCampaignName 
-          ? `Campaign: ${sourceCampaignName}` 
-          : `Website AI Intake Chatbot`
-    );
+    const finalSourceType =
+      initialSourceType ||
+      (sourcePropertyAddress ? "property_listing" : sourceCampaignName ? "campaign" : "chatbot");
+    const computedLeadSource =
+      initialLeadSource ||
+      (sourcePropertyAddress
+        ? `Listing: ${sourcePropertyAddress}`
+        : sourceCampaignName
+          ? `Campaign: ${sourceCampaignName}`
+          : `Website AI Intake Chatbot`);
 
-    const computedLeadPathTag = leadState.leadPathTag || (
-      initialIntent === "chat_listings"
+    const computedLeadPathTag =
+      leadState.leadPathTag ||
+      (initialIntent === "chat_listings"
         ? "Curated Listings Request Shortcut"
         : initialIntent === "blueprint_download"
           ? "Blueprint Download Fast-Track"
           : initialIntent === "buying_power"
             ? "Buying Power Report Shortcut"
             : sourcePropertyAddress
-              ? `Property Listing Inquiry (${sourcePropertyAddress.split(',')[0]})`
+              ? `Property Listing Inquiry (${sourcePropertyAddress.split(",")[0]})`
               : sourceCampaignName
                 ? `Ad Campaign (${sourceCampaignName})`
-                : "Interactive Guided AI Intake"
-    );
+                : "Interactive Guided AI Intake");
 
-    const computedTaggedCityArea = leadState.taggedCityArea || leadState.preferredLocations || (
-      sourcePropertyAddress
-        ? (sourcePropertyAddress.includes(',') ? sourcePropertyAddress.split(',')[1]?.trim() : sourcePropertyAddress)
-        : "Portland Metro Area"
-    );
+    const computedTaggedCityArea =
+      leadState.taggedCityArea ||
+      leadState.preferredLocations ||
+      (sourcePropertyAddress
+        ? sourcePropertyAddress.includes(",")
+          ? sourcePropertyAddress.split(",")[1]?.trim()
+          : sourcePropertyAddress
+        : "Portland Metro Area");
 
     const newLead: CapturedLead = {
       id: `lead-${Date.now()}`,
@@ -874,8 +994,11 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       taggedCityArea: computedTaggedCityArea,
       leadPathTag: computedLeadPathTag,
       propertyType: contactForm.propertyType || "Single Family",
-      sendSampleHomes: leadState.sendSampleHomes ?? (leadState.sendSampleHomesOption?.startsWith("YES") ?? true),
-      sendSampleHomesOption: leadState.sendSampleHomesOption || "YES - Please send available homes with low/no down payment options",
+      sendSampleHomes:
+        leadState.sendSampleHomes ?? leadState.sendSampleHomesOption?.startsWith("YES") ?? true,
+      sendSampleHomesOption:
+        leadState.sendSampleHomesOption ||
+        "YES - Please send available homes with low/no down payment options",
       assignedLoId: loanOfficer.id,
       assignedAgentId: agent?.id,
       leadSource: computedLeadSource,
@@ -884,12 +1007,23 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       sourcePropertyId: sourcePropertyId,
       sourcePropertyAddress: sourcePropertyAddress,
       interactedSourceType: finalSourceType,
-      intentScore: (leadState.timeline?.includes("30-60") || leadState.timeline?.includes("Found")) ? "hot" : "warm",
+      intentScore:
+        leadState.timeline?.includes("30-60") || leadState.timeline?.includes("Found")
+          ? "hot"
+          : "warm",
       status: "new",
-      notes: (initialIntent === "chat_listings" ? "[URGENT ACTION REQUIRED]: Lead requested a curated list of low/no down payment homes in their desired city. Generate and send a property list via the SMS Hub or Email Outreach!\n\n" : "") + (contactForm.notes?.trim() 
-        ? `${sanitizeSSN(contactForm.notes.trim())}\n\n[System Record]: Captured via 24/7 AI Lead Intake Assistant. Source: ${computedLeadSource}. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}.`
-        : `Captured via 24/7 AI Lead Intake Assistant. Source: ${computedLeadSource}. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}.`),
-      chatTranscript: messages.map(m => ({ sender: m.sender, text: sanitizeSSN(m.text), time: m.time })),
+      notes:
+        (initialIntent === "chat_listings"
+          ? "[URGENT ACTION REQUIRED]: Lead requested a curated list of low/no down payment homes in their desired city. Generate and send a property list via the SMS Hub or Email Outreach!\n\n"
+          : "") +
+        (contactForm.notes?.trim()
+          ? `${sanitizeSSN(contactForm.notes.trim())}\n\n[System Record]: Captured via 24/7 AI Lead Intake Assistant. Source: ${computedLeadSource}. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}.`
+          : `Captured via 24/7 AI Lead Intake Assistant. Source: ${computedLeadSource}. Target: ${leadState.targetPriceRange || "N/A"}, Income: ${leadState.annualIncome || `${formatIncomeCurrency(annualIncomeAmount)}/yr`}, Timeline: ${leadState.timeline || "N/A"}.`),
+      chatTranscript: messages.map((m) => ({
+        sender: m.sender,
+        text: sanitizeSSN(m.text),
+        time: m.time,
+      })),
       createdAt: new Date().toISOString(),
       // TCPA SMS Consent & Automated Text Nurture
       smsConsentAuthorized: contactForm.smsConsentAuthorized,
@@ -897,7 +1031,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       textNurtureEnabled: contactForm.smsConsentAuthorized,
       textNurtureCurrentStep: 1,
       textNurtureTotalSteps: 4,
-      textNurtureStageText: contactForm.smsConsentAuthorized ? "1 of 4 automated text nurture active" : "Text Nurture Opted Out",
+      textNurtureStageText: contactForm.smsConsentAuthorized
+        ? "1 of 4 automated text nurture active"
+        : "Text Nurture Opted Out",
       lastTextSentAt: new Date().toISOString(),
       lastTextTemplateName: "Welcome & OHCS $10k Grant Calculator Link",
       smsMessages: [
@@ -906,9 +1042,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           direction: "outbound",
           text: `Hi ${contactForm.fullName.split(" ")[0]}! This is ${loanOfficer.name} with ${loanOfficer.company || "Guild Mortgage"}. Thank you for completing your Oregon Homebuyer Blueprint! We sent your custom DPA grant calculation details to ${contactForm.email}.`,
           timestamp: new Date().toISOString(),
-          status: "delivered"
-        }
-      ]
+          status: "delivered",
+        },
+      ],
     };
 
     onSaveLead(newLead);
@@ -919,7 +1055,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       confetti({
         particleCount: 80,
         spread: 70,
-        origin: { y: 0.6 }
+        origin: { y: 0.6 },
       });
     } catch (err) {
       console.warn(err);
@@ -930,9 +1066,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       id: `bot-confirm-${Date.now()}`,
       sender: "advisor" as const,
       text: `🎉 Congratulations ${contactForm.fullName.split(" ")[0]}! Your Prequalification Blueprint has been generated and dispatched to ${loanOfficer.name}. You can also schedule a direct 1-on-1 strategy call below!`,
-      time: "Just now"
+      time: "Just now",
     };
-    setMessages(prev => [...prev, botConfirmMsg]);
+    setMessages((prev) => [...prev, botConfirmMsg]);
   };
 
   const handleResetChat = () => {
@@ -959,15 +1095,15 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       assignedAgentId: agent.id,
       leadSource: "Website AI Intake Chatbot",
       intentScore: "hot",
-      status: "new"
+      status: "new",
     });
     setMessages([
       {
         id: `intro-${Date.now()}`,
         sender: "advisor",
         text: `👋 Let's build your new Prequalification Blueprint!\n\n${INTAKE_STEPS[0].question}`,
-        time: "Just now"
-      }
+        time: "Just now",
+      },
     ]);
   };
 
@@ -979,7 +1115,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           {/* Proactive Teaser Bubble */}
           {showTeaser && isScrolling && (
             <div className="relative bg-white rounded-2xl p-4 shadow-xl border border-[#EAE7E0] max-w-xs transition-all duration-300 animate-fade-in">
-              <button 
+              <button
                 onClick={() => setShowTeaser(false)}
                 className="absolute top-2 right-2 text-[#9A9488] hover:text-[#2D362E] p-1"
                 aria-label="Dismiss message"
@@ -999,10 +1135,13 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                 <div className="space-y-1">
                   <div className="flex items-center gap-1">
                     <span className="text-xs font-bold text-[#2D362E]">{loanOfficer.name}</span>
-                    <span className="text-[10px] bg-[#F1EFE9] text-[#4A5D4E] px-1.5 py-0.5 rounded font-semibold">24/7 AI</span>
+                    <span className="text-[10px] bg-[#F1EFE9] text-[#4A5D4E] px-1.5 py-0.5 rounded font-semibold">
+                      24/7 AI
+                    </span>
                   </div>
                   <p className="text-xs text-[#606C5D] leading-tight">
-                    Want to see your true monthly buying power & check Down Payment Assistance (DPA)?
+                    Want to see your true monthly buying power & check Down Payment Assistance
+                    (DPA)?
                   </p>
                   <button
                     onClick={onOpen}
@@ -1049,7 +1188,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                     <Sparkles className="w-3.5 h-3.5 text-[#E7C19D]" />
                     <span className="text-xs font-bold tracking-tight">AI Prequal Guide</span>
                   </div>
-                  <span className="text-[11px] text-white/80 font-medium">Check DPA & buying power</span>
+                  <span className="text-[11px] text-white/80 font-medium">
+                    Check DPA & buying power
+                  </span>
                 </div>
 
                 <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
@@ -1073,10 +1214,10 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 
       {/* Interactive Chat Window (When Open) */}
       {isOpen && (
-        <div 
+        <div
           className={`fixed z-50 transition-all duration-300 shadow-2xl bg-white flex flex-col overflow-hidden border border-[#EAE7E0] ${
-            isExpanded 
-              ? "inset-4 sm:inset-10 rounded-3xl" 
+            isExpanded
+              ? "inset-4 sm:inset-10 rounded-3xl"
               : "bottom-4 right-4 sm:bottom-6 sm:right-6 w-[95vw] sm:w-[460px] h-[690px] max-h-[92vh] rounded-3xl"
           }`}
         >
@@ -1142,20 +1283,20 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
             <div className="flex items-center gap-1.5">
               {INTAKE_STEPS.map((step, idx) => (
                 <button
-                  key={step.id} 
+                  key={step.id}
                   onClick={() => idx <= currentStepIndex && handleRevisitStep(idx)}
                   disabled={idx > currentStepIndex && !isCompleted}
                   className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
                     idx < currentStepIndex || isCompleted
-                      ? "bg-[#4A5D4E] hover:scale-125" 
-                      : idx === currentStepIndex 
-                        ? "bg-[#C18C5D] scale-125 ring-2 ring-[#C18C5D]/30" 
+                      ? "bg-[#4A5D4E] hover:scale-125"
+                      : idx === currentStepIndex
+                        ? "bg-[#C18C5D] scale-125 ring-2 ring-[#C18C5D]/30"
                         : "bg-[#D5D0C6] opacity-60 cursor-not-allowed"
                   }`}
                   title={`Revisit ${step.id}`}
                 />
               ))}
-              <div 
+              <div
                 className={`w-2.5 h-2.5 rounded-full ${
                   isCompleted ? "bg-[#4A5D4E]" : "bg-[#D5D0C6]"
                 }`}
@@ -1171,12 +1312,20 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                 {sourcePropertyAddress ? (
                   <>
                     <Home className="w-3.5 h-3.5 text-[#C18C5D] shrink-0" />
-                    <span className="truncate">Inquiring on Listing: <strong className="font-semibold text-[#4A5D4E]">{sourcePropertyAddress}</strong></span>
+                    <span className="truncate">
+                      Inquiring on Listing:{" "}
+                      <strong className="font-semibold text-[#4A5D4E]">
+                        {sourcePropertyAddress}
+                      </strong>
+                    </span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-3.5 h-3.5 text-[#C18C5D] shrink-0" />
-                    <span className="truncate">Attributed Campaign: <strong className="font-semibold text-[#4A5D4E]">{sourceCampaignName}</strong></span>
+                    <span className="truncate">
+                      Attributed Campaign:{" "}
+                      <strong className="font-semibold text-[#4A5D4E]">{sourceCampaignName}</strong>
+                    </span>
                   </>
                 )}
               </div>
@@ -1187,7 +1336,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           )}
 
           {/* Chat Messages Body with Free Scroll & Smooth Transitions */}
-          <div 
+          <div
             ref={chatContainerRef}
             className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-[#FAF9F5] scroll-smooth relative"
           >
@@ -1207,8 +1356,8 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
             {messages.map((msg, index) => {
               const isUser = msg.sender === "user";
               return (
-                <div 
-                  key={msg.id} 
+                <div
+                  key={msg.id}
                   ref={(el) => {
                     if (el) messageElementsRef.current[msg.id] = el;
                   }}
@@ -1229,11 +1378,13 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                     </div>
                   )}
 
-                  <div className={`max-w-[85%] rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm leading-relaxed shadow-xs break-words overflow-hidden ${
-                    isUser 
-                      ? "bg-[#4A5D4E] text-white font-medium flex items-center justify-between gap-3" 
-                      : "bg-white text-[#2D362E] border border-[#EAE7E0]"
-                  }`}>
+                  <div
+                    className={`max-w-[85%] rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm leading-relaxed shadow-xs break-words overflow-hidden ${
+                      isUser
+                        ? "bg-[#4A5D4E] text-white font-medium flex items-center justify-between gap-3"
+                        : "bg-white text-[#2D362E] border border-[#EAE7E0]"
+                    }`}
+                  >
                     <div className="whitespace-pre-line break-words text-left">{msg.text}</div>
                     {isUser && (
                       <button
@@ -1289,14 +1440,23 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                         >
                           <MapPin className="w-4 h-4 text-[#4A5D4E] shrink-0" />
                           {selectedCities.length === 0 ? (
-                            <span className="text-[#9A9488]">Select Oregon cities from alphabetical list...</span>
+                            <span className="text-[#9A9488]">
+                              Select Oregon cities from alphabetical list...
+                            </span>
                           ) : (
                             <span className="truncate">
-                              <strong className="text-[#4A5D4E]">{selectedCities.length} {selectedCities.length === 1 ? 'City' : 'Cities'}:</strong> {selectedCities.slice(0, 3).join(", ")}{selectedCities.length > 3 ? ` +${selectedCities.length - 3} more` : ''}
+                              <strong className="text-[#4A5D4E]">
+                                {selectedCities.length}{" "}
+                                {selectedCities.length === 1 ? "City" : "Cities"}:
+                              </strong>{" "}
+                              {selectedCities.slice(0, 3).join(", ")}
+                              {selectedCities.length > 3
+                                ? ` +${selectedCities.length - 3} more`
+                                : ""}
                             </span>
                           )}
                         </button>
-                        
+
                         <div className="flex items-center gap-2 shrink-0">
                           {selectedCities.length > 0 && (
                             <button
@@ -1313,8 +1473,14 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                             onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
                             className="flex items-center gap-1 text-[#606C5D] hover:text-[#2D362E] text-[11px] font-medium p-1 cursor-pointer"
                           >
-                            <span className="hidden sm:inline">{isCityDropdownOpen ? "Collapse" : "Browse"}</span>
-                            {isCityDropdownOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            <span className="hidden sm:inline">
+                              {isCityDropdownOpen ? "Collapse" : "Browse"}
+                            </span>
+                            {isCityDropdownOpen ? (
+                              <ChevronUp className="w-4 h-4" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
                           </button>
                         </div>
                       </div>
@@ -1370,7 +1536,15 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                           <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-[#EAE7E0] text-[10px]">
                             <div className="flex items-center gap-1 text-[#606C5D] flex-wrap">
                               <span className="font-semibold">Quick Add:</span>
-                              {["Portland", "Beaverton", "Bend", "Eugene", "Salem", "Oregon City", "Hillsboro"].map((pop) => (
+                              {[
+                                "Portland",
+                                "Beaverton",
+                                "Bend",
+                                "Eugene",
+                                "Salem",
+                                "Oregon City",
+                                "Hillsboro",
+                              ].map((pop) => (
                                 <button
                                   key={pop}
                                   type="button"
@@ -1425,7 +1599,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                                     </div>
                                     <span>{city}</span>
                                   </div>
-                                  <span className="text-[10px] font-medium text-[#9A9488]">Oregon</span>
+                                  <span className="text-[10px] font-medium text-[#9A9488]">
+                                    Oregon
+                                  </span>
                                 </div>
                               );
                             })}
@@ -1482,7 +1658,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                         <DollarSign className="w-4 h-4 text-emerald-600" />
                         <span>Approximate Gross Annual Income</span>
                       </div>
-                      <span className="text-[10px] text-[#9A9488] font-medium">Household total before taxes</span>
+                      <span className="text-[10px] text-[#9A9488] font-medium">
+                        Household total before taxes
+                      </span>
                     </div>
 
                     {/* Currency Input Field */}
@@ -1557,7 +1735,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                       className="w-full py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
                     >
                       <CheckCircle2 className="w-4 h-4 text-[#E7C19D]" />
-                      <span>Confirm Annual Income ({formatIncomeCurrency(annualIncomeAmount)}/yr)</span>
+                      <span>
+                        Confirm Annual Income ({formatIncomeCurrency(annualIncomeAmount)}/yr)
+                      </span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -1571,7 +1751,12 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                       {/* YES Box */}
                       <button
                         type="button"
-                        onClick={() => handleSelectOption(INTAKE_STEPS[currentStepIndex], "YES - Please send available homes with low/no down payment options")}
+                        onClick={() =>
+                          handleSelectOption(
+                            INTAKE_STEPS[currentStepIndex],
+                            "YES - Please send available homes with low/no down payment options"
+                          )
+                        }
                         className="p-4 rounded-2xl border-2 border-emerald-600/40 bg-emerald-50/60 hover:bg-emerald-100 hover:border-emerald-600 transition-all text-left group shadow-xs cursor-pointer flex flex-col justify-between"
                       >
                         <div className="flex items-center justify-between">
@@ -1582,14 +1767,20 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                           <ChevronRight className="w-4 h-4 text-emerald-600 group-hover:translate-x-1 transition-transform" />
                         </div>
                         <p className="text-[11px] text-emerald-900/80 mt-1.5 font-medium leading-snug">
-                          Send curated homes in my target areas with low or 0% down financing options
+                          Send curated homes in my target areas with low or 0% down financing
+                          options
                         </p>
                       </button>
 
                       {/* NO Box */}
                       <button
                         type="button"
-                        onClick={() => handleSelectOption(INTAKE_STEPS[currentStepIndex], "NO - Just send my Prequalification Blueprint")}
+                        onClick={() =>
+                          handleSelectOption(
+                            INTAKE_STEPS[currentStepIndex],
+                            "NO - Just send my Prequalification Blueprint"
+                          )
+                        }
                         className="p-4 rounded-2xl border-2 border-[#EAE7E0] bg-white hover:bg-[#F1EFE9] hover:border-[#9A9488] transition-all text-left group shadow-xs cursor-pointer flex flex-col justify-between"
                       >
                         <div className="flex items-center justify-between">
@@ -1615,7 +1806,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                       {INTAKE_STEPS[currentStepIndex].options.map((opt, i) => (
                         <button
                           key={i}
-                          onClick={() => handleSelectOption(INTAKE_STEPS[currentStepIndex], opt.value)}
+                          onClick={() =>
+                            handleSelectOption(INTAKE_STEPS[currentStepIndex], opt.value)
+                          }
                           className="text-left p-2.5 rounded-xl border border-[#EAE7E0] bg-white hover:bg-[#F1EFE9] hover:border-[#4A5D4E] transition-all group shadow-2xs"
                         >
                           <div className="text-xs font-bold text-[#2D362E] group-hover:text-[#4A5D4E] flex items-center justify-between">
@@ -1638,14 +1831,22 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
               <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 shadow-sm space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-[#4A5D4E]">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>{initialIntent === "chat_listings" ? "Where should we send your curated list of low/no down payment homes?" : initialIntent === "blueprint_download" ? "Where should we deliver your completed Blueprint?" : "Where should we deliver your Prequalification Blueprint?"}</span>
+                  <span>
+                    {initialIntent === "chat_listings"
+                      ? "Where should we send your curated list of low/no down payment homes?"
+                      : initialIntent === "blueprint_download"
+                        ? "Where should we deliver your completed Blueprint?"
+                        : "Where should we deliver your Prequalification Blueprint?"}
+                  </span>
                 </div>
 
                 <form onSubmit={handleSubmitLead} className="space-y-3 text-xs">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">Your Full Name *</label>
-                    <input 
-                      type="text" 
+                    <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">
+                      Your Full Name *
+                    </label>
+                    <input
+                      type="text"
                       required
                       placeholder="e.g. Tyler Richardson"
                       value={contactForm.fullName}
@@ -1656,9 +1857,11 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">Email Address *</label>
-                      <input 
-                        type="email" 
+                      <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
                         required
                         placeholder="you@gmail.com"
                         value={contactForm.email}
@@ -1667,9 +1870,11 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">Phone Number *</label>
-                      <input 
-                        type="tel" 
+                      <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">
+                        Phone Number *
+                      </label>
+                      <input
+                        type="tel"
                         required
                         placeholder="(503) 555-0199"
                         value={contactForm.phone}
@@ -1685,11 +1890,14 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                       <input
                         type="checkbox"
                         checked={contactForm.smsConsentAuthorized}
-                        onChange={(e) => setContactForm({ ...contactForm, smsConsentAuthorized: e.target.checked })}
+                        onChange={(e) =>
+                          setContactForm({ ...contactForm, smsConsentAuthorized: e.target.checked })
+                        }
                         className="mt-0.5 rounded border-[#9A9488] text-[#4A5D4E] focus:ring-[#4A5D4E]"
                       />
                       <span className="text-[11px] text-[#2D362E] font-semibold leading-tight">
-                        I authorize {loanOfficer.name} & partner team to send text messages (SMS) regarding rate alerts, DPA grants, and low/no down home listings.
+                        I authorize {loanOfficer.name} & partner team to send text messages (SMS)
+                        regarding rate alerts, DPA grants, and low/no down home listings.
                       </span>
                     </label>
                     <p className="text-[10px] text-[#9A9488] pl-5">
@@ -1699,10 +1907,14 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">Preferred Time to Chat</label>
+                      <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">
+                        Preferred Time to Chat
+                      </label>
                       <select
                         value={contactForm.preferredContactTime}
-                        onChange={(e) => setContactForm({ ...contactForm, preferredContactTime: e.target.value })}
+                        onChange={(e) =>
+                          setContactForm({ ...contactForm, preferredContactTime: e.target.value })
+                        }
                         className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
                       >
                         <option value="Morning (9 AM - 12 PM)">Morning (9 AM - 12 PM)</option>
@@ -1713,31 +1925,40 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">Home Type</label>
+                      <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">
+                        Home Type
+                      </label>
                       <select
                         value={contactForm.propertyType}
-                        onChange={(e) => setContactForm({ ...contactForm, propertyType: e.target.value })}
+                        onChange={(e) =>
+                          setContactForm({ ...contactForm, propertyType: e.target.value })
+                        }
                         className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
                       >
                         <option value="Single Family Home">Single Family Home</option>
                         <option value="Townhome / Condo">Townhome / Condo</option>
-                        <option value="Multi-Family (House Hacking)">Multi-Family (House Hacking)</option>
+                        <option value="Multi-Family (House Hacking)">
+                          Multi-Family (House Hacking)
+                        </option>
                       </select>
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">
-                      Additional Notes or Special Requests <span className="text-[#9A9488] font-normal">(Optional)</span>
+                      Additional Notes or Special Requests{" "}
+                      <span className="text-[#9A9488] font-normal">(Optional)</span>
                     </label>
-                    <textarea 
+                    <textarea
                       rows={2}
                       placeholder="e.g., Looking for homes near top-rated school districts, interested in VA loan options, etc."
                       value={contactForm.notes}
                       onChange={(e) => {
                         const val = e.target.value;
                         if (containsSSN(val)) {
-                          setInputError("⚠️ SSNs are blocked for your privacy. Please do not enter sensitive identifiers.");
+                          setInputError(
+                            "⚠️ SSNs are blocked for your privacy. Please do not enter sensitive identifiers."
+                          );
                         } else if (inputError) {
                           setInputError("");
                         }
@@ -1776,7 +1997,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b border-[#EAE7E0]">
                     <span className="text-[#606C5D]">Target Price:</span>
-                    <span className="font-bold text-[#4A5D4E]">{leadState.targetPriceRange || "$425,000"}</span>
+                    <span className="font-bold text-[#4A5D4E]">
+                      {leadState.targetPriceRange || "$425,000"}
+                    </span>
                   </div>
                   {leadState.annualIncome && (
                     <div className="flex justify-between items-center pb-2 border-b border-[#EAE7E0]">
@@ -1790,17 +2013,25 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b border-[#EAE7E0]">
                     <span className="text-[#606C5D]">Eligible Loan Programs:</span>
-                    <span className="text-emerald-700 font-semibold">Conventional 97, FHA 3.5%, State DPA</span>
+                    <span className="text-emerald-700 font-semibold">
+                      Conventional 97, FHA 3.5%, State DPA
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[#606C5D]">Low/No Down Homes:</span>
-                    <span className={`font-semibold ${leadState.sendSampleHomes ? 'text-emerald-700' : 'text-[#606C5D]'}`}>
-                      {leadState.sendSampleHomes ? '✓ Curated Listings Requested' : 'Blueprint Only'}
+                    <span
+                      className={`font-semibold ${leadState.sendSampleHomes ? "text-emerald-700" : "text-[#606C5D]"}`}
+                    >
+                      {leadState.sendSampleHomes
+                        ? "✓ Curated Listings Requested"
+                        : "Blueprint Only"}
                     </span>
                   </div>
                   {contactForm.notes && (
                     <div className="pt-2 border-t border-[#EAE7E0]">
-                      <span className="text-[#606C5D] block mb-0.5 font-semibold text-[11px]">Your Notes / Special Requests:</span>
+                      <span className="text-[#606C5D] block mb-0.5 font-semibold text-[11px]">
+                        Your Notes / Special Requests:
+                      </span>
                       <p className="text-[#2D362E] font-medium italic text-[11px] bg-[#FAF9F5] p-2 rounded-lg border border-[#EAE7E0]">
                         "{contactForm.notes}"
                       </p>
@@ -1833,7 +2064,18 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           </div>
 
           {/* Chat Input Bar & Security Notice */}
+          
+          {/* Quick Replies for Ask AI */}
+          {isCompleted && (
+             <div className="px-3 pt-3 flex items-center gap-1.5 overflow-x-auto hide-scrollbar pb-1">
+                 <button onClick={() => { setInputText("Should I continue renting or buy now?"); handleSendMessage(); }} className="shrink-0 px-2.5 py-1 bg-[#FAF9F5] border border-[#EAE7E0] rounded-full text-[10px] font-bold text-[#4A5D4E] hover:bg-[#F1EFE9] transition-colors shadow-sm whitespace-nowrap">⚖️ Rent vs. Buy Analysis</button>
+                 <button onClick={() => { setInputText("What are today's mortgage interest rates?"); handleSendMessage(); }} className="shrink-0 px-2.5 py-1 bg-[#FAF9F5] border border-[#EAE7E0] rounded-full text-[10px] font-bold text-[#4A5D4E] hover:bg-[#F1EFE9] transition-colors shadow-sm whitespace-nowrap">📈 Current Rates</button>
+                 <button onClick={() => { setInputText("How much down payment do I actually need?"); handleSendMessage(); }} className="shrink-0 px-2.5 py-1 bg-[#FAF9F5] border border-[#EAE7E0] rounded-full text-[10px] font-bold text-[#4A5D4E] hover:bg-[#F1EFE9] transition-colors shadow-sm whitespace-nowrap">💰 Down Payment Helper</button>
+                 <button onClick={() => { setInputText("Can you estimate closing costs on a $400k home?"); handleSendMessage(); }} className="shrink-0 px-2.5 py-1 bg-[#FAF9F5] border border-[#EAE7E0] rounded-full text-[10px] font-bold text-[#4A5D4E] hover:bg-[#F1EFE9] transition-colors shadow-sm whitespace-nowrap">📝 Estimate Closing Costs</button>
+             </div>
+          )}
           <div className="p-3 bg-white border-t border-[#EAE7E0] space-y-1.5 shrink-0">
+
             {inputError && (
               <div className="flex items-center gap-1.5 bg-rose-50 border border-rose-200 text-rose-800 px-3 py-1.5 rounded-xl text-[11px] font-semibold animate-shake">
                 <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
@@ -1841,14 +2083,20 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
               </div>
             )}
             <div className="flex items-center gap-2">
-              <input 
-                type="text" 
-                placeholder={isCompleted ? "Ask a question about rates, DPA options, or closing..." : "Type your question or reply..."}
+              <input
+                type="text"
+                placeholder={
+                  isCompleted
+                    ? "Ask a question about rates, DPA options, or closing..."
+                    : "Type your question or reply..."
+                }
                 value={inputText}
                 onChange={(e) => {
                   const val = e.target.value;
                   if (containsSSN(val)) {
-                    setInputError("⚠️ SSNs are blocked for your privacy. No SSN or Credit Card required.");
+                    setInputError(
+                      "⚠️ SSNs are blocked for your privacy. No SSN or Credit Card required."
+                    );
                   } else if (inputError) {
                     setInputError("");
                   }
@@ -1857,12 +2105,27 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                 onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                 disabled={isSubmittingQuery}
                 className={`flex-1 bg-[#FAF9F5] border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#2D362E] placeholder-[#9A9488] focus:outline-none transition-colors ${
-                  inputError ? "border-rose-400 bg-rose-50/30 focus:border-rose-500" : "border-[#EAE7E0] focus:border-[#4A5D4E]"
+                  inputError
+                    ? "border-rose-400 bg-rose-50/30 focus:border-rose-500"
+                    : "border-[#EAE7E0] focus:border-[#4A5D4E]"
                 }`}
               />
+              {speechSupported && (
+                <button
+                  onClick={toggleListening}
+                  title={isListening ? "Stop listening" : "Speak to answer"}
+                  className={`p-2.5 rounded-xl transition-all shadow-sm shrink-0 flex items-center justify-center cursor-pointer ${
+                    isListening
+                      ? "bg-rose-100 text-rose-600 animate-pulse border border-rose-200"
+                      : "bg-[#FAF9F5] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#EAE7E0]"
+                  }`}
+                >
+                  {isListening ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+                </button>
+              )}
               <button
                 onClick={() => handleSendMessage()}
-                disabled={isSubmittingQuery || !inputText.trim()}
+                disabled={isSubmittingQuery || !inputText.trim() || isListening}
                 className="p-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white disabled:opacity-40 transition-all shadow-sm shrink-0 flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
                 title="Send message"
               >
@@ -1878,13 +2141,22 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                 <Lock className="w-2.5 h-2.5 text-emerald-600" />
                 <span>No SSN Required</span>
               </span>
-              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded uppercase tracking-wider font-bold border ${
-                aiProvider === 'deepseek' ? 'bg-[#4A5D4E]/10 text-[#4A5D4E] border-[#4A5D4E]/20' :
-                aiProvider === 'gemini' ? 'bg-[#C18C5D]/10 text-[#C18C5D] border-[#C18C5D]/20' :
-                'bg-gray-100 text-gray-500 border-gray-200'
-              }`}>
+              <span
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded uppercase tracking-wider font-bold border ${
+                  aiProvider === "deepseek"
+                    ? "bg-[#4A5D4E]/10 text-[#4A5D4E] border-[#4A5D4E]/20"
+                    : aiProvider === "gemini"
+                      ? "bg-[#C18C5D]/10 text-[#C18C5D] border-[#C18C5D]/20"
+                      : "bg-gray-100 text-gray-500 border-gray-200"
+                }`}
+              >
                 <Bot className="w-2.5 h-2.5" />
-                AI Engine: {aiProvider === 'deepseek' ? 'DeepSeek' : aiProvider === 'gemini' ? 'Gemini' : 'Simulated'}
+                AI Engine:{" "}
+                {aiProvider === "deepseek"
+                  ? "DeepSeek"
+                  : aiProvider === "gemini"
+                    ? "Gemini"
+                    : "Simulated"}
               </span>
             </div>
           </div>

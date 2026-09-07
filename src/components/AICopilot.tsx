@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  Sparkles, 
-  Send, 
-  RefreshCw, 
-  ShieldCheck, 
-  FileText, 
-  User, 
-  Bot, 
-  CheckCircle2, 
+import {
+  Sparkles,
+  Send,
+  RefreshCw,
+  ShieldCheck,
+  FileText,
+  User,
+  Bot,
+  CheckCircle2,
   ExternalLink,
   Download,
   Copy,
@@ -16,7 +16,7 @@ import {
   Trash2,
   FileDown,
   GripVertical,
-  RotateCcw
+  RotateCcw,
 } from "lucide-react";
 import { FinancialProfile, PropertyListing, ChatMessage, LoanOfficerProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
@@ -30,10 +30,18 @@ interface AICopilotProps {
   profile: FinancialProfile;
   properties: PropertyListing[];
   loanOfficer?: LoanOfficerProfile;
+  activeAgent?: any;
 }
 
-export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanOfficer }) => {
-  const [activeTool, setActiveTool] = useState<"chat" | "offer" | "inspection" | "le_decoder">("chat");
+export const AICopilot: React.FC<AICopilotProps> = ({
+  profile,
+  properties,
+  loanOfficer,
+  activeAgent,
+}) => {
+  const [activeTool, setActiveTool] = useState<"chat" | "offer" | "inspection" | "le_decoder">(
+    "chat"
+  );
 
   // Initial Advisor Welcome Message
   const INITIAL_MESSAGE: ChatMessage = {
@@ -45,25 +53,25 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
       "What are the seller concession & IPC limits for FHA, Conventional, VA, and USDA?",
       "How do Conventional IPC limits change based on LTV (>90% vs 80-90% vs <=80%)?",
       "Can seller concessions be used to pay for my down payment?",
-      "How can I ask the seller for closing credits to buy down my rate?"
-    ]
+      "How can I ask the seller for closing credits to buy down my rate?",
+    ],
   };
 
   // Chat State
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [inputMessage, setInputMessage] = useState("");
   const [sendingChat, setSendingChat] = useState(false);
-  const [aiProvider, setAiProvider] = useState<'deepseek' | 'gemini' | 'none'>('none');
+  const [aiProvider, setAiProvider] = useState<"deepseek" | "gemini" | "none">("none");
 
   useEffect(() => {
-    fetch('/api/ai/diagnostics')
-      .then(res => res.json())
-      .then(data => {
+    fetch("/api/ai/diagnostics")
+      .then((res) => res.json())
+      .then((data) => {
         if (data && data.activeProvider) {
           setAiProvider(data.activeProvider);
         }
       })
-      .catch(e => console.error("Failed to fetch AI diagnostics:", e));
+      .catch((e) => console.error("Failed to fetch AI diagnostics:", e));
   }, []);
 
   // Dynamic Horizontal Resize State for Chat Container
@@ -138,7 +146,9 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Offer Strategy State
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(properties[0]?.id || "custom");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(
+    properties[0]?.id || "custom"
+  );
   const [customPrice, setCustomPrice] = useState(425000);
   const [customAddress, setCustomAddress] = useState("123 Maple Street");
   const [daysOnMarket, setDaysOnMarket] = useState(12);
@@ -159,7 +169,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
   const showToast = (msg: string) => {
     setToastNotification(msg);
     setTimeout(() => {
-      setToastNotification(prev => prev === msg ? null : prev);
+      setToastNotification((prev) => (prev === msg ? null : prev));
     }, 3000);
   };
 
@@ -172,7 +182,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
   const generateTranscriptText = () => {
     const dateStr = new Date().toLocaleString("en-US", {
       dateStyle: "full",
-      timeStyle: "short"
+      timeStyle: "short",
     });
 
     const divider = "=".repeat(76);
@@ -251,13 +261,13 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
       const doc = new jsPDF({
         orientation: "portrait",
         unit: "pt",
-        format: "letter"
+        format: "letter",
       });
 
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 40;
-      const contentWidth = pageWidth - (margin * 2);
+      const contentWidth = pageWidth - margin * 2;
       let y = 45;
 
       // Header Banner Box
@@ -271,8 +281,14 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8.5);
-      const loLine = loanOfficer ? `  •  Officer: ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId})` : "";
-      doc.text(`Consultation Date: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}${loLine}`, margin + 14, y + 38);
+      const loLine = loanOfficer
+        ? `  •  Officer: ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId})`
+        : "";
+      doc.text(
+        `Consultation Date: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}${loLine}`,
+        margin + 14,
+        y + 38
+      );
 
       y += 66;
 
@@ -285,7 +301,11 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
       doc.setTextColor(45, 54, 46);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
-      doc.text(`Target Price: ${formatUSD(profile.targetPrice)}   |   Down Payment: ${formatUSD(profile.downPaymentSavings)}   |   Income: ${formatUSD(profile.annualIncome)}/yr   |   State: ${profile.state || "OR"}`, margin + 12, y + 19);
+      doc.text(
+        `Target Price: ${formatUSD(profile.targetPrice)}   |   Down Payment: ${formatUSD(profile.downPaymentSavings)}   |   Income: ${formatUSD(profile.annualIncome)}/yr   |   State: ${profile.state || "OR"}`,
+        margin + 12,
+        y + 19
+      );
 
       y += 42;
 
@@ -340,7 +360,8 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
       doc.setFont("helvetica", "italic");
       doc.setFontSize(7.5);
       doc.setTextColor(120, 130, 120);
-      const disclaimer = "Notice: This AI Copilot consultation summary is provided for educational and scenario planning purposes only. Mortgage eligibility, interest rates, seller concessions, and underwriting conditions are subject to review and official Loan Estimate (LE) disclosures from your licensed loan officer.";
+      const disclaimer =
+        "Notice: This AI Copilot consultation summary is provided for educational and scenario planning purposes only. Mortgage eligibility, interest rates, seller concessions, and underwriting conditions are subject to review and official Loan Estimate (LE) disclosures from your licensed loan officer.";
       const disclaimerLines = doc.splitTextToSize(disclaimer, contentWidth);
       doc.text(disclaimerLines, margin, y);
 
@@ -361,7 +382,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
       window.print();
       return;
     }
-    
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -399,14 +420,18 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
           </div>
 
           <div class="conversation">
-            ${messages.map((m, idx) => `
+            ${messages
+              .map(
+                (m, idx) => `
               <div class="msg ${m.sender === "user" ? "user" : "advisor"}">
                 <div class="sender ${m.sender === "user" ? "user" : "advisor"}">
                   ${m.sender === "user" ? "Homebuyer" : "AI Copilot Advisor"} • ${m.timestamp || `Turn #${idx + 1}`}
                 </div>
                 <div class="content">${m.text.replace(/\n/g, "<br/>")}</div>
               </div>
-            `).join("")}
+            `
+              )
+              .join("")}
           </div>
 
           <div class="disclaimer">
@@ -436,10 +461,10 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
       id: generateMessageId("user"),
       sender: "user",
       text: query,
-      timestamp: "Just now"
+      timestamp: "Just now",
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInputMessage("");
     setSendingChat(true);
 
@@ -454,9 +479,11 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
             downPayment: profile.downPaymentSavings,
             monthlyDebt: profile.monthlyDebt,
             targetPrice: profile.targetPrice,
-            location: profile.state
+            location: profile.state,
           },
-          chatHistory: messages.slice(-40)
+          chatHistory: messages.slice(-40),
+          loanOfficer,
+          agent: activeAgent,
         }),
       });
 
@@ -464,19 +491,22 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
       const botMsg: ChatMessage = {
         id: generateMessageId("bot"),
         sender: "advisor",
-        text: data.reply || data.fallback || "I'm here to help you evaluate properties and financing options.",
-        timestamp: "Just now"
+        text:
+          data.reply ||
+          data.fallback ||
+          "I'm here to help you evaluate properties and financing options.",
+        timestamp: "Just now",
       };
-      setMessages(prev => [...prev, botMsg]);
+      setMessages((prev) => [...prev, botMsg]);
     } catch (e) {
       console.error(e);
       const botMsg: ChatMessage = {
         id: generateMessageId("bot"),
         sender: "advisor",
         text: "I am ready to assist with your mortgage questions, contract terms, or inspection reviews. Feel free to ask anything about the first-time homebuyer process!",
-        timestamp: "Just now"
+        timestamp: "Just now",
       };
-      setMessages(prev => [...prev, botMsg]);
+      setMessages((prev) => [...prev, botMsg]);
     } finally {
       setSendingChat(false);
     }
@@ -486,19 +516,19 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
     setLoadingOffer(true);
     setOfferResult(null);
 
-    const prop = properties.find(p => p.id === selectedPropertyId);
+    const prop = properties.find((p) => p.id === selectedPropertyId);
     const propDetails = prop
       ? {
           price: prop.price,
           address: prop.address,
           daysOnMarket: prop.daysOnMarket,
-          notes: prop.notes
+          notes: prop.notes,
         }
       : {
           price: customPrice,
           address: customAddress,
           daysOnMarket,
-          notes: "Standard turnkey condition"
+          notes: "Standard turnkey condition",
         };
 
     try {
@@ -510,9 +540,11 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
           buyerFinances: {
             preApprovalAmount: profile.targetPrice + 25000,
             cashAvailable: profile.downPaymentSavings + 15000,
-            loanType: offerLoanType
+            loanType: offerLoanType,
           },
-          marketCondition
+          marketCondition,
+          loanOfficer,
+          agent: activeAgent,
         }),
       });
 
@@ -520,7 +552,9 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
       setOfferResult(data.strategy || "Strategy generated successfully.");
     } catch (e) {
       console.error(e);
-      setOfferResult("Recommended approach: Offer at 98% of list price with a 7-day inspection contingency and request $5,000 in seller credits for rate buydown.");
+      setOfferResult(
+        "Recommended approach: Offer at 98% of list price with a 7-day inspection contingency and request $5,000 in seller credits for rate buydown."
+      );
     } finally {
       setLoadingOffer(false);
     }
@@ -536,7 +570,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           inspectionNotes: inspectionInput,
-          propertyPrice: inspectionPropertyPrice
+          propertyPrice: inspectionPropertyPrice,
         }),
       });
 
@@ -544,7 +578,9 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
       setInspectionResult(data.analysis || "Inspection audit completed.");
     } catch (e) {
       console.error(e);
-      setInspectionResult("Analysis completed: Focus repair requests on electrical GFCI safety and an aging water heater replacement credit (~$1,800).");
+      setInspectionResult(
+        "Analysis completed: Focus repair requests on electrical GFCI safety and an aging water heater replacement credit (~$1,800)."
+      );
     } finally {
       setLoadingInspection(false);
     }
@@ -564,7 +600,8 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
               AI Homebuyer Copilot & Strategic Tools
             </h2>
             <p className="text-xs sm:text-sm text-[#606C5D]">
-              Personalized guidance, automated offer terms, inspection defect triage, and Loan Estimate decoding.
+              Personalized guidance, automated offer terms, inspection defect triage, and Loan
+              Estimate decoding.
             </p>
           </div>
 
@@ -584,7 +621,9 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
                   : "Chat window is currently at its default width (100%)"
               }
             >
-              <RotateCcw className={`w-3.5 h-3.5 ${chatContainerWidth ? "text-white" : "text-[#4A5D4E]"}`} />
+              <RotateCcw
+                className={`w-3.5 h-3.5 ${chatContainerWidth ? "text-white" : "text-[#4A5D4E]"}`}
+              />
               <span>Reset Width</span>
               {chatContainerWidth && (
                 <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono">
@@ -602,7 +641,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
             { id: "offer", label: "Offer Strategy Generator", icon: Sparkles },
             { id: "inspection", label: "Inspection Report Triage", icon: ShieldCheck },
             { id: "le_decoder", label: "Loan Estimate (LE) Decoder", icon: FileText },
-          ].map(tab => {
+          ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTool === tab.id;
             return (
@@ -631,7 +670,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
             width: chatContainerWidth ? `${chatContainerWidth}px` : "100%",
             maxWidth: chatContainerWidth ? "min(100vw - 32px, 1800px)" : "100%",
             minWidth: "360px",
-            transition: isResizingChat ? "none" : "width 0.15s ease-out"
+            transition: isResizingChat ? "none" : "width 0.15s ease-out",
           }}
           className="relative bg-white rounded-2xl border border-[#EAE7E0] flex flex-col h-[650px] overflow-hidden shadow-sm pr-1"
         >
@@ -713,7 +752,11 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#606C5D] text-xs font-medium transition-colors cursor-pointer"
                 title="Copy entire transcript to clipboard"
               >
-                {copiedTranscript ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedTranscript ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )}
                 <span className="hidden md:inline">{copiedTranscript ? "Copied" : "Copy"}</span>
               </button>
 
@@ -760,22 +803,39 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
             {messages.map((msg) => {
               const isUser = msg.sender === "user";
               return (
-                <div key={msg.id} className={`flex items-start gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                    isUser ? "bg-[#4A5D4E] text-white font-bold" : "bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0]"
-                  }`}>
-                    {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4 text-[#C18C5D]" />}
+                <div
+                  key={msg.id}
+                  className={`flex items-start gap-3 ${isUser ? "flex-row-reverse" : ""}`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                      isUser
+                        ? "bg-[#4A5D4E] text-white font-bold"
+                        : "bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0]"
+                    }`}
+                  >
+                    {isUser ? (
+                      <User className="w-4 h-4" />
+                    ) : (
+                      <Bot className="w-4 h-4 text-[#C18C5D]" />
+                    )}
                   </div>
 
-                  <div className={`max-w-[80%] space-y-2 rounded-2xl p-4 text-xs sm:text-sm leading-relaxed ${
-                    isUser ? "bg-[#4A5D4E] text-white" : "bg-[#F9F8F4] text-[#2D362E] border border-[#EAE7E0] shadow-xs"
-                  }`}>
+                  <div
+                    className={`max-w-[80%] space-y-2 rounded-2xl p-4 text-xs sm:text-sm leading-relaxed ${
+                      isUser
+                        ? "bg-[#4A5D4E] text-white"
+                        : "bg-[#F9F8F4] text-[#2D362E] border border-[#EAE7E0] shadow-xs"
+                    }`}
+                  >
                     <div className="whitespace-pre-line">{msg.text}</div>
 
                     {/* Suggested quick replies if available */}
                     {msg.suggestedActions && msg.suggestedActions.length > 0 && (
                       <div className="pt-2 border-t border-[#EAE7E0] space-y-1.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488]">Suggested Questions:</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488]">
+                          Suggested Questions:
+                        </span>
                         <div className="flex flex-wrap gap-1.5">
                           {msg.suggestedActions.map((sug, idx) => (
                             <button
@@ -826,13 +886,22 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
             </div>
             {/* AI Engine Status Badge */}
             <div className="flex justify-end px-1">
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
-                aiProvider === 'deepseek' ? 'bg-[#4A5D4E]/10 text-[#4A5D4E] border-[#4A5D4E]/20' :
-                aiProvider === 'gemini' ? 'bg-[#C18C5D]/10 text-[#C18C5D] border-[#C18C5D]/20' :
-                'bg-gray-100 text-gray-500 border-gray-200'
-              }`}>
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
+                  aiProvider === "deepseek"
+                    ? "bg-[#4A5D4E]/10 text-[#4A5D4E] border-[#4A5D4E]/20"
+                    : aiProvider === "gemini"
+                      ? "bg-[#C18C5D]/10 text-[#C18C5D] border-[#C18C5D]/20"
+                      : "bg-gray-100 text-gray-500 border-gray-200"
+                }`}
+              >
                 <Bot className="w-3 h-3" />
-                AI Engine: {aiProvider === 'deepseek' ? 'DeepSeek' : aiProvider === 'gemini' ? 'Gemini' : 'Simulated Fallback'}
+                AI Engine:{" "}
+                {aiProvider === "deepseek"
+                  ? "DeepSeek"
+                  : aiProvider === "gemini"
+                    ? "Gemini"
+                    : "Simulated Fallback"}
               </span>
             </div>
           </div>
@@ -850,11 +919,13 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
             }`}
           >
             {/* Visual Grip Handle Indicator */}
-            <div className={`flex flex-col items-center justify-center gap-1 px-0.5 py-2.5 rounded-full transition-all ${
-              isResizingChat
-                ? "bg-[#4A5D4E] text-white py-5 shadow-sm"
-                : "bg-[#EAE7E0] group-hover:bg-[#4A5D4E] text-[#606C5D] group-hover:text-white"
-            }`}>
+            <div
+              className={`flex flex-col items-center justify-center gap-1 px-0.5 py-2.5 rounded-full transition-all ${
+                isResizingChat
+                  ? "bg-[#4A5D4E] text-white py-5 shadow-sm"
+                  : "bg-[#EAE7E0] group-hover:bg-[#4A5D4E] text-[#606C5D] group-hover:text-white"
+              }`}
+            >
               <GripVertical className="w-2.5 h-5" />
             </div>
           </div>
@@ -866,44 +937,55 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 bg-white rounded-2xl border border-[#EAE7E0] p-6 space-y-5 shadow-sm">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-[#C18C5D]">Offer Intelligence</span>
-              <h3 className="text-lg font-serif font-bold text-[#2D362E] mt-0.5">Customize Property Details</h3>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#C18C5D]">
+                Offer Intelligence
+              </span>
+              <h3 className="text-lg font-serif font-bold text-[#2D362E] mt-0.5">
+                Customize Property Details
+              </h3>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#606C5D] mb-1">Select Property</label>
+                <label className="block text-xs font-semibold text-[#606C5D] mb-1">
+                  Select Property
+                </label>
                 <select
                   value={selectedPropertyId}
                   onChange={(e) => setSelectedPropertyId(e.target.value)}
                   className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#2D362E] font-medium focus:outline-none focus:border-[#4A5D4E]"
                 >
-                  {properties.map(p => (
-                    <option key={p.id} value={p.id}>{p.title} ({formatUSD(p.price)})</option>
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title} ({formatUSD(p.price)})
+                    </option>
                   ))}
                   <option value="custom">Custom Property...</option>
                 </select>
 
-                {selectedPropertyId !== "custom" && properties.find(p => p.id === selectedPropertyId) && (
-                  <div className="pt-1.5 flex justify-end">
-                    <a
-                      href={getZillowUrl(properties.find(p => p.id === selectedPropertyId)!)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold border border-blue-200 transition-colors"
-                      title="Open selected property live on Zillow.com"
-                    >
-                      <span>View on Zillow</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                )}
+                {selectedPropertyId !== "custom" &&
+                  properties.find((p) => p.id === selectedPropertyId) && (
+                    <div className="pt-1.5 flex justify-end">
+                      <a
+                        href={getZillowUrl(properties.find((p) => p.id === selectedPropertyId)!)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold border border-blue-200 transition-colors"
+                        title="Open selected property live on Zillow.com"
+                      >
+                        <span>View on Zillow</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
               </div>
 
               {selectedPropertyId === "custom" && (
                 <>
                   <div>
-                    <label className="block text-xs font-semibold text-[#606C5D] mb-1">Target Price ($)</label>
+                    <label className="block text-xs font-semibold text-[#606C5D] mb-1">
+                      Target Price ($)
+                    </label>
                     <input
                       type="number"
                       step="5000"
@@ -913,7 +995,9 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#606C5D] mb-1">Days on Market</label>
+                    <label className="block text-xs font-semibold text-[#606C5D] mb-1">
+                      Days on Market
+                    </label>
                     <input
                       type="number"
                       value={daysOnMarket}
@@ -925,31 +1009,49 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-[#606C5D] mb-1">Loan Program (IPC Cap)</label>
+                <label className="block text-xs font-semibold text-[#606C5D] mb-1">
+                  Loan Program (IPC Cap)
+                </label>
                 <select
                   value={offerLoanType}
                   onChange={(e) => setOfferLoanType(e.target.value)}
                   className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#2D362E] font-medium focus:outline-none focus:border-[#4A5D4E]"
                 >
-                  <option value="Conventional (>90% LTV, 3% IPC limit)">Conventional &gt;90% LTV (3% Max IPC)</option>
-                  <option value="Conventional (80%-90% LTV, 6% IPC limit)">Conventional 80%-90% LTV (6% Max IPC)</option>
-                  <option value="Conventional (<=80% LTV, 9% IPC limit)">Conventional &le;80% LTV (9% Max IPC)</option>
+                  <option value="Conventional (>90% LTV, 3% IPC limit)">
+                    Conventional &gt;90% LTV (3% Max IPC)
+                  </option>
+                  <option value="Conventional (80%-90% LTV, 6% IPC limit)">
+                    Conventional 80%-90% LTV (6% Max IPC)
+                  </option>
+                  <option value="Conventional (<=80% LTV, 9% IPC limit)">
+                    Conventional &le;80% LTV (9% Max IPC)
+                  </option>
                   <option value="FHA Loan (6% Max IPC)">FHA Loan (6% Max IPC)</option>
-                  <option value="USDA Rural Development (6% Max IPC)">USDA Rural Development (6% Max IPC)</option>
-                  <option value="VA Home Loan (4% Max Seller Concessions)">VA Home Loan (4% Max Concessions)</option>
+                  <option value="USDA Rural Development (6% Max IPC)">
+                    USDA Rural Development (6% Max IPC)
+                  </option>
+                  <option value="VA Home Loan (4% Max Seller Concessions)">
+                    VA Home Loan (4% Max Concessions)
+                  </option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#606C5D] mb-1">Current Market Climate</label>
+                <label className="block text-xs font-semibold text-[#606C5D] mb-1">
+                  Current Market Climate
+                </label>
                 <select
                   value={marketCondition}
                   onChange={(e) => setMarketCondition(e.target.value)}
                   className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#2D362E] font-medium focus:outline-none focus:border-[#4A5D4E]"
                 >
-                  <option value="Hot Seller's Market (Multiple Offers)">Hot Seller's Market (Multiple Offers)</option>
+                  <option value="Hot Seller's Market (Multiple Offers)">
+                    Hot Seller's Market (Multiple Offers)
+                  </option>
                   <option value="Balanced Market">Balanced Market (Standard)</option>
-                  <option value="Buyer's Market (Price Cuts & High Inventory)">Buyer's Market (High Inventory & Price Cuts)</option>
+                  <option value="Buyer's Market (Price Cuts & High Inventory)">
+                    Buyer's Market (High Inventory & Price Cuts)
+                  </option>
                 </select>
               </div>
 
@@ -958,8 +1060,14 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
                 disabled={loadingOffer}
                 className="w-full py-3 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-xs shadow-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
-                {loadingOffer ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-[#C18C5D]" />}
-                <span>{loadingOffer ? "Generating Strategy..." : "Generate AI Offer Strategy"}</span>
+                {loadingOffer ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4 text-[#C18C5D]" />
+                )}
+                <span>
+                  {loadingOffer ? "Generating Strategy..." : "Generate AI Offer Strategy"}
+                </span>
               </button>
             </div>
           </div>
@@ -977,7 +1085,10 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
             ) : (
               <div className="text-center py-16 text-[#9A9488] space-y-2">
                 <Sparkles className="w-8 h-8 mx-auto text-[#9A9488]" />
-                <p className="text-xs">Click "Generate AI Offer Strategy" to get tactical price targets, EMD guidelines, contingency clauses, and seller concession requests.</p>
+                <p className="text-xs">
+                  Click "Generate AI Offer Strategy" to get tactical price targets, EMD guidelines,
+                  contingency clauses, and seller concession requests.
+                </p>
               </div>
             )}
           </div>
@@ -989,16 +1100,23 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 bg-white rounded-2xl border border-[#EAE7E0] p-6 space-y-5 shadow-sm">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-[#C18C5D]">Defect Triage & Repair Credits</span>
-              <h3 className="text-lg font-serif font-bold text-[#2D362E] mt-0.5">Paste Inspection Notes</h3>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#C18C5D]">
+                Defect Triage & Repair Credits
+              </span>
+              <h3 className="text-lg font-serif font-bold text-[#2D362E] mt-0.5">
+                Paste Inspection Notes
+              </h3>
               <p className="text-xs text-[#606C5D]">
-                Paste findings from your home inspector to identify safety red flags, ballpark contractor repair costs, and generate seller credit request language.
+                Paste findings from your home inspector to identify safety red flags, ballpark
+                contractor repair costs, and generate seller credit request language.
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#606C5D] mb-1">Inspection Findings / Punchlist</label>
+                <label className="block text-xs font-semibold text-[#606C5D] mb-1">
+                  Inspection Findings / Punchlist
+                </label>
                 <textarea
                   rows={8}
                   value={inspectionInput}
@@ -1012,8 +1130,16 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
                 disabled={loadingInspection}
                 className="w-full py-3 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-xs shadow-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
-                {loadingInspection ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                <span>{loadingInspection ? "Auditing Inspection..." : "Triage Defects & Draft Credit Letter"}</span>
+                {loadingInspection ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ShieldCheck className="w-4 h-4" />
+                )}
+                <span>
+                  {loadingInspection
+                    ? "Auditing Inspection..."
+                    : "Triage Defects & Draft Credit Letter"}
+                </span>
               </button>
             </div>
           </div>
@@ -1031,7 +1157,10 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
             ) : (
               <div className="text-center py-16 text-[#9A9488] space-y-2">
                 <ShieldCheck className="w-8 h-8 mx-auto text-[#9A9488]" />
-                <p className="text-xs">Paste inspection punchlist items and click above to receive cost ranges, urgency ratings, and formal seller repair request drafts.</p>
+                <p className="text-xs">
+                  Paste inspection punchlist items and click above to receive cost ranges, urgency
+                  ratings, and formal seller repair request drafts.
+                </p>
               </div>
             )}
           </div>
@@ -1042,49 +1171,69 @@ export const AICopilot: React.FC<AICopilotProps> = ({ profile, properties, loanO
       {activeTool === "le_decoder" && (
         <div className="bg-white rounded-2xl border border-[#EAE7E0] p-6 sm:p-8 space-y-6 shadow-sm">
           <div className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#C18C5D]">CFPB Standard Disclosure</span>
-            <h3 className="text-xl font-serif font-bold text-[#2D362E]">How to Read Your Official Loan Estimate (LE)</h3>
-            <p className="text-xs text-[#606C5D]">Lenders must provide this 3-page form within 3 business days of applying. Here is how to audit each section:</p>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#C18C5D]">
+              CFPB Standard Disclosure
+            </span>
+            <h3 className="text-xl font-serif font-bold text-[#2D362E]">
+              How to Read Your Official Loan Estimate (LE)
+            </h3>
+            <p className="text-xs text-[#606C5D]">
+              Lenders must provide this 3-page form within 3 business days of applying. Here is how
+              to audit each section:
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="bg-[#F9F8F4] p-4 rounded-xl border border-[#EAE7E0] space-y-2">
               <div className="flex items-center gap-2 text-[#4A5D4E] font-bold">
-                <span className="w-5 h-5 rounded-full bg-[#4A5D4E]/20 flex items-center justify-center text-xs">A</span>
+                <span className="w-5 h-5 rounded-full bg-[#4A5D4E]/20 flex items-center justify-center text-xs">
+                  A
+                </span>
                 <span>Section A: Origination Charges</span>
               </div>
               <p className="text-[#606C5D] leading-relaxed">
-                <strong className="text-[#2D362E]">Zero-Tolerance Section:</strong> This is what the lender charges you directly (application, underwriting, discount points). Compare Section A between lenders to find the cheapest loan.
+                <strong className="text-[#2D362E]">Zero-Tolerance Section:</strong> This is what the
+                lender charges you directly (application, underwriting, discount points). Compare
+                Section A between lenders to find the cheapest loan.
               </p>
             </div>
 
             <div className="bg-[#F9F8F4] p-4 rounded-xl border border-[#EAE7E0] space-y-2">
               <div className="flex items-center gap-2 text-[#4A5D4E] font-bold">
-                <span className="w-5 h-5 rounded-full bg-[#4A5D4E]/20 flex items-center justify-center text-xs">B</span>
+                <span className="w-5 h-5 rounded-full bg-[#4A5D4E]/20 flex items-center justify-center text-xs">
+                  B
+                </span>
                 <span>Section B: Services You Cannot Shop For</span>
               </div>
               <p className="text-[#606C5D] leading-relaxed">
-                Appraisal fees, credit report pulls, flood certifications. The lender selects these vendors on your behalf.
+                Appraisal fees, credit report pulls, flood certifications. The lender selects these
+                vendors on your behalf.
               </p>
             </div>
 
             <div className="bg-[#F9F8F4] p-4 rounded-xl border border-[#EAE7E0] space-y-2">
               <div className="flex items-center gap-2 text-[#4A5D4E] font-bold">
-                <span className="w-5 h-5 rounded-full bg-[#4A5D4E]/20 flex items-center justify-center text-xs">C</span>
+                <span className="w-5 h-5 rounded-full bg-[#4A5D4E]/20 flex items-center justify-center text-xs">
+                  C
+                </span>
                 <span>Section C: Services You CAN Shop For</span>
               </div>
               <p className="text-[#606C5D] leading-relaxed">
-                Title search, title insurance, settlement agent / closing attorney fees. You have the legal right to choose your own title company to save money.
+                Title search, title insurance, settlement agent / closing attorney fees. You have
+                the legal right to choose your own title company to save money.
               </p>
             </div>
 
             <div className="bg-[#F9F8F4] p-4 rounded-xl border border-[#EAE7E0] space-y-2">
               <div className="flex items-center gap-2 text-[#C18C5D] font-bold">
-                <span className="w-5 h-5 rounded-full bg-[#C18C5D]/20 flex items-center justify-center text-xs">F</span>
+                <span className="w-5 h-5 rounded-full bg-[#C18C5D]/20 flex items-center justify-center text-xs">
+                  F
+                </span>
                 <span>Section F & G: Prepaids and Initial Escrow</span>
               </div>
               <p className="text-[#606C5D] leading-relaxed">
-                Prepaid homeowners insurance (12-14 months) and prepaid property taxes (2-4 months) to fund your impound escrow account.
+                Prepaid homeowners insurance (12-14 months) and prepaid property taxes (2-4 months)
+                to fund your impound escrow account.
               </p>
             </div>
           </div>

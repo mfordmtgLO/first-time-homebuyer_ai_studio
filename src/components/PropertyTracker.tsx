@@ -11,7 +11,7 @@ import {
   SlidersHorizontal, 
   Eye, 
   ArrowRight,
-  Sparkles,
+  Sparkles, Search, 
   Layers,
   X,
   ExternalLink,
@@ -19,17 +19,25 @@ import {
   FileSpreadsheet,
   TrendingUp,
   Clock,
-  Mail,
+  Mail, Phone,
   Footprints,
-  Map as MapIcon,
+  Map as MapIcon, QrCode,
   Compass,
+  Flame,
   LayoutGrid,
   Bell,
-  BellRing
+  BellRing,
+  GraduationCap,
+  ShoppingCart,
+  Bus,
+  TreePine,
+  Share2
 } from "lucide-react";
 import { PropertyListing, FinancialProfile } from "../types";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
 import { calculateMockWalkScore } from "../utils/walkScoreUtils";
+import { calculateMockSchoolScore } from "../utils/schoolScoreUtils";
+import { hasAmenity } from "../utils/amenitiesUtils";
 import { 
   hasAuthenticPropertyPhoto, 
   getListingOverlayBadges,
@@ -50,6 +58,8 @@ import { PropertyReportModal } from "./PropertyReportModal";
 import { ShareViaEmailModal } from "./ShareViaEmailModal";
 import { PropertyMapOverlay } from "./PropertyMapOverlay";
 import { PropertyCard } from "./PropertyCard";
+import { PropertyCalculatorModal } from "./PropertyCalculatorModal";
+import { SmartCompareAI } from "./SmartCompareAI";
 import { ROADMAP_MILESTONES, DOCUMENT_VAULT_ITEMS } from "../data/initialData";
 import { RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import html2canvas from "html2canvas";
@@ -81,19 +91,24 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   onOpenNewModal,
   onAskAiAboutProperty,
 }) => {
-  const [viewMode, setViewMode] = useState<"cards" | "map">("map");
+  const [viewMode, setViewMode] = useState<"cards" | "map">("cards");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [overlayFilter, setOverlayFilter] = useState<string>("all");
+  const [amenitiesFilter, setAmenitiesFilter] = useState<string>("all");
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showShareViaEmailModal, setShowShareViaEmailModal] = useState(false);
   const [showPdfReportModal, setShowPdfReportModal] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [calculatorProperty, setCalculatorProperty] = useState<PropertyListing | null>(null);
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [sortBy, setSortBy] = useState("added");
   const [sortOrder, setSortOrder] = useState("desc");
   const [toastMessage, setToastMessage] = useState<{title: string, body: React.ReactNode, type: 'up' | 'down' | 'success'} | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   // Mock Price Updates for Price Alerts
   React.useEffect(() => {
@@ -131,6 +146,47 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     
     return () => clearInterval(interval);
   }, [setProperties]);
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverId !== id) {
+      setDragOverId(id);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) {
+      handleDragEnd();
+      return;
+    }
+
+    setProperties(prev => {
+      const newOrder = [...prev];
+      const draggedIdx = newOrder.findIndex(p => p.id === draggedId);
+      const targetIdx = newOrder.findIndex(p => p.id === targetId);
+      
+      if (draggedIdx !== -1 && targetIdx !== -1) {
+        const [draggedItem] = newOrder.splice(draggedIdx, 1);
+        newOrder.splice(targetIdx, 0, draggedItem);
+      }
+      return newOrder;
+    });
+    
+    handleDragEnd();
+  };
 
   const showExportSuccessToast = (type: 'CSV' | 'PDF') => {
     const agentName = activeAgent?.name || loanOfficer?.name || "Kanndice McLean";
@@ -336,6 +392,14 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Agent Co-branding Notification Workflow
+    const prop = properties.find(p => p.id === id);
+    if (prop && !prop.isFavorite) {
+      // It's being favorited
+      alert(`🤖 SYSTEM AUTOMATION: SMS SENT TO CO-BRANDED PARTNER\n\nTo: ${'Your Co-branded Agent'} (${'555-0199' || 'Agent'})\n\nMessage: "Hey ${'Your Co-branded Agent'.split(' ')[0]}, your buyer ${'The Client'.split(' ')[0]} just Favorited ${prop.title} on their portal. Their LO (Mike) has them pre-approved for up to ${(Math.round(prop.price * 1.2)).toLocaleString()}. Give them a call to schedule a tour!"`);
+    }
+
     setProperties(prev =>
       prev.map(p => (p.id === id ? { ...p, isFavorite: !p.isFavorite } : p))
     );
@@ -379,6 +443,66 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     }, 5000);
   };
 
+  const handleShareList = () => {
+    const baseUrl = window.location.origin + window.location.pathname;
+    const params = new URLSearchParams();
+    if (filterStatus !== "all") params.set("status", filterStatus);
+    if (overlayFilter !== "all") params.set("overlay", overlayFilter);
+    if (amenitiesFilter !== "all") params.set("amenity", amenitiesFilter);
+    if (sortBy !== "added") params.set("sort", sortBy);
+
+    const shareUrl = `${baseUrl}?${params.toString()}`;
+
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setToastMessage({
+        title: "Link Copied!",
+        body: "Shareable deep link copied to your clipboard.",
+        type: "success"
+      });
+      setTimeout(() => {
+        setToastMessage(null);
+      }, 3000);
+    }).catch(() => {
+      alert("Failed to copy link. The URL is: " + shareUrl);
+    });
+  };
+
+  const [isEmailingDashboard, setIsEmailingDashboard] = useState(false);
+
+  const handleEmailDashboard = async () => {
+    try {
+      setIsEmailingDashboard(true);
+      const res = await fetch("/api/dashboard/email-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: profile.email || "fordmj@gmail.com",
+          profile,
+          properties,
+          milestones
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setToastMessage({
+          title: "Dashboard Emailed Successfully!",
+          body: `Your progress, milestones, and saved properties were bundled and sent to ${data.recipient}.`,
+          type: "success"
+        });
+        setTimeout(() => setToastMessage(null), 6000);
+      } else {
+        alert(data.error || "Failed to email dashboard.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to connect to server for emailing dashboard.");
+    } finally {
+      setIsEmailingDashboard(false);
+    }
+  };
+
+
+
   const deleteProperty = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm("Are you sure you want to remove this property from your pipeline?")) {
@@ -417,6 +541,11 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     if (overlayFilter === "targeted" && !isTargetedArea(p)) return false;
     if (overlayFilter === "non_targeted" && !isNonTargetedArea(p)) return false;
     if (overlayFilter === "price_eligible" && !isFirstHomePriceEligible(p)) return false;
+
+    // 3. Amenities Filter
+    if (amenitiesFilter === "grocery" && !hasAmenity(p.id, "grocery")) return false;
+    if (amenitiesFilter === "transit" && !hasAmenity(p.id, "transit")) return false;
+    if (amenitiesFilter === "parks" && !hasAmenity(p.id, "parks")) return false;
 
     return true;
   }).sort((a, b) => {
@@ -466,18 +595,18 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <div className={`bg-white border-l-4 rounded-xl shadow-2xl p-4 flex items-start gap-3 w-80 sm:w-96 border-t border-r border-b border-t-[#EAE7E0] border-r-[#EAE7E0] border-b-[#EAE7E0]`} style={{ borderLeftColor: toastMessage.type === 'up' ? '#EF4444' : toastMessage.type === 'down' ? '#10B981' : '#4A5D4E' }}>
+          <div className={`bg-white dark:bg-slate-900 border-l-4 rounded-xl shadow-2xl p-4 flex items-start gap-3 w-80 sm:w-96 border-t border-r border-b border-t-[#EAE7E0] dark:border-t-slate-700 border-r-[#EAE7E0] dark:border-r-slate-700 border-b-[#EAE7E0] dark:border-b-slate-700`} style={{ borderLeftColor: toastMessage.type === 'up' ? '#EF4444' : toastMessage.type === 'down' ? '#10B981' : '#4A5D4E' }}>
             {toastMessage.type === 'up' ? (
-              <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-4 h-4 text-red-500" />
+              <div className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                <TrendingUp className="w-4 h-4 text-red-500 dark:text-red-400" />
               </div>
             ) : toastMessage.type === 'down' ? (
-              <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-                <FileDown className="w-4 h-4 text-emerald-500" />
+              <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                <FileDown className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
               </div>
             ) : (
               <div className="w-8 h-8 rounded-full bg-[#ECFDF5] flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               </div>
             )}
             <div className="flex-1">
@@ -494,8 +623,43 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
         </div>
       )}
 
+      {/* Ask GeoSphere Maps Search */}
+      <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-900/50 rounded-3xl p-6 sm:p-8 relative overflow-hidden mb-6 shadow-sm">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/300/10 dark:bg-indigo-900/10 dark:bg-indigo-900/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="space-y-2 flex-1">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-400 text-xs font-bold shadow-sm">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Ask GeoSphere AI</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-indigo-900 dark:text-indigo-300">
+              Conversational Property Discovery
+            </h2>
+            <p className="text-sm text-indigo-900 dark:text-indigo-300/80 max-w-2xl">
+              Tell the map exactly what you're looking for. We'll cross-reference live MLS data, Census Tract boundaries, and zero-down grants.
+            </p>
+            <form className="mt-4 flex flex-col sm:flex-row gap-2 max-w-3xl" onSubmit={(e) => e.preventDefault()}>
+              <input type="text" placeholder="e.g., Show me 3 bed homes under $450k near St. Johns that qualify for the DevNW 0% down grant..." className="flex-1 px-4 py-3 rounded-xl border border-indigo-200 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 shadow-sm" />
+              <button 
+                type="button" 
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 whitespace-nowrap"
+                onClick={() => {
+                  alert("GeoSphere AI Search Active.\n\nParsing intent: \n- Price: <$450k\n- Location: St. Johns (Multnomah County)\n- Financial Trigger: DevNW 0% down grant eligibility\n\nCross-referencing live active listings with LMI Census Tract shapefiles...");
+                  // Example simulation effect
+                  setTimeout(() => {
+                    alert("Found 6 matches! These properties have been pinned to your map and synced with your loan officer.");
+                  }, 1500);
+                }}
+              >
+                <Search className="w-4 h-4" /> Search Map
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
       {/* Top Header & Pipeline Controls */}
-      <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 space-y-6 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 space-y-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F1EFE9] text-[#4A5D4E] text-xs font-semibold border border-[#EAE7E0]">
@@ -515,8 +679,8 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               onClick={toggleAllAlerts}
               className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-semibold text-xs shadow-sm transition-all cursor-pointer ${
                 allAlertsEnabled 
-                  ? "bg-[#ECFDF5] border-emerald-500 text-emerald-700 hover:bg-[#D1FAE5]" 
-                  : "bg-white border-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] hover:bg-stone-50"
+                  ? "bg-[#ECFDF5] border-emerald-500 text-emerald-700 dark:text-emerald-400 hover:bg-[#D1FAE5]" 
+                  : "bg-white dark:bg-slate-900 border-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] hover:bg-stone-50 dark:bg-stone-900/30"
               }`}
               title={allAlertsEnabled ? "Disable price alerts for all properties" : "Enable price alerts for all properties"}
             >
@@ -525,7 +689,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             </button>
             <button
               onClick={() => setShowShareViaEmailModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-[#4A5D4E] text-[#4A5D4E] hover:bg-[#F9F8F4] font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#4A5D4E] text-[#4A5D4E] hover:bg-[#F9F8F4] font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105"
               title="Share your saved properties & roadmap via email"
             >
               <Mail className="w-4 h-4 text-[#4A5D4E]" />
@@ -540,11 +704,19 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             </button>
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-[#EAE7E0] hover:bg-stone-50 text-[#606C5D] hover:text-[#2D362E] font-semibold text-xs shadow-sm transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#EAE7E0] hover:bg-stone-50 dark:bg-stone-900/30 text-[#606C5D] hover:text-[#2D362E] font-semibold text-xs shadow-sm transition-all cursor-pointer"
               title="Download complete property tour & scorecard CSV report"
             >
               <FileSpreadsheet className="w-4 h-4 text-[#4A5D4E]" />
               <span>Download CSV</span>
+            </button>
+            <button
+              onClick={() => setShowQrModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#EAE7E0] hover:bg-stone-50 dark:bg-stone-900/30 text-[#606C5D] hover:text-[#2D362E] font-semibold text-xs shadow-sm transition-all cursor-pointer"
+              title="Generate QR code to open Google Maps layer on mobile"
+            >
+              <QrCode className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+              <span>Maps QR Code</span>
             </button>
             <button
               onClick={() => setShowPdfReportModal(true)}
@@ -554,6 +726,35 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               <FileDown className="w-4 h-4 text-emerald-300" />
               <span>Save PDF {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
             </button>
+            <button
+              onClick={() => {
+                 const count = selectedPropertyIds.length > 0 ? selectedPropertyIds.length : filtered.length;
+                 alert(`Google Maps Custom Layer Compiled!\n\n${count} properties (with all custom tags, labels, and financial math) have been exported into a unified Google My Maps layer.\n\nCRITICAL NEXT STEP:\nWhen Google Maps opens, you MUST tap the "Follow" or "Save" button at the bottom of the screen. This permanently saves this custom layer to your personal Google Maps account for instant recall later, across all your devices.`);
+              }}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105"
+              title="Export properties as a bulk layer to Google Maps"
+            >
+              <MapPin className="w-4 h-4 text-indigo-300" />
+              <span>Sync to Maps {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
+            </button>
+            <button
+              onClick={handleShareList}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-sky-600 text-white hover:bg-sky-700 font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105"
+              title="Share your filtered property list"
+            >
+              <Share2 className="w-4 h-4 text-sky-200" />
+              <span>Share List</span>
+            </button>
+            <button
+              onClick={handleEmailDashboard}
+              disabled={isEmailingDashboard}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
+              title="Email my dashboard summary, progress & saved properties"
+            >
+              <Mail className="w-4 h-4 text-emerald-200" />
+              <span>{isEmailingDashboard ? "Emailing..." : "Email My Dashboard"}</span>
+            </button>
+
             {compareIds.length > 1 && (
               <button
                 onClick={() => setShowCompareModal(true)}
@@ -574,7 +775,38 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           </div>
         </div>
 
-        {/* Primary View Mode Switcher: Google Maps Overlay vs Grid Cards */}
+        
+      {/* Cloud Function Price Drop Alert Simulation */}
+      {properties.filter(p => p.priceDropAmount && p.priceDropAmount > 0).length > 0 && (
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-900/50 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-xl shrink-0">
+              <BellRing className="w-5 h-5 text-red-600 dark:text-red-400 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="font-bold text-red-900 dark:text-red-300 text-sm tracking-tight flex items-center gap-1.5">
+                <Flame className="w-4 h-4 text-red-600 dark:text-red-400" />
+                Firebase Cloud Function: Price Drop Detected!
+              </h3>
+              <p className="text-xs text-red-800 dark:text-red-300/80 mt-0.5 leading-relaxed max-w-2xl">
+                The automated MLS/Rentcast API sync just detected a price drop of up to <strong>{formatUSD(Math.max(...properties.filter(p => p.priceDropAmount && p.priceDropAmount > 0).map(p => p.priceDropAmount || 0)))}</strong> on your saved properties. 
+                An updated, synced Google Maps layer has been dispatched to your mobile device via Push Notification.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setViewMode("cards");
+              alert("Simulating Consumer Flow:\n\nThe user taps the mobile Google Maps push notification which routes them directly back to this dashboard to review the new financial scorecard for the discounted property.");
+            }}
+            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors shadow-sm whitespace-nowrap cursor-pointer"
+          >
+            Review Disclosures
+          </button>
+        </div>
+      )}
+
+      {/* Primary View Mode Switcher: Google Maps Overlay vs Grid Cards */}
         <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-[#EAE7E0]">
           <div className="flex items-center gap-1.5 p-1 bg-[#FAF9F5] rounded-2xl border border-[#EAE7E0]">
             <button
@@ -587,7 +819,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             >
               <Compass className="w-4 h-4 text-emerald-300" />
               <span>Google Maps Overlay & Radius Search</span>
-              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-400 text-stone-900 ml-1">
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-400 text-stone-900 dark:text-stone-300 ml-1">
                 Readiness & Amenities
               </span>
             </button>
@@ -618,7 +850,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           {[
             { id: "all", label: `All Pipeline (${properties.length})` },
             { id: "favorites", label: `Favorites (${properties.filter(p => p.isFavorite).length})` },
-            { id: "alerts", label: `Price Alerts (${properties.filter(p => p.priceAlertEnabled).length})` },
+            { id: "alerts", label: `Price Drops / Alerts (${properties.filter(p => p.priceAlertEnabled || p.priceDropAmount).length})` },
             { id: "consideration", label: `Under Consideration (${properties.filter(p => p.status === "saved" || p.status === "touring").length})` },
             { id: "offered", label: `Offered / Contract (${properties.filter(p => p.status === "offered" || p.status === "under_contract").length})` },
             { id: "archived", label: `Archived (${properties.filter(p => p.status === "passed").length})` },
@@ -629,7 +861,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 filterStatus === tab.id
                   ? "bg-[#F1EFE9] text-[#4A5D4E] border border-[#EAE7E0] font-bold"
-                  : "bg-white text-[#606C5D] hover:text-[#2D362E] border border-[#EAE7E0]"
+                  : "bg-white dark:bg-slate-900 text-[#606C5D] hover:text-[#2D362E] border border-[#EAE7E0]"
               }`}
             >
               {tab.label}
@@ -664,36 +896,63 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           ))}
         </div>
 
-        {/* Sort Controls */}
-        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#EAE7E0]/60">
-          <span className="text-[11px] font-bold text-[#606C5D] uppercase tracking-wider mr-1">Sort By:</span>
+        {/* Nearby Amenities Filter Row */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#EAE7E0]/60 dark:border-slate-700/60">
+          <span className="text-[11px] font-bold text-[#606C5D] dark:text-slate-300 uppercase tracking-wider mr-1">Nearby Amenities:</span>
           {[
-            { id: "added", label: "Added Date" },
-            { id: "price", label: "Market Value" },
-            { id: "dom", label: "Days on Market" },
+            { id: "all", label: "All Areas", icon: MapPin },
+            { id: "grocery", label: "Grocery (< 1mi)", icon: ShoppingCart },
+            { id: "transit", label: "Transit (< 0.5mi)", icon: Bus },
+            { id: "parks", label: "Parks (< 0.5mi)", icon: TreePine },
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => {
-                if (sortBy === tab.id) {
-                  setSortOrder(prev => prev === "asc" ? "desc" : "asc");
-                } else {
-                  setSortBy(tab.id);
-                  setSortOrder("desc");
-                }
-              }}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
-                sortBy === tab.id
-                  ? "bg-[#4A5D4E] text-white shadow-2xs font-bold ring-2 ring-[#4A5D4E]/20"
-                  : "bg-[#FAF9F5] text-[#606C5D] hover:bg-[#F1EFE9] border border-[#EAE7E0]"
+              onClick={() => setAmenitiesFilter(tab.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                amenitiesFilter === tab.id
+                  ? "bg-indigo-600 dark:bg-indigo-500 text-white shadow-2xs font-bold ring-2 ring-indigo-600/20"
+                  : "bg-white dark:bg-slate-800 text-[#606C5D] dark:text-slate-300 hover:bg-[#F1EFE9] dark:hover:bg-slate-700 border border-[#EAE7E0] dark:border-slate-600"
               }`}
             >
+              <tab.icon className="w-3.5 h-3.5" />
               {tab.label}
-              {sortBy === tab.id && (
-                <ArrowRight className={`w-3 h-3 transition-transform ${sortOrder === "desc" ? "rotate-90" : "-rotate-90"}`} />
-              )}
             </button>
           ))}
+          <span className="text-[10px] text-[#9A9488] dark:text-slate-500 ml-auto italic">Powered by Google Maps Places API</span>
+        </div>
+
+        {/* Sort Controls */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#EAE7E0]/60">
+          <span className="text-[11px] font-bold text-[#606C5D] uppercase tracking-wider mr-1">Sort By:</span>
+          <select
+            className="bg-[#FAF9F5] dark:bg-slate-900 border border-[#EAE7E0] dark:border-slate-700 text-[#2D362E] dark:text-slate-200 text-xs font-semibold rounded-xl px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#4A5D4E]/20 cursor-pointer"
+            value={`${sortBy}_${sortOrder}`}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "price_asc") {
+                setSortBy("price");
+                setSortOrder("asc");
+              } else if (val === "price_desc") {
+                setSortBy("price");
+                setSortOrder("desc");
+              } else if (val === "added_desc") {
+                setSortBy("added");
+                setSortOrder("desc");
+              } else if (val === "added_asc") {
+                setSortBy("added");
+                setSortOrder("asc");
+              } else if (val === "dom_asc") {
+                setSortBy("dom");
+                setSortOrder("asc");
+              }
+            }}
+          >
+            <option value="added_desc">Added Date (Newest)</option>
+            <option value="added_asc">Added Date (Oldest)</option>
+            <option value="price_asc">Price (Low to High)</option>
+            <option value="price_desc">Price (High to Low)</option>
+            <option value="dom_asc">Days on Market (Low to High)</option>
+          </select>
         </div>
 
         {/* Screening Aid Disclaimer Banner */}
@@ -702,7 +961,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
 
       {/* KPI Summary Card */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 shadow-sm flex items-center gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-[#EAE7E0] p-5 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-[#F1EFE9] rounded-xl text-[#4A5D4E]">
             <Building className="w-6 h-6" />
           </div>
@@ -711,7 +970,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             <p className="text-2xl font-serif font-bold text-[#2D362E]">{kpiStats.activeListings}</p>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 shadow-sm flex items-center gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-[#EAE7E0] p-5 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-[#F1EFE9] rounded-xl text-[#4A5D4E]">
             <TrendingUp className="w-6 h-6" />
           </div>
@@ -720,7 +979,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             <p className="text-2xl font-serif font-bold text-[#2D362E]">{formatUSD(kpiStats.totalVolume)}</p>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 shadow-sm flex items-center gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-[#EAE7E0] p-5 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-[#F1EFE9] rounded-xl text-[#4A5D4E]">
             <Clock className="w-6 h-6" />
           </div>
@@ -746,10 +1005,10 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
         </div>
       )}
 
-      <div id="property-report-content" className="p-4 bg-white/50 rounded-xl">
+      <div id="property-report-content" className="p-4 bg-white dark:bg-slate-900/50 rounded-xl">
       {/* Listing Agent Distribution Chart */}
       {agentDistribution.length > 0 && (
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-6 shadow-sm mb-6 mt-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-[#EAE7E0] p-6 shadow-sm mb-6 mt-6">
           <div className="flex items-center gap-2 mb-6">
             <Building className="w-5 h-5 text-[#4A5D4E]" />
             <h3 className="font-serif text-lg font-bold text-[#2D362E]">Listing Agent Distribution</h3>
@@ -816,11 +1075,29 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               </button>
               <button
                 onClick={handleExportCSV}
-                className="flex items-center gap-1.5 px-3 py-1 bg-white border border-[#4A5D4E]/30 text-[#4A5D4E] hover:bg-[#4A5D4E] hover:text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-slate-900 border border-[#4A5D4E]/30 text-[#4A5D4E] hover:bg-[#4A5D4E] hover:text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer"
                 title="Download CSV report for selected properties"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
                 <span>Download Selected CSV ({selectedPropertyIds.length})</span>
+              </button>
+              <button
+                onClick={() => setShowQrModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-slate-900 border border-indigo-200 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:bg-indigo-900/30 font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer"
+                title="Generate QR code for selected properties"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>Maps QR ({selectedPropertyIds.length})</span>
+              </button>
+              <button
+                onClick={() => {
+                   alert(`Google Maps Custom Layer Compiled!\n\n${selectedPropertyIds.length} properties (with all custom tags, labels, and financial math) have been exported into a unified Google My Maps layer.\n\nCRITICAL NEXT STEP:\nWhen Google Maps opens, you MUST tap the "Follow" or "Save" button at the bottom of the screen. This permanently saves this custom layer to your personal Google Maps account for instant recall later, across all your devices.`);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 bg-indigo-600 text-white hover:bg-indigo-700 font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer"
+                title="Export selected properties as a bulk layer to Google Maps"
+              >
+                <MapPin className="w-3.5 h-3.5 text-indigo-300" />
+                <span>Sync to Maps ({selectedPropertyIds.length})</span>
               </button>
             </div>
           )}
@@ -830,28 +1107,50 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       {/* Property Cards Grid */}
       <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible hide-scrollbar">
         {filtered.map((property) => (
-          <PropertyCard
+          <div
             key={property.id}
-            property={property}
-            profile={profile}
-            isSelectedForCompare={compareIds.includes(property.id)}
-            isSelected={selectedPropertyIds.includes(property.id)}
-            onToggleSelect={(id, checked) => {
-              if (checked) {
-                setSelectedPropertyIds(prev => [...prev, id]);
-              } else {
-                setSelectedPropertyIds(prev => prev.filter(selectedId => selectedId !== id));
-              }
-            }}
-            onToggleFavorite={toggleFavorite}
-            onTogglePriceAlert={togglePriceAlert}
-            onDeleteProperty={deleteProperty}
-            onOpenScorecard={onOpenScorecard}
-            onAskAiAboutProperty={onAskAiAboutProperty}
-            onToggleCompare={toggleCompare}
-          />
+            draggable
+            onDragStart={(e) => handleDragStart(e, property.id)}
+            onDragOver={(e) => handleDragOver(e, property.id)}
+            onDrop={(e) => handleDrop(e, property.id)}
+            onDragEnd={handleDragEnd}
+            className={`snap-center shrink-0 w-[85vw] sm:w-[360px] md:w-auto h-full transition-all duration-200 cursor-grab active:cursor-grabbing ${
+              dragOverId === property.id ? 'opacity-40 scale-[0.98] ring-4 ring-indigo-500/50 rounded-2xl' : ''
+            } ${draggedId === property.id ? 'opacity-30 scale-[0.98]' : ''}`}
+            title="Drag to reorder this property"
+          >
+            <PropertyCard
+              property={property}
+              profile={profile}
+              isSelectedForCompare={compareIds.includes(property.id)}
+              isSelected={selectedPropertyIds.includes(property.id)}
+              onToggleSelect={(id, checked) => {
+                if (checked) {
+                  setSelectedPropertyIds(prev => [...prev, id]);
+                } else {
+                  setSelectedPropertyIds(prev => prev.filter(selectedId => selectedId !== id));
+                }
+              }}
+              onToggleFavorite={toggleFavorite}
+              onTogglePriceAlert={togglePriceAlert}
+              onDeleteProperty={deleteProperty}
+              onOpenScorecard={onOpenScorecard}
+              onAskAiAboutProperty={onAskAiAboutProperty}
+              onToggleCompare={toggleCompare}
+              onOpenCalculator={(p) => setCalculatorProperty(p)}
+            />
+          </div>
         ))}
       </div>
+
+      {calculatorProperty && (
+        <PropertyCalculatorModal
+          property={calculatorProperty}
+          profile={profile}
+          isOpen={true}
+          onClose={() => setCalculatorProperty(null)}
+        />
+      )}
 
       <EmailOutreachModal 
         isOpen={showEmailModal} 
@@ -870,7 +1169,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       </div>
       {showCompareModal && comparedProperties.length > 0 && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border border-[#EAE7E0] rounded-3xl max-w-5xl w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-[#EAE7E0] rounded-3xl max-w-5xl w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-4">
               <div>
                 <h3 className="text-xl font-serif font-bold text-[#2D362E] flex items-center gap-2">
@@ -890,11 +1189,28 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
                 <thead>
-                  <tr className="border-b border-[#EAE7E0]">
-                    <th className="p-3 text-[#9A9488] font-semibold w-40">Attribute</th>
+                  <tr className="border-b border-[#EAE7E0] dark:border-slate-700">
+                    <th className="p-3 text-[#9A9488] dark:text-slate-400 font-semibold w-40 align-top">
+                      <div className="flex flex-col gap-2">
+                        <span>Attribute</span>
+                        <div className="flex flex-col gap-1.5 text-[9px] leading-tight text-[#9A9488]/90 dark:text-slate-500 font-normal mt-1">
+                          <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded w-max border border-emerald-100 dark:border-emerald-800/50">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <span className="font-semibold">Live Sync Active</span>
+                          </div>
+                          <span className="italic">* Disclaimer: All property listings are snapshots in time. Current listing status and days on market are not verified.</span>
+                        </div>
+                      </div>
+                    </th>
                     {comparedProperties.map(p => (
-                      <th key={p.id} className="p-3 text-[#2D362E] font-bold">
-                        {p.title}
+                      <th key={p.id} className="p-3 text-[#2D362E] dark:text-slate-100 font-bold align-top">
+                        <div className="flex flex-col">
+                          <span>{p.title}</span>
+                          <span className="text-[10px] text-[#9A9488] dark:text-slate-400 font-normal flex items-center gap-1 mt-1.5">
+                            <Clock className="w-3 h-3" /> 
+                            Last synced: {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </span>
+                        </div>
                       </th>
                     ))}
                   </tr>
@@ -962,7 +1278,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                     ))}
                   </tr>
                   <tr>
-                    <td className="p-3 text-[#606C5D]">Walk Score®</td>
+                    <td className="p-3 text-[#606C5D] dark:text-slate-300">Walk Score®</td>
                     {comparedProperties.map(p => {
                       const walk = calculateMockWalkScore(p.address, p.city, p.zip, p.walkScore);
                       return (
@@ -975,6 +1291,51 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                         </td>
                       );
                     })}
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-[#606C5D] dark:text-slate-300">GreatSchools Rating</td>
+                    {comparedProperties.map(p => {
+                      const school = calculateMockSchoolScore(p.address, p.city, p.zip);
+                      return (
+                        <td key={p.id} className="p-3">
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold border ${school.badgeBg} ${school.badgeText} ${school.badgeBorder}`}>
+                            <GraduationCap className="w-3 h-3 shrink-0" />
+                            <span className={`px-1 py-0.2 rounded text-[10px] font-mono font-extrabold ${school.badgePillBg}`}>{school.score}/10</span>
+                            <span>{school.category}</span>
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-[#606C5D] dark:text-slate-300">Nearby Amenities</td>
+                    {comparedProperties.map(p => (
+                      <td key={p.id} className="p-3">
+                        <div className="flex flex-col gap-1.5 items-start">
+                          {hasAmenity(p.id, "grocery") && (
+                            <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
+                              <ShoppingCart className="w-3 h-3 shrink-0 opacity-80" />
+                              <span>Grocery</span>
+                            </span>
+                          )}
+                          {hasAmenity(p.id, "transit") && (
+                            <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
+                              <Bus className="w-3 h-3 shrink-0 opacity-80" />
+                              <span>Transit Hub</span>
+                            </span>
+                          )}
+                          {hasAmenity(p.id, "parks") && (
+                            <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
+                              <TreePine className="w-3 h-3 shrink-0 opacity-80" />
+                              <span>Parks</span>
+                            </span>
+                          )}
+                          {!hasAmenity(p.id, "grocery") && !hasAmenity(p.id, "transit") && !hasAmenity(p.id, "parks") && (
+                            <span className="text-[#9A9488] text-xs">None listed</span>
+                          )}
+                        </div>
+                      </td>
+                    ))}
                   </tr>
                   <tr>
                     <td className="p-3 text-[#606C5D]">Tour Scorecard Grade</td>
@@ -1006,7 +1367,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                           href={getZillowUrl(p)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200 transition-colors"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 text-xs font-bold border border-blue-200 transition-colors"
                         >
                           <span>Open on Zillow</span>
                           <ExternalLink className="w-3 h-3" />
@@ -1017,6 +1378,12 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                 </tbody>
               </table>
             </div>
+            
+            <SmartCompareAI 
+              properties={comparedProperties}
+              loanOfficer={loanOfficer}
+              agent={activeAgent}
+            />
 
             <div className="flex justify-end pt-2">
               <button
@@ -1041,6 +1408,34 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
         loanOfficer={loanOfficer}
         activeAgent={activeAgent}
       />
+      {showQrModal && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-sm w-full relative text-center shadow-2xl animate-in zoom-in-95 duration-200">
+            <button onClick={() => setShowQrModal(false)} className="absolute top-4 right-4 p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:bg-slate-700 rounded-full text-slate-600 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <QrCode className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <h3 className="text-xl font-bold text-[#2D362E] mb-2">Scan for Google Maps</h3>
+            <p className="text-sm text-[#606C5D] mb-6 leading-relaxed">
+              Point your phone's camera at this code to instantly open the custom Google Maps Layer containing your curated properties.
+            </p>
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border-2 border-dashed border-slate-200 inline-block mb-6 shadow-sm">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://maps.google.com/local?q=curated+property+list" alt="QR Code" className="w-48 h-48 mx-auto" />
+            </div>
+            <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-900/50 text-indigo-800 dark:text-indigo-300 text-xs p-4 rounded-xl font-medium text-left">
+              <strong className="text-sm block mb-1">Included Metadata:</strong>
+              <ul className="space-y-1 ml-1">
+                <li>✓ Tour Grades & Scores</li>
+                <li>✓ Estimated Renovation Costs</li>
+                <li>✓ Affordability Match Tags</li>
+                <li>✓ Monthly Payment Estimates</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

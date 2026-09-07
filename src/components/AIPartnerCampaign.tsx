@@ -1,29 +1,25 @@
 import React, { useState } from "react";
-import { 
-  Sparkles, 
-  Send, 
-  Copy, 
-  Check, 
-  Mail, 
-  MessageSquare, 
-  Home, 
-  TrendingUp, 
-  Users, 
-  CheckCircle2, 
-  RefreshCw, 
-  Download, 
-  DollarSign, 
-  ShieldCheck, 
+import {
+  Sparkles,
+  Send,
+  Copy,
+  Check,
+  Mail,
+  MessageSquare,
+  Home,
+  TrendingUp,
+  Users,
+  CheckCircle2,
+  RefreshCw,
+  Download,
+  DollarSign,
+  ShieldCheck,
   ExternalLink,
   ChevronRight,
   Filter,
-  Share2
+  Share2,
 } from "lucide-react";
-import { 
-  LoanOfficerProfile, 
-  RealEstateAgentProfile, 
-  PropertyListing 
-} from "../types";
+import { LoanOfficerProfile, RealEstateAgentProfile, PropertyListing } from "../types";
 
 interface AIPartnerCampaignProps {
   loanOfficer: LoanOfficerProfile;
@@ -40,28 +36,30 @@ export const AIPartnerCampaign: React.FC<AIPartnerCampaignProps> = ({
   properties,
   pairingUrl,
   onOpenEmailOutreachModal,
-  triggerToast
+  triggerToast,
 }) => {
   // Target Agent Selection State
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>(() => {
     // Default to buyer agents in roster
-    const buyerAgents = agentRoster.filter(a => a.agentType === "buyer_agent").map(a => a.id);
-    return buyerAgents.length > 0 ? buyerAgents : agentRoster.slice(0, 2).map(a => a.id);
+    const buyerAgents = agentRoster.filter((a) => a.agentType === "buyer_agent").map((a) => a.id);
+    return buyerAgents.length > 0 ? buyerAgents : agentRoster.slice(0, 2).map((a) => a.id);
   });
   const [customAgentInput, setCustomAgentInput] = useState("");
 
   // Target Property Selection State
   const [propertyFilter, setPropertyFilter] = useState<"all" | "usda" | "flex_dpa">("all");
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>(() => {
-    const usdaProps = properties.filter(p => p.overlayEligibility?.usda).map(p => p.id);
-    return usdaProps.length > 0 ? usdaProps.slice(0, 3) : properties.slice(0, 3).map(p => p.id);
+    const usdaProps = properties.filter((p) => p.overlayEligibility?.usda).map((p) => p.id);
+    return usdaProps.length > 0 ? usdaProps.slice(0, 3) : properties.slice(0, 3).map((p) => p.id);
   });
 
   // Strategy & Campaign Settings
   const [campaignFocus, setCampaignFocus] = useState<
     "usda_zero_down" | "flex_dpa_grants" | "stop_renting_math" | "open_house_kit"
   >("usda_zero_down");
-  const [tone, setTone] = useState<"high_converting" | "consultative" | "data_driven">("high_converting");
+  const [tone, setTone] = useState<"high_converting" | "consultative" | "data_driven">(
+    "high_converting"
+  );
   const [customInstructions, setCustomInstructions] = useState("");
 
   // Generation Results State
@@ -88,39 +86,44 @@ export const AIPartnerCampaign: React.FC<AIPartnerCampaignProps> = ({
   };
 
   const toggleAgentSelection = (agentId: string) => {
-    setSelectedAgentIds(prev => 
-      prev.includes(agentId) ? prev.filter(id => id !== agentId) : [...prev, agentId]
+    setSelectedAgentIds((prev) =>
+      prev.includes(agentId) ? prev.filter((id) => id !== agentId) : [...prev, agentId]
     );
   };
 
   const togglePropertySelection = (propId: string) => {
-    setSelectedPropertyIds(prev => 
-      prev.includes(propId) ? prev.filter(id => id !== propId) : [...prev, propId]
+    setSelectedPropertyIds((prev) =>
+      prev.includes(propId) ? prev.filter((id) => id !== propId) : [...prev, propId]
     );
   };
 
-  const filteredProperties = properties.filter(p => {
+  const filteredProperties = properties.filter((p) => {
     if (propertyFilter === "usda") return Boolean(p.overlayEligibility?.usda);
-    if (propertyFilter === "flex_dpa") return Boolean(p.overlayEligibility?.lmi || p.overlayEligibility?.firstHomeEligible);
+    if (propertyFilter === "flex_dpa")
+      return Boolean(p.overlayEligibility?.lmi || p.overlayEligibility?.firstHomeEligible);
     return true;
   });
 
   const handleGenerateCampaign = async () => {
     setIsGenerating(true);
 
-    const selectedAgents = agentRoster.filter(a => selectedAgentIds.includes(a.id));
-    const agentNames = selectedAgents.map(a => a.name);
+    const selectedAgents = agentRoster.filter((a) => selectedAgentIds.includes(a.id));
+    const agentNames = selectedAgents.map((a) => a.name);
     if (customAgentInput.trim()) {
       agentNames.push(customAgentInput.trim());
     }
 
-    const selectedProps = properties.filter(p => selectedPropertyIds.includes(p.id));
+    const selectedProps = properties.filter((p) => selectedPropertyIds.includes(p.id));
 
     let focusTitle = "Attract Buyer Agents - Stop Renting Zero-Down Push";
-    if (campaignFocus === "usda_zero_down") focusTitle = "100% USDA Zero Down Rural Development Listings Pitch";
-    else if (campaignFocus === "flex_dpa_grants") focusTitle = "OHCS Flex DPA 3.5%-5% Grants + Seller Concession Buydowns";
-    else if (campaignFocus === "stop_renting_math") focusTitle = "Stop Renting vs. Owning Monthly Payment Math Breakdown";
-    else if (campaignFocus === "open_house_kit") focusTitle = "Co-Branded Open House Renter Conversion Kit";
+    if (campaignFocus === "usda_zero_down")
+      focusTitle = "100% USDA Zero Down Rural Development Listings Pitch";
+    else if (campaignFocus === "flex_dpa_grants")
+      focusTitle = "OHCS Flex DPA 3.5%-5% Grants + Seller Concession Buydowns";
+    else if (campaignFocus === "stop_renting_math")
+      focusTitle = "Stop Renting vs. Owning Monthly Payment Math Breakdown";
+    else if (campaignFocus === "open_house_kit")
+      focusTitle = "Co-Branded Open House Renter Conversion Kit";
 
     try {
       const res = await fetch("/api/gemini/buyer-agent-email", {
@@ -129,10 +132,10 @@ export const AIPartnerCampaign: React.FC<AIPartnerCampaignProps> = ({
         body: JSON.stringify({
           agentNames,
           properties: selectedProps,
-          loName: loanOfficer.name,
+          loanOfficer: loanOfficer,
           campaignType: focusTitle,
           tone,
-          customNotes: customInstructions
+          customNotes: customInstructions,
         }),
       });
 
@@ -151,14 +154,14 @@ export const AIPartnerCampaign: React.FC<AIPartnerCampaignProps> = ({
         openHouseTalkingPoints: [
           "Highlight that buyers can purchase with $0 down payment using 100% USDA RD financing.",
           "Show how $2,200/mo average rent compares to $2,140/mo mortgage payments with seller credits.",
-          "Provide a co-branded QR code link on flyers for instant 60-second pre-qualifications."
+          "Provide a co-branded QR code link on flyers for instant 60-second pre-qualifications.",
         ],
         rentVsBuyComparison: {
           avgLocalRent: "$2,250/mo",
           estMortgagePayment: "$2,180/mo",
           downPaymentRequired: "$0 (USDA RD 100% Financing)",
-          monthlySavings: "$70/mo + Home Equity Growth"
-        }
+          monthlySavings: "$70/mo + Home Equity Growth",
+        },
       });
     } finally {
       setIsGenerating(false);
@@ -217,7 +220,9 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
               AI Partner Campaign Generator
             </h2>
             <p className="text-xs sm:text-sm text-[#606C5D] max-w-3xl">
-              Attract top Buyer&apos;s Agents by crafting specialized outreach campaigns that pair their qualifying listings with low/no down payment programs (USDA RD $0 down, Flex DPA Grants) to help renters stop paying rent and buy their first home.
+              Attract top Buyer&apos;s Agents by crafting specialized outreach campaigns that pair
+              their qualifying listings with low/no down payment programs (USDA RD $0 down, Flex DPA
+              Grants) to help renters stop paying rent and buy their first home.
             </p>
           </div>
 
@@ -237,15 +242,17 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
 
       {/* Main Campaign Builder Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
         {/* Left Column: Config Panel (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          
           {/* Step 1: Select Strategy Focus */}
           <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 space-y-4 shadow-sm">
             <div className="flex items-center gap-2 pb-2 border-b border-[#EAE7E0]">
-              <span className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white text-xs font-bold flex items-center justify-center">1</span>
-              <h3 className="font-serif font-bold text-base text-[#2D362E]">Select Campaign Strategy</h3>
+              <span className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white text-xs font-bold flex items-center justify-center">
+                1
+              </span>
+              <h3 className="font-serif font-bold text-base text-[#2D362E]">
+                Select Campaign Strategy
+              </h3>
             </div>
 
             <div className="grid grid-cols-1 gap-2.5">
@@ -253,24 +260,24 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
                 {
                   id: "usda_zero_down",
                   title: "🌾 USDA RD 100% Zero-Down Focus",
-                  desc: "Highlight 100% financing for eligible rural/suburban listings so renters buy with $0 out of pocket."
+                  desc: "Highlight 100% financing for eligible rural/suburban listings so renters buy with $0 out of pocket.",
                 },
                 {
                   id: "flex_dpa_grants",
                   title: "💳 Flex DPA Grants + Seller Concession",
-                  desc: "Combine 3.5%-5% down payment assistance grants with 3% seller credits for rate buydowns."
+                  desc: "Combine 3.5%-5% down payment assistance grants with 3% seller credits for rate buydowns.",
                 },
                 {
                   id: "stop_renting_math",
                   title: "📈 Stop Renting vs. Owning Comparison",
-                  desc: "Show buyer agents direct payment math comparing local average rents vs owning their listing."
+                  desc: "Show buyer agents direct payment math comparing local average rents vs owning their listing.",
                 },
                 {
                   id: "open_house_kit",
                   title: "🎪 Co-Branded Open House Lead Engine",
-                  desc: "Provide flyers & 1-click pre-qual QR codes to convert open house visitors into buyers."
-                }
-              ].map(strat => (
+                  desc: "Provide flyers & 1-click pre-qual QR codes to convert open house visitors into buyers.",
+                },
+              ].map((strat) => (
                 <button
                   key={strat.id}
                   onClick={() => setCampaignFocus(strat.id as any)}
@@ -281,7 +288,9 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
                   }`}
                 >
                   <div className="font-bold text-xs text-[#2D362E]">{strat.title}</div>
-                  <div className="text-[11px] text-[#606C5D] mt-0.5 leading-relaxed">{strat.desc}</div>
+                  <div className="text-[11px] text-[#606C5D] mt-0.5 leading-relaxed">
+                    {strat.desc}
+                  </div>
                 </button>
               ))}
             </div>
@@ -291,8 +300,12 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
           <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between pb-2 border-b border-[#EAE7E0]">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white text-xs font-bold flex items-center justify-center">2</span>
-                <h3 className="font-serif font-bold text-base text-[#2D362E]">Target Buyer Agents</h3>
+                <span className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white text-xs font-bold flex items-center justify-center">
+                  2
+                </span>
+                <h3 className="font-serif font-bold text-base text-[#2D362E]">
+                  Target Buyer Agents
+                </h3>
               </div>
               <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                 {selectedAgentIds.length} Selected
@@ -300,7 +313,7 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
             </div>
 
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-              {agentRoster.map(agent => {
+              {agentRoster.map((agent) => {
                 const isSelected = selectedAgentIds.includes(agent.id);
                 const isBuyerAgent = agent.agentType === "buyer_agent";
 
@@ -315,9 +328,13 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                        isSelected ? "bg-emerald-700 border-emerald-700 text-white" : "border-[#9A9488] bg-white"
-                      }`}>
+                      <div
+                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                          isSelected
+                            ? "bg-emerald-700 border-emerald-700 text-white"
+                            : "border-[#9A9488] bg-white"
+                        }`}
+                      >
                         {isSelected && <Check className="w-3 h-3" />}
                       </div>
                       <div className="min-w-0">
@@ -333,7 +350,9 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-[#9A9488] truncate">{agent.brokerage} • {agent.email}</div>
+                        <div className="text-[10px] text-[#9A9488] truncate">
+                          {agent.brokerage} • {agent.email}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -342,7 +361,9 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">Custom Agent Name / Office (Optional)</label>
+              <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">
+                Custom Agent Name / Office (Optional)
+              </label>
               <input
                 type="text"
                 placeholder="e.g. Sarah Jenkins, Premier Buyer Realty"
@@ -357,8 +378,12 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
           <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between pb-2 border-b border-[#EAE7E0]">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white text-xs font-bold flex items-center justify-center">3</span>
-                <h3 className="font-serif font-bold text-base text-[#2D362E]">Feature Qualifying Listings</h3>
+                <span className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white text-xs font-bold flex items-center justify-center">
+                  3
+                </span>
+                <h3 className="font-serif font-bold text-base text-[#2D362E]">
+                  Feature Qualifying Listings
+                </h3>
               </div>
               <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                 {selectedPropertyIds.length} Properties
@@ -370,7 +395,9 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
               <button
                 onClick={() => setPropertyFilter("all")}
                 className={`px-2.5 py-1 text-[11px] font-bold rounded-lg ${
-                  propertyFilter === "all" ? "bg-[#2D362E] text-white" : "bg-[#FAF9F5] text-[#606C5D] border border-[#EAE7E0]"
+                  propertyFilter === "all"
+                    ? "bg-[#2D362E] text-white"
+                    : "bg-[#FAF9F5] text-[#606C5D] border border-[#EAE7E0]"
                 }`}
               >
                 All ({properties.length})
@@ -378,15 +405,19 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
               <button
                 onClick={() => setPropertyFilter("usda")}
                 className={`px-2.5 py-1 text-[11px] font-bold rounded-lg ${
-                  propertyFilter === "usda" ? "bg-emerald-700 text-white" : "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                  propertyFilter === "usda"
+                    ? "bg-emerald-700 text-white"
+                    : "bg-emerald-50 text-emerald-800 border border-emerald-200"
                 }`}
               >
-                🌾 USDA 0% Down ({properties.filter(p => p.overlayEligibility?.usda).length})
+                🌾 USDA 0% Down ({properties.filter((p) => p.overlayEligibility?.usda).length})
               </button>
               <button
                 onClick={() => setPropertyFilter("flex_dpa")}
                 className={`px-2.5 py-1 text-[11px] font-bold rounded-lg ${
-                  propertyFilter === "flex_dpa" ? "bg-amber-700 text-white" : "bg-amber-50 text-amber-800 border border-amber-200"
+                  propertyFilter === "flex_dpa"
+                    ? "bg-amber-700 text-white"
+                    : "bg-amber-50 text-amber-800 border border-amber-200"
                 }`}
               >
                 💳 Flex DPA Grants
@@ -395,7 +426,7 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
 
             {/* Listings Checklist */}
             <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-              {filteredProperties.slice(0, 8).map(prop => {
+              {filteredProperties.slice(0, 8).map((prop) => {
                 const isSelected = selectedPropertyIds.includes(prop.id);
                 const isUsda = prop.overlayEligibility?.usda;
 
@@ -410,9 +441,13 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                        isSelected ? "bg-amber-600 border-amber-600 text-white" : "border-[#9A9488] bg-white"
-                      }`}>
+                      <div
+                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                          isSelected
+                            ? "bg-amber-600 border-amber-600 text-white"
+                            : "border-[#9A9488] bg-white"
+                        }`}
+                      >
                         {isSelected && <Check className="w-3 h-3" />}
                       </div>
                       <div className="min-w-0">
@@ -420,9 +455,13 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
                           {prop.address}, {prop.city}
                         </div>
                         <div className="text-[10px] text-[#606C5D] flex items-center gap-2">
-                          <span className="font-semibold text-[#4A5D4E]">${prop.price.toLocaleString()}</span>
+                          <span className="font-semibold text-[#4A5D4E]">
+                            ${prop.price.toLocaleString()}
+                          </span>
                           {isUsda ? (
-                            <span className="text-emerald-700 font-bold">🌾 100% USDA Zero Down</span>
+                            <span className="text-emerald-700 font-bold">
+                              🌾 100% USDA Zero Down
+                            </span>
                           ) : (
                             <span className="text-amber-700 font-semibold">💳 Flex DPA Grant</span>
                           )}
@@ -438,25 +477,39 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
           {/* Tone & Custom Instructions */}
           <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 space-y-4 shadow-sm">
             <div className="flex items-center gap-2 pb-2 border-b border-[#EAE7E0]">
-              <span className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white text-xs font-bold flex items-center justify-center">4</span>
-              <h3 className="font-serif font-bold text-base text-[#2D362E]">Tone & Custom Directives</h3>
+              <span className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white text-xs font-bold flex items-center justify-center">
+                4
+              </span>
+              <h3 className="font-serif font-bold text-base text-[#2D362E]">
+                Tone & Custom Directives
+              </h3>
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">Campaign Tone Strategy</label>
+              <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">
+                Campaign Tone Strategy
+              </label>
               <select
                 value={tone}
                 onChange={(e) => setTone(e.target.value as any)}
                 className="w-full px-3 py-2 text-xs bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl focus:outline-none focus:border-[#4A5D4E] font-medium"
               >
-                <option value="high_converting">⚡ High-Converting & Growth-Oriented (Action-Focused)</option>
-                <option value="consultative">🤝 Consultative & Educational (Relationship Building)</option>
-                <option value="data_driven">📊 Concise & Data-Driven (Rent vs Buy Math Focus)</option>
+                <option value="high_converting">
+                  ⚡ High-Converting & Growth-Oriented (Action-Focused)
+                </option>
+                <option value="consultative">
+                  🤝 Consultative & Educational (Relationship Building)
+                </option>
+                <option value="data_driven">
+                  📊 Concise & Data-Driven (Rent vs Buy Math Focus)
+                </option>
               </select>
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">Additional Instructions or Value-Add</label>
+              <label className="block text-[11px] font-semibold text-[#606C5D] mb-1">
+                Additional Instructions or Value-Add
+              </label>
               <textarea
                 rows={2}
                 placeholder="e.g. Mention our 10-day fast closing guarantee or $1,000 appraisal credit for first-time buyers..."
@@ -484,14 +537,12 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
               )}
             </button>
           </div>
-
         </div>
 
         {/* Right Column: Output Campaign Package Studio (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
           {campaignResult ? (
             <div className="space-y-6 animate-in fade-in duration-300">
-              
               {/* Primary Email Draft Card */}
               <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 space-y-5 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#EAE7E0]">
@@ -506,10 +557,16 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
 
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleCopy(`${campaignResult.subject}\n\n${campaignResult.body}`, "email")}
+                      onClick={() =>
+                        handleCopy(`${campaignResult.subject}\n\n${campaignResult.body}`, "email")
+                      }
                       className="px-3 py-1.5 bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] rounded-xl text-xs font-bold text-[#4A5D4E] flex items-center gap-1.5 transition-colors"
                     >
-                      {copiedKey === "email" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedKey === "email" ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
                       <span>Copy Draft</span>
                     </button>
 
@@ -527,7 +584,9 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
 
                 {/* Email Subject Box */}
                 <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#EAE7E0] space-y-1">
-                  <span className="text-[10px] font-bold text-[#9A9488] uppercase tracking-wider">Subject Line:</span>
+                  <span className="text-[10px] font-bold text-[#9A9488] uppercase tracking-wider">
+                    Subject Line:
+                  </span>
                   <div className="font-bold text-sm text-[#2D362E]">{campaignResult.subject}</div>
                 </div>
 
@@ -554,28 +613,36 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                     <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#EAE7E0]">
-                      <span className="text-[10px] text-[#9A9488] font-bold uppercase block">Avg. Local Rent</span>
+                      <span className="text-[10px] text-[#9A9488] font-bold uppercase block">
+                        Avg. Local Rent
+                      </span>
                       <span className="font-bold text-base text-[#2D362E] mt-1 block">
                         {campaignResult.rentVsBuyComparison.avgLocalRent}
                       </span>
                     </div>
 
                     <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#EAE7E0]">
-                      <span className="text-[10px] text-[#9A9488] font-bold uppercase block">Est. Mortgage PITI</span>
+                      <span className="text-[10px] text-[#9A9488] font-bold uppercase block">
+                        Est. Mortgage PITI
+                      </span>
                       <span className="font-bold text-base text-[#4A5D4E] mt-1 block">
                         {campaignResult.rentVsBuyComparison.estMortgagePayment}
                       </span>
                     </div>
 
                     <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#EAE7E0]">
-                      <span className="text-[10px] text-[#9A9488] font-bold uppercase block">Down Payment</span>
+                      <span className="text-[10px] text-[#9A9488] font-bold uppercase block">
+                        Down Payment
+                      </span>
                       <span className="font-bold text-base text-emerald-700 mt-1 block">
                         {campaignResult.rentVsBuyComparison.downPaymentRequired}
                       </span>
                     </div>
 
                     <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#EAE7E0]">
-                      <span className="text-[10px] text-[#9A9488] font-bold uppercase block">Monthly Advantage</span>
+                      <span className="text-[10px] text-[#9A9488] font-bold uppercase block">
+                        Monthly Advantage
+                      </span>
                       <span className="font-bold text-base text-amber-700 mt-1 block">
                         {campaignResult.rentVsBuyComparison.monthlySavings}
                       </span>
@@ -586,7 +653,6 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
 
               {/* SMS Follow-Up Script & Open House Talking Points Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
                 {/* SMS Follow-Up Script */}
                 {campaignResult.smsScript && (
                   <div className="bg-white rounded-3xl border border-[#EAE7E0] p-5 space-y-3 shadow-sm">
@@ -600,7 +666,11 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
                         className="p-1 text-[#606C5D] hover:text-[#2D362E] transition-colors"
                         title="Copy SMS"
                       >
-                        {copiedKey === "sms" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedKey === "sms" ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
                       </button>
                     </div>
 
@@ -611,34 +681,40 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
                 )}
 
                 {/* Open House Talking Points */}
-                {campaignResult.openHouseTalkingPoints && campaignResult.openHouseTalkingPoints.length > 0 && (
-                  <div className="bg-white rounded-3xl border border-[#EAE7E0] p-5 space-y-3 shadow-sm">
-                    <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-2">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#2D362E]">
-                        <Home className="w-4 h-4 text-amber-600" />
-                        <span>Open House Renter Talking Points</span>
+                {campaignResult.openHouseTalkingPoints &&
+                  campaignResult.openHouseTalkingPoints.length > 0 && (
+                    <div className="bg-white rounded-3xl border border-[#EAE7E0] p-5 space-y-3 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-2">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-[#2D362E]">
+                          <Home className="w-4 h-4 text-amber-600" />
+                          <span>Open House Renter Talking Points</span>
+                        </div>
                       </div>
+
+                      <ul className="space-y-1.5 text-xs text-[#606C5D]">
+                        {campaignResult.openHouseTalkingPoints.map((pt, i) => (
+                          <li
+                            key={i}
+                            className="flex items-start gap-2 bg-[#FAF9F5] p-2 rounded-lg border border-[#EAE7E0]"
+                          >
+                            <span className="font-bold text-[#4A5D4E] shrink-0">•</span>
+                            <span>{pt}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-
-                    <ul className="space-y-1.5 text-xs text-[#606C5D]">
-                      {campaignResult.openHouseTalkingPoints.map((pt, i) => (
-                        <li key={i} className="flex items-start gap-2 bg-[#FAF9F5] p-2 rounded-lg border border-[#EAE7E0]">
-                          <span className="font-bold text-[#4A5D4E] shrink-0">•</span>
-                          <span>{pt}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
+                  )}
               </div>
 
               {/* Bottom Action Footer */}
               <div className="bg-[#2D362E] rounded-3xl p-6 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
                 <div>
-                  <h4 className="font-serif font-bold text-lg">Ready to Launch Your Buyer Agent Campaign?</h4>
+                  <h4 className="font-serif font-bold text-lg">
+                    Ready to Launch Your Buyer Agent Campaign?
+                  </h4>
                   <p className="text-xs text-gray-300 mt-0.5">
-                    Download the complete campaign brief or load into your email outreach portal to start connecting with partner agents.
+                    Download the complete campaign brief or load into your email outreach portal to
+                    start connecting with partner agents.
                   </p>
                 </div>
 
@@ -652,7 +728,6 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
                   </button>
                 </div>
               </div>
-
             </div>
           ) : (
             /* Empty State Placeholder */
@@ -661,15 +736,19 @@ ${(campaignResult.openHouseTalkingPoints || []).map((tp, i) => `${i + 1}. ${tp}`
                 <Sparkles className="w-8 h-8 text-amber-500" />
               </div>
               <div>
-                <h3 className="font-serif font-bold text-xl text-[#2D362E]">AI Campaign Package Preview</h3>
+                <h3 className="font-serif font-bold text-xl text-[#2D362E]">
+                  AI Campaign Package Preview
+                </h3>
                 <p className="text-xs text-[#606C5D] max-w-md mx-auto mt-1">
-                  Configure your strategy focus, select target buyer agents and qualifying listings on the left, then click <strong>&quot;Generate AI Partner Campaign Package&quot;</strong> to craft personalized outreach email drafts and renter conversion materials.
+                  Configure your strategy focus, select target buyer agents and qualifying listings
+                  on the left, then click{" "}
+                  <strong>&quot;Generate AI Partner Campaign Package&quot;</strong> to craft
+                  personalized outreach email drafts and renter conversion materials.
                 </p>
               </div>
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

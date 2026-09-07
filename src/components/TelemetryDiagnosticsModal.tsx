@@ -1,19 +1,42 @@
 import React, { useState, useEffect } from "react";
 import { telemetry, Breadcrumb, CapturedErrorEvent } from "../services/telemetryService";
-import { X, Bug, RefreshCw, Copy, Check, Trash2, Terminal, AlertTriangle, ShieldCheck, Activity } from "lucide-react";
+import {
+  X,
+  Bug,
+  RefreshCw,
+  Copy,
+  Check,
+  Trash2,
+  Terminal,
+  AlertTriangle,
+  ShieldCheck,
+  Download,
+  Activity,
+} from "lucide-react";
 
 interface TelemetryDiagnosticsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps> = ({ isOpen, onClose }) => {
+export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([]);
   const [errors, setErrors] = useState<CapturedErrorEvent[]>([]);
-  const [activeTab, setActiveTab] = useState<"breadcrumbs" | "errors" | "sentry">("breadcrumbs");
+  const [activeTab, setActiveTab] = useState<
+    "breadcrumbs" | "errors" | "security" | "verify" | "sentry"
+  >("breadcrumbs");
   const [copied, setCopied] = useState(false);
-  const [sentryDsnInput, setSentryDsnInput] = useState(() => localStorage.getItem("sentry_dsn") || "");
+  const [sentryDsnInput, setSentryDsnInput] = useState(
+    () => localStorage.getItem("sentry_dsn") || ""
+  );
   const [sentrySaved, setSentrySaved] = useState(false);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [testPayload, setTestPayload] = useState("");
+  const [testResult, setTestResult] = useState<"idle" | "testing" | "passed" | "failed">("idle");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -25,6 +48,42 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, [isOpen]);
+
+  const exportSecurityLogToCSV = () => {
+    const securityLogs = breadcrumbs.filter((b) => b.category === "security").reverse();
+    if (securityLogs.length === 0) return;
+
+    const headers = ["Timestamp", "Level", "Message", "Event ID", "Payload Data"];
+    const rows = securityLogs.map((b) => {
+      const dataStr = b.data ? JSON.stringify(b.data).replace(/"/g, '""') : "";
+      return [
+        new Date(b.timestamp).toISOString(),
+        b.level,
+        `"${b.message.replace(/"/g, '""')}"`,
+        b.id,
+        `"${dataStr}"`,
+      ];
+    });
+
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `compliance_audit_trail_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const securityLogs = breadcrumbs.filter((b) => b.category === "security");
+  const threatCount = securityLogs.filter((b) => b.level === "error").length;
+  const warningCount = securityLogs.filter((b) => b.level === "warning").length;
+  // Risk goes up with threats, but caps at 100
+  const riskScore = Math.min(100, threatCount * 25 + warningCount * 5);
 
   if (!isOpen) return null;
 
@@ -80,10 +139,15 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
                   Active
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">Real-time frontend exception monitoring, API telemetry, and breadcrumb trails</p>
+              <p className="text-xs text-slate-400">
+                Real-time frontend exception monitoring, API telemetry, and breadcrumb trails
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -114,6 +178,28 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
               <span>Captured Errors ({errors.length})</span>
             </button>
             <button
+              onClick={() => setActiveTab("verify")}
+              className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center justify-center gap-2 ${
+                activeTab === "verify"
+                  ? "border-indigo-400 text-indigo-400"
+                  : "border-transparent text-[#9A9488] hover:text-[#E8ECE6] hover:border-[#606C5D]"
+              }`}
+            >
+              <Terminal className="w-4 h-4" />
+              Verify
+            </button>
+            <button
+              onClick={() => setActiveTab("security")}
+              className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center justify-center gap-2 ${
+                activeTab === "security"
+                  ? "border-[#D4A373] text-[#D4A373]"
+                  : "border-transparent text-[#9A9488] hover:text-[#E8ECE6] hover:border-[#606C5D]"
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Compliance
+            </button>
+            <button
               onClick={() => setActiveTab("sentry")}
               className={`px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center space-x-2 ${
                 activeTab === "sentry"
@@ -131,7 +217,11 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
               onClick={handleCopyAll}
               className="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 flex items-center space-x-1.5 transition"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
               <span>{copied ? "Copied" : "Export Diagnostic Report"}</span>
             </button>
             <button
@@ -152,7 +242,9 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
                 <div className="text-center py-16 text-slate-500 font-sans">
                   <Terminal className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p className="text-sm font-medium">No diagnostic breadcrumbs recorded yet.</p>
-                  <p className="text-xs text-slate-600 mt-1">Interact with the app or trigger API requests to record telemetry.</p>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Interact with the app or trigger API requests to record telemetry.
+                  </p>
                 </div>
               ) : (
                 breadcrumbs.map((bc) => (
@@ -162,8 +254,8 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
                       bc.level === "error"
                         ? "bg-red-950/25 border-red-900/50 text-red-300"
                         : bc.level === "warning"
-                        ? "bg-amber-950/25 border-amber-900/50 text-amber-300"
-                        : "bg-slate-900/60 border-slate-800/80 text-slate-300"
+                          ? "bg-amber-950/25 border-amber-900/50 text-amber-300"
+                          : "bg-slate-900/60 border-slate-800/80 text-slate-300"
                     }`}
                   >
                     <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
@@ -189,12 +281,19 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
               {errors.length === 0 ? (
                 <div className="text-center py-16 text-slate-500 font-sans">
                   <ShieldCheck className="w-12 h-12 mx-auto mb-3 text-emerald-500/40" />
-                  <p className="text-sm font-medium text-slate-300">Zero runtime exceptions captured!</p>
-                  <p className="text-xs text-slate-500 mt-1">Your frontend and API calls are running cleanly without exceptions.</p>
+                  <p className="text-sm font-medium text-slate-300">
+                    Zero runtime exceptions captured!
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Your frontend and API calls are running cleanly without exceptions.
+                  </p>
                 </div>
               ) : (
                 errors.map((err) => (
-                  <div key={err.id} className="p-4 rounded-xl bg-red-950/20 border border-red-900/50 text-red-200 space-y-2">
+                  <div
+                    key={err.id}
+                    className="p-4 rounded-xl bg-red-950/20 border border-red-900/50 text-red-200 space-y-2"
+                  >
                     <div className="flex items-center justify-between text-[11px] text-red-400">
                       <span className="uppercase font-bold px-2 py-0.5 rounded bg-red-900/40 border border-red-700/40">
                         {err.type}
@@ -209,7 +308,10 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
                     )}
                     {err.breadcrumbs && err.breadcrumbs.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-red-900/40 text-[11px] text-slate-400 font-sans">
-                        <span className="font-semibold text-slate-300">Attached Breadcrumbs at time of error:</span> {err.breadcrumbs.length} events logged.
+                        <span className="font-semibold text-slate-300">
+                          Attached Breadcrumbs at time of error:
+                        </span>{" "}
+                        {err.breadcrumbs.length} events logged.
                       </div>
                     )}
                   </div>
@@ -218,20 +320,223 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
             </>
           )}
 
+          {activeTab === "security" && (
+            <div className="space-y-4">
+              <div className="bg-[#2D362E] border border-[#606C5D] p-4 rounded-xl flex items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="bg-[#4A5D4E]/30 p-3 rounded-full text-[#D4A373]">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-[#E8ECE6] font-bold text-sm">Zero Trust Audit Trail</h4>
+                    <p className="text-xs text-[#9A9488] mt-1 leading-relaxed">
+                      Live log of AI payload sanitization, PII blocking events, and secure CRM
+                      handoffs.
+                    </p>
+                  </div>
+                </div>
+                {breadcrumbs.filter((b) => b.category === "security").length > 0 && (
+                  <button
+                    onClick={exportSecurityLogToCSV}
+                    disabled={isExporting}
+                    className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg transition-all border whitespace-nowrap ${
+                      isExporting
+                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
+                        : "bg-[#4A5D4E] hover:bg-[#38463B] text-white border-[#606C5D]"
+                    }`}
+                  >
+                    {isExporting ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Download Complete
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        Export CSV
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {breadcrumbs.filter((b) => b.category === "security").length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-[#606C5D] rounded-xl bg-[#2D362E]/50">
+                  <ShieldCheck className="w-8 h-8 text-[#606C5D] mb-3" />
+                  <p className="text-[#9A9488] text-sm font-medium">
+                    No compliance events captured yet
+                  </p>
+                  <p className="text-[#9A9488]/70 text-xs mt-1">
+                    AI payloads and interactions will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {breadcrumbs
+                    .filter((b) => b.category === "security")
+                    .reverse()
+                    .map((b) => (
+                      <div
+                        key={b.id}
+                        className="bg-[#2D362E] border border-[#606C5D] p-3 rounded-lg flex items-start gap-3"
+                      >
+                        <div className="text-emerald-400 mt-0.5">
+                          <Check className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-xs font-semibold text-[#E8ECE6] break-words">
+                              {b.message}
+                            </span>
+                            <span className="text-[10px] text-[#9A9488] shrink-0 ml-2 whitespace-nowrap">
+                              {new Date(b.timestamp).toLocaleTimeString([], {
+                                hour12: false,
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                          {b.data && (
+                            <pre className="mt-2 bg-[#1A211B] p-2 rounded text-[10px] text-[#9A9488] overflow-x-auto border border-[#4A5D4E]/50">
+                              {JSON.stringify(b.data, null, 2)}
+                            </pre>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "verify" && (
+            <div className="space-y-4">
+              <div className="bg-[#2D362E] border border-[#606C5D] p-4 rounded-xl flex items-start gap-4">
+                <div className="bg-indigo-500/20 p-3 rounded-full text-indigo-400">
+                  <Terminal className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-[#E8ECE6] font-bold text-sm">Edge Firewall Verification</h4>
+                  <p className="text-xs text-[#9A9488] mt-1 leading-relaxed">
+                    Test the system's PII Regex interception logic before deployment. Input toxic
+                    data (like an SSN) to verify it is caught at the edge.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-[#E8ECE6] uppercase tracking-wider block">
+                  Test Payload String
+                </label>
+                <textarea
+                  value={testPayload}
+                  onChange={(e) => {
+                    setTestPayload(e.target.value);
+                    setTestResult("idle");
+                  }}
+                  className="w-full bg-[#1A211B] border border-[#606C5D] rounded-lg p-3 text-sm text-[#E8ECE6] font-mono focus:border-indigo-400 focus:outline-none transition-colors min-h-[100px]"
+                  placeholder="e.g. 'My social security number is 123-45-6789...'"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2 border-t border-[#606C5D]/50">
+                <button
+                  onClick={() => {
+                    setTestResult("testing");
+                    setTimeout(() => {
+                      // Mirror the exact regex from server.ts and LeadIntakeChatbot
+                      const ssnPattern =
+                        /\b(?!000|666|9\d{2})\d{3}[-.\s]?(?!00)\d{2}[-.\s]?(?!0000)\d{4}\b/;
+                      if (ssnPattern.test(testPayload)) {
+                        setTestResult("passed");
+                        telemetry.addBreadcrumb({
+                          category: "security",
+                          message: "Edge Firewall Test Passed (Threat Blocked)",
+                          level: "info",
+                          data: {
+                            inputLength: testPayload.length,
+                            simulatedAction: "Payload Rejected",
+                          },
+                        });
+                      } else {
+                        setTestResult("failed");
+                        telemetry.addBreadcrumb({
+                          category: "security",
+                          message: "Edge Firewall Test Failed (No Threat Detected)",
+                          level: "warning",
+                          data: { simulatedAction: "Payload Allowed" },
+                        });
+                      }
+                    }, 800);
+                  }}
+                  disabled={!testPayload.trim() || testResult === "testing"}
+                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {testResult === "testing" ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Activity className="w-4 h-4" />
+                  )}
+                  Run Diagnostics
+                </button>
+              </div>
+
+              {testResult === "passed" && (
+                <div className="bg-emerald-500/10 border border-emerald-500/50 p-4 rounded-xl flex items-center gap-3 mt-4 animate-in fade-in slide-in-from-bottom-2">
+                  <div className="bg-emerald-500 rounded-full p-1 text-[#1A211B]">
+                    <Check className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="text-emerald-400 font-bold text-sm">
+                      Test Passed: Threat Intercepted
+                    </h5>
+                    <p className="text-emerald-400/80 text-xs">
+                      The Edge Firewall successfully identified and blocked the PII payload.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {testResult === "failed" && (
+                <div className="bg-rose-500/10 border border-rose-500/50 p-4 rounded-xl flex items-center gap-3 mt-4 animate-in fade-in slide-in-from-bottom-2">
+                  <div className="bg-rose-500 rounded-full p-1 text-[#1A211B]">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="text-rose-400 font-bold text-sm">
+                      Test Failed: Payload Allowed
+                    </h5>
+                    <p className="text-rose-400/80 text-xs">
+                      No toxic PII was detected. The payload would have passed to the LLM backend.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === "sentry" && (
             <div className="max-w-xl mx-auto py-8 font-sans space-y-6">
               <div className="bg-purple-950/20 border border-purple-500/30 rounded-2xl p-6 space-y-4">
                 <div className="flex items-center space-x-3">
                   <Activity className="w-6 h-6 text-purple-400" />
                   <div>
-                    <h3 className="text-base font-bold text-white">Sentry Cloud Reporting Configuration</h3>
-                    <p className="text-xs text-slate-400">Connect your Sentry project DSN to stream live error events and performance traces.</p>
+                    <h3 className="text-base font-bold text-white">
+                      Sentry Cloud Reporting Configuration
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Connect your Sentry project DSN to stream live error events and performance
+                      traces.
+                    </p>
                   </div>
                 </div>
 
                 <form onSubmit={handleSaveSentry} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Sentry DSN URL</label>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">
+                      Sentry DSN URL
+                    </label>
                     <input
                       type="text"
                       value={sentryDsnInput}
@@ -247,7 +552,9 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
                     Save & Initialize Sentry SDK
                   </button>
                   {sentrySaved && (
-                    <p className="text-xs text-emerald-400 text-center font-medium">Sentry DSN saved successfully! Reloading...</p>
+                    <p className="text-xs text-emerald-400 text-center font-medium">
+                      Sentry DSN saved successfully! Reloading...
+                    </p>
                   )}
                 </form>
               </div>

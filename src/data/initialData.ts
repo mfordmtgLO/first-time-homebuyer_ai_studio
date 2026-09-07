@@ -39,6 +39,11 @@ export const INITIAL_PROPERTIES: PropertyListing[] = [
     state: "OR",
     zip: "97202",
     price: 435000,
+    priceHistory: [
+      { date: "2026-06-01", price: 460000, event: "Listed" },
+      { date: "2026-07-15", price: 450000, event: "Price Drop" },
+      { date: "2026-08-10", price: 435000, event: "Price Drop" }
+    ],
     beds: 3,
     baths: 2,
     sqft: 1840,
@@ -83,6 +88,9 @@ export const INITIAL_PROPERTIES: PropertyListing[] = [
     state: "OR",
     zip: "97005",
     price: 399000,
+    priceHistory: [
+      { date: "2026-07-01", price: 399000, event: "Listed" }
+    ],
     beds: 2,
     baths: 2.5,
     sqft: 1450,

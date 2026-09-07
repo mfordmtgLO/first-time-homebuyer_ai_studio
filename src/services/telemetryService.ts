@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/react";
 export interface Breadcrumb {
   id: string;
   timestamp: string;
-  category: "navigation" | "http" | "user-action" | "console" | "error" | "lifecycle";
+  category: "navigation" | "http" | "user-action" | "console" | "error" | "lifecycle" | "security";
   message: string;
   data?: any;
   level: "info" | "warning" | "error";
@@ -37,15 +37,17 @@ class TelemetryService {
       try {
         Sentry.init({
           dsn: sentryDsn,
-          integrations: [
-            Sentry.browserTracingIntegration(),
-            Sentry.replayIntegration(),
-          ],
+          integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
           tracesSampleRate: 1.0,
           replaysSessionSampleRate: 0.1,
           replaysOnErrorSampleRate: 1.0,
         });
-        this.addBreadcrumb("lifecycle", "Sentry initialized successfully", { dsn: sentryDsn.substring(0, 10) + "..." }, "info");
+        this.addBreadcrumb(
+          "lifecycle",
+          "Sentry initialized successfully",
+          { dsn: sentryDsn.substring(0, 10) + "..." },
+          "info"
+        );
       } catch (err) {
         console.warn("Failed to initialize Sentry SDK:", err);
       }
@@ -56,16 +58,25 @@ class TelemetryService {
 
     // Listen for global unhandled rejections
     window.addEventListener("unhandledrejection", (event) => {
-      const errorMsg = event.reason?.message || String(event.reason || "Unhandled Promise Rejection");
+      const errorMsg =
+        event.reason?.message || String(event.reason || "Unhandled Promise Rejection");
       this.captureException(new Error(errorMsg), "unhandled_rejection");
     });
 
     // Listen for global errors
     window.addEventListener("error", (event) => {
-      this.captureException(event.error || new Error(event.message || "Global Window Error"), "react_error");
+      this.captureException(
+        event.error || new Error(event.message || "Global Window Error"),
+        "react_error"
+      );
     });
 
-    this.addBreadcrumb("lifecycle", "Telemetry & Diagnostic Breadcrumb Engine initialized", {}, "info");
+    this.addBreadcrumb(
+      "lifecycle",
+      "Telemetry & Diagnostic Breadcrumb Engine initialized",
+      {},
+      "info"
+    );
   }
 
   public addBreadcrumb(
@@ -101,7 +112,11 @@ class TelemetryService {
     }
   }
 
-  public captureException(error: Error, type: CapturedErrorEvent["type"] = "manual", componentStack?: string) {
+  public captureException(
+    error: Error,
+    type: CapturedErrorEvent["type"] = "manual",
+    componentStack?: string
+  ) {
     const errorEvent: CapturedErrorEvent = {
       id: "err_" + Math.random().toString(36).substr(2, 9),
       timestamp: new Date().toISOString(),
@@ -118,7 +133,12 @@ class TelemetryService {
       this.capturedErrors = this.capturedErrors.slice(0, this.maxErrors);
     }
 
-    this.addBreadcrumb("error", `Exception captured [${type}]: ${error.message}`, { stack: error.stack }, "error");
+    this.addBreadcrumb(
+      "error",
+      `Exception captured [${type}]: ${error.message}`,
+      { stack: error.stack },
+      "error"
+    );
 
     // Report to Sentry
     try {
@@ -127,7 +147,9 @@ class TelemetryService {
       // Sentry inactive
     }
 
-    console.error(`[Telemetry Diagnostic Error] (${type}):`, error, { breadcrumbs: errorEvent.breadcrumbs });
+    console.error(`[Telemetry Diagnostic Error] (${type}):`, error, {
+      breadcrumbs: errorEvent.breadcrumbs,
+    });
     return errorEvent;
   }
 
@@ -149,46 +171,51 @@ class TelemetryService {
     try {
       const originalFetch = window.fetch;
       window.fetch = async (...args): Promise<Response> => {
-      const url = typeof args[0] === "string" ? args[0] : args[0] instanceof Request ? args[0].url : String(args[0]);
-      const options = args[1] || {};
-      const method = options.method || "GET";
-      const startTime = performance.now();
+        const url =
+          typeof args[0] === "string"
+            ? args[0]
+            : args[0] instanceof Request
+              ? args[0].url
+              : String(args[0]);
+        const options = args[1] || {};
+        const method = options.method || "GET";
+        const startTime = performance.now();
 
-      this.addBreadcrumb("http", `API Request: ${method} ${url}`, { method, url }, "info");
+        this.addBreadcrumb("http", `API Request: ${method} ${url}`, { method, url }, "info");
 
-      try {
-        const response = await originalFetch(...args);
-        const duration = Math.round(performance.now() - startTime);
+        try {
+          const response = await originalFetch(...args);
+          const duration = Math.round(performance.now() - startTime);
 
-        if (!response.ok) {
+          if (!response.ok) {
+            this.addBreadcrumb(
+              "http",
+              `API Error Response: ${response.status} ${response.statusText} for ${method} ${url} (${duration}ms)`,
+              { status: response.status, statusText: response.statusText, url },
+              "error"
+            );
+          } else {
+            this.addBreadcrumb(
+              "http",
+              `API Success: ${response.status} ${method} ${url} (${duration}ms)`,
+              { status: response.status, url, duration },
+              "info"
+            );
+          }
+
+          return response;
+        } catch (err: any) {
+          const duration = Math.round(performance.now() - startTime);
           this.addBreadcrumb(
             "http",
-            `API Error Response: ${response.status} ${response.statusText} for ${method} ${url} (${duration}ms)`,
-            { status: response.status, statusText: response.statusText, url },
+            `API Network Failure: ${method} ${url} - ${err.message} (${duration}ms)`,
+            { error: err.message, url },
             "error"
           );
-        } else {
-          this.addBreadcrumb(
-            "http",
-            `API Success: ${response.status} ${method} ${url} (${duration}ms)`,
-            { status: response.status, url, duration },
-            "info"
-          );
+          this.captureException(err, "api_error");
+          throw err;
         }
-
-        return response;
-      } catch (err: any) {
-        const duration = Math.round(performance.now() - startTime);
-        this.addBreadcrumb(
-          "http",
-          `API Network Failure: ${method} ${url} - ${err.message} (${duration}ms)`,
-          { error: err.message, url },
-          "error"
-        );
-        this.captureException(err, "api_error");
-        throw err;
-      }
-    };
+      };
     } catch (e) {
       console.warn("Telemetry: Could not intercept window.fetch", e);
     }

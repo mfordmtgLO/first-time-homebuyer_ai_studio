@@ -1,0 +1,61 @@
+--- src/components/LeadIntakeChatbot.tsx
++++ src/components/LeadIntakeChatbot.tsx
+@@ -425,6 +425,48 @@
+   const [showTeaser, setShowTeaser] = useState<boolean>(true);
+   const [aiProvider, setAiProvider] = useState<'deepseek' | 'gemini' | 'none'>('none');
+ 
++  // Web Speech API State
++  const [isListening, setIsListening] = useState<boolean>(false);
++  const [speechSupported, setSpeechSupported] = useState<boolean>(false);
++  const recognitionRef = useRef<any>(null);
++
++  useEffect(() => {
++    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
++    if (SpeechRecognition) {
++      setSpeechSupported(true);
++      recognitionRef.current = new SpeechRecognition();
++      recognitionRef.current.continuous = true;
++      recognitionRef.current.interimResults = true;
++
++      recognitionRef.current.onresult = (event: any) => {
++        let finalTranscript = '';
++        for (let i = event.resultIndex; i < event.results.length; ++i) {
++          if (event.results[i].isFinal) {
++            finalTranscript += event.results[i][0].transcript;
++          }
++        }
++        if (finalTranscript) {
++          setInputText((prev) => (prev ? prev + ' ' + finalTranscript : finalTranscript));
++        }
++      };
++
++      recognitionRef.current.onerror = (event: any) => {
++        console.error("Speech recognition error:", event.error);
++        setIsListening(false);
++      };
++
++      recognitionRef.current.onend = () => {
++        // Auto-restart if we are still supposed to be listening (but browser cut it off)
++        // Actually, better to just stop and let the user click again to avoid infinite error loops
++        setIsListening(false);
++      };
++    }
++  }, []);
++
++  const toggleListening = () => {
++    if (!recognitionRef.current) return;
++    if (isListening) {
++      recognitionRef.current.stop();
++      setIsListening(false);
++    } else {
++      try {
++        recognitionRef.current.start();
++        setIsListening(true);
++      } catch (err) {
++        console.error("Failed to start speech recognition:", err);
++      }
++    }
++  };
++
+   useEffect(() => {
+     fetch('/api/ai/diagnostics')

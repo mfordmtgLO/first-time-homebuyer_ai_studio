@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from "react";
-import { 
-  Calculator, 
-  DollarSign, 
-  Percent, 
-  ShieldAlert, 
-  Sparkles, 
-  TrendingUp, 
+import {
+  Calculator,
+  DollarSign,
+  Percent,
+  ShieldAlert,
+  Sparkles,
+  TrendingUp,
   Info,
-  CheckCircle2, 
-  AlertTriangle, 
-  ArrowRight, 
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
   RefreshCw,
   Target,
   ShieldCheck,
@@ -20,9 +20,15 @@ import {
   Building,
   BookmarkPlus,
   MailCheck,
-  Check
+  Check,
 } from "lucide-react";
-import { FinancialProfile, CapturedLead, SavedScenario, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
+import {
+  FinancialProfile,
+  CapturedLead,
+  SavedScenario,
+  LoanOfficerProfile,
+  RealEstateAgentProfile,
+} from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 import { US_STATES } from "./StateLicensingSelector";
 import { getNationwideHfaDetails } from "../utils/nationwideHfaLimits";
@@ -58,7 +64,7 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
   activeAgent,
   onOpenEmailOutreach,
   onOpenSmsOutreach,
-  isLoanOfficerMode = false
+  isLoanOfficerMode = false,
 }) => {
   const [loanTypePreset, setLoanTypePreset] = useState<"30yr" | "fha" | "usda" | "va">("30yr");
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
@@ -75,23 +81,27 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
 
   const getLoanProgramName = () => {
     switch (loanTypePreset) {
-      case "fha": return "FHA 3.5% Down";
-      case "usda": return "USDA 100% Zero Down";
-      case "va": return "VA 0% Down Military";
-      default: return "30-Year Conventional";
+      case "fha":
+        return "FHA 3.5% Down";
+      case "usda":
+        return "USDA 100% Zero Down";
+      case "va":
+        return "VA 0% Down Military";
+      default:
+        return "30-Year Conventional";
     }
   };
 
   const handlePresetChange = (type: "30yr" | "fha" | "usda" | "va") => {
     setLoanTypePreset(type);
     if (type === "30yr") {
-      setProfile(prev => ({ ...prev, loanTermYears: 30, interestRate: 6.625, pmiRate: 0.65 }));
+      setProfile((prev) => ({ ...prev, loanTermYears: 30, interestRate: 6.625, pmiRate: 0.65 }));
     } else if (type === "fha") {
-      setProfile(prev => ({ ...prev, loanTermYears: 30, interestRate: 6.125, pmiRate: 0.55 }));
+      setProfile((prev) => ({ ...prev, loanTermYears: 30, interestRate: 6.125, pmiRate: 0.55 }));
     } else if (type === "usda") {
-      setProfile(prev => ({ ...prev, loanTermYears: 30, interestRate: 6.125, pmiRate: 0.35 }));
+      setProfile((prev) => ({ ...prev, loanTermYears: 30, interestRate: 6.125, pmiRate: 0.35 }));
     } else if (type === "va") {
-      setProfile(prev => ({ ...prev, loanTermYears: 30, interestRate: 6.000, pmiRate: 0 }));
+      setProfile((prev) => ({ ...prev, loanTermYears: 30, interestRate: 6.0, pmiRate: 0 }));
     }
   };
 
@@ -103,10 +113,10 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
       if (match) {
         const parsed = parseInt(match[1].replace(/,/g, ""), 10);
         if (!isNaN(parsed) && parsed > 50000) {
-          setProfile(prev => ({
+          setProfile((prev) => ({
             ...prev,
             targetPrice: parsed,
-            downPaymentSavings: Math.round(parsed * 0.05)
+            downPaymentSavings: Math.round(parsed * 0.05),
           }));
         }
       }
@@ -125,13 +135,13 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
       sourceTool: "calculator",
       loanOfficer,
       agent: activeAgent,
-      scenarioName: `${getLoanProgramName()} @ ${formatUSD(profile.targetPrice)} (${formatUSD(breakdown.totalMonthly)}/mo)`
+      scenarioName: `${getLoanProgramName()} @ ${formatUSD(profile.targetPrice)} (${formatUSD(breakdown.totalMonthly)}/mo)`,
     });
 
     const updatedScenarios = [newScenario, ...(selectedLead.savedScenarios || [])];
     const updatedLead: CapturedLead = {
       ...selectedLead,
-      savedScenarios: updatedScenarios
+      savedScenarios: updatedScenarios,
     };
 
     if (onUpdateLead) {
@@ -139,7 +149,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
     }
     setSelectedLead(updatedLead);
     setActiveOutreachScenario(newScenario);
-    setSaveSuccessMsg(`✓ Saved scenario to ${selectedLead.fullName}'s profile! Ready-made drafts generated.`);
+    setSaveSuccessMsg(
+      `✓ Saved scenario to ${selectedLead.fullName}'s profile! Ready-made drafts generated.`
+    );
     setTimeout(() => setSaveSuccessMsg(null), 4000);
   };
 
@@ -155,18 +167,24 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
           downPayment: profile.downPaymentSavings,
           creditScore: profile.creditScore,
           targetHomePrice: profile.targetPrice,
-          state: profile.state
+          state: profile.state,
+          loanOfficer: loanOfficer,
+          agent: activeAgent,
         }),
       });
       const data = await res.json();
       if (data.analysis) {
         setAiAnalysis(data.analysis);
       } else {
-        setAiAnalysis("Analysis complete. Your debt-to-income profile is healthy. Consider setting aside 3 months of emergency reserves before locking your loan.");
+        setAiAnalysis(
+          "Analysis complete. Your debt-to-income profile is healthy. Consider setting aside 3 months of emergency reserves before locking your loan."
+        );
       }
     } catch (e) {
       console.error(e);
-      setAiAnalysis("Your current numbers reflect a strong base for a 30-year conventional or FHA mortgage. We recommend aiming for a back-end DTI under 36% for the lowest interest rate tiers.");
+      setAiAnalysis(
+        "Your current numbers reflect a strong base for a 30-year conventional or FHA mortgage. We recommend aiming for a back-end DTI under 36% for the lowest interest rate tiers."
+      );
     } finally {
       setLoadingAi(false);
     }
@@ -212,7 +230,10 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
   // Calculate percentage of Target Price slider for linear-gradient fill
   const minPrice = 100000;
   const maxPrice = 1200000;
-  const priceSliderPercent = Math.min(100, Math.max(0, ((profile.targetPrice - minPrice) / (maxPrice - minPrice)) * 100));
+  const priceSliderPercent = Math.min(
+    100,
+    Math.max(0, ((profile.targetPrice - minPrice) / (maxPrice - minPrice)) * 100)
+  );
 
   return (
     <div className="space-y-10">
@@ -242,7 +263,8 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             How Much House Can You Truly Afford?
           </h2>
           <p className="text-sm text-[#606C5D] max-w-2xl">
-            Test loan scenarios with accurate property taxes, homeowners insurance, PMI, and standard DTI underwriting limits.
+            Test loan scenarios with accurate property taxes, homeowners insurance, PMI, and
+            standard DTI underwriting limits.
           </p>
         </div>
 
@@ -252,7 +274,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             <button
               onClick={() => handlePresetChange("30yr")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                loanTypePreset === "30yr" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
+                loanTypePreset === "30yr"
+                  ? "bg-[#4A5D4E] text-white shadow-sm"
+                  : "text-[#606C5D] hover:text-[#2D362E]"
               }`}
             >
               30-Yr Conventional
@@ -260,7 +284,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             <button
               onClick={() => handlePresetChange("fha")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                loanTypePreset === "fha" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
+                loanTypePreset === "fha"
+                  ? "bg-[#4A5D4E] text-white shadow-sm"
+                  : "text-[#606C5D] hover:text-[#2D362E]"
               }`}
             >
               FHA 3.5%
@@ -268,7 +294,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             <button
               onClick={() => handlePresetChange("usda")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                loanTypePreset === "usda" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
+                loanTypePreset === "usda"
+                  ? "bg-[#4A5D4E] text-white shadow-sm"
+                  : "text-[#606C5D] hover:text-[#2D362E]"
               }`}
             >
               USDA 0%
@@ -276,7 +304,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             <button
               onClick={() => handlePresetChange("va")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                loanTypePreset === "va" ? "bg-[#4A5D4E] text-white shadow-sm" : "text-[#606C5D] hover:text-[#2D362E]"
+                loanTypePreset === "va"
+                  ? "bg-[#4A5D4E] text-white shadow-sm"
+                  : "text-[#606C5D] hover:text-[#2D362E]"
               }`}
             >
               VA 0%
@@ -335,10 +365,10 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                 onChange={(e) => {
                   const newState = e.target.value;
                   const hfa = getNationwideHfaDetails(newState);
-                  setProfile(prev => ({
+                  setProfile((prev) => ({
                     ...prev,
                     state: newState,
-                    propertyTaxRate: Number((hfa.avgPropertyTaxRate * 100).toFixed(2))
+                    propertyTaxRate: Number((hfa.avgPropertyTaxRate * 100).toFixed(2)),
                   }));
                 }}
                 className="bg-[#F9F8F4] border border-[#EAE7E0] rounded-lg px-2.5 py-1 text-xs font-bold text-[#2D362E] focus:outline-none focus:ring-1 focus:ring-[#C18C5D]"
@@ -360,8 +390,13 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                 <div className="flex items-center gap-2">
                   <Building className="w-4 h-4 text-[#C18C5D] shrink-0" />
                   <div>
-                    <span className="font-bold text-[#2D362E] block">{hfa.agencyAcronym}: {hfa.featuredProgramName}</span>
-                    <span className="text-stone-500 text-[11px]">2026 Conforming Limit: ${hfa.conformingBaselineLimit.toLocaleString()} • Avg Tax: {(hfa.avgPropertyTaxRate * 100).toFixed(2)}%</span>
+                    <span className="font-bold text-[#2D362E] block">
+                      {hfa.agencyAcronym}: {hfa.featuredProgramName}
+                    </span>
+                    <span className="text-stone-500 text-[11px]">
+                      2026 Conforming Limit: ${hfa.conformingBaselineLimit.toLocaleString()} • Avg
+                      Tax: {(hfa.avgPropertyTaxRate * 100).toFixed(2)}%
+                    </span>
                   </div>
                 </div>
                 <button
@@ -377,13 +412,13 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
 
           <div className="space-y-5">
             {/* User Input at top of Financial Inputs: Self-Restricted Target Max Monthly Payment Goal */}
-            <div 
+            <div
               id="self-restricted-max-payment-container"
               className="bg-[#F9F8F4] p-4 rounded-xl border border-[#EAE7E0] space-y-2.5"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <label 
-                  htmlFor="self-restricted-max-payment-input" 
+                <label
+                  htmlFor="self-restricted-max-payment-input"
                   className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5"
                 >
                   <Target className="w-3.5 h-3.5 text-[#C18C5D]" />
@@ -398,7 +433,12 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                     min="500"
                     max="10000"
                     value={profile.targetMaxMonthlyPayment || 3200}
-                    onChange={(e) => setProfile(prev => ({ ...prev, targetMaxMonthlyPayment: Math.max(100, Number(e.target.value)) }))}
+                    onChange={(e) =>
+                      setProfile((prev) => ({
+                        ...prev,
+                        targetMaxMonthlyPayment: Math.max(100, Number(e.target.value)),
+                      }))
+                    }
                     className="w-28 bg-white border border-[#EAE7E0] rounded-lg px-2.5 py-1 text-xs font-bold text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
                   />
                   <span className="text-xs font-semibold text-[#606C5D]">/mo</span>
@@ -408,7 +448,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
               {/* Quick Presets & Status Legend */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[#EAE7E0]/60">
                 <div className="flex items-center gap-1 flex-wrap">
-                  <span className="text-[10px] font-bold text-[#9A9488] uppercase mr-1">Presets:</span>
+                  <span className="text-[10px] font-bold text-[#9A9488] uppercase mr-1">
+                    Presets:
+                  </span>
                   {[2500, 2800, 3000, 3200, 3500].map((preset) => {
                     const isSelected = (profile.targetMaxMonthlyPayment || 3200) === preset;
                     return (
@@ -416,7 +458,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                         key={preset}
                         id={`preset-max-payment-${preset}`}
                         type="button"
-                        onClick={() => setProfile(prev => ({ ...prev, targetMaxMonthlyPayment: preset }))}
+                        onClick={() =>
+                          setProfile((prev) => ({ ...prev, targetMaxMonthlyPayment: preset }))
+                        }
                         className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
                           isSelected
                             ? "bg-[#4A5D4E] text-white shadow-xs"
@@ -431,15 +475,24 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
 
                 {/* Live 3-Stage Visual Legend */}
                 <div className="flex items-center gap-2.5 text-[10px] text-[#606C5D] font-medium">
-                  <span className="flex items-center gap-1" title="Dark Green: More than $500 below target monthly max">
+                  <span
+                    className="flex items-center gap-1"
+                    title="Dark Green: More than $500 below target monthly max"
+                  >
                     <span className="w-2 h-2 rounded-full bg-emerald-800 inline-block" />
                     <span>&gt;$500 under</span>
                   </span>
-                  <span className="flex items-center gap-1" title="Amber: Within $500 of target monthly max">
+                  <span
+                    className="flex items-center gap-1"
+                    title="Amber: Within $500 of target monthly max"
+                  >
                     <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
                     <span>Within $500</span>
                   </span>
-                  <span className="flex items-center gap-1" title="Red: Reached or exceeded target monthly max">
+                  <span
+                    className="flex items-center gap-1"
+                    title="Red: Reached or exceeded target monthly max"
+                  >
                     <span className="w-2 h-2 rounded-full bg-red-600 inline-block" />
                     <span>At / Over Max</span>
                   </span>
@@ -453,17 +506,14 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                 <span className="text-[#2D362E] font-bold">Target Home Purchase Price</span>
                 <div className="flex items-center gap-2">
                   {/* Dynamic Status Chip */}
-                  <span 
+                  <span
                     id="payment-status-badge"
                     className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border font-bold ${statusBadgeBg}`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${statusDotColor}`} />
                     <span>{statusBadgeText}</span>
                   </span>
-                  <span 
-                    className="font-bold text-sm"
-                    style={{ color: sliderTrackColor }}
-                  >
+                  <span className="font-bold text-sm" style={{ color: sliderTrackColor }}>
                     {formatUSD(profile.targetPrice)}
                   </span>
                 </div>
@@ -478,10 +528,12 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                   max={maxPrice}
                   step="5000"
                   value={profile.targetPrice}
-                  onChange={(e) => setProfile(prev => ({ ...prev, targetPrice: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, targetPrice: Number(e.target.value) }))
+                  }
                   style={{
                     accentColor: sliderTrackColor,
-                    background: `linear-gradient(to right, ${sliderTrackColor} 0%, ${sliderTrackColor} ${priceSliderPercent}%, #DEDAD2 ${priceSliderPercent}%, #DEDAD2 100%)`
+                    background: `linear-gradient(to right, ${sliderTrackColor} 0%, ${sliderTrackColor} ${priceSliderPercent}%, #DEDAD2 ${priceSliderPercent}%, #DEDAD2 100%)`,
                   }}
                   className="w-full h-2.5 rounded-lg appearance-none cursor-pointer transition-all duration-200"
                   title={`Target Price: ${formatUSD(profile.targetPrice)} (Total Est. Monthly: ${formatUSD(breakdown.totalMonthly)}/mo)`}
@@ -499,7 +551,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             <div>
               <div className="flex justify-between text-xs text-[#606C5D] mb-1.5 font-semibold">
                 <span>Gross Household Annual Income</span>
-                <span className="text-[#2D362E] font-bold text-sm">{formatUSD(profile.annualIncome)}/yr</span>
+                <span className="text-[#2D362E] font-bold text-sm">
+                  {formatUSD(profile.annualIncome)}/yr
+                </span>
               </div>
               <input
                 type="range"
@@ -507,11 +561,16 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                 max="350000"
                 step="5000"
                 value={profile.annualIncome}
-                onChange={(e) => setProfile(prev => ({ ...prev, annualIncome: Number(e.target.value) }))}
+                onChange={(e) =>
+                  setProfile((prev) => ({ ...prev, annualIncome: Number(e.target.value) }))
+                }
                 className="w-full h-2 bg-[#DEDAD2] rounded-lg appearance-none cursor-pointer accent-[#4A5D4E]"
               />
               <div className="text-[11px] text-[#9A9488] mt-1">
-                Gross monthly income: <strong className="text-[#2D362E]">{formatUSD(profile.annualIncome / 12)}/mo</strong>
+                Gross monthly income:{" "}
+                <strong className="text-[#2D362E]">
+                  {formatUSD(profile.annualIncome / 12)}/mo
+                </strong>
               </div>
             </div>
 
@@ -526,11 +585,15 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                   <div className="text-[11px] text-[#606C5D]">
                     {breakdown.downPaymentPercent >= 20 ? (
                       <span className="text-[#4A5D4E] font-semibold flex items-center gap-1 mt-0.5">
-                        <ShieldCheck className="w-3 h-3 text-[#4A5D4E]" /> 20%+ Down (No PMI required)
+                        <ShieldCheck className="w-3 h-3 text-[#4A5D4E]" /> 20%+ Down (No PMI
+                        required)
                       </span>
                     ) : (
                       <span className="text-[#9A9488] block mt-0.5">
-                        {formatUSD(Math.max(0, profile.targetPrice * 0.2 - profile.downPaymentSavings))} more to reach 20% no-PMI milestone
+                        {formatUSD(
+                          Math.max(0, profile.targetPrice * 0.2 - profile.downPaymentSavings)
+                        )}{" "}
+                        more to reach 20% no-PMI milestone
                       </span>
                     )}
                   </div>
@@ -540,7 +603,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                 <div className="flex items-center gap-2">
                   {/* Dollar Amount Input */}
                   <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#606C5D]">$</span>
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#606C5D]">
+                      $
+                    </span>
                     <input
                       id="down-payment-dollar-input"
                       type="number"
@@ -549,8 +614,11 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                       step="1000"
                       value={profile.downPaymentSavings}
                       onChange={(e) => {
-                        const val = Math.max(0, Math.min(profile.targetPrice, Number(e.target.value) || 0));
-                        setProfile(prev => ({ ...prev, downPaymentSavings: val }));
+                        const val = Math.max(
+                          0,
+                          Math.min(profile.targetPrice, Number(e.target.value) || 0)
+                        );
+                        setProfile((prev) => ({ ...prev, downPaymentSavings: val }));
                       }}
                       className="w-24 sm:w-28 pl-5 pr-2 py-1 bg-white border border-[#DEDAD2] rounded-lg text-xs font-bold text-[#2D362E] focus:outline-none focus:border-[#4A5D4E] shadow-2xs text-right"
                       title="Direct Dollar Amount"
@@ -569,12 +637,14 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                       onChange={(e) => {
                         const pct = Math.max(0, Math.min(100, Number(e.target.value) || 0));
                         const calculatedDollar = Math.round(profile.targetPrice * (pct / 100));
-                        setProfile(prev => ({ ...prev, downPaymentSavings: calculatedDollar }));
+                        setProfile((prev) => ({ ...prev, downPaymentSavings: calculatedDollar }));
                       }}
                       className="w-16 sm:w-18 pl-2 pr-5 py-1 bg-white border border-[#DEDAD2] rounded-lg text-xs font-bold text-[#4A5D4E] focus:outline-none focus:border-[#4A5D4E] shadow-2xs text-right"
                       title="Direct Percentage of Purchase Price"
                     />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4A5D4E]">%</span>
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4A5D4E]">
+                      %
+                    </span>
                   </div>
                 </div>
               </div>
@@ -588,7 +658,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                   max={Math.max(150000, profile.targetPrice * 0.5)}
                   step="1000"
                   value={profile.downPaymentSavings}
-                  onChange={(e) => setProfile(prev => ({ ...prev, downPaymentSavings: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, downPaymentSavings: Number(e.target.value) }))
+                  }
                   className="w-full h-2.5 bg-[#DEDAD2] rounded-lg appearance-none cursor-pointer accent-[#4A5D4E]"
                   title={`Down payment: ${formatUSD(profile.downPaymentSavings)} (${breakdown.downPaymentPercent}%)`}
                 />
@@ -597,7 +669,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
               {/* Quick % and Program Presets */}
               <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-[#EAE7E0]/80">
                 <div className="flex items-center gap-1 flex-wrap">
-                  <span className="text-[10px] font-bold text-[#9A9488] uppercase mr-1">Quick %:</span>
+                  <span className="text-[10px] font-bold text-[#9A9488] uppercase mr-1">
+                    Quick %:
+                  </span>
                   {[
                     { label: "3% (Conv)", pct: 3 },
                     { label: "3.5% (FHA)", pct: 3.5 },
@@ -607,13 +681,15 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                     { label: "20% (No PMI)", pct: 20 },
                   ].map((preset) => {
                     const presetDollar = Math.round(profile.targetPrice * (preset.pct / 100));
-                    const isSelected = Math.abs(profile.downPaymentSavings - presetDollar) < 100 || Math.abs(breakdown.downPaymentPercent - preset.pct) < 0.2;
+                    const isSelected =
+                      Math.abs(profile.downPaymentSavings - presetDollar) < 100 ||
+                      Math.abs(breakdown.downPaymentPercent - preset.pct) < 0.2;
                     return (
                       <button
                         key={preset.pct}
                         type="button"
                         onClick={() => {
-                          setProfile(prev => ({ ...prev, downPaymentSavings: presetDollar }));
+                          setProfile((prev) => ({ ...prev, downPaymentSavings: presetDollar }));
                         }}
                         className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
                           isSelected
@@ -629,7 +705,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                 </div>
 
                 <div className="text-[11px] text-[#606C5D] font-medium ml-auto">
-                  Loan: <strong className="text-[#2D362E]">{formatUSD(breakdown.loanAmount)}</strong> ({Math.round(100 - breakdown.downPaymentPercent)}% LTV)
+                  Loan:{" "}
+                  <strong className="text-[#2D362E]">{formatUSD(breakdown.loanAmount)}</strong> (
+                  {Math.round(100 - breakdown.downPaymentPercent)}% LTV)
                 </div>
               </div>
             </div>
@@ -638,7 +716,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             <div>
               <div className="flex justify-between text-xs text-[#606C5D] mb-1.5 font-semibold">
                 <span>Monthly Non-Mortgage Debt (Cars, Student, CC)</span>
-                <span className="text-[#C18C5D] font-bold text-sm">{formatUSD(profile.monthlyDebt)}/mo</span>
+                <span className="text-[#C18C5D] font-bold text-sm">
+                  {formatUSD(profile.monthlyDebt)}/mo
+                </span>
               </div>
               <input
                 type="range"
@@ -646,7 +726,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                 max="3000"
                 step="50"
                 value={profile.monthlyDebt}
-                onChange={(e) => setProfile(prev => ({ ...prev, monthlyDebt: Number(e.target.value) }))}
+                onChange={(e) =>
+                  setProfile((prev) => ({ ...prev, monthlyDebt: Number(e.target.value) }))
+                }
                 className="w-full h-2 bg-[#DEDAD2] rounded-lg appearance-none cursor-pointer accent-[#C18C5D]"
               />
             </div>
@@ -664,7 +746,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                     min="3"
                     max="12"
                     value={profile.interestRate}
-                    onChange={(e) => setProfile(prev => ({ ...prev, interestRate: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setProfile((prev) => ({ ...prev, interestRate: Number(e.target.value) }))
+                    }
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-sm text-[#2D362E] font-bold focus:outline-none focus:border-[#4A5D4E]"
                   />
                   <Percent className="w-3.5 h-3.5 text-[#9A9488] absolute right-3 top-3" />
@@ -682,7 +766,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                     min="0"
                     max="1000"
                     value={profile.monthlyHOA}
-                    onChange={(e) => setProfile(prev => ({ ...prev, monthlyHOA: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setProfile((prev) => ({ ...prev, monthlyHOA: Number(e.target.value) }))
+                    }
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-sm text-[#2D362E] font-bold focus:outline-none focus:border-[#4A5D4E]"
                   />
                   <DollarSign className="w-3.5 h-3.5 text-[#9A9488] absolute right-3 top-3" />
@@ -702,7 +788,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                   min="0.4"
                   max="3.0"
                   value={profile.propertyTaxRate}
-                  onChange={(e) => setProfile(prev => ({ ...prev, propertyTaxRate: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, propertyTaxRate: Number(e.target.value) }))
+                  }
                   className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-sm text-[#2D362E] font-bold focus:outline-none focus:border-[#4A5D4E]"
                 />
               </div>
@@ -717,7 +805,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                   min="500"
                   max="5000"
                   value={profile.annualHomeInsurance}
-                  onChange={(e) => setProfile(prev => ({ ...prev, annualHomeInsurance: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, annualHomeInsurance: Number(e.target.value) }))
+                  }
                   className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-sm text-[#2D362E] font-bold focus:outline-none focus:border-[#4A5D4E]"
                 />
               </div>
@@ -731,7 +821,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
           <div className="bg-white rounded-2xl border border-[#EAE7E0] p-6 space-y-5 shadow-sm">
             <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-4">
               <div>
-                <span className="text-xs uppercase tracking-wider text-[#9A9488] font-bold">Estimated Total Monthly Cost</span>
+                <span className="text-xs uppercase tracking-wider text-[#9A9488] font-bold">
+                  Estimated Total Monthly Cost
+                </span>
                 <div className="text-3xl sm:text-4xl font-extrabold text-[#4A5D4E] tracking-tight">
                   {formatUSD(breakdown.totalMonthly)}
                   <span className="text-sm font-normal text-[#9A9488] ml-1.5">/ month</span>
@@ -740,18 +832,44 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
 
               <div className="text-right">
                 <span className="text-xs text-[#9A9488] block">Loan Amount</span>
-                <span className="text-sm font-bold text-[#2D362E]">{formatUSD(breakdown.loanAmount)}</span>
+                <span className="text-sm font-bold text-[#2D362E]">
+                  {formatUSD(breakdown.loanAmount)}
+                </span>
               </div>
             </div>
 
             {/* Visual Stacked Bar */}
             <div className="space-y-2">
               <div className="flex h-3 w-full rounded-full overflow-hidden bg-[#F1EFE9] gap-0.5">
-                <div style={{ width: `${piPct}%` }} className="bg-[#4A5D4E]" title={`Principal & Interest: ${piPct}%`} />
-                <div style={{ width: `${taxPct}%` }} className="bg-[#606C5D]" title={`Property Taxes: ${taxPct}%`} />
-                <div style={{ width: `${insPct}%` }} className="bg-[#8E9A8B]" title={`Homeowners Insurance: ${insPct}%`} />
-                {pmiPct > 0 && <div style={{ width: `${pmiPct}%` }} className="bg-[#C18C5D]" title={`PMI: ${pmiPct}%`} />}
-                {hoaPct > 0 && <div style={{ width: `${hoaPct}%` }} className="bg-[#D4A373]" title={`HOA: ${hoaPct}%`} />}
+                <div
+                  style={{ width: `${piPct}%` }}
+                  className="bg-[#4A5D4E]"
+                  title={`Principal & Interest: ${piPct}%`}
+                />
+                <div
+                  style={{ width: `${taxPct}%` }}
+                  className="bg-[#606C5D]"
+                  title={`Property Taxes: ${taxPct}%`}
+                />
+                <div
+                  style={{ width: `${insPct}%` }}
+                  className="bg-[#8E9A8B]"
+                  title={`Homeowners Insurance: ${insPct}%`}
+                />
+                {pmiPct > 0 && (
+                  <div
+                    style={{ width: `${pmiPct}%` }}
+                    className="bg-[#C18C5D]"
+                    title={`PMI: ${pmiPct}%`}
+                  />
+                )}
+                {hoaPct > 0 && (
+                  <div
+                    style={{ width: `${hoaPct}%` }}
+                    className="bg-[#D4A373]"
+                    title={`HOA: ${hoaPct}%`}
+                  />
+                )}
               </div>
 
               {/* Itemized List */}
@@ -760,7 +878,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                   <span className="w-2.5 h-2.5 rounded-full bg-[#4A5D4E] shrink-0" />
                   <div>
                     <span className="text-[#9A9488] block text-[11px]">Principal & Interest</span>
-                    <span className="font-bold text-[#2D362E]">{formatUSD(breakdown.principalAndInterest)}</span>
+                    <span className="font-bold text-[#2D362E]">
+                      {formatUSD(breakdown.principalAndInterest)}
+                    </span>
                   </div>
                 </div>
 
@@ -768,7 +888,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                   <span className="w-2.5 h-2.5 rounded-full bg-[#606C5D] shrink-0" />
                   <div>
                     <span className="text-[#9A9488] block text-[11px]">Property Taxes</span>
-                    <span className="font-bold text-[#2D362E]">{formatUSD(breakdown.propertyTax)}</span>
+                    <span className="font-bold text-[#2D362E]">
+                      {formatUSD(breakdown.propertyTax)}
+                    </span>
                   </div>
                 </div>
 
@@ -776,14 +898,18 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                   <span className="w-2.5 h-2.5 rounded-full bg-[#8E9A8B] shrink-0" />
                   <div>
                     <span className="text-[#9A9488] block text-[11px]">Home Insurance</span>
-                    <span className="font-bold text-[#2D362E]">{formatUSD(breakdown.homeInsurance)}</span>
+                    <span className="font-bold text-[#2D362E]">
+                      {formatUSD(breakdown.homeInsurance)}
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#C18C5D] shrink-0" />
                   <div>
-                    <span className="text-[#9A9488] block text-[11px]">PMI ({breakdown.downPaymentPercent < 20 ? "Active" : "None"})</span>
+                    <span className="text-[#9A9488] block text-[11px]">
+                      PMI ({breakdown.downPaymentPercent < 20 ? "Active" : "None"})
+                    </span>
                     <span className="font-bold text-[#2D362E]">{formatUSD(breakdown.pmi)}</span>
                   </div>
                 </div>
@@ -818,21 +944,37 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
 
             <div className="grid grid-cols-3 gap-3 text-xs">
               <div className="bg-[#F1EFE9] p-3 rounded-xl border border-[#EAE7E0] space-y-1">
-                <span className="text-[#4A5D4E] font-bold block text-[11px]">Conservative (28/36)</span>
-                <span className="text-base font-extrabold text-[#2D362E] block">{formatUSD(breakdown.maxSafePriceConservative)}</span>
-                <span className="text-[10px] text-[#606C5D] block">Lowest stress, strong savings rate</span>
+                <span className="text-[#4A5D4E] font-bold block text-[11px]">
+                  Conservative (28/36)
+                </span>
+                <span className="text-base font-extrabold text-[#2D362E] block">
+                  {formatUSD(breakdown.maxSafePriceConservative)}
+                </span>
+                <span className="text-[10px] text-[#606C5D] block">
+                  Lowest stress, strong savings rate
+                </span>
               </div>
 
               <div className="bg-[#F1EFE9] p-3 rounded-xl border border-[#EAE7E0] space-y-1">
                 <span className="text-[#606C5D] font-bold block text-[11px]">Moderate (33/43)</span>
-                <span className="text-base font-extrabold text-[#2D362E] block">{formatUSD(breakdown.maxSafePriceModerate)}</span>
-                <span className="text-[10px] text-[#606C5D] block">Typical lender maximum qualification</span>
+                <span className="text-base font-extrabold text-[#2D362E] block">
+                  {formatUSD(breakdown.maxSafePriceModerate)}
+                </span>
+                <span className="text-[10px] text-[#606C5D] block">
+                  Typical lender maximum qualification
+                </span>
               </div>
 
               <div className="bg-[#F1EFE9] p-3 rounded-xl border border-[#EAE7E0] space-y-1">
-                <span className="text-[#C18C5D] font-bold block text-[11px]">Aggressive (36/45)</span>
-                <span className="text-base font-extrabold text-[#2D362E] block">{formatUSD(breakdown.maxSafePriceAggressive)}</span>
-                <span className="text-[10px] text-[#606C5D] block">Requires tight monthly budgeting</span>
+                <span className="text-[#C18C5D] font-bold block text-[11px]">
+                  Aggressive (36/45)
+                </span>
+                <span className="text-base font-extrabold text-[#2D362E] block">
+                  {formatUSD(breakdown.maxSafePriceAggressive)}
+                </span>
+                <span className="text-[10px] text-[#606C5D] block">
+                  Requires tight monthly budgeting
+                </span>
               </div>
             </div>
           </div>
@@ -845,8 +987,12 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                   <Building className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-[#2D362E]">Spatial Map & Loan Program Qualification</h4>
-                  <span className="text-[10px] text-[#606C5D]">Boundaries, 2026 FHFA Limits & DPA Program Matrix</span>
+                  <h4 className="text-xs font-bold text-[#2D362E]">
+                    Spatial Map & Loan Program Qualification
+                  </h4>
+                  <span className="text-[10px] text-[#606C5D]">
+                    Boundaries, 2026 FHFA Limits & DPA Program Matrix
+                  </span>
                 </div>
               </div>
               <button
@@ -862,26 +1008,41 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
               {/* Conventional 2026 Conforming Limit */}
               <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">2026 Conforming Cap</span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                    breakdown.loanAmount <= 806495 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"
-                  }`}>
+                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">
+                    2026 Conforming Cap
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                      breakdown.loanAmount <= 806495
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-amber-100 text-amber-900"
+                    }`}
+                  >
                     {breakdown.loanAmount <= 806495 ? "✓ Conforming" : "High Balance / Jumbo"}
                   </span>
                 </div>
                 <div className="text-sm font-extrabold text-[#2D362E]">$806,495 baseline</div>
                 <p className="text-[10px] text-[#606C5D]">
-                  Current loan of {formatUSD(breakdown.loanAmount)} is {breakdown.loanAmount <= 806495 ? "within standard baseline limit." : "above baseline."}
+                  Current loan of {formatUSD(breakdown.loanAmount)} is{" "}
+                  {breakdown.loanAmount <= 806495
+                    ? "within standard baseline limit."
+                    : "above baseline."}
                 </p>
               </div>
 
               {/* FHA Loan Limit */}
               <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">2026 FHA Floor/Ceiling</span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                    breakdown.loanAmount <= 632500 ? "bg-emerald-100 text-emerald-800" : "bg-stone-100 text-stone-700"
-                  }`}>
+                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">
+                    2026 FHA Floor/Ceiling
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                      breakdown.loanAmount <= 632500
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-stone-100 text-stone-700"
+                    }`}
+                  >
                     {breakdown.loanAmount <= 632500 ? "✓ FHA Eligible" : "Exceeds FHA Cap"}
                   </span>
                 </div>
@@ -894,28 +1055,34 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
               {/* USDA 100% 0%-Down Boundary */}
               <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">USDA Rural Boundary</span>
+                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">
+                    USDA Rural Boundary
+                  </span>
                   <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800">
                     ✓ 0% Down Active
                   </span>
                 </div>
                 <div className="text-sm font-extrabold text-[#4A5D4E]">Eligible in Rural Zones</div>
                 <p className="text-[10px] text-[#606C5D]">
-                  Marion, Yamhill, Polk & rural Oregon counties qualify for 100% financing with 0.35% guarantee fee.
+                  Marion, Yamhill, Polk & rural Oregon counties qualify for 100% financing with
+                  0.35% guarantee fee.
                 </p>
               </div>
 
               {/* LMI Census Tract & State DPA Grant */}
               <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">LMI / CRA & DPA Grant</span>
+                  <span className="text-[10px] font-bold uppercase text-[#606C5D]">
+                    LMI / CRA & DPA Grant
+                  </span>
                   <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#EBF3ED] text-[#2F5738]">
                     ✓ Grants Available
                   </span>
                 </div>
                 <div className="text-sm font-extrabold text-[#C18C5D]">Up to $15,000 DPA</div>
                 <p className="text-[10px] text-[#606C5D]">
-                  OHCS Flex Lending & FirstLine assistance grants apply directly toward down payment & rate buydowns.
+                  OHCS Flex Lending & FirstLine assistance grants apply directly toward down payment
+                  & rate buydowns.
                 </p>
               </div>
             </div>
@@ -934,7 +1101,11 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
                 disabled={loadingAi}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4A5D4E] hover:bg-[#38463B] text-white font-semibold text-xs shadow-sm transition-all disabled:opacity-50"
               >
-                {loadingAi ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {loadingAi ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
                 <span>{loadingAi ? "Analyzing..." : "Audit My Numbers with AI"}</span>
               </button>
             </div>
@@ -945,7 +1116,8 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
               </div>
             ) : (
               <p className="text-xs text-[#606C5D]">
-                Click above to generate an instant, personalized audit of your DTI ratios, safe price ceiling, and recommended loan programs via Gemini 3.7 Flash.
+                Click above to generate an instant, personalized audit of your DTI ratios, safe
+                price ceiling, and recommended loan programs via Gemini 3.7 Flash.
               </p>
             )}
           </div>
@@ -955,7 +1127,7 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
       {/* Guided 4-Step Flow: Proceed to Step 2 Navigation Card */}
       <div className="bg-gradient-to-br from-[#2D362E] to-[#1E251F] text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-[#4A5D4E]/40 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-72 h-72 bg-[#4A5D4E]/20 rounded-full blur-3xl pointer-events-none" />
-        
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
@@ -971,7 +1143,9 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             </h3>
 
             <p className="text-xs sm:text-sm text-[#DEDAD2] leading-relaxed">
-              Now that your monthly budget ({formatUSD(breakdown.totalMonthly)}/mo) and safe purchase target ({formatUSD(profile.targetPrice)}) are modeled, advance to the 10-step milestone roadmap and discover Oregon down payment assistance programs.
+              Now that your monthly budget ({formatUSD(breakdown.totalMonthly)}/mo) and safe
+              purchase target ({formatUSD(profile.targetPrice)}) are modeled, advance to the 10-step
+              milestone roadmap and discover Oregon down payment assistance programs.
             </p>
           </div>
 

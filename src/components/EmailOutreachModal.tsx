@@ -1,15 +1,61 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  X, Search, Plus, Archive, ArchiveRestore, Mail, Copy, Send, Sparkles, 
-  CheckSquare, Square, FileSpreadsheet, Tag as TagIcon, ExternalLink, 
-  Paperclip, Download, FileText, Check, AlertCircle, Info, Save, RotateCcw, CheckCircle2,
-  FileCheck, FilePlus, Image as ImageIcon, Eye, Filter, Upload, ChevronDown, ChevronUp,
-  UserCheck, Building, MapPin, PhoneCall, Award
-} from 'lucide-react';
-import { PropertyListing, EmailTemplate, RealEstateAgentProfile, CapturedLead, LoanOfficerProfile, EmailHistoryItem } from '../types';
-import { INITIAL_AGENT_ROSTER, INITIAL_LEADS, INITIAL_TEAM_LOAN_OFFICERS } from '../data/initialData';
-import { OutreachHistoryBadge } from './OutreachHistoryBadge';
-import { launchLocalOutlookDraft, appendWorkEmailSignature, getWorkEmailSignature } from '../utils/outlookEmailService';
+import React, { useState, useEffect } from "react";
+import {
+  X,
+  Search,
+  Plus,
+  Archive,
+  ArchiveRestore,
+  Mail,
+  Copy,
+  Send,
+  Sparkles,
+  CheckSquare,
+  Square,
+  FileSpreadsheet,
+  Tag as TagIcon,
+  ExternalLink,
+  Paperclip,
+  Download,
+  FileText,
+  Check,
+  AlertCircle,
+  Info,
+  Save,
+  RotateCcw,
+  CheckCircle2,
+  FileCheck,
+  FilePlus,
+  Image as ImageIcon,
+  Eye,
+  Filter,
+  Upload,
+  ChevronDown,
+  ChevronUp,
+  UserCheck,
+  Building,
+  MapPin,
+  PhoneCall,
+  Award,
+} from "lucide-react";
+import {
+  PropertyListing,
+  EmailTemplate,
+  RealEstateAgentProfile,
+  CapturedLead,
+  LoanOfficerProfile,
+  EmailHistoryItem,
+} from "../types";
+import {
+  INITIAL_AGENT_ROSTER,
+  INITIAL_LEADS,
+  INITIAL_TEAM_LOAN_OFFICERS,
+} from "../data/initialData";
+import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
+import {
+  launchLocalOutlookDraft,
+  appendWorkEmailSignature,
+  getWorkEmailSignature,
+} from "../utils/outlookEmailService";
 
 interface EmailOutreachModalProps {
   isOpen: boolean;
@@ -29,107 +75,140 @@ export interface MarketingFlyer {
   name: string;
   filename: string;
   category: string;
-  fileType: 'pdf' | 'jpg' | 'png';
+  fileType: "pdf" | "jpg" | "png";
   size: string;
   description: string;
   thumbnailUrl?: string;
   isCustom?: boolean;
 }
 
-const PRESET_TAGS = ['Welcome', 'Follow-up', 'Promotion', 'USDA', 'Open House'];
-const STORAGE_KEY_TEMPLATES = 'geosphere_email_templates';
-const STORAGE_KEY_DRAFT = 'geosphere_email_editor_draft';
+const PRESET_TAGS = ["Welcome", "Follow-up", "Promotion", "USDA", "Open House"];
+const STORAGE_KEY_TEMPLATES = "geosphere_email_templates";
+const STORAGE_KEY_DRAFT = "geosphere_email_editor_draft";
 
-const CATEGORY_META: Record<string, { label: string; icon: string; badgeColor: string; bgTint: string }> = {
-  'USDA': { label: 'USDA Financing Collateral', icon: '🌾', badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300', bgTint: 'border-l-4 border-l-emerald-600' },
-  'Flex': { label: 'Flex & Down Payment Assistance', icon: '⚡', badgeColor: 'bg-amber-100 text-amber-800 border-amber-300', bgTint: 'border-l-4 border-l-amber-600' },
-  'Rate Buydown': { label: 'Rate Buydown & Incentive Matrix', icon: '📈', badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-300', bgTint: 'border-l-4 border-l-indigo-600' },
-  'General': { label: 'General & Specialty Loan Programs', icon: '📁', badgeColor: 'bg-[#4A5D4E]/15 text-[#2D362E] border-[#4A5D4E]/30', bgTint: 'border-l-4 border-l-[#4A5D4E]' },
-  'Custom Uploads': { label: 'Custom Uploaded Documents', icon: '📎', badgeColor: 'bg-purple-100 text-purple-800 border-purple-300', bgTint: 'border-l-4 border-l-purple-600' }
+const CATEGORY_META: Record<
+  string,
+  { label: string; icon: string; badgeColor: string; bgTint: string }
+> = {
+  USDA: {
+    label: "USDA Financing Collateral",
+    icon: "🌾",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    bgTint: "border-l-4 border-l-emerald-600",
+  },
+  Flex: {
+    label: "Flex & Down Payment Assistance",
+    icon: "⚡",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-300",
+    bgTint: "border-l-4 border-l-amber-600",
+  },
+  "Rate Buydown": {
+    label: "Rate Buydown & Incentive Matrix",
+    icon: "📈",
+    badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-300",
+    bgTint: "border-l-4 border-l-indigo-600",
+  },
+  General: {
+    label: "General & Specialty Loan Programs",
+    icon: "📁",
+    badgeColor: "bg-[#4A5D4E]/15 text-[#2D362E] border-[#4A5D4E]/30",
+    bgTint: "border-l-4 border-l-[#4A5D4E]",
+  },
+  "Custom Uploads": {
+    label: "Custom Uploaded Documents",
+    icon: "📎",
+    badgeColor: "bg-purple-100 text-purple-800 border-purple-300",
+    bgTint: "border-l-4 border-l-purple-600",
+  },
 };
 
 const PRESET_MARKETING_FLYERS: MarketingFlyer[] = [
   {
-    id: 'flyer-1',
-    name: 'USDA Zero Down Direct Flyer',
-    filename: 'USDA_100_Zero_Down_Program_Flyer.pdf',
-    category: 'USDA',
-    fileType: 'pdf',
-    size: '1.4 MB',
-    description: 'Highlights 100% financing eligibility, income caps, and zero down payment benefits.'
+    id: "flyer-1",
+    name: "USDA Zero Down Direct Flyer",
+    filename: "USDA_100_Zero_Down_Program_Flyer.pdf",
+    category: "USDA",
+    fileType: "pdf",
+    size: "1.4 MB",
+    description:
+      "Highlights 100% financing eligibility, income caps, and zero down payment benefits.",
   },
   {
-    id: 'flyer-1b',
-    name: 'USDA Eligible Geographic Boundary Guide',
-    filename: 'USDA_Eligible_Geographic_Tract_Guide.jpg',
-    category: 'USDA',
-    fileType: 'jpg',
-    size: '1.1 MB',
-    description: 'Visual map breakdown and property location rules for USDA rural & suburban tracts.'
+    id: "flyer-1b",
+    name: "USDA Eligible Geographic Boundary Guide",
+    filename: "USDA_Eligible_Geographic_Tract_Guide.jpg",
+    category: "USDA",
+    fileType: "jpg",
+    size: "1.1 MB",
+    description:
+      "Visual map breakdown and property location rules for USDA rural & suburban tracts.",
   },
   {
-    id: 'flyer-2',
-    name: 'FirstHome $15K DPA Grant Guide',
-    filename: 'FirstHome_15k_Down_Payment_Grant_Overview.pdf',
-    category: 'Flex',
-    fileType: 'pdf',
-    size: '2.1 MB',
-    description: 'Breakdown of first-time homebuyer grant qualification rules and closing cost credits.'
+    id: "flyer-2",
+    name: "FirstHome $15K DPA Grant Guide",
+    filename: "FirstHome_15k_Down_Payment_Grant_Overview.pdf",
+    category: "Flex",
+    fileType: "pdf",
+    size: "2.1 MB",
+    description:
+      "Breakdown of first-time homebuyer grant qualification rules and closing cost credits.",
   },
   {
-    id: 'flyer-2b',
-    name: 'Flex 3.5% Assistance & Forgivable Second Lien',
-    filename: 'Flex_Down_Payment_Assistance_Options.pdf',
-    category: 'Flex',
-    fileType: 'pdf',
-    size: '1.6 MB',
-    description: 'Flexible down payment assistance matrix featuring zero-interest forgivable options.'
+    id: "flyer-2b",
+    name: "Flex 3.5% Assistance & Forgivable Second Lien",
+    filename: "Flex_Down_Payment_Assistance_Options.pdf",
+    category: "Flex",
+    fileType: "pdf",
+    size: "1.6 MB",
+    description:
+      "Flexible down payment assistance matrix featuring zero-interest forgivable options.",
   },
   {
-    id: 'flyer-3',
-    name: '2-1 Temporary Interest Rate Buydown Matrix',
-    filename: '2_1_Temporary_Buydown_Rate_Sheet.jpg',
-    category: 'Rate Buydown',
-    fileType: 'jpg',
-    size: '980 KB',
-    description: 'Visual chart comparing Year 1, Year 2, and Year 3 monthly mortgage savings.'
+    id: "flyer-3",
+    name: "2-1 Temporary Interest Rate Buydown Matrix",
+    filename: "2_1_Temporary_Buydown_Rate_Sheet.jpg",
+    category: "Rate Buydown",
+    fileType: "jpg",
+    size: "980 KB",
+    description: "Visual chart comparing Year 1, Year 2, and Year 3 monthly mortgage savings.",
   },
   {
-    id: 'flyer-3b',
-    name: '1-0 Seller-Paid Rate Buydown Agent Sheet',
-    filename: '1_0_Seller_Buydown_Agent_Sheet.pdf',
-    category: 'Rate Buydown',
-    fileType: 'pdf',
-    size: '890 KB',
-    description: 'Co-branded listing flyer highlighting seller concessions for initial interest rate drops.'
+    id: "flyer-3b",
+    name: "1-0 Seller-Paid Rate Buydown Agent Sheet",
+    filename: "1_0_Seller_Buydown_Agent_Sheet.pdf",
+    category: "Rate Buydown",
+    fileType: "pdf",
+    size: "890 KB",
+    description:
+      "Co-branded listing flyer highlighting seller concessions for initial interest rate drops.",
   },
   {
-    id: 'flyer-4',
-    name: 'VA Military Zero-Down Benefits Flyer',
-    filename: 'VA_Military_Loan_Benefits_Summary.pdf',
-    category: 'General',
-    fileType: 'pdf',
-    size: '1.8 MB',
-    description: 'Zero funding fee eligibility, competitive interest rates, and no PMI advantages.'
+    id: "flyer-4",
+    name: "VA Military Zero-Down Benefits Flyer",
+    filename: "VA_Military_Loan_Benefits_Summary.pdf",
+    category: "General",
+    fileType: "pdf",
+    size: "1.8 MB",
+    description: "Zero funding fee eligibility, competitive interest rates, and no PMI advantages.",
   },
   {
-    id: 'flyer-5',
-    name: 'FHA 203(k) Renovation Loan Flyer',
-    filename: 'FHA_203k_Renovation_Mortgage_Guide.pdf',
-    category: 'General',
-    fileType: 'pdf',
-    size: '1.2 MB',
-    description: 'Single mortgage combining home purchase price with repair/renovation budget.'
+    id: "flyer-5",
+    name: "FHA 203(k) Renovation Loan Flyer",
+    filename: "FHA_203k_Renovation_Mortgage_Guide.pdf",
+    category: "General",
+    fileType: "pdf",
+    size: "1.2 MB",
+    description: "Single mortgage combining home purchase price with repair/renovation budget.",
   },
   {
-    id: 'flyer-6',
-    name: 'Medical Professional & Doctor Loan Flyer',
-    filename: 'Doctor_Medical_Physician_0_Down_Flyer.jpg',
-    category: 'General',
-    fileType: 'jpg',
-    size: '850 KB',
-    description: 'Tailored zero down payment loans for MDs, DOs, Dentists, and Residents.'
-  }
+    id: "flyer-6",
+    name: "Medical Professional & Doctor Loan Flyer",
+    filename: "Doctor_Medical_Physician_0_Down_Flyer.jpg",
+    category: "General",
+    fileType: "jpg",
+    size: "850 KB",
+    description: "Tailored zero down payment loans for MDs, DOs, Dentists, and Residents.",
+  },
 ];
 
 const MOCK_TEMPLATES: EmailTemplate[] = [
@@ -159,7 +238,7 @@ NMLS #[LoNMLS]
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ownerId: "me"
+    ownerId: "me",
   },
   {
     id: "market-trends-cobrand",
@@ -194,7 +273,7 @@ Real Estate Specialist | [AgentBrokerage]
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ownerId: "me"
+    ownerId: "me",
   },
   {
     id: "lead-outreach-1",
@@ -224,7 +303,7 @@ Warm regards,
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ownerId: "me"
+    ownerId: "me",
   },
   {
     id: "lead-outreach-2",
@@ -248,7 +327,7 @@ Best,
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ownerId: "me"
+    ownerId: "me",
   },
   {
     id: "buyer-agent-attract-1",
@@ -259,7 +338,7 @@ Best,
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ownerId: "me"
+    ownerId: "me",
   },
   {
     id: "buyer-agent-stop-renting",
@@ -270,7 +349,7 @@ Best,
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ownerId: "me"
+    ownerId: "me",
   },
   {
     id: "1",
@@ -281,7 +360,7 @@ Best,
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ownerId: "me"
+    ownerId: "me",
   },
   {
     id: "2",
@@ -292,7 +371,7 @@ Best,
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ownerId: "me"
+    ownerId: "me",
   },
   {
     id: "3",
@@ -303,7 +382,7 @@ Best,
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ownerId: "me"
+    ownerId: "me",
   },
   {
     id: "4",
@@ -314,21 +393,21 @@ Best,
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ownerId: "me"
-  }
+    ownerId: "me",
+  },
 ];
 
-export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  properties, 
+export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
+  isOpen,
+  onClose,
+  properties,
   agentRoster,
   leads = INITIAL_LEADS,
   loanOfficers = INITIAL_TEAM_LOAN_OFFICERS,
   initialSelectedLeadId,
   onLogOutreach,
   onUpdateLead,
-  onTriggerToast
+  onTriggerToast,
 }) => {
   const [templates, setTemplates] = useState<EmailTemplate[]>(() => {
     try {
@@ -345,17 +424,19 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
   const [activeTemplateId, setActiveTemplateId] = useState<string>("lead-outreach-1");
   const [isEditing, setIsEditing] = useState(false);
-  
+
   const [selectedAgentEmails, setSelectedAgentEmails] = useState<string[]>([]);
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(initialSelectedLeadId || null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(
+    initialSelectedLeadId || null
+  );
 
   useEffect(() => {
     if (initialSelectedLeadId) {
       setSelectedLeadId(initialSelectedLeadId);
-      setRecipientTab('website_leads');
+      setRecipientTab("website_leads");
     }
   }, [initialSelectedLeadId]);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTagFilter, setSelectedTagFilter] = useState<string>("All");
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -364,23 +445,23 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
   // Marketing Material Flyers State
   const [flyers, setFlyers] = useState<MarketingFlyer[]>(PRESET_MARKETING_FLYERS);
-  const [selectedFlyerIds, setSelectedFlyerIds] = useState<string[]>(['flyer-1', 'flyer-3']);
+  const [selectedFlyerIds, setSelectedFlyerIds] = useState<string[]>(["flyer-1", "flyer-3"]);
   const [flyerSearchQuery, setFlyerSearchQuery] = useState("");
   const [selectedFlyerCategory, setSelectedFlyerCategory] = useState<string>("All");
   const [previewingFlyer, setPreviewingFlyer] = useState<MarketingFlyer | null>(null);
   const [isFlyerSectionExpanded, setIsFlyerSectionExpanded] = useState(true);
-  
+
   const [editTitle, setEditTitle] = useState("");
   const [editSubject, setEditSubject] = useState("");
   const [editBody, setEditBody] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState("");
-  
+
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Auto-Save States
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
   const [hasRestoredDraft, setHasRestoredDraft] = useState<boolean>(false);
 
@@ -397,7 +478,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   const effectiveAgentRoster = React.useMemo(() => {
     if (agentRoster && agentRoster.length > 0) return agentRoster;
     try {
-      const raw = localStorage.getItem('guides_state_v1');
+      const raw = localStorage.getItem("guides_state_v1");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed.agentRoster) && parsed.agentRoster.length > 0) {
@@ -410,28 +491,39 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
   // Buyer Agents from Roster
   const buyerAgentList = React.useMemo(() => {
-    return effectiveAgentRoster.filter(a => a.agentType === 'buyer_agent' || a.agentType === 'dual_agent' || !a.agentType);
+    return effectiveAgentRoster.filter(
+      (a) => a.agentType === "buyer_agent" || a.agentType === "dual_agent" || !a.agentType
+    );
   }, [effectiveAgentRoster]);
 
   // Tab for recipient list selection: 'website_leads' | 'buyer' | 'listing' | 'all'
-  const [recipientTab, setRecipientTab] = useState<'website_leads' | 'buyer' | 'listing' | 'all'>('website_leads');
+  const [recipientTab, setRecipientTab] = useState<"website_leads" | "buyer" | "listing" | "all">(
+    "website_leads"
+  );
 
   // AI Studio Website Chatbot Lead Email Generator
   const handleGenerateAiWebsiteLeadEmail = async (targetLeadId?: string) => {
     const leadId = targetLeadId || selectedLeadId;
-    const lead = leads.find(l => l.id === leadId) || leads[0];
+    const lead = leads.find((l) => l.id === leadId) || leads[0];
     if (!lead) return;
 
     setIsGenerating(true);
     try {
-      const assignedLo = loanOfficers.find(l => l.id === lead.assignedLoId || l.name === lead.assignedLO) || loanOfficers[0];
-      const assignedAgent = effectiveAgentRoster.find(a => a.id === lead.assignedAgentId || a.name === lead.assignedAgent) || effectiveAgentRoster[0];
+      const assignedLo =
+        loanOfficers.find((l) => l.id === lead.assignedLoId || l.name === lead.assignedLO) ||
+        loanOfficers[0];
+      const assignedAgent =
+        effectiveAgentRoster.find(
+          (a) => a.id === lead.assignedAgentId || a.name === lead.assignedAgent
+        ) || effectiveAgentRoster[0];
 
       // Filter matching listings by lead location
       const city = lead.preferredLocations || "Albany";
-      const matchingListings = properties.filter(p => 
-        p.city.toLowerCase().includes(city.toLowerCase()) || p.overlayEligibility?.usda
-      ).slice(0, 4);
+      const matchingListings = properties
+        .filter(
+          (p) => p.city.toLowerCase().includes(city.toLowerCase()) || p.overlayEligibility?.usda
+        )
+        .slice(0, 4);
 
       const res = await fetch("/api/gemini/website-lead-email", {
         method: "POST",
@@ -440,8 +532,8 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
           lead,
           lo: assignedLo,
           agent: assignedAgent,
-          matchingListings
-        })
+          matchingListings,
+        }),
       });
 
       if (res.ok) {
@@ -457,8 +549,12 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         // Fallback generator
         setIsEditing(true);
         setEditTitle(`Outreach: ${lead.fullName} (${lead.preferredLocations})`);
-        setEditSubject(`Your Requested Low/No Down Payment Home List for ${lead.preferredLocations} + First-Time Buyer Blueprint`);
-        setEditBody(`Hi ${lead.fullName},\n\nThank you for reaching out via our chatbot! We have prepared your custom homebuyer blueprint for ${lead.preferredLocations}.\n\n🤝 YOUR LOCAL CO-BRANDED GUIDE TEAM:\nMike Ford (Senior Loan Officer, NMLS #987654) and ${assignedAgent.name} (${assignedAgent.title} at ${assignedAgent.brokerage}, ${assignedAgent.phone}) are ready to help you every step of the way!\n\nNext Steps: Let's set up a 10-minute chat at ${lead.preferredContactTime || 'your convenience'}.\n\nBest,\nMike Ford & ${assignedAgent.name}`);
+        setEditSubject(
+          `Your Requested Low/No Down Payment Home List for ${lead.preferredLocations} + First-Time Buyer Blueprint`
+        );
+        setEditBody(
+          `Hi ${lead.fullName},\n\nThank you for reaching out via our chatbot! We have prepared your custom homebuyer blueprint for ${lead.preferredLocations}.\n\n🤝 YOUR LOCAL CO-BRANDED GUIDE TEAM:\nMike Ford (Senior Loan Officer, NMLS #987654) and ${assignedAgent.name} (${assignedAgent.title} at ${assignedAgent.brokerage}, ${assignedAgent.phone}) are ready to help you every step of the way!\n\nNext Steps: Let's set up a 10-minute chat at ${lead.preferredContactTime || "your convenience"}.\n\nBest,\nMike Ford & ${assignedAgent.name}`
+        );
         setEditTags(["Website Lead", "Chatbot", "Co-Branded"]);
       }
     } catch (err) {
@@ -472,18 +568,22 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   const handleGenerateAiBuyerEmail = async () => {
     setIsGenerating(true);
     try {
-      const selectedBuyerAgents = buyerAgentList.filter(a => selectedAgentEmails.includes(a.email));
-      const targetAgentNames = selectedBuyerAgents.map(a => a.name);
-      
+      const selectedBuyerAgents = buyerAgentList.filter((a) =>
+        selectedAgentEmails.includes(a.email)
+      );
+      const targetAgentNames = selectedBuyerAgents.map((a) => a.name);
+
       const res = await fetch("/api/gemini/buyer-agent-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agentNames: targetAgentNames.length > 0 ? targetAgentNames : ["Top Buyer Agent"],
           properties: properties,
-          loName: "Mike Ford",
-          campaignType: "Attract Buyer Agents - Stop Renting Zero Down & Flex DPA Push"
-        })
+          loName: activeLo.name,
+          loPhone: activeLo.phone,
+          loEmail: activeLo.email,
+          campaignType: "Attract Buyer Agents - Stop Renting Zero Down & Flex DPA Push",
+        }),
       });
 
       if (res.ok) {
@@ -491,7 +591,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         if (data.success && data.email) {
           setIsEditing(true);
           setEditTitle("AI Studio: Buyer Agent Stop-Renting Campaign");
-          setEditSubject(data.email.subject || "Co-Marketing Partnership: Stop Renting & 0% Down USDA Listings");
+          setEditSubject(
+            data.email.subject || "Co-Marketing Partnership: Stop Renting & 0% Down USDA Listings"
+          );
           setEditBody(data.email.body || "");
           setEditTags(["Buyer Agent", "USDA", "Promotion"]);
         }
@@ -499,16 +601,24 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         // High quality fallback client generator
         setIsEditing(true);
         setEditTitle("AI Studio: Buyer Agent Stop-Renting Campaign");
-        setEditSubject("Co-Marketing Partnership: Zero-Down & Flex DPA Pre-Screened Listings in Oregon");
-        setEditBody(`Hi [AgentName],\n\nAs a premier Buyer's Agent, I wanted to reach out regarding a massive co-marketing opportunity to attract renters who want to stop renting and buy their first home.\n\nWe have pre-screened property listings eligible for 100% USDA Zero-Down Financing, 3.5% Flex DPA Grants, and 2-1 Temporary Rate Buydowns that lower buyer upfront cash to virtually $0!\n\nI would love to partner with you to co-market these listings with co-branded landing pages, open house flyer attachments, and 24-hour pre-approvals.\n\nLet's catch up over coffee or a brief call this week to align on our first-time homebuyer strategy.\n\nBest regards,\n[MyName]`);
+        setEditSubject(
+          "Co-Marketing Partnership: Zero-Down & Flex DPA Pre-Screened Listings in Oregon"
+        );
+        setEditBody(
+          `Hi [AgentName],\n\nAs a premier Buyer's Agent, I wanted to reach out regarding a massive co-marketing opportunity to attract renters who want to stop renting and buy their first home.\n\nWe have pre-screened property listings eligible for 100% USDA Zero-Down Financing, 3.5% Flex DPA Grants, and 2-1 Temporary Rate Buydowns that lower buyer upfront cash to virtually $0!\n\nI would love to partner with you to co-market these listings with co-branded landing pages, open house flyer attachments, and 24-hour pre-approvals.\n\nLet's catch up over coffee or a brief call this week to align on our first-time homebuyer strategy.\n\nBest regards,\n[MyName]`
+        );
         setEditTags(["Buyer Agent", "USDA", "Promotion"]);
       }
     } catch (err) {
       console.error("AI Email generation error:", err);
       setIsEditing(true);
       setEditTitle("AI Studio: Buyer Agent Stop-Renting Campaign");
-      setEditSubject("Co-Marketing Partnership: Zero-Down & Flex DPA Pre-Screened Listings in Oregon");
-      setEditBody(`Hi [AgentName],\n\nAs a premier Buyer's Agent, I wanted to reach out regarding a massive co-marketing opportunity to attract renters who want to stop renting and buy their first home.\n\nWe have pre-screened property listings eligible for 100% USDA Zero-Down Financing, 3.5% Flex DPA Grants, and 2-1 Temporary Rate Buydowns that lower buyer upfront cash to virtually $0!\n\nI would love to partner with you to co-market these listings with co-branded landing pages, open house flyer attachments, and 24-hour pre-approvals.\n\nLet's catch up over coffee or a brief call this week to align on our first-time homebuyer strategy.\n\nBest regards,\n[MyName]`);
+      setEditSubject(
+        "Co-Marketing Partnership: Zero-Down & Flex DPA Pre-Screened Listings in Oregon"
+      );
+      setEditBody(
+        `Hi [AgentName],\n\nAs a premier Buyer's Agent, I wanted to reach out regarding a massive co-marketing opportunity to attract renters who want to stop renting and buy their first home.\n\nWe have pre-screened property listings eligible for 100% USDA Zero-Down Financing, 3.5% Flex DPA Grants, and 2-1 Temporary Rate Buydowns that lower buyer upfront cash to virtually $0!\n\nI would love to partner with you to co-market these listings with co-branded landing pages, open house flyer attachments, and 24-hour pre-approvals.\n\nLet's catch up over coffee or a brief call this week to align on our first-time homebuyer strategy.\n\nBest regards,\n[MyName]`
+      );
       setEditTags(["Buyer Agent", "USDA", "Promotion"]);
     } finally {
       setIsGenerating(false);
@@ -517,11 +627,12 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
   // Group properties by listing agent email
   const agentProperties = React.useMemo(() => {
-    const map = new Map<string, { agentName: string, properties: PropertyListing[] }>();
-    properties.forEach(p => {
+    const map = new Map<string, { agentName: string; properties: PropertyListing[] }>();
+    properties.forEach((p) => {
       if (p.listingAgent?.email) {
         const email = p.listingAgent.email;
-        if (!map.has(email)) map.set(email, { agentName: p.listingAgent.name || email, properties: [] });
+        if (!map.has(email))
+          map.set(email, { agentName: p.listingAgent.name || email, properties: [] });
         map.get(email)!.properties.push(p);
       }
     });
@@ -531,7 +642,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   // Extract all unique tags across existing templates + presets
   const allAvailableTags = React.useMemo(() => {
     const set = new Set<string>(PRESET_TAGS);
-    templates.forEach(t => t.tags?.forEach(tag => set.add(tag)));
+    templates.forEach((t) => t.tags?.forEach((tag) => set.add(tag)));
     return Array.from(set);
   }, [templates]);
 
@@ -549,8 +660,16 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
           setEditBody(draft.editBody ?? "");
           setEditTags(draft.editTags ?? []);
           if (Array.isArray(draft.selectedFlyerIds)) setSelectedFlyerIds(draft.selectedFlyerIds);
-          setLastSavedTime(draft.savedAt ? new Date(draft.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : null);
-          setAutoSaveStatus('saved');
+          setLastSavedTime(
+            draft.savedAt
+              ? new Date(draft.savedAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })
+              : null
+          );
+          setAutoSaveStatus("saved");
           setHasRestoredDraft(true);
           loadedFromDraft = true;
         }
@@ -568,7 +687,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         setEditBody("");
         setEditTags(["Welcome"]);
       } else {
-        const t = templates.find(t => t.id === activeTemplateId);
+        const t = templates.find((t) => t.id === activeTemplateId);
         if (t) {
           setIsEditing(false);
           setEditTitle(t.title);
@@ -584,7 +703,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   useEffect(() => {
     if (!isEditing) return;
 
-    setAutoSaveStatus('saving');
+    setAutoSaveStatus("saving");
     const timer = setTimeout(() => {
       try {
         const now = new Date();
@@ -595,14 +714,16 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
           editBody,
           editTags,
           selectedFlyerIds,
-          savedAt: now.toISOString()
+          savedAt: now.toISOString(),
         };
         localStorage.setItem(STORAGE_KEY_DRAFT, JSON.stringify(draftData));
-        setLastSavedTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-        setAutoSaveStatus('saved');
+        setLastSavedTime(
+          now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+        );
+        setAutoSaveStatus("saved");
       } catch (e) {
         console.error("Auto-save to local state failed:", e);
-        setAutoSaveStatus('idle');
+        setAutoSaveStatus("idle");
       }
     }, 1200);
 
@@ -616,7 +737,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       console.error(e);
     }
     setHasRestoredDraft(false);
-    setAutoSaveStatus('idle');
+    setAutoSaveStatus("idle");
     setLastSavedTime(null);
     if (activeTemplateId === "new") {
       setEditTitle("New Template");
@@ -624,7 +745,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       setEditBody("");
       setEditTags(["Welcome"]);
     } else {
-      const t = templates.find(t => t.id === activeTemplateId);
+      const t = templates.find((t) => t.id === activeTemplateId);
       if (t) {
         setEditTitle(t.title);
         setEditSubject(t.subject);
@@ -636,16 +757,16 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedAgentEmails(agentProperties.map(a => a.email));
+      setSelectedAgentEmails(agentProperties.map((a) => a.email));
       setDownloadedAttachment(false);
     }
   }, [isOpen, agentProperties]);
 
   if (!isOpen) return null;
 
-  const filteredTemplates = templates.filter(t => {
+  const filteredTemplates = templates.filter((t) => {
     if (!includeArchived && t.isArchived) return false;
-    
+
     // Tag filter
     if (selectedTagFilter !== "All") {
       if (!t.tags || !t.tags.includes(selectedTagFilter)) return false;
@@ -657,14 +778,14 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       const titleMatch = t.title.toLowerCase().includes(q);
       const bodyMatch = t.body.toLowerCase().includes(q);
       const subjectMatch = t.subject.toLowerCase().includes(q);
-      const tagMatch = t.tags?.some(tag => tag.toLowerCase().includes(q));
+      const tagMatch = t.tags?.some((tag) => tag.toLowerCase().includes(q));
       return titleMatch || bodyMatch || subjectMatch || tagMatch;
     }
     return true;
   });
 
   const getPropertyLink = (p: PropertyListing) => {
-    if (p.zillowUrl && p.zillowUrl.startsWith('http')) return p.zillowUrl;
+    if (p.zillowUrl && p.zillowUrl.startsWith("http")) return p.zillowUrl;
     const query = `${p.address}, ${p.city}, ${p.state} ${p.zip}`;
     return `https://www.zillow.com/homes/${encodeURIComponent(query)}`;
   };
@@ -680,19 +801,25 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         isArchived: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        ownerId: "me"
+        ownerId: "me",
       };
-      setTemplates(prev => [...prev, newTemplate]);
+      setTemplates((prev) => [...prev, newTemplate]);
       setActiveTemplateId(newTemplate.id);
     } else {
-      setTemplates(prev => prev.map(t => t.id === activeTemplateId ? { 
-        ...t, 
-        title: editTitle, 
-        subject: editSubject, 
-        body: editBody, 
-        tags: editTags,
-        updatedAt: new Date().toISOString() 
-      } : t));
+      setTemplates((prev) =>
+        prev.map((t) =>
+          t.id === activeTemplateId
+            ? {
+                ...t,
+                title: editTitle,
+                subject: editSubject,
+                body: editBody,
+                tags: editTags,
+                updatedAt: new Date().toISOString(),
+              }
+            : t
+        )
+      );
     }
     try {
       localStorage.removeItem(STORAGE_KEY_DRAFT);
@@ -700,32 +827,38 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       console.error(e);
     }
     setHasRestoredDraft(false);
-    setAutoSaveStatus('saved');
+    setAutoSaveStatus("saved");
     setIsEditing(false);
   };
 
   const toggleTagInEditor = (tag: string) => {
-    setEditTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+    setEditTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
   const handleAddCustomTag = () => {
     const trimmed = customTagInput.trim();
     if (trimmed && !editTags.includes(trimmed)) {
-      setEditTags(prev => [...prev, trimmed]);
+      setEditTags((prev) => [...prev, trimmed]);
       setCustomTagInput("");
     }
   };
 
   const toggleArchive = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setTemplates(prev => prev.map(t => t.id === id ? { ...t, isArchived: !t.isArchived } : t));
+    setTemplates((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, isArchived: !t.isArchived } : t))
+    );
   };
 
   const handleGenerateAI = async () => {
     if (!aiPrompt) return;
     setIsGenerating(true);
     setTimeout(() => {
-      setEditBody(prev => prev + `\n\n[AI Suggestion based on "${aiPrompt}"]: \nHi [AgentName], noticed your listing is eligible for zero-down USDA financing! Would love to chat about bringing our pre-approved buyers.`);
+      setEditBody(
+        (prev) =>
+          prev +
+          `\n\n[AI Suggestion based on "${aiPrompt}"]: \nHi [AgentName], noticed your listing is eligible for zero-down USDA financing! Would love to chat about bringing our pre-approved buyers.`
+      );
       setIsGenerating(false);
       setAiPrompt("");
     }, 1500);
@@ -733,29 +866,29 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
   const generateBodyContent = (isHtml: boolean = false) => {
     let text = editBody;
-    
+
     // Resolve Loan Officer details
     const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
-    const loName = activeLo?.name || 'Mike Ford';
-    const rawNmls = activeLo?.nmlsId ? activeLo.nmlsId.replace(/[^0-9]/g, '') : '288455';
-    const loNmls = rawNmls || '288455';
+    const loName = activeLo?.name || "Mike Ford";
+    const rawNmls = activeLo?.nmlsId ? activeLo.nmlsId.replace(/[^0-9]/g, "") : "288455";
+    const loNmls = rawNmls || "288455";
 
     // Replace lead or agent placeholders
-    if (recipientTab === 'website_leads' && selectedLeadId) {
-      const targetLead = leads.find(l => l.id === selectedLeadId);
+    if (recipientTab === "website_leads" && selectedLeadId) {
+      const targetLead = leads.find((l) => l.id === selectedLeadId);
       if (targetLead) {
-        text = text.replace(/\[LeadName\]/g, targetLead.fullName || 'Homebuyer');
-        const budgetDisplay = (targetLead as any).targetPrice 
-          ? `$${Number((targetLead as any).targetPrice).toLocaleString()}` 
-          : (targetLead.targetPriceRange || '$450,000');
+        text = text.replace(/\[LeadName\]/g, targetLead.fullName || "Homebuyer");
+        const budgetDisplay = (targetLead as any).targetPrice
+          ? `$${Number((targetLead as any).targetPrice).toLocaleString()}`
+          : targetLead.targetPriceRange || "$450,000";
         text = text.replace(/\[TargetBudget\]/g, budgetDisplay);
-        text = text.replace(/\[City\]/g, targetLead.taggedCityArea || 'Salem, OR');
-        text = text.replace(/\[PreferredTime\]/g, 'this afternoon or tomorrow morning');
+        text = text.replace(/\[City\]/g, targetLead.taggedCityArea || "Salem, OR");
+        text = text.replace(/\[PreferredTime\]/g, "this afternoon or tomorrow morning");
       }
     }
 
     if (selectedAgentEmails.length === 1) {
-      const agent = agentProperties.find(a => a.email === selectedAgentEmails[0]);
+      const agent = agentProperties.find((a) => a.email === selectedAgentEmails[0]);
       if (agent) {
         text = text.replace(/\[AgentName\]/g, agent.agentName);
         if (agent.properties.length > 0) {
@@ -764,9 +897,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         }
       }
     } else {
-      text = text.replace(/\[AgentName\]/g, 'Valued Partner');
-      text = text.replace(/\[Address\]/g, 'your active listings');
-      text = text.replace(/\[City\]/g, 'our target area');
+      text = text.replace(/\[AgentName\]/g, "Valued Partner");
+      text = text.replace(/\[Address\]/g, "your active listings");
+      text = text.replace(/\[City\]/g, "our target area");
     }
 
     text = text.replace(/\[LoName\]/g, loName);
@@ -774,24 +907,28 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
     text = text.replace(/\[MyName\]/g, `${loName} (Senior Loan Officer, NMLS #${loNmls})`);
 
     const targetProperties: PropertyListing[] = [];
-    selectedAgentEmails.forEach(email => {
-      const agent = agentProperties.find(a => a.email === email);
+    selectedAgentEmails.forEach((email) => {
+      const agent = agentProperties.find((a) => a.email === email);
       if (agent) targetProperties.push(...agent.properties);
     });
 
-    const selectedFlyers = flyers.filter(f => selectedFlyerIds.includes(f.id));
+    const selectedFlyers = flyers.filter((f) => selectedFlyerIds.includes(f.id));
 
     if (isHtml) {
-      let htmlOutput = text.replace(/\n/g, '<br/>');
-      
+      let htmlOutput = text.replace(/\n/g, "<br/>");
+
       if (includePropertyLinks && targetProperties.length > 0) {
         htmlOutput += `<br/><br/><div style="border-top: 2px solid #0078D4; padding-top: 12px; margin-top: 16px;">`;
         htmlOutput += `<h4 style="color: #0078D4; margin: 0 0 10px 0; font-family: Arial, sans-serif;">📍 Featured Listing Overview & Direct Links</h4>`;
         htmlOutput += `<ul style="padding-left: 18px; margin: 0; font-family: Arial, sans-serif; font-size: 13px; color: #333;">`;
-        targetProperties.forEach(p => {
+        targetProperties.forEach((p) => {
           const link = getPropertyLink(p);
-          const usdaTag = p.overlayEligibility?.usda ? `<span style="color: #2e7d32; font-weight: bold;">[USDA 100% Eligible]</span> ` : '';
-          const firstHomeTag = p.overlayEligibility?.firstHomeEligible ? `<span style="color: #0288d1; font-weight: bold;">[FirstHome Grant Qualified]</span>` : '';
+          const usdaTag = p.overlayEligibility?.usda
+            ? `<span style="color: #2e7d32; font-weight: bold;">[USDA 100% Eligible]</span> `
+            : "";
+          const firstHomeTag = p.overlayEligibility?.firstHomeEligible
+            ? `<span style="color: #0288d1; font-weight: bold;">[FirstHome Grant Qualified]</span>`
+            : "";
           htmlOutput += `<li style="margin-bottom: 12px;">`;
           htmlOutput += `<strong><a href="${link}" style="color: #0078D4; text-decoration: underline;">${p.address}, ${p.city}, ${p.state} ${p.zip}</a></strong><br/>`;
           htmlOutput += `<span style="color: #555;">Price: $${p.price.toLocaleString()} | ${p.beds} Bed / ${p.baths} Bath (${p.sqft.toLocaleString()} sq ft)</span><br/>`;
@@ -806,7 +943,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         htmlOutput += `<br/><br/><div style="border-top: 2px dashed #4A5D4E; padding-top: 12px; margin-top: 16px; background-color: #FAF9F5; padding: 12px; border-radius: 8px;">`;
         htmlOutput += `<h4 style="color: #4A5D4E; margin: 0 0 8px 0; font-family: Arial, sans-serif; font-size: 13px; font-weight: bold;">📎 Attached Loan Program Marketing Flyers (${selectedFlyers.length})</h4>`;
         htmlOutput += `<ul style="padding-left: 18px; margin: 0; font-family: Arial, sans-serif; font-size: 12px; color: #2D362E;">`;
-        selectedFlyers.forEach(f => {
+        selectedFlyers.forEach((f) => {
           htmlOutput += `<li style="margin-bottom: 8px;">`;
           htmlOutput += `<strong style="color: #4A5D4E;">[${f.fileType.toUpperCase()}] ${f.name}</strong> (${f.filename} - ${f.size})<br/>`;
           htmlOutput += `<span style="color: #606C5D; font-size: 11px;">Category: ${f.category} — ${f.description}</span>`;
@@ -818,7 +955,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       // Append authentic work email signature formatted for HTML
       const signatureText = getWorkEmailSignature(activeLo);
       htmlOutput += `<br/><br/><div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5; font-size: 12px; border-top: 1px solid #ddd; padding-top: 12px; margin-top: 20px;">`;
-      htmlOutput += signatureText.replace(/\n/g, '<br/>');
+      htmlOutput += signatureText.replace(/\n/g, "<br/>");
       htmlOutput += `</div>`;
 
       return htmlOutput;
@@ -828,8 +965,12 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         textOutput += `\n\n==============================================\n📍 FEATURED PROPERTY OVERVIEW & DIRECT LINKS:\n==============================================\n`;
         targetProperties.forEach((p, idx) => {
           const link = getPropertyLink(p);
-          const usdaTag = p.overlayEligibility?.usda ? '[USDA 100% Eligible Zone]' : '[Standard Financing]';
-          const firstHomeTag = p.overlayEligibility?.firstHomeEligible ? ' [FirstHome Grant Qualified]' : '';
+          const usdaTag = p.overlayEligibility?.usda
+            ? "[USDA 100% Eligible Zone]"
+            : "[Standard Financing]";
+          const firstHomeTag = p.overlayEligibility?.firstHomeEligible
+            ? " [FirstHome Grant Qualified]"
+            : "";
           textOutput += `${idx + 1}. ${p.address}, ${p.city}, ${p.state} ${p.zip}\n`;
           textOutput += `   • Price: $${p.price.toLocaleString()} | ${p.beds} Beds / ${p.baths} Baths | ${p.sqft.toLocaleString()} sq ft\n`;
           textOutput += `   • Program Specs: ${usdaTag}${firstHomeTag}\n`;
@@ -854,13 +995,13 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   };
 
   const handleDownloadSelectedFlyers = () => {
-    const selectedFlyers = flyers.filter(f => selectedFlyerIds.includes(f.id));
+    const selectedFlyers = flyers.filter((f) => selectedFlyerIds.includes(f.id));
     if (selectedFlyers.length === 0) {
       alert("Please select at least one marketing flyer to download.");
       return;
     }
 
-    selectedFlyers.forEach(flyer => {
+    selectedFlyers.forEach((flyer) => {
       let content = `========================================================================\n`;
       content += `GEOSPHERE MORTGAGE MARKETING FLYER: ${flyer.name.toUpperCase()}\n`;
       content += `Filename : ${flyer.filename}\n`;
@@ -875,11 +1016,11 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       content += `NMLS License ID: #987654\n`;
       content += `========================================================================\n`;
 
-      const blob = new Blob([content], { type: 'text/plain' });
+      const blob = new Blob([content], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = flyer.filename.replace(/\.(pdf|jpg|png)$/i, '') + '_Flyer.txt';
+      a.download = flyer.filename.replace(/\.(pdf|jpg|png)$/i, "") + "_Flyer.txt";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -892,24 +1033,25 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
     if (!files || files.length === 0) return;
 
     Array.from(files).forEach((file: File, idx: number) => {
-      const ext = file.name.split('.').pop()?.toLowerCase();
-      const fileType: 'pdf' | 'jpg' | 'png' = ext === 'pdf' ? 'pdf' : (ext === 'png' ? 'png' : 'jpg');
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      const fileType: "pdf" | "jpg" | "png" = ext === "pdf" ? "pdf" : ext === "png" ? "png" : "jpg";
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      const formattedSize = file.size > 1024 * 1024 ? `${sizeMb} MB` : `${Math.round(file.size / 1024)} KB`;
+      const formattedSize =
+        file.size > 1024 * 1024 ? `${sizeMb} MB` : `${Math.round(file.size / 1024)} KB`;
 
       const newFlyer: MarketingFlyer = {
         id: `custom-flyer-${Date.now()}-${idx}`,
-        name: file.name.replace(/\.[^/.]+$/, "").replace(/_/g, ' '),
+        name: file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " "),
         filename: file.name,
-        category: 'Custom Upload',
+        category: "Custom Upload",
         fileType,
         size: formattedSize,
-        description: 'Uploaded custom loan program flyer ready for agent outreach.',
-        isCustom: true
+        description: "Uploaded custom loan program flyer ready for agent outreach.",
+        isCustom: true,
       };
 
-      setFlyers(prev => [newFlyer, ...prev]);
-      setSelectedFlyerIds(prev => [...prev, newFlyer.id]);
+      setFlyers((prev) => [newFlyer, ...prev]);
+      setSelectedFlyerIds((prev) => [...prev, newFlyer.id]);
     });
   };
 
@@ -918,12 +1060,12 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
     let cc = "";
     let subjectText = editSubject;
 
-    if (recipientTab === 'website_leads') {
+    if (recipientTab === "website_leads") {
       if (!selectedLeadId) {
         alert("Please select a website lead first.");
         return;
       }
-      const lead = leads.find(l => l.id === selectedLeadId);
+      const lead = leads.find((l) => l.id === selectedLeadId);
       if (!lead || !lead.email) {
         alert("Selected lead does not have a valid email address.");
         return;
@@ -938,18 +1080,18 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         return;
       }
       to = selectedAgentEmails.join(";");
-      
+
       if (selectedAgentEmails.length === 1) {
-        const agent = agentProperties.find(a => a.email === selectedAgentEmails[0]);
+        const agent = agentProperties.find((a) => a.email === selectedAgentEmails[0]);
         if (agent && agent.properties.length > 0) {
           subjectText = subjectText.replace(/\[Address\]/g, agent.properties[0].address);
           subjectText = subjectText.replace(/\[City\]/g, agent.properties[0].city);
           subjectText = subjectText.replace(/\[AgentName\]/g, agent.agentName);
         }
       } else {
-        subjectText = subjectText.replace(/\[Address\]/g, 'Featured Listings');
-        subjectText = subjectText.replace(/\[City\]/g, 'Target Area');
-        subjectText = subjectText.replace(/\[AgentName\]/g, 'Agent Partners');
+        subjectText = subjectText.replace(/\[Address\]/g, "Featured Listings");
+        subjectText = subjectText.replace(/\[City\]/g, "Target Area");
+        subjectText = subjectText.replace(/\[AgentName\]/g, "Agent Partners");
       }
     }
 
@@ -963,24 +1105,27 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
     }
 
     // Log to emailHistory and outreach tracking
-    const activeTmpl = templates.find(t => t.id === activeTemplateId);
-    const resolvedTemplateName = activeTmpl?.title || activeTmpl?.name || editTitle || 'Outlook Outreach';
+    const activeTmpl = templates.find((t) => t.id === activeTemplateId);
+    const resolvedTemplateName =
+      activeTmpl?.title || activeTmpl?.name || editTitle || "Outlook Outreach";
 
-    if (recipientTab === 'website_leads' && selectedLeadId) {
-      const lead = leads.find(l => l.id === selectedLeadId);
+    if (recipientTab === "website_leads" && selectedLeadId) {
+      const lead = leads.find((l) => l.id === selectedLeadId);
       if (lead) {
         const newHistoryItem: EmailHistoryItem = {
           id: `eh-outlook-${Date.now()}`,
           timestamp: new Date().toISOString(),
           templateType: resolvedTemplateName,
           subject: subjectText,
-          channel: 'outlook',
+          channel: "outlook",
           recipientEmail: to,
           recipientName: lead.fullName,
-          sentBy: 'Mike Ford (Senior Mortgage Specialist)',
-          status: 'sent',
+          sentBy: "Mike Ford (Senior Mortgage Specialist)",
+          status: "sent",
           notes: `Outlook dispatch with ${selectedFlyerIds.length} attached flyer(s).`,
-          flyerNames: selectedFlyerIds.map(fid => flyers.find(f => f.id === fid)?.name).filter(Boolean) as string[]
+          flyerNames: selectedFlyerIds
+            .map((fid) => flyers.find((f) => f.id === fid)?.name)
+            .filter(Boolean) as string[],
         };
 
         if (onUpdateLead) {
@@ -994,33 +1139,33 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
               {
                 id: `ol-outlook-${Date.now()}`,
                 timestamp: new Date().toISOString(),
-                channel: 'email',
+                channel: "email",
                 templateName: resolvedTemplateName,
                 subject: subjectText,
                 recipientName: lead.fullName,
-                notes: `Dispatched via Outlook to ${to}`
-              }
-            ]
+                notes: `Dispatched via Outlook to ${to}`,
+              },
+            ],
           };
           onUpdateLead(updatedLead);
         }
         onLogOutreach?.(lead.id, newHistoryItem);
       }
     } else if (agentRoster && selectedAgentEmails.length > 0) {
-      selectedAgentEmails.forEach(email => {
-        const ag = agentRoster.find(a => a.email === email);
+      selectedAgentEmails.forEach((email) => {
+        const ag = agentRoster.find((a) => a.email === email);
         if (ag) {
           const newAgItem: EmailHistoryItem = {
             id: `eh-ag-outlook-${Date.now()}`,
             timestamp: new Date().toISOString(),
             templateType: resolvedTemplateName,
             subject: subjectText,
-            channel: 'outlook',
+            channel: "outlook",
             recipientEmail: email,
             recipientName: ag.name,
-            sentBy: 'Mike Ford (Senior Mortgage Specialist)',
-            status: 'sent',
-            notes: `Outlook agent partner dispatch.`
+            sentBy: "Mike Ford (Senior Mortgage Specialist)",
+            status: "sent",
+            notes: `Outlook agent partner dispatch.`,
           };
           ag.emailHistory = [...(ag.emailHistory || []), newAgItem];
           ag.outreachLogs = [
@@ -1028,12 +1173,12 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
             {
               id: `ol-ag-outlook-${Date.now()}`,
               timestamp: new Date().toISOString(),
-              channel: 'email',
+              channel: "email",
               templateName: resolvedTemplateName,
               subject: subjectText,
               recipientName: ag.name,
-              notes: `Dispatched via Outlook to ${email}`
-            }
+              notes: `Dispatched via Outlook to ${email}`,
+            },
           ];
         }
       });
@@ -1047,27 +1192,32 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       subject: subjectText,
       body: plainBody,
       loanOfficer: activeLo,
-      lead: recipientTab === 'website_leads' && selectedLeadId ? leads.find(l => l.id === selectedLeadId) : undefined,
+      lead:
+        recipientTab === "website_leads" && selectedLeadId
+          ? leads.find((l) => l.id === selectedLeadId)
+          : undefined,
       templateName: resolvedTemplateName,
-      flyerNames: selectedFlyerIds.map(fid => flyers.find(f => f.id === fid)?.name).filter(Boolean) as string[],
-      onTriggerToast
+      flyerNames: selectedFlyerIds
+        .map((fid) => flyers.find((f) => f.id === fid)?.name)
+        .filter(Boolean) as string[],
+      onTriggerToast,
     });
   };
 
   const handleDownloadAttachment = () => {
     const targetProperties: PropertyListing[] = [];
-    selectedAgentEmails.forEach(email => {
-      const agent = agentProperties.find(a => a.email === email);
+    selectedAgentEmails.forEach((email) => {
+      const agent = agentProperties.find((a) => a.email === email);
       if (agent) targetProperties.push(...agent.properties);
     });
 
-    let preparedFor = selectedAgentEmails.join('; ');
-    if (recipientTab === 'website_leads' && selectedLeadId) {
-      const lead = leads.find(l => l.id === selectedLeadId);
+    let preparedFor = selectedAgentEmails.join("; ");
+    if (recipientTab === "website_leads" && selectedLeadId) {
+      const lead = leads.find((l) => l.id === selectedLeadId);
       if (lead) {
         preparedFor = lead.fullName;
         if (selectedAgentEmails.length > 0) {
-          preparedFor += ` (cc: ${selectedAgentEmails.join('; ')})`;
+          preparedFor += ` (cc: ${selectedAgentEmails.join("; ")})`;
         }
       }
     }
@@ -1084,13 +1234,13 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       fileContent += `MLS / Listing ID  : ${p.mlsNumber || p.id}\n`;
       fileContent += `Listing Price     : $${p.price.toLocaleString()}\n`;
       fileContent += `Property Specs    : ${p.beds} Beds | ${p.baths} Baths | ${p.sqft.toLocaleString()} sq ft | Built ${p.yearBuilt}\n`;
-      fileContent += `Listing Agent     : ${p.listingAgent?.name || 'N/A'} (${p.listingAgent?.email || 'N/A'})\n`;
-      fileContent += `USDA Financing    : ${p.overlayEligibility?.usda ? 'QUALIFIED (Zero Down Eligible Zone)' : 'Standard'}\n`;
-      fileContent += `FirstHome Grant   : ${p.overlayEligibility?.firstHomeEligible ? 'QUALIFIED ($15,000 Assistance Cap)' : 'Standard'}\n`;
+      fileContent += `Listing Agent     : ${p.listingAgent?.name || "N/A"} (${p.listingAgent?.email || "N/A"})\n`;
+      fileContent += `USDA Financing    : ${p.overlayEligibility?.usda ? "QUALIFIED (Zero Down Eligible Zone)" : "Standard"}\n`;
+      fileContent += `FirstHome Grant   : ${p.overlayEligibility?.firstHomeEligible ? "QUALIFIED ($15,000 Assistance Cap)" : "Standard"}\n`;
       fileContent += `Direct Web Link   : ${getPropertyLink(p)}\n\n`;
     });
 
-    const selectedFlyers = flyers.filter(f => selectedFlyerIds.includes(f.id));
+    const selectedFlyers = flyers.filter((f) => selectedFlyerIds.includes(f.id));
     if (selectedFlyers.length > 0) {
       fileContent += `========================================================================\n`;
       fileContent += `ATTACHED LOAN PROGRAM MARKETING FLYERS & GUIDES (${selectedFlyers.length})\n`;
@@ -1108,9 +1258,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
     fileContent += `Direct Email: fordmj@gmail.com\n`;
     fileContent += `========================================================================\n`;
 
-    const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `Outlook_Property_Flyer_Attachment_${new Date().toISOString().slice(0, 10)}.txt`;
     document.body.appendChild(a);
@@ -1123,11 +1273,11 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   const handleCopyHtml = () => {
     const finalHtml = generateBodyContent(true);
     const plainText = generateBodyContent(false);
-    
+
     const blobHtml = new Blob([finalHtml], { type: "text/html" });
     const blobText = new Blob([plainText], { type: "text/plain" });
     const data = [new ClipboardItem({ "text/html": blobHtml, "text/plain": blobText })];
-    
+
     navigator.clipboard.write(data).then(() => {
       alert("Rich HTML email body copied to clipboard! You can paste this directly into Outlook.");
     });
@@ -1136,7 +1286,6 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white border border-[#EAE7E0] rounded-3xl max-w-6xl w-full flex flex-col md:flex-row min-h-[600px] shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden">
-        
         {/* Left Sidebar - Agent Selection & Templates */}
         <div className="w-full md:w-1/3 bg-[#FAF9F5] border-r border-[#EAE7E0] flex flex-col h-[600px] md:h-[800px]">
           {/* 1. Agent Selection */}
@@ -1152,9 +1301,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
             <div className="flex bg-[#EAE7E0] p-1 rounded-xl gap-1 mb-2">
               <button
                 type="button"
-                onClick={() => setRecipientTab('website_leads')}
+                onClick={() => setRecipientTab("website_leads")}
                 className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
-                  recipientTab === 'website_leads'
+                  recipientTab === "website_leads"
                     ? "bg-[#C18C5D] text-white shadow-xs"
                     : "text-[#606C5D] hover:text-[#2D362E]"
                 }`}
@@ -1164,9 +1313,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setRecipientTab('buyer')}
+                onClick={() => setRecipientTab("buyer")}
                 className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
-                  recipientTab === 'buyer'
+                  recipientTab === "buyer"
                     ? "bg-[#4A5D4E] text-white shadow-xs"
                     : "text-[#606C5D] hover:text-[#2D362E]"
                 }`}
@@ -1176,9 +1325,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setRecipientTab('listing')}
+                onClick={() => setRecipientTab("listing")}
                 className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
-                  recipientTab === 'listing'
+                  recipientTab === "listing"
                     ? "bg-[#2D362E] text-white shadow-xs"
                     : "text-[#606C5D] hover:text-[#2D362E]"
                 }`}
@@ -1190,7 +1339,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
             {/* Bulk Selection / Tab Action Quick Buttons */}
             <div className="flex items-center justify-between gap-2 mb-2">
-              {recipientTab === 'website_leads' ? (
+              {recipientTab === "website_leads" ? (
                 <div className="w-full flex items-center justify-between">
                   <span className="text-xs font-bold text-[#C18C5D] flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
@@ -1208,16 +1357,20 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                     </button>
                   )}
                 </div>
-              ) : recipientTab === 'buyer' ? (
+              ) : recipientTab === "buyer" ? (
                 <button
                   type="button"
                   onClick={() => {
-                    const buyerEmails = buyerAgentList.map(a => a.email).filter(Boolean);
-                    const allSelected = buyerEmails.every(e => selectedAgentEmails.includes(e));
+                    const buyerEmails = buyerAgentList.map((a) => a.email).filter(Boolean);
+                    const allSelected = buyerEmails.every((e) => selectedAgentEmails.includes(e));
                     if (allSelected) {
-                      setSelectedAgentEmails(prev => prev.filter(e => !buyerEmails.includes(e)));
+                      setSelectedAgentEmails((prev) =>
+                        prev.filter((e) => !buyerEmails.includes(e))
+                      );
                     } else {
-                      setSelectedAgentEmails(prev => Array.from(new Set([...prev, ...buyerEmails])));
+                      setSelectedAgentEmails((prev) =>
+                        Array.from(new Set([...prev, ...buyerEmails]))
+                      );
                     }
                   }}
                   className="text-xs font-bold text-[#4A5D4E] hover:underline flex items-center gap-1 bg-[#4A5D4E]/10 px-2.5 py-1 rounded-lg"
@@ -1229,12 +1382,16 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    const listingEmails = agentProperties.map(a => a.email).filter(Boolean);
-                    const allSelected = listingEmails.every(e => selectedAgentEmails.includes(e));
+                    const listingEmails = agentProperties.map((a) => a.email).filter(Boolean);
+                    const allSelected = listingEmails.every((e) => selectedAgentEmails.includes(e));
                     if (allSelected) {
-                      setSelectedAgentEmails(prev => prev.filter(e => !listingEmails.includes(e)));
+                      setSelectedAgentEmails((prev) =>
+                        prev.filter((e) => !listingEmails.includes(e))
+                      );
                     } else {
-                      setSelectedAgentEmails(prev => Array.from(new Set([...prev, ...listingEmails])));
+                      setSelectedAgentEmails((prev) =>
+                        Array.from(new Set([...prev, ...listingEmails]))
+                      );
                     }
                   }}
                   className="text-xs font-bold text-[#2D362E] hover:underline flex items-center gap-1 bg-[#2D362E]/10 px-2.5 py-1 rounded-lg"
@@ -1244,7 +1401,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                 </button>
               )}
 
-              {recipientTab !== 'website_leads' && selectedAgentEmails.length > 0 && (
+              {recipientTab !== "website_leads" && selectedAgentEmails.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setSelectedAgentEmails([])}
@@ -1257,11 +1414,13 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
             {/* Recipient Checkbox / Selection List */}
             <div className="max-h-48 overflow-y-auto space-y-1.5 border border-[#EAE7E0] rounded-xl p-2 bg-white">
-              {recipientTab === 'website_leads' ? (
+              {recipientTab === "website_leads" ? (
                 leads.length === 0 ? (
-                  <p className="text-xs text-[#9A9488] text-center p-2">No website chatbot leads captured yet.</p>
+                  <p className="text-xs text-[#9A9488] text-center p-2">
+                    No website chatbot leads captured yet.
+                  </p>
                 ) : (
-                  leads.map(lead => {
+                  leads.map((lead) => {
                     const isSelected = selectedLeadId === lead.id;
                     return (
                       <div
@@ -1279,11 +1438,13 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                       >
                         <div className="flex items-center justify-between gap-1 mb-1">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-bold text-xs text-[#2D362E] truncate">{lead.fullName}</span>
+                            <span className="font-bold text-xs text-[#2D362E] truncate">
+                              {lead.fullName}
+                            </span>
                             <OutreachHistoryBadge lead={lead} compact={true} />
                           </div>
                           <span className="text-[9px] font-bold bg-[#C18C5D]/15 text-[#C18C5D] px-1.5 py-0.5 rounded-md shrink-0">
-                            {lead.status || 'New Lead'}
+                            {lead.status || "New Lead"}
                           </span>
                         </div>
 
@@ -1305,7 +1466,13 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
                         <div className="flex items-center justify-between text-[9px] text-[#9A9488] pt-1 border-t border-[#EAE7E0]/60">
                           <span className="truncate">
-                            Partner Agent: <strong>{effectiveAgentRoster.find(a => a.id === lead.assignedAgentId)?.name || lead.assignedAgent || 'Sarah Jenkins'}</strong>
+                            Partner Agent:{" "}
+                            <strong>
+                              {effectiveAgentRoster.find((a) => a.id === lead.assignedAgentId)
+                                ?.name ||
+                                lead.assignedAgent ||
+                                "Sarah Jenkins"}
+                            </strong>
                           </span>
                           <span className="font-bold text-[#C18C5D] flex items-center gap-0.5">
                             <Sparkles className="w-2.5 h-2.5" /> Auto-Draft
@@ -1315,74 +1482,109 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                     );
                   })
                 )
-              ) : recipientTab === 'buyer' ? (
+              ) : recipientTab === "buyer" ? (
                 buyerAgentList.length === 0 ? (
-                  <p className="text-xs text-[#9A9488] text-center p-2">No buyer agents in roster.</p>
+                  <p className="text-xs text-[#9A9488] text-center p-2">
+                    No buyer agents in roster.
+                  </p>
                 ) : (
-                  buyerAgentList.map(agent => {
+                  buyerAgentList.map((agent) => {
                     const isChecked = selectedAgentEmails.includes(agent.email);
                     return (
-                      <label key={agent.id || agent.email} className="flex items-center gap-2 text-xs text-[#2D362E] cursor-pointer hover:bg-[#F9F8F4] p-1.5 rounded-lg transition-colors border border-transparent hover:border-[#EAE7E0]">
-                        {isChecked ? <CheckSquare className="w-4 h-4 text-[#4A5D4E] shrink-0" /> : <Square className="w-4 h-4 text-[#C18C5D] shrink-0" />}
+                      <label
+                        key={agent.id || agent.email}
+                        className="flex items-center gap-2 text-xs text-[#2D362E] cursor-pointer hover:bg-[#F9F8F4] p-1.5 rounded-lg transition-colors border border-transparent hover:border-[#EAE7E0]"
+                      >
+                        {isChecked ? (
+                          <CheckSquare className="w-4 h-4 text-[#4A5D4E] shrink-0" />
+                        ) : (
+                          <Square className="w-4 h-4 text-[#C18C5D] shrink-0" />
+                        )}
                         <input
                           type="checkbox"
                           className="hidden"
                           checked={isChecked}
                           onChange={(e) => {
-                            if (e.target.checked) setSelectedAgentEmails(prev => [...prev, agent.email]);
-                            else setSelectedAgentEmails(prev => prev.filter(em => em !== agent.email));
+                            if (e.target.checked)
+                              setSelectedAgentEmails((prev) => [...prev, agent.email]);
+                            else
+                              setSelectedAgentEmails((prev) =>
+                                prev.filter((em) => em !== agent.email)
+                              );
                           }}
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1">
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="font-semibold text-[#2D362E] truncate">{agent.name}</span>
+                              <span className="font-semibold text-[#2D362E] truncate">
+                                {agent.name}
+                              </span>
                               <OutreachHistoryBadge agent={agent} compact={true} />
                             </div>
                             <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full shrink-0">
                               Buyer Agent
                             </span>
                           </div>
-                          <p className="text-[10px] text-[#606C5D] truncate">{agent.brokerage} • {agent.email}</p>
+                          <p className="text-[10px] text-[#606C5D] truncate">
+                            {agent.brokerage} • {agent.email}
+                          </p>
                         </div>
                       </label>
                     );
                   })
                 )
+              ) : agentProperties.length === 0 ? (
+                <p className="text-xs text-[#9A9488] text-center p-2">
+                  No listing agents found for current properties.
+                </p>
               ) : (
-                agentProperties.length === 0 ? (
-                  <p className="text-xs text-[#9A9488] text-center p-2">No listing agents found for current properties.</p>
-                ) : (
-                  agentProperties.map(agent => {
-                    const isChecked = selectedAgentEmails.includes(agent.email);
-                    return (
-                      <label key={agent.email} className="flex items-center gap-2 text-xs text-[#2D362E] cursor-pointer hover:bg-[#F9F8F4] p-1.5 rounded-lg transition-colors border border-transparent hover:border-[#EAE7E0]">
-                        {isChecked ? <CheckSquare className="w-4 h-4 text-[#2D362E] shrink-0" /> : <Square className="w-4 h-4 text-[#C18C5D] shrink-0" />}
-                        <input
-                          type="checkbox"
-                          className="hidden"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) setSelectedAgentEmails(prev => [...prev, agent.email]);
-                            else setSelectedAgentEmails(prev => prev.filter(em => em !== agent.email));
-                          }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="font-semibold text-[#2D362E] truncate">{agent.agentName}</span>
-                              <OutreachHistoryBadge agent={effectiveAgentRoster.find(a => a.email === agent.email || a.name === agent.agentName)} compact={true} />
-                            </div>
-                            <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full shrink-0">
-                              Listing Agent ({agent.properties.length} homes)
+                agentProperties.map((agent) => {
+                  const isChecked = selectedAgentEmails.includes(agent.email);
+                  return (
+                    <label
+                      key={agent.email}
+                      className="flex items-center gap-2 text-xs text-[#2D362E] cursor-pointer hover:bg-[#F9F8F4] p-1.5 rounded-lg transition-colors border border-transparent hover:border-[#EAE7E0]"
+                    >
+                      {isChecked ? (
+                        <CheckSquare className="w-4 h-4 text-[#2D362E] shrink-0" />
+                      ) : (
+                        <Square className="w-4 h-4 text-[#C18C5D] shrink-0" />
+                      )}
+                      <input
+                        type="checkbox"
+                        className="hidden"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked)
+                            setSelectedAgentEmails((prev) => [...prev, agent.email]);
+                          else
+                            setSelectedAgentEmails((prev) =>
+                              prev.filter((em) => em !== agent.email)
+                            );
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-semibold text-[#2D362E] truncate">
+                              {agent.agentName}
                             </span>
+                            <OutreachHistoryBadge
+                              agent={effectiveAgentRoster.find(
+                                (a) => a.email === agent.email || a.name === agent.agentName
+                              )}
+                              compact={true}
+                            />
                           </div>
-                          <p className="text-[10px] text-[#606C5D] truncate">{agent.email}</p>
+                          <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full shrink-0">
+                            Listing Agent ({agent.properties.length} homes)
+                          </span>
                         </div>
-                      </label>
-                    );
-                  })
-                )
+                        <p className="text-[10px] text-[#606C5D] truncate">{agent.email}</p>
+                      </div>
+                    </label>
+                  );
+                })
               )}
             </div>
           </div>
@@ -1390,15 +1592,15 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
           {/* 2. Template Selection & Tag Filtering */}
           <div className="p-4 flex-1 flex flex-col min-h-0">
             <h4 className="text-xs font-bold text-[#606C5D] uppercase mb-2">2. Choose Template</h4>
-            
+
             {/* Search Input */}
             <div className="relative mb-2.5">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9A9488]" />
-              <input 
-                type="text" 
-                placeholder="Search by title, body, or tag..." 
+              <input
+                type="text"
+                placeholder="Search by title, body, or tag..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-[#EAE7E0] bg-white focus:outline-none focus:ring-2 focus:ring-[#4A5D4E]/20"
               />
             </div>
@@ -1417,10 +1619,12 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                       : "bg-white border border-[#EAE7E0] text-[#606C5D] hover:bg-[#F1EFE9]"
                   }`}
                 >
-                  All ({templates.filter(t => includeArchived || !t.isArchived).length})
+                  All ({templates.filter((t) => includeArchived || !t.isArchived).length})
                 </button>
-                {allAvailableTags.map(tag => {
-                  const count = templates.filter(t => (includeArchived || !t.isArchived) && t.tags?.includes(tag)).length;
+                {allAvailableTags.map((tag) => {
+                  const count = templates.filter(
+                    (t) => (includeArchived || !t.isArchived) && t.tags?.includes(tag)
+                  ).length;
                   const isSelected = selectedTagFilter === tag;
                   return (
                     <button
@@ -1440,55 +1644,70 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
             </div>
 
             <label className="flex items-center gap-2 text-xs text-[#606C5D] mb-2.5 cursor-pointer">
-              <input type="checkbox" checked={includeArchived} onChange={e => setIncludeArchived(e.target.checked)} className="rounded text-[#4A5D4E]" />
+              <input
+                type="checkbox"
+                checked={includeArchived}
+                onChange={(e) => setIncludeArchived(e.target.checked)}
+                className="rounded text-[#4A5D4E]"
+              />
               Include Archived
             </label>
 
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              <button 
+              <button
                 onClick={() => setActiveTemplateId("new")}
                 className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center gap-2 ${activeTemplateId === "new" ? "bg-[#4A5D4E] text-white border-[#4A5D4E]" : "bg-white border-dashed border-[#C18C5D] text-[#606C5D] hover:bg-[#F1EFE9]"}`}
               >
                 <Plus className="w-4 h-4" />
                 <span className="font-semibold text-xs">Create New Template</span>
               </button>
-              
+
               {filteredTemplates.length === 0 ? (
                 <div className="text-center py-6 px-4 bg-white rounded-xl border border-[#EAE7E0]">
-                  <p className="text-xs text-[#9A9488]">No templates match the active filter or tag.</p>
+                  <p className="text-xs text-[#9A9488]">
+                    No templates match the active filter or tag.
+                  </p>
                 </div>
               ) : (
-                filteredTemplates.map(t => (
-                  <div 
-                    key={t.id} 
+                filteredTemplates.map((t) => (
+                  <div
+                    key={t.id}
                     onClick={() => setActiveTemplateId(t.id)}
                     className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer group ${
-                      activeTemplateId === t.id 
-                        ? "bg-[#4A5D4E] text-white border-[#4A5D4E] shadow-sm" 
+                      activeTemplateId === t.id
+                        ? "bg-[#4A5D4E] text-white border-[#4A5D4E] shadow-sm"
                         : "bg-white border-[#EAE7E0] text-[#2D362E] hover:border-[#4A5D4E]"
                     }`}
                   >
                     <div className="flex items-start justify-between">
                       <span className="font-semibold text-xs truncate pr-2">{t.title}</span>
-                      <button 
+                      <button
                         onClick={(e) => toggleArchive(t.id, e)}
                         className={`shrink-0 p-1 rounded hover:bg-black/10 ${activeTemplateId === t.id ? "text-white/80 hover:text-white" : "text-[#9A9488] hover:text-[#2D362E]"}`}
                         title={t.isArchived ? "Restore" : "Archive"}
                       >
-                        {t.isArchived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
+                        {t.isArchived ? (
+                          <ArchiveRestore className="w-3.5 h-3.5" />
+                        ) : (
+                          <Archive className="w-3.5 h-3.5" />
+                        )}
                       </button>
                     </div>
-                    <p className={`text-[11px] truncate mt-0.5 ${activeTemplateId === t.id ? "text-white/80" : "text-[#9A9488]"}`}>{t.subject}</p>
-                    
+                    <p
+                      className={`text-[11px] truncate mt-0.5 ${activeTemplateId === t.id ? "text-white/80" : "text-[#9A9488]"}`}
+                    >
+                      {t.subject}
+                    </p>
+
                     {/* Tags Badges */}
                     {t.tags && t.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {t.tags.map(tag => (
-                          <span 
-                            key={tag} 
+                        {t.tags.map((tag) => (
+                          <span
+                            key={tag}
                             className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${
-                              activeTemplateId === t.id 
-                                ? "bg-white/20 text-white" 
+                              activeTemplateId === t.id
+                                ? "bg-white/20 text-white"
                                 : "bg-[#FAF9F5] border border-[#EAE7E0] text-[#606C5D]"
                             }`}
                           >
@@ -1506,41 +1725,57 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
         {/* Right Side - Editor & Launch in Outlook Controls */}
         <div className="w-full md:w-2/3 bg-white flex flex-col h-[600px] md:h-[800px] relative">
-          <button onClick={onClose} className="absolute right-4 top-4 p-2 text-[#9A9488] hover:bg-[#F1EFE9] rounded-full z-10 transition-colors">
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 p-2 text-[#9A9488] hover:bg-[#F1EFE9] rounded-full z-10 transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
-          
+
           <div className="p-6 md:p-8 flex-1 flex flex-col border-b border-[#EAE7E0] min-h-0 overflow-y-auto">
             <div className="flex items-center justify-between mb-4 pr-8">
               <div>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h3 className="font-serif font-bold text-2xl text-[#2D362E]">Draft Email Builder</h3>
+                  <h3 className="font-serif font-bold text-2xl text-[#2D362E]">
+                    Draft Email Builder
+                  </h3>
                   <button
                     type="button"
                     onClick={handleGenerateAiBuyerEmail}
                     disabled={isGenerating}
                     className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-[#4A5D4E] to-[#2D362E] hover:opacity-95 text-white text-xs font-bold shadow-xs transition-all"
                   >
-                    <Sparkles className={`w-3.5 h-3.5 text-amber-300 ${isGenerating ? 'animate-spin' : ''}`} />
-                    <span>{isGenerating ? "AI Generating..." : "✨ AI Studio: Attract Buyer Agents"}</span>
+                    <Sparkles
+                      className={`w-3.5 h-3.5 text-amber-300 ${isGenerating ? "animate-spin" : ""}`}
+                    />
+                    <span>
+                      {isGenerating ? "AI Generating..." : "✨ AI Studio: Attract Buyer Agents"}
+                    </span>
                   </button>
-                  {isEditing && autoSaveStatus === 'saving' && (
+                  {isEditing && autoSaveStatus === "saving" && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200 animate-pulse">
                       <Save className="w-3 h-3 text-amber-600" />
                       Auto-saving...
                     </span>
                   )}
-                  {isEditing && autoSaveStatus === 'saved' && lastSavedTime && (
+                  {isEditing && autoSaveStatus === "saved" && lastSavedTime && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
                       <Check className="w-3 h-3 text-emerald-600" />
                       Auto-saved to local state at {lastSavedTime}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-[#606C5D]">Pre-encoded for Microsoft Outlook & Desktop Email Clients</p>
+                <p className="text-xs text-[#606C5D]">
+                  Pre-encoded for Microsoft Outlook & Desktop Email Clients
+                </p>
               </div>
               {!isEditing && activeTemplateId !== "new" && (
-                <button onClick={() => setIsEditing(true)} className="text-sm font-semibold text-[#C18C5D] hover:underline">Edit Template</button>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="text-sm font-semibold text-[#C18C5D] hover:underline"
+                >
+                  Edit Template
+                </button>
               )}
             </div>
 
@@ -1548,23 +1783,41 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
               {isEditing ? (
                 <>
                   <div>
-                    <label className="block text-xs font-bold text-[#606C5D] uppercase mb-1">Template Title</label>
-                    <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-[#EAE7E0] focus:outline-none focus:border-[#4A5D4E] text-sm" placeholder="e.g. USDA Outreach" />
+                    <label className="block text-xs font-bold text-[#606C5D] uppercase mb-1">
+                      Template Title
+                    </label>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full px-4 py-2 rounded-xl border border-[#EAE7E0] focus:outline-none focus:border-[#4A5D4E] text-sm"
+                      placeholder="e.g. USDA Outreach"
+                    />
                   </div>
-                  
+
                   {/* Category Tags Selector */}
                   <div>
-                    <label className="block text-xs font-bold text-[#606C5D] uppercase mb-1.5">Categorize Tags</label>
+                    <label className="block text-xs font-bold text-[#606C5D] uppercase mb-1.5">
+                      Categorize Tags
+                    </label>
                     <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl p-3 space-y-2.5">
                       {/* Active Edit Tags */}
                       <div className="flex flex-wrap items-center gap-1.5 min-h-[28px]">
                         {editTags.length === 0 ? (
-                          <span className="text-xs text-[#9A9488] italic">No tags selected. Click standard tags below or add custom tag.</span>
+                          <span className="text-xs text-[#9A9488] italic">
+                            No tags selected. Click standard tags below or add custom tag.
+                          </span>
                         ) : (
-                          editTags.map(tag => (
-                            <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#4A5D4E] text-white">
+                          editTags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#4A5D4E] text-white"
+                            >
                               {tag}
-                              <button onClick={() => toggleTagInEditor(tag)} className="hover:text-rose-200">
+                              <button
+                                onClick={() => toggleTagInEditor(tag)}
+                                className="hover:text-rose-200"
+                              >
                                 <X className="w-3 h-3" />
                               </button>
                             </span>
@@ -1574,8 +1827,10 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
                       {/* Quick Toggle Presets */}
                       <div className="pt-2 border-t border-[#EAE7E0] flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] text-[#606C5D] font-semibold">Quick Presets:</span>
-                        {PRESET_TAGS.map(tag => {
+                        <span className="text-[11px] text-[#606C5D] font-semibold">
+                          Quick Presets:
+                        </span>
+                        {PRESET_TAGS.map((tag) => {
                           const isSelected = editTags.includes(tag);
                           return (
                             <button
@@ -1583,8 +1838,8 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                               type="button"
                               onClick={() => toggleTagInEditor(tag)}
                               className={`px-2 py-0.5 rounded-md text-xs font-medium transition-all ${
-                                isSelected 
-                                  ? "bg-[#C18C5D] text-white" 
+                                isSelected
+                                  ? "bg-[#C18C5D] text-white"
                                   : "bg-white border border-[#EAE7E0] text-[#606C5D] hover:bg-[#F1EFE9]"
                               }`}
                             >
@@ -1596,20 +1851,20 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
                       {/* Custom Tag Input */}
                       <div className="pt-2 border-t border-[#EAE7E0] flex items-center gap-2">
-                        <input 
-                          type="text" 
-                          value={customTagInput} 
-                          onChange={e => setCustomTagInput(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') {
+                        <input
+                          type="text"
+                          value={customTagInput}
+                          onChange={(e) => setCustomTagInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
                               e.preventDefault();
                               handleAddCustomTag();
                             }
                           }}
-                          placeholder="Type custom tag (e.g. Rate Buydown)..." 
+                          placeholder="Type custom tag (e.g. Rate Buydown)..."
                           className="flex-1 px-3 py-1 text-xs rounded-lg border border-[#EAE7E0] bg-white focus:outline-none focus:border-[#4A5D4E]"
                         />
-                        <button 
+                        <button
                           type="button"
                           onClick={handleAddCustomTag}
                           className="px-3 py-1 bg-[#2D362E] text-white rounded-lg text-xs font-semibold hover:bg-black transition-colors"
@@ -1621,15 +1876,24 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#606C5D] uppercase mb-1">Subject Line</label>
-                    <input type="text" value={editSubject} onChange={e => setEditSubject(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-[#EAE7E0] focus:outline-none focus:border-[#4A5D4E] text-sm" />
+                    <label className="block text-xs font-bold text-[#606C5D] uppercase mb-1">
+                      Subject Line
+                    </label>
+                    <input
+                      type="text"
+                      value={editSubject}
+                      onChange={(e) => setEditSubject(e.target.value)}
+                      className="w-full px-4 py-2 rounded-xl border border-[#EAE7E0] focus:outline-none focus:border-[#4A5D4E] text-sm"
+                    />
                   </div>
 
                   <div className="flex-1 flex flex-col min-h-0">
-                    <label className="block text-xs font-bold text-[#606C5D] uppercase mb-1">Email Body (Plain Text / Light HTML)</label>
-                    <textarea 
-                      value={editBody} 
-                      onChange={e => setEditBody(e.target.value)} 
+                    <label className="block text-xs font-bold text-[#606C5D] uppercase mb-1">
+                      Email Body (Plain Text / Light HTML)
+                    </label>
+                    <textarea
+                      value={editBody}
+                      onChange={(e) => setEditBody(e.target.value)}
                       className="w-full flex-1 p-4 rounded-xl border border-[#EAE7E0] focus:outline-none focus:border-[#4A5D4E] resize-none font-sans text-sm text-[#2D362E] min-h-[120px]"
                       placeholder="Type your email here..."
                     />
@@ -1651,14 +1915,24 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                         <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#4A5D4E] hover:bg-[#3B4A3E] text-white text-xs font-semibold rounded-lg cursor-pointer transition-colors shadow-xs">
                           <Upload className="w-3 h-3" />
                           <span>+ Upload Flyer</span>
-                          <input type="file" accept=".pdf,.jpg,.jpeg,.png" multiple className="hidden" onChange={handleCustomFlyerUpload} />
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            multiple
+                            className="hidden"
+                            onChange={handleCustomFlyerUpload}
+                          />
                         </label>
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           onClick={() => setIsFlyerSectionExpanded(!isFlyerSectionExpanded)}
                           className="p-1 text-[#606C5D] hover:text-[#2D362E]"
                         >
-                          {isFlyerSectionExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          {isFlyerSectionExpanded ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -1669,17 +1943,24 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
                           <div className="relative flex-1">
                             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9A9488]" />
-                            <input 
-                              type="text" 
-                              placeholder="Search flyers by title, category, or keyword..." 
+                            <input
+                              type="text"
+                              placeholder="Search flyers by title, category, or keyword..."
                               value={flyerSearchQuery}
-                              onChange={e => setFlyerSearchQuery(e.target.value)}
+                              onChange={(e) => setFlyerSearchQuery(e.target.value)}
                               className="w-full pl-8 pr-3 py-1 text-xs rounded-lg border border-[#EAE7E0] bg-white focus:outline-none focus:border-[#4A5D4E]"
                             />
                           </div>
-                          
+
                           <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-                            {['All', 'USDA', 'Flex', 'Rate Buydown', 'General', 'Custom Uploads'].map(cat => {
+                            {[
+                              "All",
+                              "USDA",
+                              "Flex",
+                              "Rate Buydown",
+                              "General",
+                              "Custom Uploads",
+                            ].map((cat) => {
                               const isCatSelected = selectedFlyerCategory === cat;
                               return (
                                 <button
@@ -1687,8 +1968,8 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                                   type="button"
                                   onClick={() => setSelectedFlyerCategory(cat)}
                                   className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
-                                    isCatSelected 
-                                      ? "bg-[#2D362E] text-white shadow-xs" 
+                                    isCatSelected
+                                      ? "bg-[#2D362E] text-white shadow-xs"
                                       : "bg-white border border-[#EAE7E0] text-[#606C5D] hover:bg-[#F1EFE9]"
                                   }`}
                                 >
@@ -1701,11 +1982,20 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
                         {/* Grouped Flyers Grid */}
                         {(() => {
-                          const filtered = flyers.filter(f => {
-                            if (selectedFlyerCategory !== 'All' && f.category !== selectedFlyerCategory) return false;
+                          const filtered = flyers.filter((f) => {
+                            if (
+                              selectedFlyerCategory !== "All" &&
+                              f.category !== selectedFlyerCategory
+                            )
+                              return false;
                             if (flyerSearchQuery) {
                               const q = flyerSearchQuery.toLowerCase();
-                              return f.name.toLowerCase().includes(q) || f.description.toLowerCase().includes(q) || f.category.toLowerCase().includes(q) || f.filename.toLowerCase().includes(q);
+                              return (
+                                f.name.toLowerCase().includes(q) ||
+                                f.description.toLowerCase().includes(q) ||
+                                f.category.toLowerCase().includes(q) ||
+                                f.filename.toLowerCase().includes(q)
+                              );
                             }
                             return true;
                           });
@@ -1713,10 +2003,15 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                           if (filtered.length === 0) {
                             return (
                               <div className="bg-white rounded-xl border border-dashed border-[#EAE7E0] p-6 text-center">
-                                <p className="text-xs text-[#606C5D]">No marketing flyers found matching your filter.</p>
-                                <button 
+                                <p className="text-xs text-[#606C5D]">
+                                  No marketing flyers found matching your filter.
+                                </p>
+                                <button
                                   type="button"
-                                  onClick={() => { setFlyerSearchQuery(""); setSelectedFlyerCategory("All"); }}
+                                  onClick={() => {
+                                    setFlyerSearchQuery("");
+                                    setSelectedFlyerCategory("All");
+                                  }}
                                   className="mt-2 text-xs font-semibold text-[#C18C5D] underline hover:text-[#A87447]"
                                 >
                                   Reset filters
@@ -1727,10 +2022,16 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
                           // Group filtered flyers by category
                           const grouped: Record<string, MarketingFlyer[]> = {};
-                          const categoryOrder = ['USDA', 'Flex', 'Rate Buydown', 'General', 'Custom Uploads'];
-                          
-                          filtered.forEach(f => {
-                            const catKey = f.category || 'General';
+                          const categoryOrder = [
+                            "USDA",
+                            "Flex",
+                            "Rate Buydown",
+                            "General",
+                            "Custom Uploads",
+                          ];
+
+                          filtered.forEach((f) => {
+                            const catKey = f.category || "General";
                             if (!grouped[catKey]) grouped[catKey] = [];
                             grouped[catKey].push(f);
                           });
@@ -1744,24 +2045,33 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
                           return (
                             <div className="space-y-3.5 max-h-[360px] overflow-y-auto pr-1">
-                              {sortedCategories.map(category => {
+                              {sortedCategories.map((category) => {
                                 const items = grouped[category];
-                                const meta = CATEGORY_META[category] || { 
-                                  label: `${category} Collateral`, 
-                                  icon: '📁', 
-                                  badgeColor: 'bg-gray-100 text-gray-800 border-gray-300', 
-                                  bgTint: 'border-l-4 border-l-gray-500' 
+                                const meta = CATEGORY_META[category] || {
+                                  label: `${category} Collateral`,
+                                  icon: "📁",
+                                  badgeColor: "bg-gray-100 text-gray-800 border-gray-300",
+                                  bgTint: "border-l-4 border-l-gray-500",
                                 };
-                                const selectedCount = items.filter(f => selectedFlyerIds.includes(f.id)).length;
+                                const selectedCount = items.filter((f) =>
+                                  selectedFlyerIds.includes(f.id)
+                                ).length;
 
                                 return (
-                                  <div key={category} className={`bg-white rounded-xl border border-[#EAE7E0] p-3 shadow-2xs ${meta.bgTint}`}>
+                                  <div
+                                    key={category}
+                                    className={`bg-white rounded-xl border border-[#EAE7E0] p-3 shadow-2xs ${meta.bgTint}`}
+                                  >
                                     <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-[#EAE7E0]">
                                       <div className="flex items-center gap-2">
                                         <span className="text-sm">{meta.icon}</span>
-                                        <h5 className="font-bold text-xs text-[#2D362E] uppercase tracking-wider">{meta.label}</h5>
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${meta.badgeColor}`}>
-                                          {items.length} flyer{items.length > 1 ? 's' : ''}
+                                        <h5 className="font-bold text-xs text-[#2D362E] uppercase tracking-wider">
+                                          {meta.label}
+                                        </h5>
+                                        <span
+                                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${meta.badgeColor}`}
+                                        >
+                                          {items.length} flyer{items.length > 1 ? "s" : ""}
                                         </span>
                                       </div>
                                       {selectedCount > 0 && (
@@ -1772,33 +2082,41 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                                      {items.map(flyer => {
+                                      {items.map((flyer) => {
                                         const isSelected = selectedFlyerIds.includes(flyer.id);
                                         return (
-                                          <div 
+                                          <div
                                             key={flyer.id}
                                             onClick={() => {
-                                              setSelectedFlyerIds(prev => 
-                                                isSelected ? prev.filter(id => id !== flyer.id) : [...prev, flyer.id]
+                                              setSelectedFlyerIds((prev) =>
+                                                isSelected
+                                                  ? prev.filter((id) => id !== flyer.id)
+                                                  : [...prev, flyer.id]
                                               );
                                             }}
                                             className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between relative group ${
-                                              isSelected 
-                                                ? "bg-[#FAF9F5] border-[#4A5D4E] ring-2 ring-[#4A5D4E]/20 shadow-xs" 
+                                              isSelected
+                                                ? "bg-[#FAF9F5] border-[#4A5D4E] ring-2 ring-[#4A5D4E]/20 shadow-xs"
                                                 : "bg-white border-[#EAE7E0] hover:border-[#9A9488]"
                                             }`}
                                           >
                                             <div>
                                               <div className="flex items-center justify-between mb-1.5">
-                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
-                                                  flyer.fileType === 'pdf' 
-                                                    ? "bg-rose-100 text-rose-800 border border-rose-200" 
-                                                    : "bg-sky-100 text-sky-800 border border-sky-200"
-                                                }`}>
-                                                  {flyer.fileType === 'pdf' ? <FileText className="w-3 h-3 text-rose-600" /> : <ImageIcon className="w-3 h-3 text-sky-600" />}
+                                                <span
+                                                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
+                                                    flyer.fileType === "pdf"
+                                                      ? "bg-rose-100 text-rose-800 border border-rose-200"
+                                                      : "bg-sky-100 text-sky-800 border border-sky-200"
+                                                  }`}
+                                                >
+                                                  {flyer.fileType === "pdf" ? (
+                                                    <FileText className="w-3 h-3 text-rose-600" />
+                                                  ) : (
+                                                    <ImageIcon className="w-3 h-3 text-sky-600" />
+                                                  )}
                                                   <span>{flyer.fileType.toUpperCase()}</span>
                                                 </span>
-                                                
+
                                                 <div className="flex items-center gap-1.5">
                                                   <button
                                                     type="button"
@@ -1810,7 +2128,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                                                     className="p-1 rounded-md bg-white text-[#C18C5D] hover:bg-[#C18C5D] hover:text-white border border-[#EAE7E0] transition-all flex items-center gap-1 text-[10px] font-semibold"
                                                   >
                                                     <Eye className="w-3.5 h-3.5" />
-                                                    <span className="hidden sm:inline">Preview</span>
+                                                    <span className="hidden sm:inline">
+                                                      Preview
+                                                    </span>
                                                   </button>
                                                   {isSelected ? (
                                                     <CheckCircle2 className="w-4 h-4 text-[#4A5D4E]" />
@@ -1820,13 +2140,22 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                                                 </div>
                                               </div>
 
-                                              <h5 className="font-bold text-xs text-[#2D362E] line-clamp-1">{flyer.name}</h5>
-                                              <p className="text-[10px] text-[#606C5D] font-medium mt-0.5">{flyer.category} • {flyer.size}</p>
-                                              <p className="text-[11px] text-[#9A9488] line-clamp-2 mt-1 leading-snug">{flyer.description}</p>
+                                              <h5 className="font-bold text-xs text-[#2D362E] line-clamp-1">
+                                                {flyer.name}
+                                              </h5>
+                                              <p className="text-[10px] text-[#606C5D] font-medium mt-0.5">
+                                                {flyer.category} • {flyer.size}
+                                              </p>
+                                              <p className="text-[11px] text-[#9A9488] line-clamp-2 mt-1 leading-snug">
+                                                {flyer.description}
+                                              </p>
                                             </div>
 
                                             <div className="mt-2.5 pt-2 border-t border-[#EAE7E0] flex items-center justify-between">
-                                              <span className="text-[10px] font-mono text-[#9A9488] truncate max-w-[120px]" title={flyer.filename}>
+                                              <span
+                                                className="text-[10px] font-mono text-[#9A9488] truncate max-w-[120px]"
+                                                title={flyer.filename}
+                                              >
                                                 {flyer.filename}
                                               </span>
                                               <button
@@ -1861,16 +2190,16 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                       <label className="flex items-center gap-1.5 text-xs font-bold text-[#C18C5D] uppercase mb-1">
                         <Sparkles className="w-3.5 h-3.5" /> AI Template Assistant
                       </label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={aiPrompt}
-                        onChange={e => setAiPrompt(e.target.value)}
+                        onChange={(e) => setAiPrompt(e.target.value)}
                         placeholder="e.g. Write a professional follow up about their Open House..."
                         className="w-full px-3 py-2 rounded-lg border border-[#EAE7E0] text-sm"
-                        onKeyDown={e => e.key === 'Enter' && handleGenerateAI()}
+                        onKeyDown={(e) => e.key === "Enter" && handleGenerateAI()}
                       />
                     </div>
-                    <button 
+                    <button
                       onClick={handleGenerateAI}
                       disabled={isGenerating || !aiPrompt}
                       className="px-4 py-2 bg-[#C18C5D] hover:bg-[#A87447] text-white rounded-lg text-sm font-semibold disabled:opacity-50 transition-colors"
@@ -1886,9 +2215,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                           <span className="text-xs text-[#C18C5D] font-medium bg-[#C18C5D]/10 px-2.5 py-1 rounded-lg">
                             ⚡ Draft auto-restored from previous session
                           </span>
-                          <button 
-                            type="button" 
-                            onClick={handleDiscardDraft} 
+                          <button
+                            type="button"
+                            onClick={handleDiscardDraft}
                             className="inline-flex items-center gap-1 text-xs text-[#9A9488] hover:text-[#2D362E] underline"
                             title="Discard un-saved local draft and revert to original template"
                           >
@@ -1899,12 +2228,20 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                     </div>
 
                     <div className="flex items-center gap-3">
-                      {isEditing && !hasRestoredDraft && autoSaveStatus === 'saved' && lastSavedTime && (
-                        <span className="text-xs text-[#9A9488]">
-                          Auto-saved locally ({lastSavedTime})
-                        </span>
-                      )}
-                      <button onClick={handleSave} className="px-6 py-2.5 bg-[#4A5D4E] text-white rounded-xl font-bold text-sm hover:scale-105 transition-transform shadow-sm">Save Template</button>
+                      {isEditing &&
+                        !hasRestoredDraft &&
+                        autoSaveStatus === "saved" &&
+                        lastSavedTime && (
+                          <span className="text-xs text-[#9A9488]">
+                            Auto-saved locally ({lastSavedTime})
+                          </span>
+                        )}
+                      <button
+                        onClick={handleSave}
+                        className="px-6 py-2.5 bg-[#4A5D4E] text-white rounded-xl font-bold text-sm hover:scale-105 transition-transform shadow-sm"
+                      >
+                        Save Template
+                      </button>
                     </div>
                   </div>
                 </>
@@ -1912,12 +2249,17 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                 <>
                   <div className="bg-[#FAF9F5] p-4 rounded-xl border border-[#EAE7E0] space-y-3">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <p className="text-sm font-semibold text-[#606C5D]">Subject: <span className="text-[#2D362E] font-bold">{editSubject}</span></p>
+                      <p className="text-sm font-semibold text-[#606C5D]">
+                        Subject: <span className="text-[#2D362E] font-bold">{editSubject}</span>
+                      </p>
                       {editTags && editTags.length > 0 && (
                         <div className="flex items-center gap-1">
                           <TagIcon className="w-3 h-3 text-[#C18C5D]" />
-                          {editTags.map(tag => (
-                            <span key={tag} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#4A5D4E]/10 text-[#4A5D4E]">
+                          {editTags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#4A5D4E]/10 text-[#4A5D4E]"
+                            >
                               {tag}
                             </span>
                           ))}
@@ -1928,11 +2270,11 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                     {/* Format Options Checkboxes */}
                     <div className="flex items-center justify-between pt-2 border-t border-[#EAE7E0] text-xs text-[#606C5D]">
                       <label className="flex items-center gap-2 cursor-pointer font-medium hover:text-[#2D362E]">
-                        <input 
-                          type="checkbox" 
-                          checked={includePropertyLinks} 
-                          onChange={e => setIncludePropertyLinks(e.target.checked)} 
-                          className="rounded text-[#0078D4] focus:ring-[#0078D4]" 
+                        <input
+                          type="checkbox"
+                          checked={includePropertyLinks}
+                          onChange={(e) => setIncludePropertyLinks(e.target.checked)}
+                          className="rounded text-[#0078D4] focus:ring-[#0078D4]"
                         />
                         Include Live Property Web Links & Specs Overview
                       </label>
@@ -1964,26 +2306,34 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
             <div className="flex items-center gap-2 text-xs text-[#0078D4] bg-blue-50/90 border border-blue-200 p-2.5 rounded-xl">
               <Info className="w-4 h-4 shrink-0 text-[#0078D4]" />
               <span>
-                <strong>Local Outlook Integration:</strong> Your official work email signature (Cornerstone First Mortgage • Mike Ford • NMLS #288455 • Direct Line & Equal Housing Notice) is automatically included in this draft. Clicking <strong>Launch in Outlook</strong> will open your installed Outlook client with the complete message and signature.
+                <strong>Local Outlook Integration:</strong> Your official work email signature
+                (Cornerstone First Mortgage • Mike Ford • NMLS #288455 • Direct Line & Equal Housing
+                Notice) is automatically included in this draft. Clicking{" "}
+                <strong>Launch in Outlook</strong> will open your installed Outlook client with the
+                complete message and signature.
               </span>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-[#606C5D]">
-                {recipientTab === 'website_leads' ? (
+                {recipientTab === "website_leads" ? (
                   <>
-                    <span className="font-bold text-[#2D362E]">{selectedLeadId ? 1 : 0}</span> lead(s) targeted {selectedAgentEmails.length > 0 && `(cc: ${selectedAgentEmails.length} agent${selectedAgentEmails.length === 1 ? '' : 's'})`}
+                    <span className="font-bold text-[#2D362E]">{selectedLeadId ? 1 : 0}</span>{" "}
+                    lead(s) targeted{" "}
+                    {selectedAgentEmails.length > 0 &&
+                      `(cc: ${selectedAgentEmails.length} agent${selectedAgentEmails.length === 1 ? "" : "s"})`}
                   </>
                 ) : (
                   <>
-                    <span className="font-bold text-[#2D362E]">{selectedAgentEmails.length}</span> agent(s) targeted
+                    <span className="font-bold text-[#2D362E]">{selectedAgentEmails.length}</span>{" "}
+                    agent(s) targeted
                   </>
                 )}
               </div>
 
               <div className="flex items-center gap-2.5 flex-wrap">
                 {/* Download Attachment Sheet */}
-                <button 
+                <button
                   onClick={handleDownloadAttachment}
                   title="Download formatted property datasheet file to attach in Outlook"
                   className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#EAE7E0] bg-white text-[#2D362E] font-semibold text-xs hover:bg-[#F1EFE9] transition-all shadow-xs"
@@ -1994,7 +2344,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
                 {/* Download Selected Flyers Button */}
                 {selectedFlyerIds.length > 0 && (
-                  <button 
+                  <button
                     onClick={handleDownloadSelectedFlyers}
                     title="Download selected loan program flyers for email attachment"
                     className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#4A5D4E]/30 bg-[#4A5D4E]/10 text-[#4A5D4E] font-semibold text-xs hover:bg-[#4A5D4E]/20 transition-all shadow-xs"
@@ -2005,7 +2355,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                 )}
 
                 {/* Copy HTML for Outlook */}
-                <button 
+                <button
                   onClick={handleCopyHtml}
                   title="Copy rich HTML body with clickable property links to clipboard"
                   className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#4A5D4E] text-[#4A5D4E] font-semibold text-xs hover:bg-[#4A5D4E]/5 transition-all"
@@ -2015,7 +2365,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                 </button>
 
                 {/* Launch in Outlook Primary Action Button */}
-                <button 
+                <button
                   onClick={launchInOutlook}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0078D4] hover:bg-[#005A9E] text-white font-bold text-sm transition-all shadow-md hover:shadow-lg active:scale-95"
                 >
@@ -2033,7 +2383,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       {previewingFlyer && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[#EAE7E0] relative flex flex-col gap-4">
-            <button 
+            <button
               onClick={() => setPreviewingFlyer(null)}
               className="absolute right-4 top-4 p-1.5 text-[#9A9488] hover:bg-[#F1EFE9] rounded-full transition-colors"
             >
@@ -2041,13 +2391,25 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
             </button>
 
             <div className="flex items-center gap-3 pr-8">
-              <div className={`p-3 rounded-xl ${previewingFlyer.fileType === 'pdf' ? 'bg-rose-100 text-rose-800' : 'bg-sky-100 text-sky-800'}`}>
-                {previewingFlyer.fileType === 'pdf' ? <FileText className="w-6 h-6" /> : <ImageIcon className="w-6 h-6" />}
+              <div
+                className={`p-3 rounded-xl ${previewingFlyer.fileType === "pdf" ? "bg-rose-100 text-rose-800" : "bg-sky-100 text-sky-800"}`}
+              >
+                {previewingFlyer.fileType === "pdf" ? (
+                  <FileText className="w-6 h-6" />
+                ) : (
+                  <ImageIcon className="w-6 h-6" />
+                )}
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#C18C5D]">{previewingFlyer.category}</span>
-                <h3 className="font-serif font-bold text-lg text-[#2D362E]">{previewingFlyer.name}</h3>
-                <p className="text-xs font-mono text-[#9A9488]">{previewingFlyer.filename} ({previewingFlyer.size})</p>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#C18C5D]">
+                  {previewingFlyer.category}
+                </span>
+                <h3 className="font-serif font-bold text-lg text-[#2D362E]">
+                  {previewingFlyer.name}
+                </h3>
+                <p className="text-xs font-mono text-[#9A9488]">
+                  {previewingFlyer.filename} ({previewingFlyer.size})
+                </p>
               </div>
             </div>
 
@@ -2063,7 +2425,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
               </div>
 
               <div className="space-y-2">
-                <h4 className="text-xs font-bold text-[#2D362E] uppercase tracking-wide">Program Highlights</h4>
+                <h4 className="text-xs font-bold text-[#2D362E] uppercase tracking-wide">
+                  Program Highlights
+                </h4>
                 <p className="text-xs text-[#606C5D] leading-relaxed bg-white p-3 rounded-lg border border-[#EAE7E0]">
                   {previewingFlyer.description}
                 </p>
@@ -2081,8 +2445,8 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                 onClick={() => {
                   const flyer = previewingFlyer;
                   const isSelected = selectedFlyerIds.includes(flyer.id);
-                  setSelectedFlyerIds(prev => 
-                    isSelected ? prev.filter(id => id !== flyer.id) : [...prev, flyer.id]
+                  setSelectedFlyerIds((prev) =>
+                    isSelected ? prev.filter((id) => id !== flyer.id) : [...prev, flyer.id]
                   );
                 }}
                 className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
@@ -2122,11 +2486,11 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                   content += `NMLS License ID: #987654\n`;
                   content += `========================================================================\n`;
 
-                  const blob = new Blob([content], { type: 'text/plain' });
+                  const blob = new Blob([content], { type: "text/plain" });
                   const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
+                  const a = document.createElement("a");
                   a.href = url;
-                  a.download = flyer.filename.replace(/\.(pdf|jpg|png)$/i, '') + '_Flyer.txt';
+                  a.download = flyer.filename.replace(/\.(pdf|jpg|png)$/i, "") + "_Flyer.txt";
                   document.body.appendChild(a);
                   a.click();
                   document.body.removeChild(a);

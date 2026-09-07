@@ -1,9 +1,13 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/types.ts', 'utf8');
+let c = fs.readFileSync('src/types.ts', 'utf8');
 
-code = code.replace(
-  "export interface LoanOfficerProfile {\n  enrichmentStatus?",
-  "export interface LoanOfficerProfile {\n  accountRestricted?: boolean;\n  accountRestrictedAt?: string;\n  enrichmentStatus?"
-);
+const target = `  price: number;
+  beds: number;`;
+const injection = `  price: number;
+  originalPrice?: number;
+  priceDropAmount?: number;
+  priceDropDate?: string;
+  beds: number;`;
 
-fs.writeFileSync('src/types.ts', code);
+c = c.replace(target, injection);
+fs.writeFileSync('src/types.ts', c);

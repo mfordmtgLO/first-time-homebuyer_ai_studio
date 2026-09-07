@@ -26,10 +26,10 @@ import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { checkAndProvisionUser } from "./utils/authUtils";
 import { applyMetadataToDocument, fetchSavedSeoMetadata } from "./utils/seoManager";
-import { 
-  INITIAL_PROFILE, 
-  INITIAL_PROPERTIES, 
-  ROADMAP_MILESTONES, 
+import {
+  INITIAL_PROFILE,
+  INITIAL_PROPERTIES,
+  ROADMAP_MILESTONES,
   DOCUMENT_VAULT_ITEMS,
   DEFAULT_LOAN_OFFICER,
   INITIAL_TEAM_LOAN_OFFICERS,
@@ -37,26 +37,26 @@ import {
   INITIAL_PAIRINGS,
   INITIAL_SOCIAL_CAMPAIGNS,
   INITIAL_AD_DRAFTS,
-  INITIAL_LEADS
+  INITIAL_LEADS,
 } from "./data/initialData";
 import { INITIAL_RECRUITING_CAMPAIGNS } from "./data/recruitingData";
 import { DEFAULT_SMS_TEMPLATES } from "./data/smsTemplates";
-import { 
-  FinancialProfile, 
-  PropertyListing, 
-  RoadmapMilestone, 
-  DocumentItem, 
+import {
+  FinancialProfile,
+  PropertyListing,
+  RoadmapMilestone,
+  DocumentItem,
   ProfessionalGuidesState,
   CapturedLead,
-  RbacRole
+  RbacRole,
 } from "./types";
-import { 
-  sanitizeLoanOfficer, 
+import {
+  sanitizeLoanOfficer,
   sanitizeAgent,
-  findMatchingLoanOfficer, 
-  findMatchingAgent, 
+  findMatchingLoanOfficer,
+  findMatchingAgent,
   findMatchingPairing,
-  resolveFromUrlPath 
+  resolveFromUrlPath,
 } from "./utils/guideMatching";
 import { db } from "./firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
@@ -68,7 +68,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>("hero");
   const [isLeadBotOpen, setIsLeadBotOpen] = useState<boolean>(false);
   const [showTelemetryModal, setShowTelemetryModal] = useState<boolean>(false);
-  const [leadBotSourceContext, setLeadBotSourceContext] = useState<{ source?: string, intent?: "chat_listings" | "blueprint_download" | "buying_power" } | undefined>(undefined);
+  const [leadBotSourceContext, setLeadBotSourceContext] = useState<
+    | { source?: string; intent?: "chat_listings" | "blueprint_download" | "buying_power" }
+    | undefined
+  >(undefined);
 
   // Authentication & Site Visibility State
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -99,21 +102,25 @@ export default function App() {
       })
       .catch((err) => console.warn("Initial SEO metadata load notice:", err));
 
-    const unsubscribeSettings = onSnapshot(doc(db, "app_settings", "global"), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setIsAppPublic(data.isPublic === true);
-        if (data.seoMetadata) {
-          applyMetadataToDocument(data.seoMetadata);
+    const unsubscribeSettings = onSnapshot(
+      doc(db, "app_settings", "global"),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setIsAppPublic(data.isPublic === true);
+          if (data.seoMetadata) {
+            applyMetadataToDocument(data.seoMetadata);
+          }
+        } else {
+          setIsAppPublic(false);
         }
-      } else {
-        setIsAppPublic(false);
+        setIsSettingsChecking(false);
+      },
+      (err) => {
+        console.warn("Global settings snapshot error:", err);
+        setIsSettingsChecking(false);
       }
-      setIsSettingsChecking(false);
-    }, (err) => {
-      console.warn("Global settings snapshot error:", err);
-      setIsSettingsChecking(false);
-    });
+    );
 
     return () => {
       unsubscribeAuth();
@@ -124,18 +131,17 @@ export default function App() {
   const pathname = typeof window !== "undefined" ? window.location.pathname.toLowerCase() : "";
   const hash = typeof window !== "undefined" ? window.location.hash.toLowerCase() : "";
   const search = typeof window !== "undefined" ? window.location.search.toLowerCase() : "";
-  
-  const isPortalAccess = 
+
+  const isPortalAccess =
     pathname === "/portal" ||
     pathname.startsWith("/portal/") ||
     pathname === "/admin" ||
     pathname.startsWith("/admin/") ||
     pathname === "/login" ||
-    hash.includes("portal") || 
+    hash.includes("portal") ||
     hash.includes("admin") ||
     search.includes("portal=lo") ||
     search.includes("admin=lo");
-
 
   // Global State
   const [profile, setProfile] = useState<FinancialProfile>(() => {
@@ -149,26 +155,30 @@ export default function App() {
     }
     return INITIAL_PROFILE;
   });
-  
+
   const [properties, setProperties] = useState<PropertyListing[]>(() => {
     try {
       const savedUserProps = localStorage.getItem("homebuyer_user_properties");
       if (savedUserProps) {
         return JSON.parse(savedUserProps);
       }
-      
-      const saved = localStorage.getItem("homebuyer_roadmap_state_v2") || localStorage.getItem("manus_guides_state_v2");
+
+      const saved =
+        localStorage.getItem("homebuyer_roadmap_state_v2") ||
+        localStorage.getItem("manus_guides_state_v2");
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.syncedProperties && parsed.syncedProperties.length > 0) {
-          const published = parsed.syncedProperties.filter((p: PropertyListing) => p.isPubliclyPublished !== false);
+          const published = parsed.syncedProperties.filter(
+            (p: PropertyListing) => p.isPubliclyPublished !== false
+          );
           return [...published, ...INITIAL_PROPERTIES];
         }
       }
     } catch (e) {
       console.warn("Error parsing properties:", e);
     }
-    const defaultPublished = GEOSPHERE_MOCK_LISTINGS.filter(p => p.isPubliclyPublished !== false);
+    const defaultPublished = GEOSPHERE_MOCK_LISTINGS.filter((p) => p.isPubliclyPublished !== false);
     return [...defaultPublished, ...INITIAL_PROPERTIES];
   });
   const [milestones, setMilestones] = useState<RoadmapMilestone[]>(ROADMAP_MILESTONES);
@@ -189,11 +199,13 @@ export default function App() {
       adCampaignDrafts: INITIAL_AD_DRAFTS,
       leads: INITIAL_LEADS,
       syncedProperties: GEOSPHERE_MOCK_LISTINGS,
-      smsTemplates: DEFAULT_SMS_TEMPLATES
+      smsTemplates: DEFAULT_SMS_TEMPLATES,
     };
 
     try {
-      const saved = localStorage.getItem("homebuyer_roadmap_state_v2") || localStorage.getItem("manus_guides_state_v2");
+      const saved =
+        localStorage.getItem("homebuyer_roadmap_state_v2") ||
+        localStorage.getItem("manus_guides_state_v2");
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.loanOfficers && parsed.pairings) {
@@ -204,20 +216,20 @@ export default function App() {
           if (!parsed.smsTemplates || parsed.smsTemplates.length === 0) {
             parsed.smsTemplates = DEFAULT_SMS_TEMPLATES;
           } else {
-            DEFAULT_SMS_TEMPLATES.forEach(defaultTpl => {
+            DEFAULT_SMS_TEMPLATES.forEach((defaultTpl) => {
               if (!parsed.smsTemplates.some((t: any) => t.id === defaultTpl.id)) {
                 parsed.smsTemplates.push(defaultTpl);
               }
             });
           }
           // Sanitize all loan officers and agents to guarantee data integrity
-          parsed.loanOfficers = (parsed.loanOfficers as any[]).map(lo => sanitizeLoanOfficer(lo));
+          parsed.loanOfficers = (parsed.loanOfficers as any[]).map((lo) => sanitizeLoanOfficer(lo));
           if (parsed.agentRoster) {
-            parsed.agentRoster = (parsed.agentRoster as any[]).map(agent => sanitizeAgent(agent));
+            parsed.agentRoster = (parsed.agentRoster as any[]).map((agent) => sanitizeAgent(agent));
           }
 
           // Merge any Team Lonn Kilstrom LOs that aren't yet in the saved state
-          INITIAL_TEAM_LOAN_OFFICERS.forEach(defaultLo => {
+          INITIAL_TEAM_LOAN_OFFICERS.forEach((defaultLo) => {
             const exists = parsed.loanOfficers.some((lo: any) => lo.id === defaultLo.id);
             if (!exists) {
               parsed.loanOfficers.push(sanitizeLoanOfficer(defaultLo));
@@ -228,7 +240,7 @@ export default function App() {
           if (!parsed.recruitingCampaigns) {
             parsed.recruitingCampaigns = INITIAL_RECRUITING_CAMPAIGNS;
           }
-          INITIAL_PAIRINGS.forEach(defaultPairing => {
+          INITIAL_PAIRINGS.forEach((defaultPairing) => {
             const pairingExists = parsed.pairings.some((p: any) => p.id === defaultPairing.id);
             if (!pairingExists) {
               parsed.pairings.push(defaultPairing);
@@ -348,44 +360,53 @@ export default function App() {
       (snapshot) => {
         if (snapshot.exists()) {
           const remoteState = snapshot.data() as ProfessionalGuidesState;
-          
+
           setGuidesState((prev) => {
-            const updatedLo = remoteState.loanOfficers.find(lo => lo.id === prev.loanOfficer.id) || prev.loanOfficer;
-            
+            const updatedLo =
+              remoteState.loanOfficers.find((lo) => lo.id === prev.loanOfficer.id) ||
+              prev.loanOfficer;
+
             return {
               ...prev,
-              loanOfficers: remoteState.loanOfficers.map(lo => sanitizeLoanOfficer(lo)),
-              agentRoster: remoteState.agentRoster.map(agent => sanitizeAgent(agent)),
+              loanOfficers: remoteState.loanOfficers.map((lo) => sanitizeLoanOfficer(lo)),
+              agentRoster: remoteState.agentRoster.map((agent) => sanitizeAgent(agent)),
               pairings: remoteState.pairings || prev.pairings,
-              recruitingCampaigns: remoteState.recruitingCampaigns || prev.recruitingCampaigns || INITIAL_RECRUITING_CAMPAIGNS,
+              recruitingCampaigns:
+                remoteState.recruitingCampaigns ||
+                prev.recruitingCampaigns ||
+                INITIAL_RECRUITING_CAMPAIGNS,
               socialCampaigns: remoteState.socialCampaigns || prev.socialCampaigns,
               adCampaignDrafts: remoteState.adCampaignDrafts || prev.adCampaignDrafts,
               leads: remoteState.leads || prev.leads,
               syncedProperties: remoteState.syncedProperties || prev.syncedProperties,
-              loanOfficer: sanitizeLoanOfficer(updatedLo)
+              loanOfficer: sanitizeLoanOfficer(updatedLo),
             };
           });
 
           // Also update the live properties list if the Loan Officer published new listings
           if (remoteState.syncedProperties && remoteState.syncedProperties.length > 0) {
-            const published = remoteState.syncedProperties.filter(p => p.isPubliclyPublished !== false);
-            setProperties(prev => {
-              const remainingCustom = prev.filter(p => !p.id.startsWith("geo-") && !p.id.includes("-OR-"));
-              
+            const published = remoteState.syncedProperties.filter(
+              (p) => p.isPubliclyPublished !== false
+            );
+            setProperties((prev) => {
+              const remainingCustom = prev.filter(
+                (p) => !p.id.startsWith("geo-") && !p.id.includes("-OR-")
+              );
+
               // Merge published properties with previous state to preserve user preferences
-              const mergedPublished = published.map(pubProp => {
-                const existing = prev.find(p => p.id === pubProp.id);
+              const mergedPublished = published.map((pubProp) => {
+                const existing = prev.find((p) => p.id === pubProp.id);
                 if (existing) {
                   return {
                     ...pubProp,
                     isFavorite: existing.isFavorite,
                     priceAlertEnabled: existing.priceAlertEnabled,
-                    previousPrice: existing.previousPrice
+                    previousPrice: existing.previousPrice,
                   };
                 }
                 return pubProp;
               });
-              
+
               return [...mergedPublished, ...remainingCustom];
             });
           }
@@ -400,13 +421,15 @@ export default function App() {
         console.warn("Guides state snapshot listener notice:", error);
       }
     );
-    
+
     return unsub;
   }, []);
 
-  const handleUpdateGuidesState = (newState: ProfessionalGuidesState | ((prev: ProfessionalGuidesState) => ProfessionalGuidesState)) => {
-    if (typeof newState === 'function') {
-      setGuidesState(prev => {
+  const handleUpdateGuidesState = (
+    newState: ProfessionalGuidesState | ((prev: ProfessionalGuidesState) => ProfessionalGuidesState)
+  ) => {
+    if (typeof newState === "function") {
+      setGuidesState((prev) => {
         const computedState = newState(prev);
         setDoc(doc(db, "guides_state", "singleton"), computedState).catch(console.error);
         return computedState;
@@ -427,7 +450,7 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           if (data.leads && data.leads.length > 0) {
-            setGuidesState(prev => {
+            setGuidesState((prev) => {
               const updatedLeads = [...data.leads, ...(prev.leads || [])];
               const newState = { ...prev, leads: updatedLeads };
               // Auto-sync new webhooks to Firebase
@@ -440,7 +463,7 @@ export default function App() {
         console.error("Failed to poll webhook leads", err?.message || err);
       }
     };
-    
+
     // Poll every 15 seconds
     const intervalId = setInterval(pollWebhookLeads, 15000);
     return () => clearInterval(intervalId);
@@ -450,7 +473,7 @@ export default function App() {
   const [showLoPortal, setShowLoPortal] = useState<boolean>(false);
   const [scorecardProperty, setScorecardProperty] = useState<PropertyListing | null>(null);
   const [showNewPropertyModal, setShowNewPropertyModal] = useState<boolean>(false);
-  
+
   // Collapsible Sidebar Layout State (Initial state: collapsed)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true);
 
@@ -495,7 +518,9 @@ export default function App() {
     if (!headerRef.current) return;
     const resizeObserver = new ResizeObserver((entries) => {
       for (let entry of entries) {
-        const height = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : entry.contentRect.height;
+        const height = entry.borderBoxSize
+          ? entry.borderBoxSize[0].blockSize
+          : entry.contentRect.height;
         setHeaderHeight(height);
       }
     });
@@ -519,18 +544,26 @@ export default function App() {
     );
 
     // Check if URL path or hash indicates LO portal or specific LO
-    let isPortalPath = 
-      pathname.includes("/portal") || 
-      pathname.includes("/admin") || 
+    let isPortalPath =
+      pathname.includes("/portal") ||
+      pathname.includes("/admin") ||
       pathname.includes("/login") ||
-      hash.includes("portal") || 
+      hash.includes("portal") ||
       hash.includes("admin") ||
-      params.get("portal") === "lo" || 
+      params.get("portal") === "lo" ||
       params.get("admin") === "lo";
 
     // Legacy support: if the URL contains the public portal base path, but resolves strictly to an LO (no Realtor pairing), it is the LO's dashboard login link.
-    if (pathname.includes("first-time_homebuyer_portal") || pathname.includes("first-time-homebuyer-portal")) {
-      if (fromPathForPortalCheck.matchedLo && !fromPathForPortalCheck.isPairing && !fromPathForPortalCheck.matchedPairing && !fromPathForPortalCheck.matchedAgent) {
+    if (
+      pathname.includes("first-time_homebuyer_portal") ||
+      pathname.includes("first-time-homebuyer-portal")
+    ) {
+      if (
+        fromPathForPortalCheck.matchedLo &&
+        !fromPathForPortalCheck.isPairing &&
+        !fromPathForPortalCheck.matchedPairing &&
+        !fromPathForPortalCheck.matchedAgent
+      ) {
         isPortalPath = true;
       }
     }
@@ -539,7 +572,7 @@ export default function App() {
     const agentParam = params.get("agent");
     const pairParam = params.get("pair");
 
-    setGuidesState(prev => {
+    setGuidesState((prev) => {
       let updatedLo = prev.loanOfficer;
       let updatedAgentId = prev.activeAgentId;
       let isCoBranded = false;
@@ -592,7 +625,7 @@ export default function App() {
         ...prev,
         loanOfficer: sanitizeLoanOfficer(updatedLo),
         activeAgentId: updatedAgentId,
-        isCoBranded: isCoBranded
+        isCoBranded: isCoBranded,
       };
     });
 
@@ -621,7 +654,7 @@ export default function App() {
         (isCtrlOrCmd && isAlt && (e.key === "p" || e.key === "P"))
       ) {
         e.preventDefault();
-        setShowLoPortal(prev => !prev);
+        setShowLoPortal((prev) => !prev);
       }
     };
 
@@ -656,12 +689,12 @@ export default function App() {
   };
 
   const handleScorecardSave = (updated: PropertyListing) => {
-    setProperties(prev => prev.map(p => (p.id === updated.id ? updated : p)));
+    setProperties((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
     setScorecardProperty(null);
   };
 
   const handleAddNewProperty = (newProp: PropertyListing) => {
-    setProperties(prev => [newProp, ...prev]);
+    setProperties((prev) => [newProp, ...prev]);
   };
 
   const handleAskAiAboutProperty = (property: PropertyListing) => {
@@ -673,13 +706,15 @@ export default function App() {
   const handleSaveLead = (newLead: CapturedLead) => {
     const currentLeads = guidesState.leads || [];
     const updatedLeads = [newLead, ...currentLeads];
-    setGuidesState(prev => ({
+    setGuidesState((prev) => ({
       ...prev,
-      leads: updatedLeads
+      leads: updatedLeads,
     }));
   };
 
-  const activeAgent = guidesState.agentRoster.find(a => a.id === guidesState.activeAgentId) || guidesState.agentRoster[0];
+  const activeAgent =
+    guidesState.agentRoster.find((a) => a.id === guidesState.activeAgentId) ||
+    guidesState.agentRoster[0];
 
   // Access Verification Loading Screen (Wait for Auth & Firestore App Settings to resolve)
   if (isAuthChecking || isSettingsChecking) {
@@ -687,7 +722,9 @@ export default function App() {
       <div className="min-h-screen bg-[#F9F8F4] dark:bg-slate-950 flex items-center justify-center transition-colors duration-200">
         <div className="animate-pulse flex flex-col items-center">
           <ShieldCheck className="w-12 h-12 text-[#4A5D4E] dark:text-[#C18C5D] mb-4 opacity-50" />
-          <p className="text-[#606C5D] dark:text-slate-400 font-mono text-xs uppercase tracking-widest">Verifying access...</p>
+          <p className="text-[#606C5D] dark:text-slate-400 font-mono text-xs uppercase tracking-widest">
+            Verifying access...
+          </p>
         </div>
       </div>
     );
@@ -701,10 +738,12 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] w-full bg-[#F9F8F4] dark:bg-slate-950 text-[#2D362E] dark:text-slate-100 flex flex-col selection:bg-[#C18C5D]/25 dark:selection:bg-[#C18C5D]/40 selection:text-[#2D362E] dark:selection:text-white font-sans antialiased overflow-hidden relative transition-colors duration-200">
-      
       {/* Top Navigation (Flex None - Pinned to Top - Hidden when Full-Screen Workspace is active) */}
       {!showLoPortal && !isFullScreen && (
-        <div ref={headerRef} className="flex-none relative z-40 bg-[#F9F8F4]/98 backdrop-blur-md border-b border-[#EAE7E0]/80 shadow-md">
+        <div
+          ref={headerRef}
+          className="flex-none relative z-40 bg-[#F9F8F4]/98 backdrop-blur-md border-b border-[#EAE7E0]/80 shadow-md"
+        >
           <Navbar
             currentTab={activeTab}
             setCurrentTab={setActiveTab}
@@ -714,7 +753,10 @@ export default function App() {
             setProfile={setProfile}
             savedCount={properties.length}
             onOpenLoPortal={() => setShowLoPortal(true)}
-            onOpenLeadBot={() => { setLeadBotSourceContext(undefined); setIsLeadBotOpen(true); }}
+            onOpenLeadBot={() => {
+              setLeadBotSourceContext(undefined);
+              setIsLeadBotOpen(true);
+            }}
             onNavigateToGuides={handleNavigateToGuides}
             loName={guidesState.loanOfficer.name}
             isFullScreen={isFullScreen}
@@ -764,247 +806,308 @@ export default function App() {
       {/* Scrollable Content Area (Flex 1) */}
       <div className="flex-1 w-full overflow-y-auto overflow-x-hidden flex flex-col relative scroll-smooth">
         {/* Main Layout Wrapper */}
-      <div className={showLoPortal ? "flex-1 w-full" : isFullScreen ? "flex-1 w-full max-w-full px-2 sm:px-4 md:px-6 transition-all duration-300" : "flex-1 w-full max-w-[1700px] mx-auto flex transition-all duration-300"}>
-        {/* Desktop Only: Left Sidebar for Step Navigation & Tools Hub (Hidden in Full-Screen Workspace) */}
-        {!showLoPortal && !isFullScreen && (
-          <aside 
-            className={`hidden lg:flex flex-col shrink-0 border-r border-[#EAE7E0] dark:border-slate-800 bg-[#F9F8F4] dark:bg-slate-950 z-30 self-start sticky top-0 transition-all duration-300 ease-in-out ${
-              isSidebarCollapsed ? "w-16 sm:w-18 md:w-20 p-2" : "w-80 sm:w-84 xl:w-88 p-3 sm:p-4"
-            }`}
-            style={{ 
-              height: `calc(100vh - ${headerHeight}px)` 
-            }}
+        <div
+          className={
+            showLoPortal
+              ? "flex-1 w-full"
+              : isFullScreen
+                ? "flex-1 w-full max-w-full px-2 sm:px-4 md:px-6 transition-all duration-300"
+                : "flex-1 w-full max-w-[1700px] mx-auto flex transition-all duration-300"
+          }
+        >
+          {/* Desktop Only: Left Sidebar for Step Navigation & Tools Hub (Hidden in Full-Screen Workspace) */}
+          {!showLoPortal && !isFullScreen && (
+            <aside
+              className={`hidden lg:flex flex-col shrink-0 border-r border-[#EAE7E0] dark:border-slate-800 bg-[#F9F8F4] dark:bg-slate-950 z-30 self-start sticky top-0 transition-all duration-300 ease-in-out ${
+                isSidebarCollapsed ? "w-16 sm:w-18 md:w-20 p-2" : "w-80 sm:w-84 xl:w-88 p-3 sm:p-4"
+              }`}
+              style={{
+                height: `calc(100vh - ${headerHeight}px)`,
+              }}
+            >
+              <StepNavigationBanner
+                currentTab={activeTab}
+                currentMode={currentMode}
+                onNavigate={handleNavigate}
+                onNavigateToGuides={handleNavigateToGuides}
+                loanOfficerName={guidesState.loanOfficer.name}
+                activeAgentName={activeAgent.name}
+                isVertical={true}
+                isCollapsed={isSidebarCollapsed}
+                onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+                profile={profile}
+                setProfile={setProfile}
+                loanOfficer={guidesState.loanOfficer}
+                activeAgent={activeAgent}
+                propertiesCount={properties.length}
+                isFullScreen={isFullScreen}
+                onToggleFullScreen={toggleFullScreen}
+              />
+            </aside>
+          )}
+
+          {/* Main Content Area: Expands & shrinks dynamically to match sidebar & full-screen states */}
+          <main
+            className={
+              showLoPortal
+                ? "flex-1 w-full p-0 m-0"
+                : isFullScreen
+                  ? "flex-1 min-w-0 w-full px-2 sm:px-6 lg:px-10 py-4 md:py-6 space-y-6 pb-12 transition-all duration-300 ease-in-out"
+                  : "flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 pb-8 transition-all duration-300 ease-in-out"
+            }
           >
-            <StepNavigationBanner
-              currentTab={activeTab}
-              currentMode={currentMode}
-              onNavigate={handleNavigate}
-              onNavigateToGuides={handleNavigateToGuides}
-              loanOfficerName={guidesState.loanOfficer.name}
-              activeAgentName={activeAgent.name}
-              isVertical={true}
-              isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
-              profile={profile}
-              setProfile={setProfile}
-              loanOfficer={guidesState.loanOfficer}
-              activeAgent={activeAgent}
-              propertiesCount={properties.length}
-              isFullScreen={isFullScreen}
-              onToggleFullScreen={toggleFullScreen}
-            />
-          </aside>
-        )}
+            {/* LOAN OFFICER PORTAL VIEW */}
+            {showLoPortal ? (
+              <LoanOfficerPortal
+                userRole={userRole}
+                guidesState={guidesState}
+                onUpdateGuidesState={handleUpdateGuidesState}
+                onClose={() => setShowLoPortal(false)}
+                onViewPublicSite={() => {
+                  setShowLoPortal(false);
+                  handleNavigate("hero", "website");
+                }}
+                properties={properties}
+                setProperties={setProperties}
+              />
+            ) : (
+              <>
+                {/* WEBSITE MODE VIEWS */}
+                {currentMode === "website" && (
+                  <div>
+                    {activeTab === "hero" && (
+                      <HeroWebsite
+                        profile={profile}
+                        setProfile={setProfile}
+                        onOpenDashboard={() => handleNavigate("dashboard", "dashboard")}
+                        onOpenCalculator={() => handleNavigate("calculator", "website")}
+                        onOpenRoadmap={() => handleNavigate("roadmap", "website")}
+                        onOpenStep4={() => handleNavigate("step4_ai_plan", "dashboard")}
+                        onOpenLeadBot={() => {
+                          setLeadBotSourceContext(undefined);
+                          setIsLeadBotOpen(true);
+                        }}
+                        onCaptureLead={handleSaveLead}
+                        loanOfficer={guidesState.loanOfficer}
+                        activeAgent={activeAgent}
+                        isCoBranded={guidesState.isCoBranded}
+                        onOpenLoPortal={() => setShowLoPortal(true)}
+                        properties={properties}
+                      />
+                    )}
 
-        {/* Main Content Area: Expands & shrinks dynamically to match sidebar & full-screen states */}
-        <main className={
-          showLoPortal 
-            ? "flex-1 w-full p-0 m-0" 
-            : isFullScreen
-            ? "flex-1 min-w-0 w-full px-2 sm:px-6 lg:px-10 py-4 md:py-6 space-y-6 pb-12 transition-all duration-300 ease-in-out"
-            : "flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 pb-8 transition-all duration-300 ease-in-out"
-        }>
-          {/* LOAN OFFICER PORTAL VIEW */}
-          {showLoPortal ? (
-          <LoanOfficerPortal userRole={userRole}
-            guidesState={guidesState}
-            onUpdateGuidesState={handleUpdateGuidesState}
-            onClose={() => setShowLoPortal(false)}
-            onViewPublicSite={() => {
-              setShowLoPortal(false);
-              handleNavigate("hero", "website");
-            }}
-            properties={properties}
-            setProperties={setProperties}
-          />
-        ) : (
-          <>
-            {/* WEBSITE MODE VIEWS */}
-            {currentMode === "website" && (
-              <div>
-                {activeTab === "hero" && (
-                  <HeroWebsite
-                    profile={profile}
-                    setProfile={setProfile}
-                    onOpenDashboard={() => handleNavigate("dashboard", "dashboard")}
-                    onOpenCalculator={() => handleNavigate("calculator", "website")}
-                    onOpenRoadmap={() => handleNavigate("roadmap", "website")}
-                    onOpenStep4={() => handleNavigate("step4_ai_plan", "dashboard")}
-                    onOpenLeadBot={() => { setLeadBotSourceContext(undefined); setIsLeadBotOpen(true); }}
-                    onCaptureLead={handleSaveLead}
-                    loanOfficer={guidesState.loanOfficer}
-                    activeAgent={activeAgent}
-                    isCoBranded={guidesState.isCoBranded}
-                    onOpenLoPortal={() => setShowLoPortal(true)}
-                    properties={properties}
-                  />
+                    {(activeTab === "calculator" || !["hero", "roadmap"].includes(activeTab)) && (
+                      <InstantAffordabilityCalculator
+                        profile={profile}
+                        setProfile={setProfile}
+                        onOpenAdvisor={() => handleNavigate("step4_ai_plan", "dashboard")}
+                        onNextStep={() => handleNavigate("roadmap", "website")}
+                        onNavigate={handleNavigate}
+                        loanOfficer={guidesState.loanOfficer}
+                        activeAgent={activeAgent}
+                        isLoanOfficerMode={false}
+                      />
+                    )}
+
+                    {activeTab === "roadmap" && (
+                      <RoadmapView
+                        milestones={milestones}
+                        setMilestones={setMilestones}
+                        onGoToDashboard={() => handleNavigate("dashboard", "dashboard")}
+                        onBackToStep1={() => handleNavigate("calculator", "website")}
+                        onNavigate={handleNavigate}
+                        profile={profile}
+                        properties={properties}
+                        documents={documents}
+                        setDocuments={setDocuments}
+                        loanOfficer={guidesState.loanOfficer}
+                        activeAgent={activeAgent}
+                        isCoBranded={guidesState.isCoBranded}
+                        agentRoster={guidesState.agentRoster}
+                      />
+                    )}
+                  </div>
                 )}
 
-                {(activeTab === "calculator" || (!["hero", "roadmap"].includes(activeTab))) && (
-                  <InstantAffordabilityCalculator
-                    profile={profile}
-                    setProfile={setProfile}
-                    onOpenAdvisor={() => handleNavigate("step4_ai_plan", "dashboard")}
-                    onNextStep={() => handleNavigate("roadmap", "website")}
-                    onNavigate={handleNavigate}
-                    loanOfficer={guidesState.loanOfficer}
-                    activeAgent={activeAgent}
-                    isLoanOfficerMode={false}
-                  />
-                )}
+                {/* DASHBOARD MODE VIEWS (SECURED USER DASHBOARD) */}
+                {currentMode === "dashboard" && (
+                  <div>
+                    {(activeTab === "dashboard" ||
+                      ![
+                        "step4_ai_plan",
+                        "properties",
+                        "mortgagelab",
+                        "ai_copilot",
+                        "escrow",
+                        "market_trends",
+                      ].includes(activeTab)) && (
+                      <DashboardOverview
+                        profile={profile}
+                        setProfile={setProfile}
+                        properties={properties}
+                        milestones={milestones}
+                        documents={documents}
+                        setDocuments={setDocuments}
+                        onNavigate={handleNavigate}
+                        onOpenNewPropertyModal={() => setShowNewPropertyModal(true)}
+                        loanOfficer={guidesState.loanOfficer}
+                        activeAgent={activeAgent}
+                        onOpenLoPortal={() => setShowLoPortal(true)}
+                        isSidebarCollapsed={isSidebarCollapsed}
+                        onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+                        onSaveLead={handleSaveLead}
+                        agentRoster={guidesState.agentRoster}
+                      />
+                    )}
 
-                {activeTab === "roadmap" && (
-                  <RoadmapView
-                    milestones={milestones}
-                    setMilestones={setMilestones}
-                    onGoToDashboard={() => handleNavigate("dashboard", "dashboard")}
-                    onBackToStep1={() => handleNavigate("calculator", "website")}
-                    onNavigate={handleNavigate}
-                    profile={profile}
-                    properties={properties}
-                    documents={documents}
-                    setDocuments={setDocuments}
-                    loanOfficer={guidesState.loanOfficer}
-                    activeAgent={activeAgent}
-                    isCoBranded={guidesState.isCoBranded}
-                    agentRoster={guidesState.agentRoster}
-                  />
+                    {activeTab === "step4_ai_plan" && (
+                      <Step4AIScenarioSummary
+                        onRequestBlueprint={() => {
+                          setLeadBotSourceContext({
+                            source: "Step 4 - Blueprint Download Request",
+                            intent: "blueprint_download",
+                          });
+                          setIsLeadBotOpen(true);
+                        }}
+                        onRequestListings={() => {
+                          setLeadBotSourceContext({
+                            source: "Step 4 - Curated Listings Request",
+                            intent: "chat_listings",
+                          });
+                          setIsLeadBotOpen(true);
+                        }}
+                        profile={profile}
+                        properties={properties}
+                        milestones={milestones}
+                        documents={documents}
+                        setDocuments={setDocuments}
+                        loanOfficer={guidesState.loanOfficer}
+                        activeAgent={activeAgent}
+                        isCoBranded={guidesState.isCoBranded}
+                        onNavigate={handleNavigate}
+                        onOpenLoPortal={() => setShowLoPortal(true)}
+                        agentRoster={guidesState.agentRoster}
+                      />
+                    )}
+
+                    {activeTab === "properties" && (
+                      <PropertyTracker
+                        properties={properties}
+                        setProperties={setProperties}
+                        profile={profile}
+                        milestones={milestones}
+                        documents={documents}
+                        setDocuments={setDocuments}
+                        loanOfficer={guidesState.loanOfficer}
+                        activeAgent={activeAgent}
+                        onOpenScorecard={(prop) => setScorecardProperty(prop)}
+                        onOpenNewModal={() => setShowNewPropertyModal(true)}
+                        onAskAiAboutProperty={handleAskAiAboutProperty}
+                      />
+                    )}
+
+                    {activeTab === "mortgagelab" && (
+                      <MortgageLab
+                        profile={profile}
+                        loanOfficer={guidesState.loanOfficer}
+                        activeAgent={activeAgent}
+                        isLoanOfficerMode={false}
+                      />
+                    )}
+
+                    {activeTab === "ai_copilot" && (
+                      <AICopilot
+                        profile={profile}
+                        properties={properties}
+                        loanOfficer={guidesState.loanOfficer}
+                        activeAgent={activeAgent}
+                      />
+                    )}
+
+                    {activeTab === "escrow" && <EscrowTracker />}
+
+                    {activeTab === "market_trends" && (
+                      <MarketTrends
+                        activeAgent={activeAgent}
+                        loanOfficer={guidesState.loanOfficer}
+                        agentRoster={guidesState.agentRoster}
+                        pairings={guidesState.pairings}
+                        isCoBranded={guidesState.isCoBranded}
+                        listings={properties}
+                        onNavigate={handleNavigate}
+                        onSaveLead={handleSaveLead}
+                      />
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
             )}
+          </main>
+        </div>
 
-            {/* DASHBOARD MODE VIEWS (SECURED USER DASHBOARD) */}
-            {currentMode === "dashboard" && (
-              <div>
-                {(activeTab === "dashboard" || (!["step4_ai_plan", "properties", "mortgagelab", "ai_copilot", "escrow", "market_trends"].includes(activeTab))) && (
-                  <DashboardOverview
-                    profile={profile}
-                    setProfile={setProfile}
-                    properties={properties}
-                    milestones={milestones}
-                    documents={documents}
-                    setDocuments={setDocuments}
-                    onNavigate={handleNavigate}
-                    onOpenNewPropertyModal={() => setShowNewPropertyModal(true)}
-                    loanOfficer={guidesState.loanOfficer}
-                    activeAgent={activeAgent}
-                    onOpenLoPortal={() => setShowLoPortal(true)}
-                    isSidebarCollapsed={isSidebarCollapsed}
-                    onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
-                    onSaveLead={handleSaveLead}
-                    agentRoster={guidesState.agentRoster}
-                  />
-                )}
-
-                {activeTab === "step4_ai_plan" && (
-                  <Step4AIScenarioSummary
-                    onRequestBlueprint={() => { setLeadBotSourceContext({ source: "Step 4 - Blueprint Download Request", intent: "blueprint_download" }); setIsLeadBotOpen(true); }}
-                    onRequestListings={() => { setLeadBotSourceContext({ source: "Step 4 - Curated Listings Request", intent: "chat_listings" }); setIsLeadBotOpen(true); }}
-                    profile={profile}
-                    properties={properties}
-                    milestones={milestones}
-                    documents={documents}
-                    setDocuments={setDocuments}
-                    loanOfficer={guidesState.loanOfficer}
-                    activeAgent={activeAgent}
-                    isCoBranded={guidesState.isCoBranded}
-                    onNavigate={handleNavigate}
-                    onOpenLoPortal={() => setShowLoPortal(true)}
-                    agentRoster={guidesState.agentRoster}
-                  />
-                )}
-
-                {activeTab === "properties" && (
-                  <PropertyTracker
-                    properties={properties}
-                    setProperties={setProperties}
-                    profile={profile}
-                    milestones={milestones}
-                    documents={documents}
-                    setDocuments={setDocuments}
-                    loanOfficer={guidesState.loanOfficer}
-                    activeAgent={activeAgent}
-                    onOpenScorecard={(prop) => setScorecardProperty(prop)}
-                    onOpenNewModal={() => setShowNewPropertyModal(true)}
-                    onAskAiAboutProperty={handleAskAiAboutProperty}
-                  />
-                )}
-
-                {activeTab === "mortgagelab" && (
-                  <MortgageLab 
-                    profile={profile}
-                    loanOfficer={guidesState.loanOfficer}
-                    activeAgent={activeAgent}
-                    isLoanOfficerMode={false}
-                  />
-                )}
-
-                {activeTab === "ai_copilot" && (
-                  <AICopilot
-                    profile={profile}
-                    properties={properties}
-                    loanOfficer={guidesState.loanOfficer}
-                  />
-                )}
-
-                {activeTab === "escrow" && (
-                  <EscrowTracker />
-                )}
-
-                {activeTab === "market_trends" && (
-                  <MarketTrends
-                    activeAgent={activeAgent}
-                    loanOfficer={guidesState.loanOfficer}
-                    agentRoster={guidesState.agentRoster}
-                    pairings={guidesState.pairings}
-                    isCoBranded={guidesState.isCoBranded}
-                    listings={properties}
-                    onNavigate={handleNavigate}
-                    onSaveLead={handleSaveLead}
-                    onTriggerToast={triggerToast}
-                  />
-                )}
+        {/* Footer (Hidden when Full-Screen Workspace is active) */}
+        {!showLoPortal && !isFullScreen && (
+          <footer className="bg-[#F1EFE9] dark:bg-slate-900 border-t border-[#EAE7E0] dark:border-slate-800 py-10 px-4 sm:px-6 lg:px-8 mt-16 text-xs text-[#606C5D] dark:text-slate-400 transition-colors duration-200">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleNavigate("hero", "website")}
+                  className="flex items-center gap-2.5 text-left group focus:outline-none"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#606C5D] flex items-center justify-center font-bold text-white shadow-sm group-hover:scale-105 transition-transform">
+                    <Compass className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-[#2D362E] dark:text-slate-200 text-sm">
+                      First-Time Homebuyer Roadmap
+                    </span>
+                    <p className="text-[11px] text-[#9A9488] dark:text-slate-500">
+                      Buy your first home with clarity and total confidence.
+                    </p>
+                  </div>
+                </button>
               </div>
-            )}
-          </>
+
+              <div className="flex flex-wrap items-center justify-center gap-5 text-[#606C5D]">
+                <button
+                  onClick={() => handleNavigate("hero", "website")}
+                  className="hover:text-[#4A5D4E] transition-colors font-medium"
+                >
+                  Overview
+                </button>
+                <button
+                  onClick={() => handleNavigate("calculator", "website")}
+                  className="hover:text-[#4A5D4E] transition-colors"
+                >
+                  Step 1: Calculator
+                </button>
+                <button
+                  onClick={() => handleNavigate("roadmap", "website")}
+                  className="hover:text-[#4A5D4E] transition-colors"
+                >
+                  Step 2: Explore
+                </button>
+                <button
+                  onClick={() => handleNavigate("dashboard", "dashboard")}
+                  className="hover:text-[#4A5D4E] transition-colors"
+                >
+                  Step 3: Dashboard
+                </button>
+                <button
+                  onClick={() => handleNavigate("step4_ai_plan", "dashboard")}
+                  className="hover:text-[#4A5D4E] transition-colors font-bold text-[#4A5D4E]"
+                >
+                  Step 4: AI Plan & Guides
+                </button>
+              </div>
+
+              <div className="text-center md:text-right text-[11px] text-[#9A9488]">
+                <span>Powered by Gemini 3.7 Flash & Natural Tones</span>
+                <div className="text-[#9A9488]/80 mt-0.5">Equal Housing Opportunity Awareness</div>
+              </div>
+            </div>
+          </footer>
         )}
-      </main>
-      </div>
-
-      {/* Footer (Hidden when Full-Screen Workspace is active) */}
-      {!showLoPortal && !isFullScreen && (
-        <footer className="bg-[#F1EFE9] dark:bg-slate-900 border-t border-[#EAE7E0] dark:border-slate-800 py-10 px-4 sm:px-6 lg:px-8 mt-16 text-xs text-[#606C5D] dark:text-slate-400 transition-colors duration-200">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => handleNavigate("hero", "website")}
-                className="flex items-center gap-2.5 text-left group focus:outline-none"
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#606C5D] flex items-center justify-center font-bold text-white shadow-sm group-hover:scale-105 transition-transform">
-                  <Compass className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <span className="font-bold text-[#2D362E] dark:text-slate-200 text-sm">First-Time Homebuyer Roadmap</span>
-                  <p className="text-[11px] text-[#9A9488] dark:text-slate-500">Buy your first home with clarity and total confidence.</p>
-                </div>
-              </button>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-5 text-[#606C5D]">
-              <button onClick={() => handleNavigate("hero", "website")} className="hover:text-[#4A5D4E] transition-colors font-medium">Overview</button>
-              <button onClick={() => handleNavigate("calculator", "website")} className="hover:text-[#4A5D4E] transition-colors">Step 1: Calculator</button>
-              <button onClick={() => handleNavigate("roadmap", "website")} className="hover:text-[#4A5D4E] transition-colors">Step 2: Explore</button>
-              <button onClick={() => handleNavigate("dashboard", "dashboard")} className="hover:text-[#4A5D4E] transition-colors">Step 3: Dashboard</button>
-              <button onClick={() => handleNavigate("step4_ai_plan", "dashboard")} className="hover:text-[#4A5D4E] transition-colors font-bold text-[#4A5D4E]">Step 4: AI Plan & Guides</button>
-            </div>
-
-            <div className="text-center md:text-right text-[11px] text-[#9A9488]">
-              <span>Powered by Gemini 3.7 Flash & Natural Tones</span>
-              <div className="text-[#9A9488]/80 mt-0.5">Equal Housing Opportunity Awareness</div>
-            </div>
-          </div>
-        </footer>
-      )}
       </div>
       {/* Bottom Nav (Flex None - Pinned to Bottom on Mobile - Hidden when in Full-Screen Workspace) */}
       {!isFullScreen && <MobileBottomNav activeTab={activeTab} onNavigate={handleNavigate} />}
@@ -1027,18 +1130,22 @@ export default function App() {
       )}
 
       {/* Return to LO Dashboard Floating Button */}
-      {!showLoPortal && typeof window !== "undefined" && localStorage.getItem("lo_portal_auth_id") && (
-        <button
-          onClick={() => {
-            setShowLoPortal(true);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          className="fixed bottom-24 right-6 md:bottom-6 md:left-6 z-50 bg-[#2D362E] hover:bg-[#1E241F] text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 font-bold text-sm transition-all animate-in slide-in-from-bottom-5 border border-white/20 hover:scale-105 active:scale-95"
-        >
-          <span className="bg-[#4A5D4E] w-6 h-6 rounded-full flex items-center justify-center text-[10px]">👑</span>
-          <span>Return to LO Dashboard</span>
-        </button>
-      )}
+      {!showLoPortal &&
+        typeof window !== "undefined" &&
+        localStorage.getItem("lo_portal_auth_id") && (
+          <button
+            onClick={() => {
+              setShowLoPortal(true);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="fixed bottom-24 right-6 md:bottom-6 md:left-6 z-50 bg-[#2D362E] hover:bg-[#1E241F] text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 font-bold text-sm transition-all animate-in slide-in-from-bottom-5 border border-white/20 hover:scale-105 active:scale-95"
+          >
+            <span className="bg-[#4A5D4E] w-6 h-6 rounded-full flex items-center justify-center text-[10px]">
+              👑
+            </span>
+            <span>Return to LO Dashboard</span>
+          </button>
+        )}
 
       {/* 24/7 AI Lead Intake & Prequal Chatbot */}
       {!showLoPortal && (
@@ -1051,7 +1158,10 @@ export default function App() {
           financialProfile={profile}
           onSaveLead={handleSaveLead}
           isOpen={isLeadBotOpen}
-          onClose={() => { setLeadBotSourceContext(undefined); setIsLeadBotOpen(false); }}
+          onClose={() => {
+            setLeadBotSourceContext(undefined);
+            setIsLeadBotOpen(false);
+          }}
           onOpen={() => setIsLeadBotOpen(true)}
         />
       )}
@@ -1074,4 +1184,3 @@ export default function App() {
     </div>
   );
 }
-

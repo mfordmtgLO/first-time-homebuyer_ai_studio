@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { MarkerClusterer, type Marker } from "@googlemaps/markerclusterer";
 import {
   APIProvider,
   Map,
   AdvancedMarker,
   InfoWindow,
-  Circle
+  Circle,
+  useMap,
 } from "@vis.gl/react-google-maps";
 import {
   MapPin,
@@ -21,7 +23,8 @@ import {
   Building,
   KeyRound,
   ExternalLink,
-  X
+  X,
+  Flame,
 } from "lucide-react";
 import { PropertyListing, FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
@@ -33,20 +36,167 @@ import {
   calculateHaversineDistance,
   OREGON_CITY_COORDINATES,
   OREGON_SCHOOL_DISTRICTS,
-  KEY_OREGON_AMENITIES
+  KEY_OREGON_AMENITIES,
 } from "../utils/propertyMapUtils";
 import { getZillowUrl } from "../utils/overlayClassification";
 
 interface PropertyMapOverlayProps {
   properties: PropertyListing[];
-  profile: FinancialProfile;
-  onOpenScorecard: (property: PropertyListing) => void;
-  onAskAiAboutProperty: (property: PropertyListing) => void;
-  compareIds: string[];
-  onToggleCompare: (propertyId: string) => void;
+  profile?: FinancialProfile;
+  onOpenScorecard?: (property: PropertyListing) => void;
+  onAskAiAboutProperty?: (property: PropertyListing) => void;
+  compareIds?: string[];
+  onToggleCompare?: (propertyId: string) => void;
   onSelectProperty?: (property: PropertyListing) => void;
   onCloseMap?: () => void;
 }
+
+const MAP_LIBRARIES: any = ["visualization"];
+
+const GeosphereHeatmap: React.FC<{
+  properties: PropertyListing[];
+  amenities: any[];
+  visible: boolean;
+}> = ({ properties, amenities, visible }) => {
+  const map = useMap();
+  const [heatmap, setHeatmap] = useState<google.maps.visualization.HeatmapLayer | null>(null);
+
+  useEffect(() => {
+    if (!map || !window.google || !window.google.maps || !window.google.maps.visualization) return;
+
+    // Utilize Geosphere logic conceptually: cluster properties and amenities
+    const heatmapData: any[] = [];
+
+    // Add properties with weight based on readiness score (higher score = more intense heat)
+    properties.forEach((p) => {
+      heatmapData.push({
+        location: new google.maps.LatLng(p.lat, p.lng),
+        weight: (p.readiness?.score || 50) / 10,
+      });
+    });
+
+    // Add amenities as high-density anchors to show clustering
+    amenities.forEach((a) => {
+      heatmapData.push({
+        location: new google.maps.LatLng(a.lat, a.lng),
+        weight: 15, // High weight for amenities to form strong cluster centers
+      });
+    });
+
+    const layer = new google.maps.visualization.HeatmapLayer({
+      data: heatmapData,
+      map: visible ? map : null,
+      radius: 40,
+      opacity: 0.6,
+      gradient: [
+        "rgba(0, 255, 255, 0)",
+        "rgba(0, 255, 255, 1)",
+        "rgba(89, 193, 115, 1)",
+        "rgba(205, 220, 57, 1)",
+        "rgba(255, 193, 7, 1)",
+        "rgba(255, 87, 34, 1)",
+        "rgba(211, 47, 47, 1)",
+      ],
+    });
+
+    setHeatmap(layer);
+
+    return () => {
+      (layer as any).setMap(null);
+    };
+  }, [map, properties, amenities]);
+
+  useEffect(() => {
+    if (heatmap) {
+      (heatmap as any).setMap(visible ? map : null);
+    }
+  }, [visible, heatmap, map]);
+
+  return null;
+};
+
+
+export const ClusteredPropertyMarkers = ({
+  properties,
+  selectedPropertyId,
+  hoveredPropertyId,
+  setSelectedPropertyId,
+  setHoveredPropertyId,
+}: any) => {
+  const [markers, setMarkers] = useState<{ [key: string]: Marker }>({});
+  const map = useMap();
+
+  const clusterer = useMemo(() => {
+    if (!map) return null;
+    return new MarkerClusterer({ map });
+  }, [map]);
+
+  const setMarkerRef = useCallback((marker: Marker | null, key: string) => {
+    setMarkers((currentMarkers) => {
+      if ((marker && currentMarkers[key]) || (!marker && !currentMarkers[key])) return currentMarkers;
+      if (marker) {
+        return { ...currentMarkers, [key]: marker };
+      } else {
+        const { [key]: _, ...newMarkers } = currentMarkers;
+        return newMarkers;
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!clusterer) return;
+    clusterer.clearMarkers();
+    clusterer.addMarkers(Object.values(markers));
+  }, [clusterer, markers]);
+
+  return (
+    <>
+      {properties.map((property: any) => {
+        const isSelected = selectedPropertyId === property.id;
+        const isHovered = hoveredPropertyId === property.id;
+
+        const pinBg =
+          property.readiness.tier === "High"
+            ? "#15803d" // emerald-700
+            : property.readiness.tier === "Moderate"
+              ? "#b45309" // amber-700
+              : "#475569"; // slate-600
+
+        return (
+          <AdvancedMarker
+            key={property.id}
+            position={{ lat: property.lat, lng: property.lng }}
+            onClick={() => setSelectedPropertyId(property.id)}
+            zIndex={isSelected ? 100 : isHovered ? 90 : 50}
+            ref={(marker) => setMarkerRef(marker, property.id)}
+          >
+            <div
+              onMouseEnter={() => setHoveredPropertyId(property.id)}
+              onMouseLeave={() => setHoveredPropertyId(null)}
+              className={`flex flex-col items-center cursor-pointer transition-all transform ${
+                isSelected ? "scale-115" : isHovered ? "scale-110" : "scale-100"
+              }`}
+            >
+              {/* Price Tag Chip */}
+              <div
+                style={{ backgroundColor: pinBg }}
+                className={`px-2 py-0.5 rounded-full text-white text-[10px] font-bold shadow-md border-2 border-white flex items-center gap-1 whitespace-nowrap`}
+              >
+                <ShieldCheck className="w-2.5 h-2.5" />
+                <span>${Math.round(property.price / 1000)}k</span>
+              </div>
+              {/* Indicator triangle */}
+              <div
+                style={{ backgroundColor: pinBg }}
+                className="w-2 h-2 rotate-45 -mt-1 border-r border-b border-white"
+              ></div>
+            </div>
+          </AdvancedMarker>
+        );
+      })}
+    </>
+  );
+};
 
 export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
   properties,
@@ -55,7 +205,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
   onAskAiAboutProperty,
   compareIds,
   onToggleCompare,
-  onCloseMap
+  onCloseMap,
 }) => {
   // Read Google Maps API Key from environment
   const envApiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) || "";
@@ -86,6 +236,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
   // Interactive Marker Selection
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
+  const [showHeatmap, setShowHeatmap] = useState<boolean>(false);
 
   // Map view type: 'google' or 'fallback_vector'
   const isGoogleMapsReady = Boolean(apiKey && apiKey.trim().length > 10);
@@ -109,11 +260,16 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
 
   // Pre-process all properties with geocodes, school districts, amenities, and homebuying readiness
   const enrichedProperties = useMemo(() => {
-    return properties.map(property => {
+    return properties.map((property) => {
       const coords = getListingCoordinates(property);
-      const { district, assignedSchools } = getListingSchoolDistrict(property, coords.lat, coords.lng);
+      const { district, assignedSchools } = getListingSchoolDistrict(
+        property,
+        coords.lat,
+        coords.lng
+      );
       const amenities = getNearbyAmenities(coords.lat, coords.lng, 8);
-      const readiness = calculateHomebuyingReadiness(property, profile);
+      const defaultProfile = { downPaymentSavings: 0, interestRate: 6.5, loanTermYears: 30, annualHomeInsurance: 1200, targetMonthlyPayment: 2500, dtiLimit: 43 };
+      const readiness = profile ? calculateHomebuyingReadiness(property, profile) : calculateHomebuyingReadiness(property, defaultProfile as any);
       const distanceFromCenter = calculateHaversineDistance(
         searchCenter.lat,
         searchCenter.lng,
@@ -130,61 +286,65 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
         assignedSchools,
         amenities,
         readiness,
-        distanceFromCenter
+        distanceFromCenter,
       };
     });
   }, [properties, profile, searchCenter]);
 
   // Filter properties based on radius, school district, amenity proximity, and readiness tier
   const filteredProperties = useMemo(() => {
-    return enrichedProperties.filter(item => {
-      // 1. Radius Check
-      if (item.distanceFromCenter > searchRadiusMiles) {
-        return false;
-      }
+    return enrichedProperties
+      .filter((item) => {
+        // 1. Radius Check
+        if (item.distanceFromCenter > searchRadiusMiles) {
+          return false;
+        }
 
-      // 2. School District Check
-      if (selectedDistrictId !== "all" && item.districtInfo.id !== selectedDistrictId) {
-        return false;
-      }
+        // 2. School District Check
+        if (selectedDistrictId !== "all" && item.districtInfo.id !== selectedDistrictId) {
+          return false;
+        }
 
-      // 3. Readiness Tier Check
-      if (readinessTierFilter !== "all" && item.readiness.tier !== readinessTierFilter) {
-        return false;
-      }
+        // 3. Readiness Tier Check
+        if (readinessTierFilter !== "all" && item.readiness.tier !== readinessTierFilter) {
+          return false;
+        }
 
-      // 4. Transit Proximity Check (< 1.5 miles to transit)
-      if (filterTransitOnly) {
-        const hasCloseTransit = item.amenities.some(
-          a => a.amenity.category === "transit" && a.distanceMiles <= 1.5
-        );
-        if (!hasCloseTransit) return false;
-      }
+        // 4. Transit Proximity Check (< 1.5 miles to transit)
+        if (filterTransitOnly) {
+          const hasCloseTransit = item.amenities.some(
+            (a) => a.amenity.category === "transit" && a.distanceMiles <= 1.5
+          );
+          if (!hasCloseTransit) return false;
+        }
 
-      // 5. Top Schools Proximity Check (< 1.5 miles to high rated school)
-      if (filterTopSchoolsOnly) {
-        const hasCloseSchool = item.assignedSchools.some(s => s.rating >= 8 && s.distanceMiles <= 1.5);
-        if (!hasCloseSchool) return false;
-      }
+        // 5. Top Schools Proximity Check (< 1.5 miles to high rated school)
+        if (filterTopSchoolsOnly) {
+          const hasCloseSchool = item.assignedSchools.some(
+            (s) => s.rating >= 8 && s.distanceMiles <= 1.5
+          );
+          if (!hasCloseSchool) return false;
+        }
 
-      // 6. Grocery Proximity Check (< 1.2 miles)
-      if (filterGroceryOnly) {
-        const hasCloseGrocery = item.amenities.some(
-          a => a.amenity.category === "grocery" && a.distanceMiles <= 1.2
-        );
-        if (!hasCloseGrocery) return false;
-      }
+        // 6. Grocery Proximity Check (< 1.2 miles)
+        if (filterGroceryOnly) {
+          const hasCloseGrocery = item.amenities.some(
+            (a) => a.amenity.category === "grocery" && a.distanceMiles <= 1.2
+          );
+          if (!hasCloseGrocery) return false;
+        }
 
-      // 7. Parks Proximity Check (< 1.0 mile)
-      if (filterParksOnly) {
-        const hasClosePark = item.amenities.some(
-          a => a.amenity.category === "park" && a.distanceMiles <= 1.0
-        );
-        if (!hasClosePark) return false;
-      }
+        // 7. Parks Proximity Check (< 1.0 mile)
+        if (filterParksOnly) {
+          const hasClosePark = item.amenities.some(
+            (a) => a.amenity.category === "park" && a.distanceMiles <= 1.0
+          );
+          if (!hasClosePark) return false;
+        }
 
-      return true;
-    }).sort((a, b) => b.readiness.score - a.readiness.score);
+        return true;
+      })
+      .sort((a, b) => b.readiness.score - a.readiness.score);
   }, [
     enrichedProperties,
     searchRadiusMiles,
@@ -193,25 +353,27 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
     filterTransitOnly,
     filterTopSchoolsOnly,
     filterGroceryOnly,
-    filterParksOnly
+    filterParksOnly,
   ]);
 
   // Currently selected property object
   const activeSelectedProperty = useMemo(() => {
     if (!selectedPropertyId) return null;
-    return enrichedProperties.find(p => p.id === selectedPropertyId) || null;
+    return enrichedProperties.find((p) => p.id === selectedPropertyId) || null;
   }, [selectedPropertyId, enrichedProperties]);
 
   // Radius summary statistics
   const radiusStats = useMemo(() => {
     const totalCount = filteredProperties.length;
-    const highReadinessCount = filteredProperties.filter(p => p.readiness.tier === "High").length;
-    const avgPrice = totalCount > 0
-      ? Math.round(filteredProperties.reduce((acc, p) => acc + p.price, 0) / totalCount)
-      : 0;
-    const avgScore = totalCount > 0
-      ? Math.round(filteredProperties.reduce((acc, p) => acc + p.readiness.score, 0) / totalCount)
-      : 0;
+    const highReadinessCount = filteredProperties.filter((p) => p.readiness.tier === "High").length;
+    const avgPrice =
+      totalCount > 0
+        ? Math.round(filteredProperties.reduce((acc, p) => acc + p.price, 0) / totalCount)
+        : 0;
+    const avgScore =
+      totalCount > 0
+        ? Math.round(filteredProperties.reduce((acc, p) => acc + p.readiness.score, 0) / totalCount)
+        : 0;
 
     return { totalCount, highReadinessCount, avgPrice, avgScore };
   }, [filteredProperties]);
@@ -223,7 +385,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
     { miles: 5, label: "5 mi (Suburban)" },
     { miles: 10, label: "10 mi (Metro Area)" },
     { miles: 15, label: "15 mi (District)" },
-    { miles: 25, label: "25 mi (Regional)" }
+    { miles: 25, label: "25 mi (Regional)" },
   ];
 
   return (
@@ -238,33 +400,89 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
           <h3 className="text-xl sm:text-2xl font-serif font-bold text-[#2D362E] flex items-center gap-2">
             <span>Homebuying Readiness Radius Explorer</span>
           </h3>
+          <div className="mt-4 p-3 bg-white border border-[#EAE7E0] rounded-xl shadow-sm">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-500" />
+                <span className="text-xs font-bold text-[#2D362E]">Ask GeoSphere AI</span>
+              </div>
+              <span className="text-[10px] text-white bg-indigo-500 px-2 py-0.5 rounded-full font-bold">
+                New
+              </span>
+            </div>
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+              }}
+            >
+              <input
+                type="text"
+                placeholder="e.g., Show me homes under $450k near St. Johns that qualify for the DevNW 0% down grant..."
+                className="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-400"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  alert(
+                    "GeoSphere AI Search logic would trigger here. Prompt parsed, bounding box applied, shapefile grants cross-referenced, and map coordinates snapped."
+                  )
+                }
+                className="px-4 py-2 bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-lg text-sm font-bold transition-colors whitespace-nowrap"
+              >
+                Search Map
+              </button>
+            </form>
+          </div>
           <p className="text-xs sm:text-sm text-[#606C5D]">
-            Inspect real properties within tailored radii, evaluate assigned Oregon school districts, and gauge walk/drive proximity to essential amenities.
+            Inspect real properties within tailored radii, evaluate assigned Oregon school
+            districts, and gauge walk/drive proximity to essential amenities.
           </p>
         </div>
 
         {/* Quick Radius Statistics Box */}
         <div className="flex items-center gap-2.5 flex-wrap">
           <div className="bg-white px-3.5 py-2 rounded-xl border border-[#EAE7E0] shadow-2xs">
-            <span className="block text-[10px] uppercase tracking-wider font-bold text-[#9A9488]">Homes in Radius</span>
+            <span className="block text-[10px] uppercase tracking-wider font-bold text-[#9A9488]">
+              Homes in Radius
+            </span>
             <span className="text-base font-serif font-bold text-[#2D362E]">
-              {radiusStats.totalCount} <span className="text-xs font-sans font-normal text-[#606C5D]">({radiusStats.highReadinessCount} High Readiness)</span>
+              {radiusStats.totalCount}{" "}
+              <span className="text-xs font-sans font-normal text-[#606C5D]">
+                ({radiusStats.highReadinessCount} High Readiness)
+              </span>
             </span>
           </div>
 
           <div className="bg-white px-3.5 py-2 rounded-xl border border-[#EAE7E0] shadow-2xs">
-            <span className="block text-[10px] uppercase tracking-wider font-bold text-[#9A9488]">Average Value</span>
+            <span className="block text-[10px] uppercase tracking-wider font-bold text-[#9A9488]">
+              Average Value
+            </span>
             <span className="text-base font-serif font-bold text-[#4A5D4E]">
               {radiusStats.totalCount > 0 ? formatUSD(radiusStats.avgPrice) : "—"}
             </span>
           </div>
 
           <div className="bg-white px-3.5 py-2 rounded-xl border border-[#EAE7E0] shadow-2xs">
-            <span className="block text-[10px] uppercase tracking-wider font-bold text-[#9A9488]">Readiness Index</span>
+            <span className="block text-[10px] uppercase tracking-wider font-bold text-[#9A9488]">
+              Readiness Index
+            </span>
             <span className="text-base font-serif font-bold text-[#C18C5D]">
               {radiusStats.totalCount > 0 ? `${radiusStats.avgScore} / 100` : "—"}
             </span>
           </div>
+
+          <button
+            onClick={() => setShowHeatmap(!showHeatmap)}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
+              showHeatmap
+                ? "bg-rose-100 text-rose-700 border-rose-200"
+                : "bg-white text-[#606C5D] border-[#EAE7E0] hover:bg-[#FAF9F5]"
+            } border shadow-2xs`}
+          >
+            <Flame className="w-3.5 h-3.5" />
+            Geosphere Heatmap
+          </button>
 
           {onCloseMap && (
             <button
@@ -290,7 +508,9 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                 Active Google Maps Platform Integration Available
               </p>
               <p className="text-[#606C5D] mt-0.5">
-                The interactive map overlay is rendering in high-precision vector mode. To activate live Google satellite & street base layers, provide a Google Maps API Key or free Maps Demo Key.
+                The interactive map overlay is rendering in high-precision vector mode. To activate
+                live Google satellite & street base layers, provide a Google Maps API Key or free
+                Maps Demo Key.
               </p>
             </div>
           </div>
@@ -306,7 +526,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
               <ExternalLink className="w-3 h-3" />
             </a>
             <button
-              onClick={() => setShowKeyInput(prev => !prev)}
+              onClick={() => setShowKeyInput((prev) => !prev)}
               className="px-3 py-1.5 rounded-lg bg-[#4A5D4E] text-white hover:bg-[#38463B] font-semibold transition-all text-xs"
             >
               {showKeyInput ? "Close Key Bar" : "Enter API Key"}
@@ -317,7 +537,10 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
 
       {/* Manual API Key Input Dropdown */}
       {showKeyInput && (
-        <form onSubmit={handleApplyApiKey} className="p-4 bg-white border-b border-[#EAE7E0] flex items-center gap-2">
+        <form
+          onSubmit={handleApplyApiKey}
+          className="p-4 bg-white border-b border-[#EAE7E0] flex items-center gap-2"
+        >
           <div className="relative flex-1">
             <input
               type="text"
@@ -370,12 +593,13 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                 <span>Search Radius Visualization</span>
               </span>
               <span className="font-serif font-bold text-[#4A5D4E] text-xs lowercase">
-                <span className="font-bold text-sm text-[#2D362E]">{searchRadiusMiles}</span> miles circle
+                <span className="font-bold text-sm text-[#2D362E]">{searchRadiusMiles}</span> miles
+                circle
               </span>
             </div>
 
             <div className="flex items-center gap-1.5 flex-wrap">
-              {RADIUS_PRESETS.map(preset => (
+              {RADIUS_PRESETS.map((preset) => (
                 <button
                   key={preset.miles}
                   onClick={() => setSearchRadiusMiles(preset.miles)}
@@ -406,7 +630,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
               className="w-full text-xs font-medium px-2.5 py-1.5 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] text-[#2D362E] focus:outline-none focus:border-[#4A5D4E] cursor-pointer"
             >
               <option value="all">All Oregon School Districts</option>
-              {OREGON_SCHOOL_DISTRICTS.map(district => (
+              {OREGON_SCHOOL_DISTRICTS.map((district) => (
                 <option key={district.id} value={district.id}>
                   {district.name} (Rated {district.averageRating}/10)
                 </option>
@@ -424,8 +648,8 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
               {[
                 { id: "all", label: "All Readiness" },
                 { id: "High", label: "High (85+)" },
-                { id: "Moderate", label: "Moderate (70+)" }
-              ].map(tier => (
+                { id: "Moderate", label: "Moderate (70+)" },
+              ].map((tier) => (
                 <button
                   key={tier.id}
                   onClick={() => setReadinessTierFilter(tier.id)}
@@ -449,7 +673,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                 <span>Proximity to Key Amenities</span>
               </span>
               <button
-                onClick={() => setShowAmenitiesOnMap(prev => !prev)}
+                onClick={() => setShowAmenitiesOnMap((prev) => !prev)}
                 className={`text-[10px] font-semibold underline cursor-pointer ${
                   showAmenitiesOnMap ? "text-[#4A5D4E]" : "text-[#9A9488]"
                 }`}
@@ -459,7 +683,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
             </label>
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
-                onClick={() => setFilterTransitOnly(prev => !prev)}
+                onClick={() => setFilterTransitOnly((prev) => !prev)}
                 className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
                   filterTransitOnly
                     ? "bg-[#4A5D4E] text-white"
@@ -472,7 +696,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
               </button>
 
               <button
-                onClick={() => setFilterTopSchoolsOnly(prev => !prev)}
+                onClick={() => setFilterTopSchoolsOnly((prev) => !prev)}
                 className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
                   filterTopSchoolsOnly
                     ? "bg-[#4A5D4E] text-white"
@@ -485,7 +709,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
               </button>
 
               <button
-                onClick={() => setFilterGroceryOnly(prev => !prev)}
+                onClick={() => setFilterGroceryOnly((prev) => !prev)}
                 className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
                   filterGroceryOnly
                     ? "bg-[#4A5D4E] text-white"
@@ -498,7 +722,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
               </button>
 
               <button
-                onClick={() => setFilterParksOnly(prev => !prev)}
+                onClick={() => setFilterParksOnly((prev) => !prev)}
                 className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
                   filterParksOnly
                     ? "bg-[#4A5D4E] text-white"
@@ -534,8 +758,13 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
             {filteredProperties.length === 0 ? (
               <div className="p-6 text-center text-xs text-[#606C5D] bg-white rounded-2xl border border-dashed border-[#EAE7E0] space-y-2 my-4">
                 <Compass className="w-8 h-8 text-[#9A9488] mx-auto opacity-50" />
-                <p className="font-semibold text-[#2D362E]">No properties match within {searchRadiusMiles} miles.</p>
-                <p>Expand your search radius slider or choose another city origin to discover more homes.</p>
+                <p className="font-semibold text-[#2D362E]">
+                  No properties match within {searchRadiusMiles} miles.
+                </p>
+                <p>
+                  Expand your search radius slider or choose another city origin to discover more
+                  homes.
+                </p>
                 <button
                   onClick={() => setSearchRadiusMiles(15)}
                   className="px-3 py-1.5 rounded-lg bg-[#4A5D4E] text-white font-semibold text-xs mt-2"
@@ -544,10 +773,10 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                 </button>
               </div>
             ) : (
-              filteredProperties.map(property => {
+              filteredProperties.map((property) => {
                 const isSelected = selectedPropertyId === property.id;
                 const isHovered = hoveredPropertyId === property.id;
-                const isCompared = compareIds.includes(property.id);
+                const isCompared = compareIds?.includes(property.id) || false;
 
                 return (
                   <div
@@ -559,26 +788,33 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                       isSelected
                         ? "border-[#4A5D4E] ring-2 ring-[#4A5D4E]/20 shadow-md"
                         : isHovered
-                        ? "border-[#C18C5D] shadow-sm"
-                        : "border-[#EAE7E0] hover:border-[#C18C5D]/60"
+                          ? "border-[#C18C5D] shadow-sm"
+                          : "border-[#EAE7E0] hover:border-[#C18C5D]/60"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-0.5 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${property.readiness.badgeColor}`}>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${property.readiness.badgeColor}`}
+                          >
                             {property.readiness.score}/100 • {property.readiness.tier}
                           </span>
                           <span className="text-[10px] font-medium text-[#606C5D] bg-[#FAF9F5] px-1.5 py-0.5 rounded">
                             {property.distanceFromCenter} mi away
                           </span>
                         </div>
-                        <h4 className="font-serif font-bold text-xs text-[#2D362E] truncate" title={property.title}>
+                        <h4
+                          className="font-serif font-bold text-xs text-[#2D362E] truncate"
+                          title={property.title}
+                        >
                           {property.title}
                         </h4>
                         <p className="text-[11px] text-[#606C5D] truncate flex items-center gap-1">
                           <MapPin className="w-3 h-3 text-[#9A9488] shrink-0" />
-                          <span>{property.address}, {property.city}</span>
+                          <span>
+                            {property.address}, {property.city}
+                          </span>
                         </p>
                       </div>
 
@@ -597,7 +833,9 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                       <div className="flex items-center justify-between font-semibold">
                         <span className="flex items-center gap-1 text-[#4A5D4E]">
                           <GraduationCap className="w-3 h-3" />
-                          <span className="truncate max-w-[170px]">{property.districtInfo.name}</span>
+                          <span className="truncate max-w-[170px]">
+                            {property.districtInfo.name}
+                          </span>
                         </span>
                         <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">
                           Rating {property.districtInfo.averageRating}/10
@@ -605,7 +843,9 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                       </div>
                       {property.assignedSchools[0] && (
                         <p className="text-[10px] text-[#606C5D] truncate">
-                          Nearest: <strong>{property.assignedSchools[0].name}</strong> ({property.assignedSchools[0].rating}/10) • {property.assignedSchools[0].distanceMiles} mi
+                          Nearest: <strong>{property.assignedSchools[0].name}</strong> (
+                          {property.assignedSchools[0].rating}/10) •{" "}
+                          {property.assignedSchools[0].distanceMiles} mi
                         </p>
                       )}
                     </div>
@@ -613,12 +853,24 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                     {/* Key Proximity Amenities Highlights */}
                     <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-[#606C5D]">
                       {property.amenities.slice(0, 2).map((am, idx) => (
-                        <span key={idx} className="bg-white border border-[#EAE7E0] px-1.5 py-0.5 rounded flex items-center gap-1">
-                          {am.amenity.category === "transit" && <Train className="w-2.5 h-2.5 text-[#C18C5D]" />}
-                          {am.amenity.category === "grocery" && <ShoppingCart className="w-2.5 h-2.5 text-[#4A5D4E]" />}
-                          {am.amenity.category === "park" && <Trees className="w-2.5 h-2.5 text-emerald-600" />}
-                          {am.amenity.category === "health" && <HeartPulse className="w-2.5 h-2.5 text-red-500" />}
-                          <span className="truncate max-w-[120px]">{am.amenity.name}</span> ({am.distanceMiles}m)
+                        <span
+                          key={idx}
+                          className="bg-white border border-[#EAE7E0] px-1.5 py-0.5 rounded flex items-center gap-1"
+                        >
+                          {am.amenity.category === "transit" && (
+                            <Train className="w-2.5 h-2.5 text-[#C18C5D]" />
+                          )}
+                          {am.amenity.category === "grocery" && (
+                            <ShoppingCart className="w-2.5 h-2.5 text-[#4A5D4E]" />
+                          )}
+                          {am.amenity.category === "park" && (
+                            <Trees className="w-2.5 h-2.5 text-emerald-600" />
+                          )}
+                          {am.amenity.category === "health" && (
+                            <HeartPulse className="w-2.5 h-2.5 text-red-500" />
+                          )}
+                          <span className="truncate max-w-[120px]">{am.amenity.name}</span> (
+                          {am.distanceMiles}m)
                         </span>
                       ))}
                     </div>
@@ -628,7 +880,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onOpenScorecard(property);
+                          if (onOpenScorecard) onOpenScorecard(property);
                         }}
                         className="text-[#4A5D4E] hover:text-[#38463B] font-semibold cursor-pointer flex items-center gap-1"
                       >
@@ -639,7 +891,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onAskAiAboutProperty(property);
+                          if (onAskAiAboutProperty) onAskAiAboutProperty(property);
                         }}
                         className="text-[#C18C5D] hover:text-[#A87447] font-semibold cursor-pointer flex items-center gap-1"
                       >
@@ -650,7 +902,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onToggleCompare(property.id);
+                          if (onToggleCompare) onToggleCompare(property.id);
                         }}
                         className={`text-[10px] font-semibold px-2 py-0.5 rounded cursor-pointer transition-all ${
                           isCompared
@@ -671,7 +923,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
         {/* Right Area: Interactive Google Map / Vector Canvas (8 cols) */}
         <div className="lg:col-span-8 relative h-[560px] sm:h-[640px] w-full bg-[#E5E9E5]">
           {isGoogleMapsReady ? (
-            <APIProvider apiKey={apiKey}>
+            <APIProvider apiKey={apiKey} libraries={MAP_LIBRARIES}>
               <div className="w-full h-full relative" style={{ minHeight: "560px" }}>
                 <Map
                   defaultCenter={searchCenter}
@@ -684,6 +936,11 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                   internalUsageAttributionIds={["gmp_mcp_codeassist_v1_aistudio"]}
                   style={{ width: "100%", height: "100%", minHeight: "560px" }}
                 >
+                  <GeosphereHeatmap
+                    properties={filteredProperties}
+                    amenities={KEY_OREGON_AMENITIES}
+                    visible={showHeatmap}
+                  />
                   {/* Visual Search Radius Circle */}
                   <Circle
                     center={searchCenter}
@@ -712,7 +969,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
 
                   {/* Amenity Markers (when toggled on) */}
                   {showAmenitiesOnMap &&
-                    KEY_OREGON_AMENITIES.map(amenity => {
+                    KEY_OREGON_AMENITIES.map((amenity) => {
                       const distFromCenter = calculateHaversineDistance(
                         searchCenter.lat,
                         searchCenter.lng,
@@ -728,64 +985,41 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                           title={`${amenity.name} (${amenity.label})`}
                         >
                           <div className="p-1 rounded-full bg-white shadow-sm border border-[#EAE7E0] hover:scale-125 transition-transform cursor-pointer">
-                            {amenity.category === "transit" && <Train className="w-3.5 h-3.5 text-[#C18C5D]" />}
-                            {amenity.category === "school" && <GraduationCap className="w-3.5 h-3.5 text-[#4A5D4E]" />}
-                            {amenity.category === "grocery" && <ShoppingCart className="w-3.5 h-3.5 text-emerald-700" />}
-                            {amenity.category === "park" && <Trees className="w-3.5 h-3.5 text-green-600" />}
-                            {amenity.category === "health" && <HeartPulse className="w-3.5 h-3.5 text-red-500" />}
+                            {amenity.category === "transit" && (
+                              <Train className="w-3.5 h-3.5 text-[#C18C5D]" />
+                            )}
+                            {amenity.category === "school" && (
+                              <GraduationCap className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                            )}
+                            {amenity.category === "grocery" && (
+                              <ShoppingCart className="w-3.5 h-3.5 text-emerald-700" />
+                            )}
+                            {amenity.category === "park" && (
+                              <Trees className="w-3.5 h-3.5 text-green-600" />
+                            )}
+                            {amenity.category === "health" && (
+                              <HeartPulse className="w-3.5 h-3.5 text-red-500" />
+                            )}
                           </div>
                         </AdvancedMarker>
                       );
                     })}
 
-                  {/* Property Markers with Readiness Tier Badges */}
-                  {filteredProperties.map(property => {
-                    const isSelected = selectedPropertyId === property.id;
-                    const isHovered = hoveredPropertyId === property.id;
-
-                    const pinBg =
-                      property.readiness.tier === "High"
-                        ? "#15803d" // emerald-700
-                        : property.readiness.tier === "Moderate"
-                        ? "#b45309" // amber-700
-                        : "#475569"; // slate-600
-
-                    return (
-                      <AdvancedMarker
-                        key={property.id}
-                        position={{ lat: property.lat, lng: property.lng }}
-                        onClick={() => setSelectedPropertyId(property.id)}
-                        zIndex={isSelected ? 100 : isHovered ? 90 : 50}
-                      >
-                        <div
-                          className={`flex flex-col items-center cursor-pointer transition-all transform ${
-                            isSelected ? "scale-115" : isHovered ? "scale-110" : "scale-100"
-                          }`}
-                        >
-                          {/* Price Tag Chip */}
-                          <div
-                            style={{ backgroundColor: pinBg }}
-                            className={`px-2 py-0.5 rounded-full text-white text-[10px] font-bold shadow-md border-2 border-white flex items-center gap-1 whitespace-nowrap`}
-                          >
-                            <ShieldCheck className="w-2.5 h-2.5" />
-                            <span>${Math.round(property.price / 1000)}k</span>
-                          </div>
-                          {/* Indicator triangle */}
-                          <div
-                            style={{ backgroundColor: pinBg }}
-                            className="w-2 h-2 rotate-45 -mt-1 border-r border-b border-white"
-                          ></div>
-                        </div>
-                      </AdvancedMarker>
-                    );
-                  })}
-
-                  {/* Active Selected Property InfoWindow */}
+                  
+                  {/* Clustered Property Markers */}
+                  <ClusteredPropertyMarkers
+                    properties={filteredProperties}
+                    selectedPropertyId={selectedPropertyId}
+                    hoveredPropertyId={hoveredPropertyId}
+                    setSelectedPropertyId={setSelectedPropertyId}
+                    setHoveredPropertyId={setHoveredPropertyId}
+                  />
+{/* Active Selected Property InfoWindow */}
                   {activeSelectedProperty && (
                     <InfoWindow
                       position={{
                         lat: activeSelectedProperty.lat,
-                        lng: activeSelectedProperty.lng
+                        lng: activeSelectedProperty.lng,
                       }}
                       onCloseClick={() => setSelectedPropertyId(null)}
                     >
@@ -800,7 +1034,8 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                           <span
                             className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm ${activeSelectedProperty.readiness.badgeColor}`}
                           >
-                            {activeSelectedProperty.readiness.score}/100 • {activeSelectedProperty.readiness.tier}
+                            {activeSelectedProperty.readiness.score}/100 •{" "}
+                            {activeSelectedProperty.readiness.tier}
                           </span>
                         </div>
 
@@ -810,7 +1045,9 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                               {formatUSD(activeSelectedProperty.price)}
                             </span>
                             <span className="text-[10px] text-[#606C5D]">
-                              est. ${activeSelectedProperty.readiness.monthlyPaymentEstimate.toLocaleString()}/mo
+                              est. $
+                              {activeSelectedProperty.readiness.monthlyPaymentEstimate.toLocaleString()}
+                              /mo
                             </span>
                           </div>
                           <h4 className="font-serif font-bold text-xs leading-tight">
@@ -826,24 +1063,30 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                           <div className="flex items-center justify-between text-[#4A5D4E] font-semibold">
                             <span className="flex items-center gap-1">
                               <GraduationCap className="w-3 h-3" />
-                              <span className="truncate">{activeSelectedProperty.districtInfo.name}</span>
+                              <span className="truncate">
+                                {activeSelectedProperty.districtInfo.name}
+                              </span>
                             </span>
-                            <span className="font-bold">{activeSelectedProperty.districtInfo.averageRating}/10</span>
+                            <span className="font-bold">
+                              {activeSelectedProperty.districtInfo.averageRating}/10
+                            </span>
                           </div>
                           <p className="text-[10px] text-emerald-700 font-medium">
-                            ✓ {activeSelectedProperty.readiness.positiveFactors[0] || "Turnkey Move-in Ready"}
+                            ✓{" "}
+                            {activeSelectedProperty.readiness.positiveFactors[0] ||
+                              "Turnkey Move-in Ready"}
                           </p>
                         </div>
 
                         <div className="pt-1 flex items-center justify-between gap-1">
                           <button
-                            onClick={() => onOpenScorecard(activeSelectedProperty)}
+                            onClick={() => onOpenScorecard && onOpenScorecard(activeSelectedProperty)}
                             className="px-2 py-1 rounded bg-[#4A5D4E] text-white font-semibold text-[10px] hover:bg-[#38463B]"
                           >
                             Scorecard
                           </button>
                           <button
-                            onClick={() => onAskAiAboutProperty(activeSelectedProperty)}
+                            onClick={() => onAskAiAboutProperty && onAskAiAboutProperty(activeSelectedProperty)}
                             className="px-2 py-1 rounded bg-[#C18C5D] text-white font-semibold text-[10px] hover:bg-[#A87447]"
                           >
                             Ask AI
@@ -859,6 +1102,19 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           )}
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${activeSelectedProperty.lat},${activeSelectedProperty.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 rounded border border-[#EAE7E0] hover:bg-stone-100 text-blue-600 ml-auto flex items-center gap-1 px-1.5"
+                            title="Save to My Google Maps"
+                            onClick={() => {
+                              // Optional: Fire telemetry event to track that visitor saved this to their personal maps
+                              console.log('Visitor saved property to their personal Google Maps', activeSelectedProperty.id);
+                            }}
+                          >
+                            <MapPin className="w-3 h-3" /> <span className="text-[9px] font-bold">Save</span>
+                          </a>
                         </div>
                       </div>
                     </InfoWindow>
@@ -877,7 +1133,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                 className="absolute rounded-full border-2 border-dashed border-[#4A5D4E]/80 bg-[#4A5D4E]/10 pointer-events-none flex items-center justify-center transition-all duration-300"
                 style={{
                   width: `${Math.min(540, Math.max(160, searchRadiusMiles * 30))}px`,
-                  height: `${Math.min(540, Math.max(160, searchRadiusMiles * 30))}px`
+                  height: `${Math.min(540, Math.max(160, searchRadiusMiles * 30))}px`,
                 }}
               >
                 <div className="absolute top-2 px-2.5 py-0.5 rounded-full bg-[#4A5D4E] text-white text-[10px] font-bold shadow-sm">
@@ -898,8 +1154,12 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
               {filteredProperties.map((property, idx) => {
                 const isSelected = selectedPropertyId === property.id;
                 // Distribute pins organically relative to canvas center
-                const angle = (idx * (360 / Math.max(1, filteredProperties.length)) + 45) * (Math.PI / 180);
-                const distanceFactor = Math.min(180, (property.distanceFromCenter / Math.max(1, searchRadiusMiles)) * 140);
+                const angle =
+                  (idx * (360 / Math.max(1, filteredProperties.length)) + 45) * (Math.PI / 180);
+                const distanceFactor = Math.min(
+                  180,
+                  (property.distanceFromCenter / Math.max(1, searchRadiusMiles)) * 140
+                );
                 const xOffset = Math.cos(angle) * distanceFactor;
                 const yOffset = Math.sin(angle) * distanceFactor;
 
@@ -907,15 +1167,15 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                   property.readiness.tier === "High"
                     ? "bg-emerald-700"
                     : property.readiness.tier === "Moderate"
-                    ? "bg-amber-600"
-                    : "bg-slate-600";
+                      ? "bg-amber-600"
+                      : "bg-slate-600";
 
                 return (
                   <div
                     key={property.id}
                     onClick={() => setSelectedPropertyId(property.id)}
                     style={{
-                      transform: `translate(${xOffset}px, ${yOffset}px)`
+                      transform: `translate(${xOffset}px, ${yOffset}px)`,
                     }}
                     className={`absolute z-30 flex flex-col items-center cursor-pointer transition-all transform hover:scale-125 ${
                       isSelected ? "scale-125 z-40" : ""
@@ -927,7 +1187,9 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                       <ShieldCheck className="w-2.5 h-2.5" />
                       <span>${Math.round(property.price / 1000)}k</span>
                     </div>
-                    <div className={`w-2 h-2 rotate-45 -mt-1 border-r border-b border-white ${pinBg}`}></div>
+                    <div
+                      className={`w-2 h-2 rotate-45 -mt-1 border-r border-b border-white ${pinBg}`}
+                    ></div>
                   </div>
                 );
               })}
@@ -938,8 +1200,11 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-0.5 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${activeSelectedProperty.readiness.badgeColor}`}>
-                          Readiness {activeSelectedProperty.readiness.score}/100 • {activeSelectedProperty.readiness.tier}
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${activeSelectedProperty.readiness.badgeColor}`}
+                        >
+                          Readiness {activeSelectedProperty.readiness.score}/100 •{" "}
+                          {activeSelectedProperty.readiness.tier}
                         </span>
                         <span className="text-[10px] text-[#606C5D] font-medium">
                           {activeSelectedProperty.distanceFromCenter} mi from center
@@ -969,7 +1234,10 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                         <span className="truncate">{activeSelectedProperty.districtInfo.name}</span>
                       </div>
                       <p className="text-[10px] text-[#606C5D]">
-                        District Rating: <strong className="text-[#2D362E]">{activeSelectedProperty.districtInfo.averageRating}/10</strong>
+                        District Rating:{" "}
+                        <strong className="text-[#2D362E]">
+                          {activeSelectedProperty.districtInfo.averageRating}/10
+                        </strong>
                       </p>
                     </div>
 
@@ -979,7 +1247,9 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                         <span>Nearby Amenity</span>
                       </div>
                       <p className="text-[10px] text-[#606C5D] truncate">
-                        {activeSelectedProperty.amenities[0]?.amenity.name || "Transit / Parks Nearby"} ({activeSelectedProperty.amenities[0]?.distanceMiles || 0.8}m)
+                        {activeSelectedProperty.amenities[0]?.amenity.name ||
+                          "Transit / Parks Nearby"}{" "}
+                        ({activeSelectedProperty.amenities[0]?.distanceMiles || 0.8}m)
                       </p>
                     </div>
                   </div>
@@ -988,13 +1258,13 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                   <div className="flex items-center justify-between gap-2 pt-1">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => onOpenScorecard(activeSelectedProperty)}
+                        onClick={() => onOpenScorecard && onOpenScorecard(activeSelectedProperty)}
                         className="px-3 py-1.5 rounded-xl bg-[#4A5D4E] text-white font-semibold text-xs hover:bg-[#38463B] transition-all"
                       >
                         Inspect Scorecard
                       </button>
                       <button
-                        onClick={() => onAskAiAboutProperty(activeSelectedProperty)}
+                        onClick={() => onAskAiAboutProperty && onAskAiAboutProperty(activeSelectedProperty)}
                         className="px-3 py-1.5 rounded-xl bg-[#C18C5D] text-white font-semibold text-xs hover:bg-[#A87447] transition-all flex items-center gap-1"
                       >
                         <Sparkles className="w-3 h-3" />
@@ -1003,14 +1273,14 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                     </div>
 
                     <button
-                      onClick={() => onToggleCompare(activeSelectedProperty.id)}
+                      onClick={() => onToggleCompare && onToggleCompare(activeSelectedProperty.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                        compareIds.includes(activeSelectedProperty.id)
+                        (compareIds?.includes(activeSelectedProperty.id) || false)
                           ? "bg-[#C18C5D] text-white border-[#C18C5D]"
                           : "bg-white text-[#606C5D] border-[#EAE7E0] hover:bg-[#FAF9F5]"
                       }`}
                     >
-                      {compareIds.includes(activeSelectedProperty.id) ? "Compared" : "+ Compare"}
+                      {(compareIds?.includes(activeSelectedProperty.id) || false) ? "Compared" : "+ Compare"}
                     </button>
                   </div>
                 </div>

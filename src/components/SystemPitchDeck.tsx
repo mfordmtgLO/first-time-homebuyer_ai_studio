@@ -14,64 +14,75 @@ export const SystemPitchDeck: React.FC = () => {
 
   const slides: Slide[] = [
     {
+      id: "frontend-ux",
+      title: "1. Front-End User Website Features",
+      subtitle: "Immersive Homebuyer Tools, Maps & Interactive Roadmaps",
+      icon: <Calculator className="w-8 h-8 text-indigo-500" />,
+      points: [
+        "Curated Property Feed: Hundreds of live homes across Oregon cities, complete with price, square footage, and tour grades.",
+        "Interactive Maps & Google My Maps Sync: Instant 1-click KML export and 4-step import guide so visitors can permanently pin homes to their Google Maps accounts.",
+        "Affordability & Grant Calculators: Built-in OHCS down payment assistance, USDA RD rural eligibility, and LMI grant overlays.",
+        "Custom Tour Scorecard & PDF Reports: Visitors generate comprehensive home tour audits and shareable roadmaps instantly."
+      ]
+    },
+    {
+      id: "cobranding",
+      title: "2. Dynamic LO & Agent 'Pair' Co-Branding",
+      subtitle: "Dynamic URL Parameters & Default Loan Officer/Agent Matching",
+      icon: <Users className="w-8 h-8 text-rose-500" />,
+      points: [
+        "Dynamic URL Routing: Custom source links (e.g., `?lo=mike&agent=kanndice`) instantly customize the entire page branding.",
+        "Default LO/Agent Pair: Automatically loads the designated Loan Officer (Mike Ford) and preferred Co-branded Partner (Kanndice McLean) across all interface headers, sidebars, and call-to-action badges.",
+        "Embedded Contact Cards: Every property card, scorecard, and exported Google Maps pin displays direct tap-to-call/email information.",
+        "Tailored Persuasion CTAs: Prominently features the tailored call: 'For more information on low/no down payment products matched for eligible areas, call Mike Ford. To get a personalized home search profile, reach out to Kanndice McLean.'"
+      ]
+    },
+    {
+      id: "lead-persuasion",
+      title: "3. Visitor Engagement & Lead Capture",
+      subtitle: "Multi-Touch Conversion & Information Gathering Touchpoints",
+      icon: <Target className="w-8 h-8 text-amber-500" />,
+      points: [
+        "Interactive Roadmap Generator: Engages visitors with a 6-step readiness quiz capturing name, email, phone, and timeline.",
+        "Favorite & Tour Requests: Triggers automated agent alerts when a visitor favorites a home or requests a tour.",
+        "Instant Email Bundles: Allows visitors to email their entire dashboard summary, mortgage roadmap, and saved home list to themselves and their co-branded team.",
+        "Map Export Funnel: Captures high-intent buyers as they export KML layers and save curated property pins to Google Maps."
+      ]
+    },
+    {
+      id: "backend-routing",
+      title: "4. Back-End CRM & Lead Routing",
+      subtitle: "Dashboard Automation, Task Queues & Conversion Outreach",
+      icon: <Database className="w-8 h-8 text-emerald-500" />,
+      points: [
+        "Unified Pipeline Dashboard: Centralizes all inbound leads, form submissions, roadmap milestones, and property favorites in real-time.",
+        "Smart Lead Scoring: Automatically prioritizes hot leads based on pre-approval status, credit range, and map export activity.",
+        "Task & Follow-Up Queues: Organizes morning priority calls and afternoon SMS/email follow-up workflows for loan officers.",
+        "Branch Manager Oversight: Full visibility across all downstream LO dashboards, tracking conversion ratios and Days-to-Close."
+      ]
+    },
+    {
+      id: "automations",
+      title: "5. Automations, Templates & Follow-Up Campaigns",
+      subtitle: "AI-Powered SMS/Email Sequences & Lead Journey Tracking",
+      icon: <Zap className="w-8 h-8 text-blue-500" />,
+      points: [
+        "AI 2nd Brain Outreach: Automatically drafts personalized, compliance-checked SMS and email follow-up messages based on live borrower math.",
+        "Multi-Channel Drip Campaigns: Automated email and text sequences nurturing first-time buyers through pre-approval, underwriting, and closing.",
+        "Lead Journey Tracking: Complete audit trail logging every interaction, email sent, property favorited, and tour scheduled.",
+        "Co-Branded Notifications: Instant dispatching of partner alerts (SMS to real estate agents) whenever their buyer interacts with a property."
+      ]
+    },
+    {
       id: "ingestion",
-      title: "How the Mortgage AI 2nd Brain Learns",
-      subtitle: "Continuous Ingestion & Knowledge Accumulation",
-      icon: <Database className="w-8 h-8 text-indigo-500" />,
+      title: "6. Mortgage AI & Market Data Ingestion",
+      subtitle: "Continuous Knowledge Accumulation & Strategy Refinement",
+      icon: <Brain className="w-8 h-8 text-indigo-500" />,
       points: [
-        "Online Gemini/Google Research: Actively pulls real-time market data and broad industry shifts.",
-        "Memorizing Chat Histories: Learns from thousands of interactions, saving the most successful tactical answers and unique borrower scenarios from all dashboard users.",
-        "Manual File Uploads (Notepad, Word, PDFs): Extracts text directly, converts complex PDFs into structured JSON for the AI Vault/Storage, expanding its local knowledge base.",
-        "Google Workspace Integration: Connects seamlessly to read successful closing narratives directly from Google Docs.",
-        "Schedule C Analyzer: Ingests non-PII, name-only tax data over time to become smarter at self-employed cashflow calculations and spotting add-back opportunities."
-      ]
-    },
-    {
-      id: "tactical",
-      title: "Tactical Knowledge & Loan Product Mastery",
-      subtitle: "Hyper-Specific Guidelines & Structuring Advantages",
-      icon: <Target className="w-8 h-8 text-rose-500" />,
-      points: [
-        "Specialized Down Payment Assistance (DPA): Expert on OHCS Flex Lending, FirstHome, USDA RD (Rural Development), and 'Lakeside National' zero/low down payment options.",
-        "VA & Military Specializations: Deep knowledge of VA Zero Down, unique DTI structuring, and creative seller contribution/concession guidelines.",
-        "Non-QM & Alternative Income: Advanced structuring for Bank Statement deposit income and DSCR (Debt Service Coverage Ratio) investor loans.",
-        "Memory Component: Constantly refines its answers based on what structures successfully close, offering tactical advice rather than generic textbook answers."
-      ]
-    },
-    {
-      id: "integration",
-      title: "Dashboard Integration: Where the Brain Lives",
-      subtitle: "Silent Co-Pilot Across the Entire Lead-to-Loan Journey",
-      icon: <Brain className="w-8 h-8 text-emerald-500" />,
-      points: [
-        "Daily Briefing & Lead Triage: Organizes the 'Start your day' overview—highlighting high-priority leads for the morning and shifting to follow-up tasks in the afternoon.",
-        "Scenario Builder & Conversions: Sits within the tools to help draft highly-converting, bespoke email and text outreach based on live math.",
-        "Outreach Template Assistance: Auto-generates compliance-checked, personalized scripts across all outreach sections.",
-        "Recruitment Engine: Assists in crafting targeted pitches for Loan Officer & Agent recruiting sections of the dashboard."
-      ]
-    },
-    {
-      id: "analytics",
-      title: "Conversion Tracking & Success Ratios",
-      subtitle: "AI-Powered ROI & Funnel Analytics",
-      icon: <PieChart className="w-8 h-8 text-amber-500" />,
-      points: [
-        "Source Comparison: Tracks success ratios between Roadmap requests, Agent Co-brand leads, Downpayment geographic requests, and Chatbot intakes.",
-        "Paid Ads Tracker: Measures actual ROI on Facebook and Google Ad spend against closed loans, not just clicks.",
-        "Outreach Efficacy: Compares Email vs. Text response rates over time to suggest the highest-converting follow-up method per lead demographic.",
-        "Full Funnel Ecosystem: Unifies the First-Time Homebuyer Site -> Intake Funnel -> Dashboard CRM -> Agent Co-Brand tools into one trackable growth engine."
-      ]
-    },
-    {
-      id: "branch-manager",
-      title: "Branch Manager / Admin Command Center",
-      subtitle: "Oversight, Shadowing, and Process Optimization",
-      icon: <Eye className="w-8 h-8 text-blue-500" />,
-      points: [
-        "Team Shadowing: Full control to oversee and shadow every downstream team loan officer's dashboard to ensure quality and compliance.",
-        "Utilization Metrics: Tracks which LOs are actively using the AI 2nd Brain, Scenario Calculators, and building Agent 'Pairs'.",
-        "Visual Analytics: Bar and Pie charts tracking leads coming into the system, searchable by date range, YTD, or all-time.",
-        "Average Days to Close: Pinpoints the exact number of days from lead intake to funded/closed status. Crucial metric for tweaking systems, recruiting elite LOs, and attracting top-tier Agent partners."
+        "Online Research: Actively pulls real-time market data and industry shifts via Gemini AI.",
+        "Tactical Knowledge Mastery: Expert on OHCS Flex Lending, FirstHome, USDA RD, and Non-QM loan structures.",
+        "Manual & Workspace Uploads: Extracts text from uploaded notes, PDFs, and Google Docs to expand local knowledge.",
+        "Full Funnel Ecosystem: Unifies frontend visitor experiences with powerful backend CRM tools for maximum loan conversions."
       ]
     }
   ];

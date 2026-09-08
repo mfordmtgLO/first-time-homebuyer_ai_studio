@@ -612,6 +612,19 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                   {preset.label}
                 </button>
               ))}
+
+              <button
+                onClick={() => setShowHeatmap((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ml-auto ${
+                  showHeatmap
+                    ? "bg-purple-700 text-white shadow-md font-bold"
+                    : "bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100"
+                }`}
+                title="Toggle Google Maps heatmap overlay for market hotspots and readiness density"
+              >
+                <Flame className="w-3.5 h-3.5 text-purple-300" />
+                <span>{showHeatmap ? "Hide Heatmap" : "Market Heatmap"}</span>
+              </button>
             </div>
           </div>
         </div>

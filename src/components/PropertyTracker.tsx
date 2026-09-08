@@ -506,6 +506,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
 
   const [showMyMapsModal, setShowMyMapsModal] = useState(false);
   const [showKmlPreview, setShowKmlPreview] = useState(false);
+  const [showMapLegend, setShowMapLegend] = useState(false);
   const [lastExportedKmlUrl, setLastExportedKmlUrl] = useState<string | null>(null);
 
   const handleExportKml = () => {
@@ -607,7 +608,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
 
     // 2. Overlay Filter
     if (overlayFilter === "usda" && !isUsdaEligible(p)) return false;
-    if (overlayFilter === "lmi" && !isLmiEligible(p)) return false;
+    if (overlayFilter === "ohcs" && !(isLakeviewNationalEligible(p) || isLmiEligible(p) || isFirstHomePriceEligible(p))) return false;
     if (overlayFilter === "lmi_usda" && !isLmiUsdaDual(p)) return false;
     if (overlayFilter === "targeted" && !isTargetedArea(p)) return false;
     if (overlayFilter === "non_targeted" && !isNonTargetedArea(p)) return false;
@@ -623,10 +624,13 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     let comparison = 0;
     if (sortBy === "price") {
       comparison = a.price - b.price;
-    } else if (sortBy === "dom") {
-      comparison = (a.daysOnMarket || 0) - (b.daysOnMarket || 0);
+    } else if (sortBy === "match") {
+      // Score based on grant eligibility and favorites
+      const scoreA = (a.isFavorite ? 5 : 0) + (isUsdaEligible(a) ? 3 : 0) + (isLmiEligible(a) ? 2 : 0);
+      const scoreB = (b.isFavorite ? 5 : 0) + (isUsdaEligible(b) ? 3 : 0) + (isLmiEligible(b) ? 2 : 0);
+      comparison = scoreB - scoreA; // Highest score first
     } else {
-      // Default to added date (assuming higher ID or syncedAt means newer, for mock data we can sort by id if syncedAt missing)
+      // Default to added date
       const dateA = a.syncedAt ? new Date(a.syncedAt).getTime() : a.id.localeCompare(b.id);
       const dateB = b.syncedAt ? new Date(b.syncedAt).getTime() : 0;
       comparison = (dateA > dateB) ? 1 : -1;
@@ -825,12 +829,12 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               <span>Export GeoJSON {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
             </button>
             <button
-              onClick={() => setShowKmlPreview(!showKmlPreview)}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-violet-100 dark:bg-violet-900/40 border border-violet-300 dark:border-violet-800 text-violet-800 dark:text-violet-300 hover:bg-violet-200 font-semibold text-xs shadow-sm transition-all cursor-pointer"
-              title="Preview KML metadata tags and coordinates before export"
+              onClick={() => setShowMapLegend(!showMapLegend)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200 font-semibold text-xs shadow-sm transition-all cursor-pointer"
+              title="Toggle map legend explaining USDA and OHCS census tract indicators"
             >
-              <Code className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-              <span>{showKmlPreview ? "Hide KML Preview" : "KML Preview"}</span>
+              <MapIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>{showMapLegend ? "Hide Map Legend" : "Map Legend"}</span>
             </button>
             <button
               onClick={handleShareList}
@@ -958,6 +962,67 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
         );
       })()}
 
+      {/* Toggleable Map Legend Panel */}
+      {showMapLegend && (
+        <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-3xl p-6 mb-6 shadow-xl border border-emerald-500/30 relative animate-in fade-in slide-in-from-top-4 duration-200 text-left">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl flex items-center justify-center">
+                <MapIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>Interactive Map &amp; Census Tract Legend</span>
+                  <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-mono">Grant Indicators</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Visual guide explaining USDA rural eligibility and OHCS FirstHome census tract zone indicators.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowMapLegend(false)}
+              className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Legend Item 1 */}
+            <div className="bg-emerald-50/50 dark:bg-slate-800/60 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 rounded-full bg-emerald-600 inline-block shadow-sm"></span>
+                <h4 className="text-xs font-bold text-emerald-900 dark:text-emerald-300 uppercase tracking-wider">USDA Rural Eligible</h4>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Indicates properties located within officially designated USDA Rural Development geographic zones. Qualifies eligible buyers for <strong>100% financing (zero down payment)</strong> and favorable mortgage insurance rates.
+              </p>
+            </div>
+
+            {/* Legend Item 2 */}
+            <div className="bg-sky-50/50 dark:bg-slate-800/60 p-4 rounded-2xl border border-sky-200 dark:border-sky-900/50 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 rounded-full bg-sky-600 inline-block shadow-sm"></span>
+                <h4 className="text-xs font-bold text-sky-900 dark:text-sky-300 uppercase tracking-wider">OHCS FirstHome / LMI</h4>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Highlights homes located in Oregon Housing and Community Services (OHCS) FirstHome targeted census tracts or Low-to-Moderate Income (LMI) areas, granting access to down payment assistance (DPA) and below-market interest rates.
+              </p>
+            </div>
+
+            {/* Legend Item 3 */}
+            <div className="bg-amber-50/50 dark:bg-slate-800/60 p-4 rounded-2xl border border-amber-200 dark:border-amber-900/50 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 rounded-full bg-amber-500 inline-block shadow-sm"></span>
+                <h4 className="text-xs font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">School &amp; Amenity Zones</h4>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Color-coded polygons representing top-rated school district boundaries, transit hubs, and grocery access radii mapped dynamically for buyer search optimization.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Cloud Function Price Drop Alert Simulation */}
       {properties.filter(p => p.priceDropAmount && p.priceDropAmount > 0).length > 0 && (
         <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-900/50 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6 shadow-sm">
@@ -1052,31 +1117,21 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           ))}
         </div>
 
-        {/* OHCS GIS Overlay Filter Row */}
-        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#EAE7E0]/60">
-          <span className="text-[11px] font-bold text-[#606C5D] uppercase tracking-wider mr-1">Overlay Filter:</span>
-          {[
-            { id: "all", label: `All (${properties.length})` },
-            { id: "lakeviewNational", label: `Lakeview (${overlayCounts.lakeviewNational})` },
-            { id: "usda", label: `USDA RD (${overlayCounts.usda})` },
-            { id: "lmi", label: `Flex Lending/LMI (${overlayCounts.lmi})` },
-            { id: "lmi_usda", label: `USDA RD+Flex (${overlayCounts.lmiUsda})` },
-            { id: "targeted", label: `Targeted Area Cap (${overlayCounts.targeted})` },
-            { id: "non_targeted", label: `Non-Targeted Cap (${overlayCounts.nonTargeted})` },
-            { id: "price_eligible", label: `Under Price Cap (${overlayCounts.firstHomePriceEligible})` },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setOverlayFilter(tab.id)}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                overlayFilter === tab.id
-                  ? "bg-[#4A5D4E] text-white shadow-2xs font-bold ring-2 ring-[#4A5D4E]/20"
-                  : "bg-[#FAF9F5] text-[#606C5D] hover:bg-[#F1EFE9] border border-[#EAE7E0]"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Grant Eligibility Filter Dropdown */}
+        <div className="flex items-center gap-3 flex-wrap pt-2 border-t border-[#EAE7E0]/60">
+          <span className="text-[11px] font-bold text-[#606C5D] uppercase tracking-wider">Grant Eligibility:</span>
+          <select
+            className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-[#EAE7E0] dark:border-slate-700 text-xs font-semibold text-[#2D362E] dark:text-slate-200 shadow-2xs focus:outline-hidden cursor-pointer"
+            value={overlayFilter}
+            onChange={(e) => setOverlayFilter(e.target.value)}
+          >
+            <option value="all">All Properties ({properties.length})</option>
+            <option value="usda">USDA-Eligible Properties ({overlayCounts.usda})</option>
+            <option value="ohcs">OHCS-Eligible Properties ({overlayCounts.lakeviewNational + overlayCounts.lmi + overlayCounts.firstHomePriceEligible})</option>
+            <option value="lmi_usda">USDA &amp; LMI Dual Eligible ({overlayCounts.lmiUsda})</option>
+            <option value="targeted">OHCS Targeted Areas ({overlayCounts.targeted})</option>
+          </select>
+          <span className="text-[10px] text-[#9A9488] dark:text-slate-500 italic">Toggle specifically between USDA-Eligible and OHCS-Eligible grant tracts</span>
         </div>
 
         {/* Nearby Amenities Filter Row */}
@@ -1121,20 +1176,16 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               } else if (val === "added_desc") {
                 setSortBy("added");
                 setSortOrder("desc");
-              } else if (val === "added_asc") {
-                setSortBy("added");
-                setSortOrder("asc");
-              } else if (val === "dom_asc") {
-                setSortBy("dom");
-                setSortOrder("asc");
+              } else if (val === "match_desc") {
+                setSortBy("match");
+                setSortOrder("desc");
               }
             }}
           >
-            <option value="added_desc">Added Date (Newest)</option>
-            <option value="added_asc">Added Date (Oldest)</option>
-            <option value="price_asc">Price (Low to High)</option>
-            <option value="price_desc">Price (High to Low)</option>
-            <option value="dom_asc">Days on Market (Low to High)</option>
+            <option value="added_desc">Newest (Recently Added)</option>
+            <option value="match_desc">Best Match (Grant &amp; Amenity Score)</option>
+            <option value="price_asc">Price (Low-High)</option>
+            <option value="price_desc">Price (High-Low)</option>
           </select>
         </div>
 

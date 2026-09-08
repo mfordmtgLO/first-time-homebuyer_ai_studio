@@ -23,16 +23,72 @@ export function hasAuthenticPropertyPhoto(listing?: PropertyListing | null): boo
 }
 
 /**
- * Checks whether a property is eligible for USDA Rural Development 100% (0% down) financing.
- * In GeoSphere Oregon GIS, USDA source polygons represent ineligible urban areas,
- * so listings situated outside those boundaries are classified as USDA RD eligible.
+ * Checks whether a property is eligible for the Lakeview National low/no down payment conventional loan program:
+ * - 140% Fannie Mae Area Median Income (AMI) or less (or pre-flagged as eligible)
+ * - Purchase transaction (not refinancing)
+ * - Primary residence
+ * - One unit Single Family Residence (SFR) — excludes manufactured homes and mobile homes
  */
 export function isLakeviewNationalEligible(listing: PropertyListing): boolean {
-  return Boolean(listing.overlayEligibility?.lakeviewNational ?? listing.overlayEligibility?.lakeviewNationalEligible);
+  if (!listing) return false;
+  
+  // 1. Exclude manufactured or mobile homes instantly
+  const propType = (listing.propertyType || "").toLowerCase();
+  if (propType.includes("manufactured") || propType.includes("mobile")) {
+    return false;
+  }
+
+  // 2. Check explicit override flags if provided by GeoSphere sync
+  const explicit = Boolean(listing.overlayEligibility?.lakeviewNational ?? listing.overlayEligibility?.lakeviewNationalEligible);
+  if (explicit) return true;
+
+  // 3. Program criteria evaluation:
+  // - Single Family or Townhouse / Condo 1-unit check
+  const isOneUnitSfr = propType.includes("single family") || propType.includes("townhouse") || propType.includes("condo") || propType === "single family";
+  if (!isOneUnitSfr) return false;
+
+  // - AMI check (defaults to true if under 140% AMI or if AMI percentage is specified <= 140)
+  const amiPct = listing.overlayEligibility?.lmiPercentage;
+  const isAmiEligible = amiPct === undefined || amiPct <= 140;
+
+  return isAmiEligible;
+}
+
+/**
+ * Checks whether a property is eligible for Fannie Mae HomeReady or Freddie Mac Home Possible:
+ * - Max income <= 80% of county Area Median Income (AMI)
+ * - Primary residence
+ * - One unit Single Family Residence (SFR) or double-wide manufactured home (real property owned, not leased park, built 1995 or newer)
+ */
+export function isHomeReadyHomePossibleEligible(listing: PropertyListing): boolean {
+  if (!listing) return false;
+
+  // 1. AMI Income Check: Must be <= 80% of county AMI
+  const amiPct = listing.overlayEligibility?.lmiPercentage;
+  const isAmiEligible = amiPct === undefined || amiPct <= 80;
+  if (!isAmiEligible) return false;
+
+  // 2. Property Type Check: 1-unit SFR or eligible double-wide manufactured home
+  const propType = (listing.propertyType || "").toLowerCase();
+  const isSfr = propType.includes("single family") || propType.includes("townhouse") || propType.includes("condo") || propType === "single family";
+  
+  const isManufactured = propType.includes("manufactured") || propType.includes("mobile");
+  let isEligibleManufactured = false;
+
+  if (isManufactured) {
+    // Must be double-wide or larger, real property (not leased park), and year built >= 1995
+    const isDoubleWide = listing.isDoubleWide !== false && !propType.includes("single-wide");
+    const isRealProperty = listing.isLeasedLand !== true; // Must own land / real property
+    const yearBuilt = listing.yearBuilt || 2000; // Default to 2000 if unspecified
+    const isNewEnough = yearBuilt >= 1995;
+
+    isEligibleManufactured = isDoubleWide && isRealProperty && isNewEnough;
+  }
+
+  return isSfr || isEligibleManufactured;
 }
 
 export function isUsdaEligible(listing: PropertyListing): boolean {
-  if (!listing || !listing.overlayEligibility) return false;
   const el = listing.overlayEligibility;
   return Boolean(
     el.usda === true ||

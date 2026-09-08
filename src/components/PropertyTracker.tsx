@@ -53,7 +53,8 @@ import {
 } from "../utils/overlayClassification";
 import { getPropertyOhcsPriceLimit, OREGON_COUNTY_PRICE_LIMITS } from "../utils/ohcsPurchaseLimits";
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
-import { EmailOutreachModal } from "./EmailOutreachModal";
+import { generateKML } from "../utils/kmlExporter";
+import { generateGeoJSON } from "../utils/geojsonExporter";
 import { PropertyReportModal } from "./PropertyReportModal";
 import { ShareViaEmailModal } from "./ShareViaEmailModal";
 import { PropertyMapOverlay } from "./PropertyMapOverlay";
@@ -504,6 +505,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
 
 
   const [showMyMapsModal, setShowMyMapsModal] = useState(false);
+  const [showKmlPreview, setShowKmlPreview] = useState(false);
   const [lastExportedKmlUrl, setLastExportedKmlUrl] = useState<string | null>(null);
 
   const handleExportKml = () => {
@@ -516,39 +518,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       return;
     }
 
-    // Build KML XML structure for Google My Maps
-    let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    kmlContent += `<kml xmlns="http://www.opengis.net/kml/2.2">\n`;
-    kmlContent += `  <Document>\n`;
-    kmlContent += `    <name>First-Time Homebuyer Curated Property Map</name>\n`;
-    kmlContent += `    <description>Curated properties with USDA/LMI eligibility, monthly payments, and co-branded loan officer contacts (Mike Ford &amp; Kanndice McLean).</description>\n`;
-
-    listToExport.forEach((p, idx) => {
-      const lat = p.lat || (45.5152 + (idx * 0.01));
-      const lng = p.lng || (-122.6784 + (idx * 0.01));
-
-      kmlContent += `    <Placemark>\n`;
-      kmlContent += `      <name><![CDATA[${p.title} - $${p.price.toLocaleString()}]]></name>\n`;
-      kmlContent += `      <description><![CDATA[\n`;
-      kmlContent += `        <b>Address:</b> ${p.address}, ${p.city}, ${p.state} ${p.zip}<br/>\n`;
-      kmlContent += `        <b>Price:</b> $${p.price.toLocaleString()}<br/>\n`;
-      kmlContent += `        <b>Est. Monthly P&I:</b> $${p.monthlyPayment || Math.round(p.price * 0.0065)}/mo<br/>\n`;
-      kmlContent += `        <b>Tour Grade:</b> ${p.tourGrade || 'B+'}<br/>\n`;
-      kmlContent += `        <hr/>\n`;
-      kmlContent += `        <b>Co-Branded Contact:</b><br/>\n`;
-      kmlContent += `        • Loan Officer: Mike Ford (fordmj@gmail.com / 555-0199)<br/>\n`;
-      kmlContent += `        • Real Estate Agent: Kanndice McLean<br/>\n`;
-      kmlContent += `        <br/>\n`;
-      kmlContent += `        <i>For more information on low or no down payment mortgage products matched for high confidence eligible areas, call Mike Ford. To get a personalized home search profile, reach out to Kanndice McLean.</i>\n`;
-      kmlContent += `      ]]></description>\n`;
-      kmlContent += `      <Point>\n`;
-      kmlContent += `        <coordinates>${lng},${lat},0</coordinates>\n`;
-      kmlContent += `      </Point>\n`;
-      kmlContent += `    </Placemark>\n`;
-    });
-
-    kmlContent += `  </Document>\n`;
-    kmlContent += `</kml>`;
+    const kmlContent = generateKML(listToExport);
 
     const blob = new Blob([kmlContent], { type: "application/vnd.google-earth.kml+xml" });
     const url = URL.createObjectURL(blob);
@@ -570,6 +540,37 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       type: "success"
     });
     setTimeout(() => setToastMessage(null), 7000);
+  };
+
+  const handleExportGeoJson = () => {
+    const listToExport = selectedPropertyIds.length > 0 
+      ? properties.filter(p => selectedPropertyIds.includes(p.id)) 
+      : filtered;
+
+    if (listToExport.length === 0) {
+      alert("No properties available to export.");
+      return;
+    }
+
+    const geoJsonString = generateGeoJSON(listToExport);
+
+    const blob = new Blob([geoJsonString], { type: "application/geo+json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Homebuyer_Curated_GeoJSON_${Date.now()}.geojson`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    setToastMessage({
+      title: "GeoJSON Export Complete!",
+      body: `Successfully exported ${listToExport.length} properties to GeoJSON format for Mapbox, ArcGIS, and GIS tools.`,
+      type: "success"
+    });
+    setTimeout(() => setToastMessage(null), 6000);
   };
 
   const deleteProperty = (id: string, e: React.MouseEvent) => {
@@ -598,6 +599,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   const filtered = properties.filter(p => {
     // 1. Status Filter
     if (filterStatus === "favorites" && !p.isFavorite) return false;
+    if (filterStatus === "unrated" && p.tourGrade) return false;
     if (filterStatus === "alerts" && !p.priceAlertEnabled) return false;
     if (filterStatus === "consideration" && p.status !== "saved" && p.status !== "touring") return false;
     if (filterStatus === "offered" && p.status !== "offered" && p.status !== "under_contract") return false;
@@ -812,7 +814,23 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               title="Download KML file for instant Google My Maps import"
             >
               <Compass className="w-4 h-4 text-purple-200" />
-              <span>Export KML Maps {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
+              <span>Export KML {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
+            </button>
+            <button
+              onClick={handleExportGeoJson}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-800 text-white hover:bg-slate-900 font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105"
+              title="Download GeoJSON format for Mapbox, ArcGIS, and GIS tools"
+            >
+              <FileDown className="w-4 h-4 text-emerald-400" />
+              <span>Export GeoJSON {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
+            </button>
+            <button
+              onClick={() => setShowKmlPreview(!showKmlPreview)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-violet-100 dark:bg-violet-900/40 border border-violet-300 dark:border-violet-800 text-violet-800 dark:text-violet-300 hover:bg-violet-200 font-semibold text-xs shadow-sm transition-all cursor-pointer"
+              title="Preview KML metadata tags and coordinates before export"
+            >
+              <Code className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              <span>{showKmlPreview ? "Hide KML Preview" : "KML Preview"}</span>
             </button>
             <button
               onClick={handleShareList}
@@ -852,7 +870,94 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           </div>
         </div>
 
-        
+      {/* KML Preview Side-Panel */}
+      {showKmlPreview && (() => {
+        const listToPreview = selectedPropertyIds.length > 0 
+          ? properties.filter(p => selectedPropertyIds.includes(p.id)) 
+          : filtered;
+        const kmlString = generateKML(listToPreview);
+        const truncatedKml = kmlString.length > 1200 ? kmlString.substring(0, 1200) + "\n... [truncated for display]" : kmlString;
+
+        return (
+          <div className="bg-slate-900 text-slate-100 rounded-3xl p-6 mb-6 shadow-xl border border-violet-500/30 relative animate-in fade-in slide-in-from-top-4 duration-200 text-left">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-violet-900/50 rounded-xl flex items-center justify-center">
+                  <Code className="w-5 h-5 text-violet-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                    <span>Google My Maps KML Structure Preview</span>
+                    <span className="bg-violet-500/20 text-violet-300 text-[10px] px-2 py-0.5 rounded-full font-mono">{listToPreview.length} Properties</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">Live XML structure displaying metadata tags, coordinates, and co-branded contacts for Google My Maps.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(kmlString);
+                    alert("KML XML copied to clipboard!");
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs transition-colors"
+                >
+                  Copy XML
+                </button>
+                <button
+                  onClick={() => setShowKmlPreview(false)}
+                  className="p-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left: Metadata summary */}
+              <div className="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/60 space-y-3">
+                <h4 className="text-xs font-bold text-violet-300 uppercase tracking-wider">Export Metadata Summary</h4>
+                <div className="space-y-2 text-xs text-slate-300">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Target Format:</span>
+                    <span className="font-mono text-emerald-400">OGC KML 2.2</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Placemarks:</span>
+                    <span className="font-mono text-white">{listToPreview.length} items</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Loan Officer:</span>
+                    <span className="font-mono text-white">Mike Ford</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Co-Brand Agent:</span>
+                    <span className="font-mono text-white">Kanndice McLean</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">USDA / LMI Tags:</span>
+                    <span className="font-mono text-emerald-400">Included</span>
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <button
+                    onClick={handleExportKml}
+                    className="w-full py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    <Compass className="w-4 h-4 text-purple-200" />
+                    <span>Download Ready-to-Import KML File</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: XML Code Preview */}
+              <div className="lg:col-span-2 bg-black/50 p-4 rounded-2xl border border-slate-800 font-mono text-[11px] text-violet-300 overflow-x-auto max-h-72 overflow-y-auto">
+                <pre className="whitespace-pre-wrap">{truncatedKml}</pre>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Cloud Function Price Drop Alert Simulation */}
       {properties.filter(p => p.priceDropAmount && p.priceDropAmount > 0).length > 0 && (
         <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-900/50 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6 shadow-sm">
@@ -926,7 +1031,8 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
         <div className="flex flex-wrap gap-2 pt-2 border-t border-[#EAE7E0]">
           {[
             { id: "all", label: `All Pipeline (${properties.length})` },
-            { id: "favorites", label: `Favorites (${properties.filter(p => p.isFavorite).length})` },
+            { id: "favorites", label: `⭐ Favorites (${properties.filter(p => p.isFavorite).length})` },
+            { id: "unrated", label: `❓ Unrated (${properties.filter(p => !p.tourGrade).length})` },
             { id: "alerts", label: `Price Drops / Alerts (${properties.filter(p => p.priceAlertEnabled || p.priceDropAmount).length})` },
             { id: "consideration", label: `Under Consideration (${properties.filter(p => p.status === "saved" || p.status === "touring").length})` },
             { id: "offered", label: `Offered / Contract (${properties.filter(p => p.status === "offered" || p.status === "under_contract").length})` },

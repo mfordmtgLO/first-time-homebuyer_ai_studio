@@ -7,6 +7,7 @@ export interface RbacPermissions {
   canViewAllAuditLogs: boolean;
   canViewAllLeads: boolean;
   canEditBranchSettings: boolean;
+  canViewBranchMetrics?: boolean;
 }
 
 export interface RbacRoleDefinition {

@@ -579,9 +579,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         body: JSON.stringify({
           agentNames: targetAgentNames.length > 0 ? targetAgentNames : ["Top Buyer Agent"],
           properties: properties,
-          loName: activeLo.name,
-          loPhone: activeLo.phone,
-          loEmail: activeLo.email,
+          loName: "Mike Ford",
+          loPhone: "555-0199",
+          loEmail: "fordmj@gmail.com",
           campaignType: "Attract Buyer Agents - Stop Renting Zero Down & Flex DPA Push",
         }),
       });

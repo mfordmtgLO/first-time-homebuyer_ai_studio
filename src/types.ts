@@ -902,6 +902,7 @@ export interface MonthlyHorizonPulseEntry {
   month: string; // YYYY-MM
   monthLabel: string; // e.g. "September 2026"
   timestamp: string;
+  lookbackStats?: any;
   reviewData: MonthlyHorizonReviewData;
 }
 

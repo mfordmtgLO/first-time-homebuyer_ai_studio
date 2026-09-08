@@ -34,7 +34,8 @@ import {
   exportAuditLogsToCsv,
   exportAuditLogsToText,
   verifyAuditChainIntegrity,
-  ChainVerificationResult
+  ChainVerificationResult,
+  GENESIS_AUDIT_HASH
 } from "../utils/auditLogger";
 
 interface BranchAuditLogSectionProps {

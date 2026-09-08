@@ -32,7 +32,7 @@ class TelemetryService {
     this.isInitialized = true;
 
     // Check if Sentry DSN is available in env or local storage
-    const sentryDsn = import.meta.env.VITE_SENTRY_DSN || localStorage.getItem("sentry_dsn");
+    const sentryDsn = ((import.meta as any).env?.VITE_SENTRY_DSN) || localStorage.getItem("sentry_dsn");
     if (sentryDsn) {
       try {
         Sentry.init({

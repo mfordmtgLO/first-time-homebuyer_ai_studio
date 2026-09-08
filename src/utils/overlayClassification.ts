@@ -77,8 +77,8 @@ export function isHomeReadyHomePossibleEligible(listing: PropertyListing): boole
 
   if (isManufactured) {
     // Must be double-wide or larger, real property (not leased park), and year built >= 1995
-    const isDoubleWide = listing.isDoubleWide !== false && !propType.includes("single-wide");
-    const isRealProperty = listing.isLeasedLand !== true; // Must own land / real property
+    const isDoubleWide = (listing as any).isDoubleWide !== false && !propType.includes("single-wide");
+    const isRealProperty = (listing as any).isLeasedLand !== true; // Must own land / real property
     const yearBuilt = listing.yearBuilt || 2000; // Default to 2000 if unspecified
     const isNewEnough = yearBuilt >= 1995;
 

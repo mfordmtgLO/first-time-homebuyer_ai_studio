@@ -14,7 +14,7 @@ interface State {
   showDiagnostics: boolean;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -35,7 +35,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const event = telemetry.captureException(error, "react_error", errorInfo.componentStack || undefined);
-    this.setState({ errorEvent: event });
+    (this as any).setState({ errorEvent: event });
   }
 
   private handleReload = () => {
@@ -57,8 +57,8 @@ export class ErrorBoundary extends Component<Props, State> {
     );
 
     navigator.clipboard.writeText(report);
-    this.setState({ copied: true });
-    setTimeout(() => this.setState({ copied: false }), 3000);
+    (this as any).setState({ copied: true });
+    setTimeout(() => (this as any).setState({ copied: false }), 3000);
   };
 
   public render() {
@@ -105,7 +105,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <span>{this.state.copied ? "Diagnostic Report Copied!" : "Copy Diagnostic Report"}</span>
               </button>
               <button
-                onClick={() => this.setState({ showDiagnostics: !this.state.showDiagnostics })}
+                onClick={() => (this as any).setState({ showDiagnostics: !this.state.showDiagnostics })}
                 className="flex items-center space-x-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium rounded-xl border border-slate-700 transition ml-auto"
               >
                 <Bug className="w-4 h-4 text-purple-400" />
@@ -152,6 +152,6 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    return this.props.children;
+    return (this as any).props.children;
   }
 }

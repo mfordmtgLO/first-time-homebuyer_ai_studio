@@ -58,6 +58,8 @@ import { generateKML } from "../utils/kmlExporter";
 import { generateGeoJSON } from "../utils/geojsonExporter";
 import { PropertyReportModal } from "./PropertyReportModal";
 import { ShareViaEmailModal } from "./ShareViaEmailModal";
+import { Code } from "lucide-react";
+import { EmailOutreachModal } from "./EmailOutreachModal";
 import { PropertyMapOverlay } from "./PropertyMapOverlay";
 import { PropertyCard } from "./PropertyCard";
 import { PropertyCalculatorModal } from "./PropertyCalculatorModal";
@@ -1470,7 +1472,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           >
             <SwipeableCardWrapper
               isFavorite={!!property.isFavorite}
-              onFavorite={() => toggleFavorite(property.id)}
+              onFavorite={() => toggleFavorite(property.id, { stopPropagation: () => {} } as any)}
               onArchive={() => deleteProperty(property.id, { stopPropagation: () => {} } as any)}
             >
               <PropertyCard

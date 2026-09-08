@@ -45,7 +45,7 @@ import { HeadshotAvatar } from "./HeadshotAvatar";
 import { formatUSD } from "../utils/mortgageMath";
 import { containsSSN, sanitizeSSN } from "../utils/ssnProtection";
 import { useIsMobile } from "../hooks/useIsMobile";
-import telemetry from "../services/telemetryService";
+import { telemetry } from "../services/telemetryService";
 
 // Comprehensive alphabetical listing of cities and towns across the state of Oregon
 export const OREGON_CITIES: string[] = [

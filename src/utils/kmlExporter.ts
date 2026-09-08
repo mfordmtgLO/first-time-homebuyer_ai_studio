@@ -1,10 +1,10 @@
-import { Property } from "../types";
+import { PropertyListing } from "../types";
 
 /**
  * Constructs a standard KML string structure from property listings
  * for Google My Maps compatibility.
  */
-export function generateKML(properties: Property[]): string {
+export function generateKML(properties: PropertyListing[]): string {
   let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>\n`;
   kmlContent += `<kml xmlns="http://www.opengis.net/kml/2.2">\n`;
   kmlContent += `  <Document>\n`;
@@ -20,8 +20,8 @@ export function generateKML(properties: Property[]): string {
     kmlContent += `      <description><![CDATA[\n`;
     kmlContent += `        <b>Address:</b> ${p.address}, ${p.city}, ${p.state} ${p.zip}<br/>\n`;
     kmlContent += `        <b>Price:</b> $${p.price.toLocaleString()}<br/>\n`;
-    kmlContent += `        <b>Est. Monthly P&I:</b> $${p.monthlyPayment || Math.round(p.price * 0.0065)}/mo<br/>\n`;
-    kmlContent += `        <b>Tour Grade:</b> ${p.tourGrade || 'B+'}<br/>\n`;
+    kmlContent += `        <b>Est. Monthly P&I:</b> $${(p as any).monthlyPayment || Math.round(p.price * 0.0065)}/mo<br/>\n`;
+    kmlContent += `        <b>Tour Grade:</b> ${(p as any).tourGrade || 'B+'}<br/>\n`;
     kmlContent += `        <hr/>\n`;
     kmlContent += `        <b>Co-Branded Contact:</b><br/>\n`;
     kmlContent += `        • Loan Officer: Mike Ford (fordmj@gmail.com / 555-0199)<br/>\n`;

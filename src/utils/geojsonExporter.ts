@@ -1,10 +1,10 @@
-import { Property } from "../types";
+import { PropertyListing } from "../types";
 
 /**
  * Constructs a standard GeoJSON FeatureCollection from property listings
  * for compatibility with Mapbox, ArcGIS, and advanced GIS tools.
  */
-export function generateGeoJSON(properties: Property[]): string {
+export function generateGeoJSON(properties: PropertyListing[]): string {
   const features = properties.map((p, idx) => {
     const lat = p.lat || (45.5152 + (idx * 0.01));
     const lng = p.lng || (-122.6784 + (idx * 0.01));
@@ -23,8 +23,8 @@ export function generateGeoJSON(properties: Property[]): string {
         city: p.city,
         state: p.state,
         zip: p.zip,
-        monthlyPayment: p.monthlyPayment || Math.round(p.price * 0.0065),
-        tourGrade: p.tourGrade || "B+",
+        monthlyPayment: (p as any).monthlyPayment || Math.round(p.price * 0.0065),
+        tourGrade: (p as any).tourGrade || "B+",
         status: p.status,
         loanOfficer: "Mike Ford (fordmj@gmail.com / 555-0199)",
         agent: "Kanndice McLean",

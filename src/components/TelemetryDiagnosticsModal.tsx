@@ -450,23 +450,23 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
                         /\b(?!000|666|9\d{2})\d{3}[-.\s]?(?!00)\d{2}[-.\s]?(?!0000)\d{4}\b/;
                       if (ssnPattern.test(testPayload)) {
                         setTestResult("passed");
-                        telemetry.addBreadcrumb({
-                          category: "security",
-                          message: "Edge Firewall Test Passed (Threat Blocked)",
-                          level: "info",
-                          data: {
+                        telemetry.addBreadcrumb(
+                          "security",
+                          "Edge Firewall Test Passed (Threat Blocked)",
+                          {
                             inputLength: testPayload.length,
                             simulatedAction: "Payload Rejected",
                           },
-                        });
+                          "info"
+                        );
                       } else {
                         setTestResult("failed");
-                        telemetry.addBreadcrumb({
-                          category: "security",
-                          message: "Edge Firewall Test Failed (No Threat Detected)",
-                          level: "warning",
-                          data: { simulatedAction: "Payload Allowed" },
-                        });
+                        telemetry.addBreadcrumb(
+                          "security",
+                          "Edge Firewall Test Failed (No Threat Detected)",
+                          { simulatedAction: "Payload Allowed" },
+                          "warning"
+                        );
                       }
                     }, 800);
                   }}

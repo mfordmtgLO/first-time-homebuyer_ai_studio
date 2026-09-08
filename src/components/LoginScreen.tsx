@@ -20,12 +20,6 @@ import { auth } from "../firebase";
 import { checkAndProvisionUser } from "../utils/authUtils";
 import { ShieldCheck, AlertTriangle, Building, ArrowRight } from "lucide-react";
 
-declare global {
-  interface Window {
-    recaptchaVerifier?: any;
-  }
-}
-
 interface LoginScreenProps {
   onLogin: (role: string) => void;
 }

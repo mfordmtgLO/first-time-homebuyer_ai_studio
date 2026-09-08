@@ -83,7 +83,7 @@ const GeosphereHeatmap: React.FC<{
       });
     });
 
-    const layer = new google.maps.visualization.HeatmapLayer({
+    const layer = new (google.maps.visualization as any).HeatmapLayer({
       data: heatmapData,
       map: visible ? map : null,
       radius: 40,
@@ -208,7 +208,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
   onCloseMap,
 }) => {
   // Read Google Maps API Key from environment
-  const envApiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) || "";
+  const envApiKey = ((import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY as string) || "";
   const [apiKey, setApiKey] = useState<string>(() => {
     return envApiKey || localStorage.getItem("temp_gmp_api_key") || "";
   });

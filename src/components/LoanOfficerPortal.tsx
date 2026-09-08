@@ -438,7 +438,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     setWeeklyPulseLoading(true);
     try {
       const now = new Date();
-      const { year, weekNumber } = getISOWeekInfo(now);
+      const { year, week: weekNumber } = getISOWeekInfo(now);
       const weekLabel = `Week ${weekNumber}, ${year}`;
       const { startDate, endDate } = getWeekDateRange(now);
 
@@ -1769,10 +1769,10 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
   const handleSalesforceSync = async (lead: CapturedLead) => {
     try {
-      if (!user) throw new Error("Must be logged in");
+      if (!auth.currentUser) throw new Error("Must be logged in");
 
-      const idToken = await user.getIdToken();
-      const docSnap = await getDoc(doc(db, "user_integrations", user.uid));
+      const idToken = await auth.currentUser.getIdToken();
+      const docSnap = await getDoc(doc(db, "user_integrations", auth.currentUser.uid));
       if (!docSnap.exists() || !docSnap.data().salesforceVault) {
         triggerToast("No Salesforce vault found. Please configure settings first.");
         setShowSalesforceSettings(true);
@@ -1813,10 +1813,10 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
   const handleTotalExpertSync = async (lead: CapturedLead) => {
     try {
-      if (!user) throw new Error("Must be logged in");
+      if (!auth.currentUser) throw new Error("Must be logged in");
 
-      const idToken = await user.getIdToken();
-      const docSnap = await getDoc(doc(db, "user_integrations", user.uid));
+      const idToken = await auth.currentUser.getIdToken();
+      const docSnap = await getDoc(doc(db, "user_integrations", auth.currentUser.uid));
       if (!docSnap.exists() || !docSnap.data().totalExpertVault) {
         triggerToast("No Total Expert vault found. Please configure settings first.");
         setShowTotalExpertSettings(true);
@@ -9798,7 +9798,7 @@ Don't forget to file your State Homestead Tax Exemption!`,
         isOpen={dailyReviewModalOpen}
         onClose={() => setDailyReviewModalOpen(false)}
         reviewData={dailyReviewData}
-        taskRatio={{ completed: loTasks.filter((t) => t.completed).length, total: loTasks.length }}
+        taskRatio={{ completed: 0, total: 0 }}
         weeklyData={weeklyPulseData}
         monthlyData={monthlyHorizonData}
         isLoading={dailyReviewLoading}

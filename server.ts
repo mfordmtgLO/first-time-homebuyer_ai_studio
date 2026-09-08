@@ -5946,67 +5946,21 @@ Return ONLY valid JSON in this exact structure:
     }
   });
 
-  // Vite middleware in dev, static serving in prod
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        hmr: process.env.DISABLE_HMR === "true" ? false : undefined,
-      },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-
-    // Fallback for HTML SPA navigation routes (e.g. /mike-ford, /mford, /mike-and-sarah)
-    app.get("*", async (req, res, next) => {
-      if (req.originalUrl.startsWith("/api")) {
-        return next();
-      }
-      try {
-        const indexPath = path.resolve(process.cwd(), "index.html");
-        let template = fs.readFileSync(indexPath, "utf-8");
-        template = await vite.transformIndexHtml(req.originalUrl, template);
-        res.status(200).set({ "Content-Type": "text/html" }).end(template);
-      } catch (e) {
-        vite.ssrFixStacktrace(e as Error);
-        next(e);
-      }
-    });
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res, next) => {
-      if (req.originalUrl.startsWith("/api")) {
-        return next();
-      }
-      res.sendFile(path.join(distPath, "index.html"));
-    });
-  }
-
-  
   // =======================================================================
   // SIMULATED FIREBASE CLOUD FUNCTION: Price Drop Monitor
   // =======================================================================
-  // In a production Firebase environment, this would be deployed via the 
-  // Firebase CLI as a Pub/Sub Scheduled Function or HTTPS Callable Function.
-  // We expose it here as an Express API route so it can be tested in the preview.
   app.post("/api/functions/trigger-price-drop", async (req, res) => {
     try {
       const { leadEmail, leadName, propertyId, dropAmount } = req.body;
       
       console.log(`[Firebase Cloud Function Log] Executing price drop monitor for ${leadEmail}...`);
       
-      // Simulate Firebase Admin SDK Firestore Update
-      // admin.firestore().collection('properties').doc(propertyId).update({ priceDropAmount: dropAmount });
-
-      // Simulate sending an email via SendGrid/Mailgun triggered by Firebase
       const emailPayload = {
         to: leadEmail,
         subject: `🔥 Price Drop Alert: Your saved property dropped by ${dropAmount.toLocaleString()}!`,
         htmlBody: `<p>Hi ${leadName},</p><p>Great news! A property on your tracker just dropped in price by <strong>${dropAmount.toLocaleString()}</strong>.</p><p>Check your dashboard to see your new monthly payment.</p>`
       };
 
-      // Simulate sending a Firebase Cloud Messaging (FCM) Push Notification
       const fcmPayload = {
         token: "device_token_xyz_123",
         notification: {
@@ -6039,7 +5993,6 @@ Return ONLY valid JSON in this exact structure:
       res.status(500).json({ error: "Cloud Function execution failed." });
     }
   });
-
 
   // Email Dashboard Summary Endpoint
   // =======================================================================
@@ -6090,7 +6043,6 @@ Return ONLY valid JSON in this exact structure:
       res.status(500).json({ error: "Failed to email dashboard summary." });
     }
   });
-  // =======================================================================
 
   // Property Compare AI Endpoint
   app.post("/api/gemini/property-compare", async (req, res) => {
@@ -6166,7 +6118,47 @@ At the end, include a strong, dynamic Call to Action encouraging the user to rea
     }
   });
 
-  // END Property Compare AI Endpoint
+  // Vite middleware in dev, static serving in prod
+  const isProduction =
+    process.env.NODE_ENV === "production" ||
+    (typeof __filename !== "undefined" && __filename.endsWith(".cjs")) ||
+    !fs.existsSync(path.join(process.cwd(), "server.ts"));
+
+  if (!isProduction) {
+    const vite = await createViteServer({
+      server: {
+        middlewareMode: true,
+        hmr: process.env.DISABLE_HMR === "true" ? false : undefined,
+      },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+
+    // Fallback for HTML SPA navigation routes (e.g. /mike-ford, /mford, /mike-and-sarah)
+    app.get("*", async (req, res, next) => {
+      if (req.originalUrl.startsWith("/api")) {
+        return next();
+      }
+      try {
+        const indexPath = path.resolve(process.cwd(), "index.html");
+        let template = fs.readFileSync(indexPath, "utf-8");
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
+  } else {
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res, next) => {
+      if (req.originalUrl.startsWith("/api")) {
+        return next();
+      }
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Manus Homebuyer Server running on http://0.0.0.0:${PORT}`);
   });

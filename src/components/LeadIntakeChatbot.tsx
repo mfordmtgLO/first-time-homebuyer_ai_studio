@@ -45,6 +45,7 @@ import { HeadshotAvatar } from "./HeadshotAvatar";
 import { formatUSD } from "../utils/mortgageMath";
 import { containsSSN, sanitizeSSN } from "../utils/ssnProtection";
 import { useIsMobile } from "../hooks/useIsMobile";
+import telemetry from "../services/telemetryService";
 
 // Comprehensive alphabetical listing of cities and towns across the state of Oregon
 export const OREGON_CITIES: string[] = [
@@ -886,12 +887,12 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     setIsSubmittingQuery(true);
 
     try {
-      telemetry.addBreadcrumb({
-        category: "security",
-        message: "AI Payload Sanitized & Dispatched",
-        level: "info",
-        data: { endpoint: "/api/gemini/lead-intake", payloadSize: query.length, piiRedacted: true },
-      });
+      telemetry.addBreadcrumb(
+        "security",
+        "AI Payload Sanitized & Dispatched",
+        { endpoint: "/api/gemini/lead-intake", payloadSize: query.length, piiRedacted: true },
+        "info"
+      );
       const res = await fetch("/api/gemini/lead-intake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

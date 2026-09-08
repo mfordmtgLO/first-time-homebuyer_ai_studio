@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fetchIntegrationsVault, saveToIntegrationsVault } from "../utils/vault";
 import { 
   Target, 
   CreditCard, 

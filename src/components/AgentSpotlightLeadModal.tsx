@@ -574,7 +574,7 @@ export const AgentSpotlightLeadModal: React.FC<AgentSpotlightLeadModalProps> = (
                         </div>
 
                         <a
-                          href={getZillowUrl(prop.address, prop.city, "OR")}
+                          href={getZillowUrl(prop as any)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-2 rounded-xl bg-white border border-[#EAE7E0] hover:bg-[#FAF9F5] text-[#4A5D4E] text-xs font-bold shrink-0 transition-colors"

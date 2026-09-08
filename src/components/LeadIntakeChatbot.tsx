@@ -44,6 +44,7 @@ import {
 import { HeadshotAvatar } from "./HeadshotAvatar";
 import { formatUSD } from "../utils/mortgageMath";
 import { containsSSN, sanitizeSSN } from "../utils/ssnProtection";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 // Comprehensive alphabetical listing of cities and towns across the state of Oregon
 export const OREGON_CITIES: string[] = [
@@ -431,6 +432,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   onOpen,
 }) => {
   const showAgent = isCoBranded && !!agent;
+  const isMobile = useIsMobile();
 
   const [messages, setMessages] = useState<
     { id: string; sender: "user" | "advisor"; text: string; time: string }[]
@@ -1113,7 +1115,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       {!isOpen && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
           {/* Proactive Teaser Bubble */}
-          {showTeaser && isScrolling && (
+          {showTeaser && (isScrolling && !isMobile) && (
             <div className="relative bg-white rounded-2xl p-4 shadow-xl border border-[#EAE7E0] max-w-xs transition-all duration-300 animate-fade-in">
               <button
                 onClick={() => setShowTeaser(false)}
@@ -1159,11 +1161,11 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           <button
             onClick={onOpen}
             className={`group relative flex items-center bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 border-2 border-white/20 ${
-              isScrolling ? "gap-3 px-4 py-3" : "w-14 h-14 justify-center p-0"
+              (isScrolling && !isMobile) ? "gap-3 px-4 py-3" : "w-14 h-14 justify-center p-0"
             }`}
             aria-label="Open AI Prequal Chatbot"
           >
-            {isScrolling ? (
+            {(isScrolling && !isMobile) ? (
               <>
                 <div className="relative flex items-center">
                   <HeadshotAvatar

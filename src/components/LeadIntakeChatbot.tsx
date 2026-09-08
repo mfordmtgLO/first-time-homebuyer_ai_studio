@@ -1118,7 +1118,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     <>
       {/* Floating Launcher Button & Teaser (When Closed) */}
       {!isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+        <div className="fixed bottom-24 lg:bottom-6 right-6 z-50 flex flex-col items-end gap-3">
           {/* Proactive Teaser Bubble */}
           {showTeaser && isScrolling && (
             <div className="hidden lg:block relative bg-white rounded-2xl p-4 shadow-xl border border-[#EAE7E0] max-w-xs transition-all duration-300 animate-fade-in mb-2">

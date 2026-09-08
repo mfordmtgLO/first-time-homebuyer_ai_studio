@@ -425,25 +425,25 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           {/* Bottom Indicators & Price Tag */}
           <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between text-white z-10 pointer-events-none">
             <div className="pointer-events-auto">
-              <span className="text-xl font-bold drop-shadow-sm font-serif">{formatUSD(property.price)}</span>
-              <span className="text-[11px] text-white/90 ml-1.5">(${Math.round(property.price / property.sqft)}/sqft)</span>
+              <span className="text-lg sm:text-xl font-bold drop-shadow-sm font-serif">{formatUSD(property.price)}</span>
+              <span className="text-[10px] sm:text-[11px] text-white/90 ml-1.5">(${Math.round(property.price / property.sqft)}/sqft)</span>
             </div>
 
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-end gap-1.5 sm:gap-2">
               {property.priceDropAmount ? (
-                <span className="text-xs font-bold text-white bg-red-600/90 px-2.5 py-0.5 rounded-md shadow-2xs backdrop-blur-xs flex items-center gap-1 animate-pulse">
-                  <Flame className="w-3 h-3" />
-                  Price Drop: -{formatUSD(property.priceDropAmount)}
+                <span className="text-[10px] sm:text-xs font-bold text-white bg-red-600/90 px-2 py-0.5 rounded-md shadow-2xs backdrop-blur-xs flex items-center gap-1 animate-pulse">
+                  <Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                  <span className="hidden sm:inline">Price Drop: </span>-{formatUSD(property.priceDropAmount)}
                 </span>
               ) : (
-                <span className="text-xs font-semibold text-white bg-[#4A5D4E]/90 px-2.5 py-0.5 rounded-md shadow-2xs backdrop-blur-xs">
-                  Est. {formatUSD(estMonthly)}/mo
+                <span className="text-[10px] sm:text-xs font-semibold text-white bg-[#4A5D4E]/90 px-2 py-0.5 rounded-md shadow-2xs backdrop-blur-xs">
+                  Est. {formatUSD(estMonthly)}<span className="hidden sm:inline">/mo</span>
                 </span>
               )}
 
               {/* Pagination Dots */}
               {images.length > 1 && (
-                <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-full backdrop-blur-xs pointer-events-auto">
+                <div className="flex items-center gap-1 sm:gap-1.5 bg-black/40 px-1.5 sm:px-2 py-1 rounded-full backdrop-blur-xs pointer-events-auto mt-0.5">
                   {images.map((_, idx) => (
                     <button
                       key={idx}
@@ -464,15 +464,28 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
 
         {/* BODY CONTENT */}
-        <div className="p-5 space-y-4">
+        <div className="p-3 sm:p-5 space-y-3 sm:space-y-4">
           <div>
-            <h3 className="font-bold text-base text-[#2D362E] group-hover:text-[#4A5D4E] transition-colors truncate">
-              {property.title}
-            </h3>
-            <p className="text-xs text-[#606C5D] flex items-center gap-1 mt-0.5">
-              <MapPin className="w-3.5 h-3.5 text-[#9A9488] shrink-0" />
-              <span className="truncate">{property.address}, {property.city}, {property.state} {property.zip}</span>
-            </p>
+            <div className="flex justify-between items-start gap-2">
+              <div className="min-w-0">
+                <h3 className="font-bold text-sm sm:text-base text-[#2D362E] group-hover:text-[#4A5D4E] transition-colors truncate">
+                  {property.title}
+                </h3>
+                <p className="text-[10px] sm:text-xs text-[#606C5D] flex items-center gap-1 mt-0.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#9A9488] shrink-0" />
+                  <span className="truncate">{property.address}, {property.city}, {property.state} {property.zip}</span>
+                </p>
+              </div>
+              <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border shadow-2xs ${
+                property.status === 'Active' 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : property.status === 'Pending'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-slate-100 text-slate-600 border-slate-200'
+              }`}>
+                {property.status}
+              </span>
+            </div>
 
             {/* Neighborhood Ratings (Walk & School) */}
             <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-[#EAE7E0]/60 dark:border-slate-700/60">
@@ -509,25 +522,25 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
           </div>
 
-          {/* Specs Pill Grid */}
-          <div className="grid grid-cols-4 gap-2 py-2 border-y border-[#EAE7E0] text-xs text-center">
-            <div>
-              <span className="text-[#9A9488] block text-[10px]">Bedrooms</span>
-              <span className="font-bold text-[#2D362E]">{property.beds}</span>
+          {/* Specs Pill Grid - Compact responsive grid */}
+          <div className="grid grid-cols-4 gap-1 sm:gap-2 py-2 border-y border-[#EAE7E0] dark:border-slate-700 text-[10px] sm:text-xs text-center overflow-hidden">
+            <div className="flex flex-col items-center justify-center p-1 bg-slate-50 dark:bg-slate-800/50 rounded-md">
+              <span className="text-[#9A9488] dark:text-slate-400 block mb-0.5">Beds</span>
+              <span className="font-bold text-[#2D362E] dark:text-slate-200">{property.beds}</span>
             </div>
-            <div>
-              <span className="text-[#9A9488] block text-[10px]">Bathrooms</span>
-              <span className="font-bold text-[#2D362E]">{property.baths}</span>
+            <div className="flex flex-col items-center justify-center p-1 bg-slate-50 dark:bg-slate-800/50 rounded-md">
+              <span className="text-[#9A9488] dark:text-slate-400 block mb-0.5">Baths</span>
+              <span className="font-bold text-[#2D362E] dark:text-slate-200">{property.baths}</span>
             </div>
-            <div>
-              <span className="text-[#9A9488] block text-[10px]">Living Area</span>
-              <span className="font-bold text-[#2D362E]">{property.sqft} sqft</span>
+            <div className="flex flex-col items-center justify-center p-1 bg-slate-50 dark:bg-slate-800/50 rounded-md">
+              <span className="text-[#9A9488] dark:text-slate-400 block mb-0.5">SqFt</span>
+              <span className="font-bold text-[#2D362E] dark:text-slate-200">{property.sqft}</span>
             </div>
-            <div className="relative group cursor-help">
-              <span className="text-[#9A9488] block text-[10px] flex items-center justify-center gap-0.5">
-                DOM <AlertCircle className="w-2.5 h-2.5" title="Days on Market" />
+            <div className="flex flex-col items-center justify-center p-1 bg-slate-50 dark:bg-slate-800/50 rounded-md relative group cursor-help">
+              <span className="text-[#9A9488] dark:text-slate-400 block mb-0.5 flex items-center gap-0.5">
+                DOM <AlertCircle className="w-2 h-2" />
               </span>
-              <span className="font-bold text-[#2D362E]">{property.daysOnMarket !== undefined ? property.daysOnMarket : "N/A"}</span>
+              <span className="font-bold text-[#2D362E] dark:text-slate-200">{property.daysOnMarket !== undefined ? property.daysOnMarket : "N/A"}</span>
             </div>
           </div>
 
@@ -537,7 +550,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               {badges.map(b => (
                 <span 
                   key={b.id}
-                  className={`${b.bgClass} text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 shadow-2xs`}
+                  className={`${b.bgClass} text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 shadow-2xs whitespace-nowrap`}
                   title={b.description}
                 >
                   <CheckCircle2 className="w-2.5 h-2.5 shrink-0 opacity-80" />
@@ -545,14 +558,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 </span>
               ))}
               <span 
-                className={`${walk.badgeBg} ${walk.badgeText} ${walk.badgeBorder} text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 shadow-2xs cursor-help`}
+                className={`${walk.badgeBg} ${walk.badgeText} ${walk.badgeBorder} text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 shadow-2xs cursor-help whitespace-nowrap`}
                 title={`Walk Score® ${walk.score}/100: ${walk.description}`}
               >
                 <Footprints className="w-2.5 h-2.5 shrink-0 opacity-80" />
                 <span>Walk Score {walk.score}</span>
               </span>
               <span 
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 shadow-2xs cursor-help ${
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 shadow-2xs cursor-help whitespace-nowrap ${
                   marketVal.condition === 'underpriced' 
                     ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                     : marketVal.condition === 'overpriced'
@@ -566,19 +579,19 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               </span>
               
               {hasAmenity(property.id, "grocery") && (
-                <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
+                <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-2xs whitespace-nowrap">
                   <ShoppingCart className="w-2.5 h-2.5 shrink-0 opacity-80" />
                   <span>Grocery Nearby</span>
                 </span>
               )}
               {hasAmenity(property.id, "transit") && (
-                <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
+                <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-2xs whitespace-nowrap">
                   <Bus className="w-2.5 h-2.5 shrink-0 opacity-80" />
                   <span>Transit Hub</span>
                 </span>
               )}
               {hasAmenity(property.id, "parks") && (
-                <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
+                <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-2xs whitespace-nowrap">
                   <TreePine className="w-2.5 h-2.5 shrink-0 opacity-80" />
                   <span>Parks Nearby</span>
                 </span>
@@ -586,12 +599,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
 
             {/* OHCS Purchase Price Cap Status */}
-            <div className="p-2 rounded-lg bg-[#FAF9F5] border border-[#EAE7E0] text-[11px] text-[#606C5D] space-y-0.5">
+            <div className="p-2 rounded-lg bg-[#FAF9F5] border border-[#EAE7E0] text-[10px] sm:text-[11px] text-[#606C5D] space-y-0.5 mt-2">
               <div className="flex items-center justify-between font-semibold text-[#2D362E]">
                 <span>{priceInfo.isTargeted ? "Targeted Area Cap" : "Non-Targeted Cap"}:</span>
                 <span className="font-mono text-[#4A5D4E]">${priceInfo.applicablePriceLimit.toLocaleString()}</span>
               </div>
-              <div className="text-[10px] text-[#9A9488]">
+              <div className="text-[9px] sm:text-[10px] text-[#9A9488]">
                 {priceInfo.qualificationReason}
               </div>
             </div>
@@ -599,28 +612,28 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
           {/* Tour Scorecard Grade Banner */}
           {property.scorecard ? (
-            <div className="bg-[#F1EFE9] p-3 rounded-xl border border-[#EAE7E0] space-y-1.5">
+            <div className="bg-[#F1EFE9] p-2.5 sm:p-3 rounded-xl border border-[#EAE7E0] space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-[#606C5D]">On-Site Tour Grade:</span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 text-[#4A5D4E] border border-[#EAE7E0]">
+                <span className="text-[11px] sm:text-xs text-[#606C5D]">On-Site Tour Grade:</span>
+                <span className="text-[11px] sm:text-xs font-bold px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 text-[#4A5D4E] border border-[#EAE7E0]">
                   Grade {property.scorecard.grade} ({property.scorecard.overallRating}/10)
                 </span>
               </div>
               {property.scorecard.redFlags && property.scorecard.redFlags.length > 0 ? (
-                <div className="text-[11px] text-[#C18C5D] flex items-center gap-1 truncate font-medium">
-                  <AlertCircle className="w-3 h-3 shrink-0" />
+                <div className="text-[10px] sm:text-[11px] text-[#C18C5D] flex items-center gap-1 truncate font-medium">
+                  <AlertCircle className="w-2.5 sm:w-3 h-2.5 sm:h-3 shrink-0" />
                   <span>Flag: {property.scorecard.redFlags[0]}</span>
                 </div>
               ) : (
-                <div className="text-[11px] text-[#4A5D4E] flex items-center gap-1 font-medium">
-                  <CheckCircle2 className="w-3 h-3 shrink-0" />
+                <div className="text-[10px] sm:text-[11px] text-[#4A5D4E] flex items-center gap-1 font-medium">
+                  <CheckCircle2 className="w-2.5 sm:w-3 h-2.5 sm:h-3 shrink-0" />
                   <span>No major structural red flags noted</span>
                 </div>
               )}
             </div>
           ) : (
-            <div className="bg-[#F9F8F4] p-3 rounded-xl border border-dashed border-[#DEDAD2] text-center">
-              <span className="text-xs text-[#9A9488] block">No tour scorecard recorded yet</span>
+            <div className="bg-[#F9F8F4] p-2.5 sm:p-3 rounded-xl border border-dashed border-[#DEDAD2] text-center">
+              <span className="text-[10px] sm:text-xs text-[#9A9488] block">No tour scorecard recorded yet</span>
             </div>
           )}
 
@@ -666,15 +679,15 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
       {/* ACTION BUTTONS FOOTER */}
       <div className="p-3 bg-[#F1EFE9]/60 border-t border-[#EAE7E0] space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => onOpenScorecard(property)}
-            className="flex-1 py-2 px-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-[#F1EFE9] text-[#2D362E] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-[#EAE7E0] cursor-pointer shadow-2xs"
+            className="flex-1 py-2 px-1.5 sm:px-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-[#F1EFE9] text-[#2D362E] text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-[#EAE7E0] cursor-pointer shadow-2xs"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-[#4A5D4E]" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[#4A5D4E] shrink-0" />
             <span className="hidden sm:inline">{property.scorecard ? "Scorecard" : "Tour Scorecard"}</span>
-            <span className="sm:hidden">Tour</span>
+            <span className="sm:hidden truncate">Tour</span>
           </button>
           
           {onOpenCalculator && (
@@ -684,30 +697,30 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 e.stopPropagation();
                 onOpenCalculator(property);
               }}
-              className="flex-1 py-2 px-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-indigo-200 dark:border-indigo-800/50 cursor-pointer shadow-2xs"
+              className="flex-1 py-2 px-1.5 sm:px-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-400 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-indigo-200 dark:border-indigo-800/50 cursor-pointer shadow-2xs"
               title="Run What-If Mortgage Scenario"
             >
-              <Calculator className="w-3.5 h-3.5" />
+              <Calculator className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden sm:inline">What-If Math</span>
-              <span className="sm:hidden">Math</span>
+              <span className="sm:hidden truncate">Math</span>
             </button>
           )}
 
           <button
             type="button"
             onClick={() => onAskAiAboutProperty(property)}
-            className="flex-1 py-2 px-2 rounded-xl bg-[#4A5D4E]/10 hover:bg-[#4A5D4E]/20 text-[#4A5D4E] text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-[#4A5D4E]/20 cursor-pointer"
+            className="flex-1 py-2 px-1.5 sm:px-2 rounded-xl bg-[#4A5D4E]/10 hover:bg-[#4A5D4E]/20 text-[#4A5D4E] text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-[#4A5D4E]/20 cursor-pointer"
             title="Generate offer strategy with Gemini"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#C18C5D] shrink-0" />
             <span className="hidden sm:inline">Offer AI</span>
-            <span className="sm:hidden">AI</span>
+            <span className="sm:hidden truncate">Offer AI</span>
           </button>
 
           <button
             type="button"
             onClick={(e) => onToggleCompare(property.id, e)}
-            className={`p-2 rounded-xl border text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+            className={`p-2 rounded-xl border text-[10px] sm:text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
               isSelectedForCompare
                 ? "bg-[#C18C5D] text-white border-[#C18C5D]"
                 : "bg-white dark:bg-slate-900 text-[#606C5D] border-[#EAE7E0] hover:text-[#2D362E]"
@@ -718,17 +731,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <a
             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zip)}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="flex-1 py-2 px-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:text-indigo-300 text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-indigo-200"
+            className="flex-1 py-2 px-1 sm:px-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:text-indigo-300 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-indigo-200"
             title="Get driving directions to this property via Google Maps"
           >
-            <Navigation className="w-3.5 h-3.5" />
-            <span>Directions</span>
+            <Navigation className="w-3 sm:w-3.5 h-3 sm:h-3.5 shrink-0" />
+            <span className="truncate">Directions</span>
           </a>
 
           <a
@@ -736,11 +749,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="flex-1 py-2 px-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-emerald-200"
+            className="flex-1 py-2 px-1 sm:px-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-emerald-200"
             title="Save this home to your personal Google Maps account. Remember to click 'Save' in Google Maps!"
           >
-            <MapPin className="w-3.5 h-3.5" />
-            <span>Maps Sync</span>
+            <MapPin className="w-3 sm:w-3.5 h-3 sm:h-3.5 shrink-0" />
+            <span className="truncate">Maps Sync</span>
           </a>
 
           <a
@@ -748,10 +761,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="py-2 px-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 hover:text-blue-900 text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-blue-200"
+            className="py-2 px-2 sm:px-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 hover:text-blue-900 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-blue-200 shrink-0"
             title={`Open ${property.address} on Zillow.com in a new tab`}
           >
-            <ExternalLink className="w-3.5 h-3.5" />
+            <ExternalLink className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
             <span className="hidden sm:inline">Zillow</span>
           </a>
         </div>

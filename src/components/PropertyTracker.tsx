@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { motion, useAnimation, PanInfo, useMotionValue, useTransform, AnimatePresence } from "motion/react";
 import { 
   Building, 
   Plus, 
@@ -66,6 +67,120 @@ import { RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProf
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+
+const SwipeableCardWrapper: React.FC<{
+  children: React.ReactNode;
+  onFavorite: () => void;
+  onArchive: () => void;
+  isFavorite: boolean;
+}> = ({ children, onFavorite, onArchive, isFavorite }) => {
+  const controls = useAnimation();
+  const x = useMotionValue(0);
+  const [confirmedAction, setConfirmedAction] = useState<'favorite' | 'archive' | null>(null);
+
+  // Dynamic scaling and opacity for background icons
+  const favoriteScale = useTransform(x, [0, 100], [0.8, 1.2]);
+  const favoriteOpacity = useTransform(x, [0, 100], [0.3, 1]);
+  const bgFavoriteOpacity = useTransform(x, [0, 150], [0, 1]);
+
+  const archiveScale = useTransform(x, [0, -100], [0.8, 1.2]);
+  const archiveOpacity = useTransform(x, [0, -100], [0.3, 1]);
+  const bgArchiveOpacity = useTransform(x, [0, -150], [0, 1]);
+  
+  const handleDragEnd = async (event: any, info: PanInfo) => {
+    const offset = info.offset.x;
+    const velocity = info.velocity.x;
+    
+    // Swipe right to favorite/unfavorite
+    if (offset > 100 || velocity > 500) {
+      setConfirmedAction('favorite');
+      await controls.start({ x: window.innerWidth > 600 ? 500 : 350, opacity: 0, transition: { duration: 0.25, ease: "easeOut" } });
+      onFavorite();
+      
+      // Wait for state to register and show the confirmation icon
+      setTimeout(() => {
+        setConfirmedAction(null);
+        // Snap back instantly without animation, then fade in
+        controls.set({ x: 0 });
+        controls.start({ opacity: 1, transition: { duration: 0.2 } });
+      }, 700);
+    } 
+    // Swipe left to archive/delete
+    else if (offset < -100 || velocity < -500) {
+      setConfirmedAction('archive');
+      await controls.start({ x: window.innerWidth > 600 ? -500 : -350, opacity: 0, transition: { duration: 0.25, ease: "easeOut" } });
+      onArchive();
+      // Card will likely unmount, but reset just in case
+      setTimeout(() => {
+        setConfirmedAction(null);
+        controls.set({ x: 0, opacity: 1 });
+      }, 700);
+    } else {
+      // Return to center if threshold not met
+      controls.start({ x: 0, scale: 1, transition: { type: "spring", stiffness: 400, damping: 25 } });
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full rounded-2xl overflow-hidden bg-[#E2DFD2] dark:bg-slate-800 touch-pan-y">
+      {/* Animated Background Overlays */}
+      <motion.div style={{ opacity: bgFavoriteOpacity }} className="absolute inset-0 bg-emerald-100 dark:bg-emerald-900/40 z-0 pointer-events-none" />
+      <motion.div style={{ opacity: bgArchiveOpacity }} className="absolute inset-0 bg-rose-100 dark:bg-rose-900/40 z-0 pointer-events-none" />
+
+      {/* Background Underlay for Swipe Actions */}
+      <div className="absolute inset-0 flex items-center justify-between px-8 z-0 pointer-events-none">
+        <motion.div style={{ scale: favoriteScale, opacity: favoriteOpacity }} className="flex flex-col items-center justify-center text-emerald-600 dark:text-emerald-400">
+          <Star className={`w-8 h-8 ${isFavorite ? "fill-emerald-600" : ""}`} />
+          <span className="text-xs font-bold mt-1">{isFavorite ? "Unfavorite" : "Favorite"}</span>
+        </motion.div>
+        <motion.div style={{ scale: archiveScale, opacity: archiveOpacity }} className="flex flex-col items-center justify-center text-rose-600 dark:text-rose-400">
+          <Trash2 className="w-8 h-8" />
+          <span className="text-xs font-bold mt-1">Archive</span>
+        </motion.div>
+      </div>
+
+      {/* Confirmation Overlay (Shows after swipe finishes) */}
+      <AnimatePresence>
+        {confirmedAction === 'favorite' && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1.1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-emerald-100/95 dark:bg-emerald-900/95 backdrop-blur-md pointer-events-none rounded-2xl shadow-inner"
+          >
+             <Star className={`w-16 h-16 text-emerald-600 dark:text-emerald-400 ${!isFavorite ? "fill-emerald-600" : ""}`} />
+             <span className="text-xl font-bold text-emerald-700 dark:text-emerald-300 mt-3">{!isFavorite ? "Favorited!" : "Removed from Favorites"}</span>
+          </motion.div>
+        )}
+        {confirmedAction === 'archive' && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1.1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-rose-100/95 dark:bg-rose-900/95 backdrop-blur-md pointer-events-none rounded-2xl shadow-inner"
+          >
+             <Trash2 className="w-16 h-16 text-rose-600 dark:text-rose-400" />
+             <span className="text-xl font-bold text-rose-700 dark:text-rose-300 mt-3">Archived!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Draggable Top Layer */}
+      <motion.div
+        style={{ x }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.4}
+        whileDrag={{ scale: 0.96, cursor: "grabbing" }}
+        onDragEnd={handleDragEnd}
+        animate={controls}
+        className="relative z-20 w-full h-full shadow-md bg-white dark:bg-slate-900 rounded-2xl"
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+};
 
 interface PropertyTrackerProps {
   properties: PropertyListing[];
@@ -1339,7 +1454,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       )}
 
       {/* Property Cards Grid */}
-      <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible hide-scrollbar">
+      <div className="flex flex-col gap-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 w-full">
         {filtered.map((property) => (
           <div
             key={property.id}
@@ -1348,31 +1463,37 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             onDragOver={(e) => handleDragOver(e, property.id)}
             onDrop={(e) => handleDrop(e, property.id)}
             onDragEnd={handleDragEnd}
-            className={`snap-center shrink-0 w-[85vw] sm:w-[360px] md:w-auto h-full transition-all duration-200 cursor-grab active:cursor-grabbing ${
+            className={`w-full transition-all duration-200 cursor-grab active:cursor-grabbing ${
               dragOverId === property.id ? 'opacity-40 scale-[0.98] ring-4 ring-indigo-500/50 rounded-2xl' : ''
             } ${draggedId === property.id ? 'opacity-30 scale-[0.98]' : ''}`}
             title="Drag to reorder this property"
           >
-            <PropertyCard
-              property={property}
-              profile={profile}
-              isSelectedForCompare={compareIds.includes(property.id)}
-              isSelected={selectedPropertyIds.includes(property.id)}
-              onToggleSelect={(id, checked) => {
-                if (checked) {
-                  setSelectedPropertyIds(prev => [...prev, id]);
-                } else {
-                  setSelectedPropertyIds(prev => prev.filter(selectedId => selectedId !== id));
-                }
-              }}
-              onToggleFavorite={toggleFavorite}
-              onTogglePriceAlert={togglePriceAlert}
-              onDeleteProperty={deleteProperty}
-              onOpenScorecard={onOpenScorecard}
-              onAskAiAboutProperty={onAskAiAboutProperty}
-              onToggleCompare={toggleCompare}
-              onOpenCalculator={(p) => setCalculatorProperty(p)}
-            />
+            <SwipeableCardWrapper
+              isFavorite={!!property.isFavorite}
+              onFavorite={() => toggleFavorite(property.id)}
+              onArchive={() => deleteProperty(property.id, { stopPropagation: () => {} } as any)}
+            >
+              <PropertyCard
+                property={property}
+                profile={profile}
+                isSelectedForCompare={compareIds.includes(property.id)}
+                isSelected={selectedPropertyIds.includes(property.id)}
+                onToggleSelect={(id, checked) => {
+                  if (checked) {
+                    setSelectedPropertyIds(prev => [...prev, id]);
+                  } else {
+                    setSelectedPropertyIds(prev => prev.filter(selectedId => selectedId !== id));
+                  }
+                }}
+                onToggleFavorite={toggleFavorite}
+                onTogglePriceAlert={togglePriceAlert}
+                onDeleteProperty={deleteProperty}
+                onOpenScorecard={onOpenScorecard}
+                onAskAiAboutProperty={onAskAiAboutProperty}
+                onToggleCompare={toggleCompare}
+                onOpenCalculator={(p) => setCalculatorProperty(p)}
+              />
+            </SwipeableCardWrapper>
           </div>
         ))}
       </div>

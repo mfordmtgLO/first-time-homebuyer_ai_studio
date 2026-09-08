@@ -1,0 +1,37 @@
+# Block AI and LLM scrapers
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: OmgiliBot
+Disallow: /
+
+User-agent: FacebookBot
+Disallow: /
+
+# General rules for search engines
+User-agent: *
+Disallow: /dashboard/
+Disallow: /portal/
+Disallow: /admin/
+Disallow: /*?*lo=*
+Disallow: /*?*agent=*
+
+# Allow public landing pages
+Allow: /
+Allow: /calculator
+Allow: /roadmap

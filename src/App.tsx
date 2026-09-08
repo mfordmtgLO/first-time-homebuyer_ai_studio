@@ -7,6 +7,7 @@ import { StepNavigationBanner } from "./components/StepNavigationBanner";
 import { MobileBottomNav } from "./components/MobileBottomNav";
 import { TelemetryDiagnosticsModal } from "./components/TelemetryDiagnosticsModal";
 import { HeroWebsite } from "./components/HeroWebsite";
+import { MobileHeroWebsite } from "./components/mobile/MobileHeroWebsite";
 import { InstantAffordabilityCalculator } from "./components/InstantAffordabilityCalculator";
 import { RoadmapView } from "./components/RoadmapView";
 import { DashboardOverview } from "./components/DashboardOverview";
@@ -64,6 +65,7 @@ import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { GEOSPHERE_MOCK_LISTINGS } from "./data/geoSphereData";
 
 export default function App() {
+  const isMobile = useIsMobile();
   const [currentMode, setCurrentMode] = useState<"website" | "dashboard">("website");
   const [activeTab, setActiveTab] = useState<string>("hero");
   const [isLeadBotOpen, setIsLeadBotOpen] = useState<boolean>(false);
@@ -876,24 +878,45 @@ export default function App() {
                 {currentMode === "website" && (
                   <div>
                     {activeTab === "hero" && (
-                      <HeroWebsite
-                        profile={profile}
-                        setProfile={setProfile}
-                        onOpenDashboard={() => handleNavigate("dashboard", "dashboard")}
-                        onOpenCalculator={() => handleNavigate("calculator", "website")}
-                        onOpenRoadmap={() => handleNavigate("roadmap", "website")}
-                        onOpenStep4={() => handleNavigate("step4_ai_plan", "dashboard")}
-                        onOpenLeadBot={() => {
-                          setLeadBotSourceContext(undefined);
-                          setIsLeadBotOpen(true);
-                        }}
-                        onCaptureLead={handleSaveLead}
-                        loanOfficer={guidesState.loanOfficer}
-                        activeAgent={activeAgent}
-                        isCoBranded={guidesState.isCoBranded}
-                        onOpenLoPortal={() => setShowLoPortal(true)}
-                        properties={properties}
-                      />
+                      isMobile ? (
+                        <MobileHeroWebsite
+                          profile={profile}
+                          setProfile={setProfile}
+                          onOpenDashboard={() => handleNavigate("dashboard", "dashboard")}
+                          onOpenCalculator={() => handleNavigate("calculator", "website")}
+                          onOpenRoadmap={() => handleNavigate("roadmap", "website")}
+                          onOpenStep4={() => handleNavigate("step4_ai_plan", "dashboard")}
+                          onOpenLeadBot={() => {
+                            setLeadBotSourceContext(undefined);
+                            setIsLeadBotOpen(true);
+                          }}
+                          onCaptureLead={handleSaveLead}
+                          loanOfficer={guidesState.loanOfficer}
+                          activeAgent={activeAgent}
+                          isCoBranded={guidesState.isCoBranded}
+                          onOpenLoPortal={() => setShowLoPortal(true)}
+                          properties={properties}
+                        />
+                      ) : (
+                        <HeroWebsite
+                          profile={profile}
+                          setProfile={setProfile}
+                          onOpenDashboard={() => handleNavigate("dashboard", "dashboard")}
+                          onOpenCalculator={() => handleNavigate("calculator", "website")}
+                          onOpenRoadmap={() => handleNavigate("roadmap", "website")}
+                          onOpenStep4={() => handleNavigate("step4_ai_plan", "dashboard")}
+                          onOpenLeadBot={() => {
+                            setLeadBotSourceContext(undefined);
+                            setIsLeadBotOpen(true);
+                          }}
+                          onCaptureLead={handleSaveLead}
+                          loanOfficer={guidesState.loanOfficer}
+                          activeAgent={activeAgent}
+                          isCoBranded={guidesState.isCoBranded}
+                          onOpenLoPortal={() => setShowLoPortal(true)}
+                          properties={properties}
+                        />
+                      )
                     )}
 
                     {(activeTab === "calculator" || !["hero", "roadmap"].includes(activeTab)) && (

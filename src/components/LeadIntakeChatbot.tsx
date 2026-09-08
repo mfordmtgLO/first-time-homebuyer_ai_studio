@@ -579,6 +579,10 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
   // Detect scroll to expand or make compact
   useEffect(() => {
     const handleWindowScroll = () => {
+      // BULLETPROOF MOBILE FIX: Completely ignore scroll events on screens smaller than 1024px
+      // This prevents the chatbot state from EVER changing to 'isScrolling=true' on an iPhone
+      if (window.innerWidth < 1024) return;
+      
       setIsScrolling(true);
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);

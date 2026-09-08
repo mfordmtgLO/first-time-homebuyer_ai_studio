@@ -1115,8 +1115,8 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       {!isOpen && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
           {/* Proactive Teaser Bubble */}
-          {showTeaser && (isScrolling && !isMobile) && (
-            <div className="relative bg-white rounded-2xl p-4 shadow-xl border border-[#EAE7E0] max-w-xs transition-all duration-300 animate-fade-in">
+          {showTeaser && isScrolling && (
+            <div className="hidden lg:block relative bg-white rounded-2xl p-4 shadow-xl border border-[#EAE7E0] max-w-xs transition-all duration-300 animate-fade-in mb-2">
               <button
                 onClick={() => setShowTeaser(false)}
                 className="absolute top-2 right-2 text-[#9A9488] hover:text-[#2D362E] p-1"
@@ -1161,13 +1161,27 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           <button
             onClick={onOpen}
             className={`group relative flex items-center bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-105 border-2 border-white/20 ${
-              (isScrolling && !isMobile) ? "gap-3 px-4 py-3" : "w-14 h-14 justify-center p-0"
+              isScrolling
+                ? "w-14 h-14 justify-center p-0 lg:w-auto lg:h-auto lg:gap-3 lg:px-4 lg:py-3 lg:justify-start"
+                : "w-14 h-14 justify-center p-0"
             }`}
             aria-label="Open AI Prequal Chatbot"
           >
-            {(isScrolling && !isMobile) ? (
-              <>
-                <div className="relative flex items-center">
+            {/* COMPACT ICON (Always visible on mobile OR when not scrolling on desktop) */}
+            <div className={`relative flex items-center justify-center w-full h-full p-1 ${isScrolling ? "lg:hidden" : ""}`}>
+              <HeadshotAvatar
+                src={loanOfficer.headshotUrl}
+                name={loanOfficer.name}
+                title={loanOfficer.title}
+                className="w-10 h-10 rounded-full border-2 border-white"
+              />
+              <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#4A5D4E]"></span>
+            </div>
+
+            {/* EXPANDED CONTENT (Only visible on desktop AND when scrolling) */}
+            {isScrolling && (
+              <div className="hidden lg:flex items-center w-full">
+                <div className="relative flex items-center shrink-0">
                   <HeadshotAvatar
                     src={loanOfficer.headshotUrl}
                     name={loanOfficer.name}
@@ -1185,7 +1199,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                   <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#4A5D4E] animate-pulse"></span>
                 </div>
 
-                <div className="text-left pr-1">
+                <div className="text-left pr-1 pl-2">
                   <div className="flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-[#E7C19D]" />
                     <span className="text-xs font-bold tracking-tight">AI Prequal Guide</span>
@@ -1195,19 +1209,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                   </span>
                 </div>
 
-                <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center ml-auto">
                   <MessageSquare className="w-3.5 h-3.5 text-white" />
                 </div>
-              </>
-            ) : (
-              <div className="relative flex items-center justify-center w-full h-full p-1">
-                <HeadshotAvatar
-                  src={loanOfficer.headshotUrl}
-                  name={loanOfficer.name}
-                  title={loanOfficer.title}
-                  className="w-10 h-10 rounded-full border-2 border-white"
-                />
-                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#4A5D4E]"></span>
               </div>
             )}
           </button>

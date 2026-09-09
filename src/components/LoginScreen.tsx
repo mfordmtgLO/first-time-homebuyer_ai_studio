@@ -1,12 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { 
-  GoogleAuthProvider, 
-  signInWithRedirect,
-  getRedirectResult, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut 
-} from "firebase/auth";
+import React, { useState } from "react";
+import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { checkAndProvisionUser } from "../utils/authUtils";
 import { Building2, ArrowRight, ShieldCheck } from "lucide-react";
@@ -16,61 +9,16 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getRedirectResult(auth)
-      .then(async (result) => {
-        if (result && result.user) {
-          setIsLoading(true);
-          try {
-            const role = await checkAndProvisionUser(result.user);
-            onLogin(role);
-          } catch (err: any) {
-            if (err.message === "NOT_WHITELISTED") {
-              setError("Access Denied: Your email has not been whitelisted by the Branch Manager.");
-              await signOut(auth);
-            } else {
-              setError("Authentication error. Please contact support.");
-            }
-          } finally {
-            setIsLoading(false);
-          }
-        }
-      })
-      .catch((err) => {
-        console.error("Redirect result error:", err);
-      });
-  }, []);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithRedirect(auth, provider);
-    } catch (err: any) {
-      console.error(err);
-      setError(`Failed to sign in with Google: ${err.message}`);
-      setIsLoading(false);
-    }
-  };
-
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    try {
-      let result;
-      if (isSignUp) {
-        result = await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        result = await signInWithEmailAndPassword(auth, email, password);
-      }
+      // Use signInWithPopup which works reliably in standard Chrome tabs without redirect loops or stuck spinners
+      const result = await signInWithPopup(auth, provider);
       try {
         const role = await checkAndProvisionUser(result.user);
         onLogin(role);
@@ -83,7 +31,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         }
       }
     } catch (err: any) {
-      setError(err.message || "Authentication failed.");
+      console.error(err);
+      if (err.code === "auth/popup-closed-by-user") {
+        setError("Sign-in popup was closed before completing.");
+      } else {
+        setError(`Google Sign-In failed: ${err.message}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -110,13 +63,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           <button
             onClick={handleGoogleLogin}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 bg-[#2D362E] hover:bg-[#4A5D4E] text-white px-6 py-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-sm"
+            className="w-full flex items-center justify-center gap-3 bg-[#2D362E] hover:bg-[#4A5D4E] text-white px-6 py-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-sm cursor-pointer"
           >
             {isLoading ? "Authenticating..." : "Sign in with Google"}
             {!isLoading && <ArrowRight className="w-4 h-4" />}
           </button>
-
-// Email sign-in disabled as requested. Google sign-in only.
         </div>
 
         <div className="mt-8 flex items-center justify-center gap-2 text-xs text-[#9A9488] border-t border-[#EAE7E0] pt-6">

@@ -201,27 +201,30 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   // Authentication & Session State (loaded from localStorage)
   const [authenticatedLoId, setAuthenticatedLoId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
+      if (localStorage.getItem("lo_portal_logged_out") === "true") {
+        return null;
+      }
       const stored = localStorage.getItem("lo_portal_auth_id");
       if (stored) return stored;
     }
-    // If authenticated via Google (Firebase auth), automatically map to LO ID
-    const currentEmail = auth.currentUser?.email?.toLowerCase();
-    if (currentEmail) {
-      const matched = guidesState.loanOfficers.find(l => l.email?.toLowerCase() === currentEmail);
-      if (matched) return matched.id;
-      if (userRole === "branch_manager" || userRole === "admin" || currentEmail === "fordmj@gmail.com" || currentEmail === "mford@cfmtg.com") {
-        return guidesState.adminLoanOfficerId || "lo-mike-ford";
-      }
-    }
+    // Only auto-map if userRole is active AND not explicitly logged out
     if (userRole) {
+      const currentEmail = auth.currentUser?.email?.toLowerCase();
+      if (currentEmail) {
+        const matched = guidesState.loanOfficers.find(l => l.email?.toLowerCase() === currentEmail);
+        if (matched) return matched.id;
+      }
       return guidesState.adminLoanOfficerId || "lo-mike-ford";
     }
     return null;
   });
 
-  // Keep authenticatedLoId synced if user signs in with Google
+  // Keep authenticatedLoId synced ONLY when user is truly signed in and has a valid userRole
   useEffect(() => {
-    if (!authenticatedLoId && (auth.currentUser || userRole)) {
+    if (typeof window !== "undefined" && localStorage.getItem("lo_portal_logged_out") === "true") {
+      return;
+    }
+    if (!authenticatedLoId && userRole && auth.currentUser) {
       const currentEmail = auth.currentUser?.email?.toLowerCase();
       if (currentEmail) {
         const matched = guidesState.loanOfficers.find(l => l.email?.toLowerCase() === currentEmail);
@@ -231,7 +234,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         if (typeof window !== "undefined") {
           localStorage.setItem("lo_portal_auth_id", resolvedId);
         }
-      } else if (userRole) {
+      } else {
         const resolvedId = guidesState.adminLoanOfficerId || "lo-mike-ford";
         setAuthenticatedLoId(resolvedId);
         setManagedLoId(resolvedId);
@@ -1377,20 +1380,23 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const handleLogout = async () => {
     try {
       if (typeof window !== "undefined") {
+        localStorage.setItem("lo_portal_logged_out", "true");
         localStorage.removeItem("lo_portal_auth_id");
         localStorage.removeItem("lo_portal_auth_email");
         localStorage.removeItem("lo_portal_role");
+        sessionStorage.clear();
       }
       setAuthenticatedLoId(null);
       await signOut(auth);
       if (onLogout) {
         onLogout();
+      } else if (typeof window !== "undefined") {
+        window.location.href = "/lo-login";
       }
-      triggerToast("Logged out of Loan Officer Dashboard.");
     } catch (err) {
       console.error("Logout error:", err);
-      if (onLogout) {
-        onLogout();
+      if (typeof window !== "undefined") {
+        window.location.href = "/lo-login";
       }
     }
   };

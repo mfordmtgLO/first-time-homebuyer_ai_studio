@@ -23,7 +23,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       try {
         const role = await checkAndProvisionUser(result.user);
         if (typeof window !== "undefined") {
-          localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
+          localStorage.removeItem("lo_portal_logged_out");
+        localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
         }
         onLogin(role);
       } catch (err: any) {

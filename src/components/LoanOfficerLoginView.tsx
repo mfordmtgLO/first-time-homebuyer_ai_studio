@@ -69,7 +69,8 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
 
       // Successful auth: set session
       if (typeof window !== "undefined") {
-        localStorage.setItem("lo_portal_auth_id", targetLoId);
+        localStorage.removeItem("lo_portal_logged_out");
+      localStorage.setItem("lo_portal_auth_id", targetLoId);
       }
       onAuthenticate(targetLoId);
     } catch (err: any) {

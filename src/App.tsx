@@ -84,6 +84,11 @@ export default function App() {
   const [isAppPublic, setIsAppPublic] = useState(false);
 
   useEffect(() => {
+    // Safety timeout to prevent infinite blank screen if Firebase offline or blocked
+    const timer = setTimeout(() => {
+      setIsAuthChecking(false);
+      setIsSettingsChecking(false);
+    }, 2500);
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {

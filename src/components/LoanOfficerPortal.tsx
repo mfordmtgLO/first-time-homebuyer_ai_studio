@@ -199,10 +199,46 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   // Authentication & Session State (loaded from localStorage)
   const [authenticatedLoId, setAuthenticatedLoId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("lo_portal_auth_id") || null;
+      const stored = localStorage.getItem("lo_portal_auth_id");
+      if (stored) return stored;
+    }
+    // If authenticated via Google (Firebase auth), automatically map to LO ID
+    const currentEmail = auth.currentUser?.email?.toLowerCase();
+    if (currentEmail) {
+      const matched = guidesState.loanOfficers.find(l => l.email?.toLowerCase() === currentEmail);
+      if (matched) return matched.id;
+      if (userRole === "branch_manager" || userRole === "admin" || currentEmail === "fordmj@gmail.com" || currentEmail === "mford@cfmtg.com") {
+        return guidesState.adminLoanOfficerId || "lo-mike-ford";
+      }
+    }
+    if (userRole) {
+      return guidesState.adminLoanOfficerId || "lo-mike-ford";
     }
     return null;
   });
+
+  // Keep authenticatedLoId synced if user signs in with Google
+  useEffect(() => {
+    if (!authenticatedLoId && (auth.currentUser || userRole)) {
+      const currentEmail = auth.currentUser?.email?.toLowerCase();
+      if (currentEmail) {
+        const matched = guidesState.loanOfficers.find(l => l.email?.toLowerCase() === currentEmail);
+        const resolvedId = matched ? matched.id : (guidesState.adminLoanOfficerId || "lo-mike-ford");
+        setAuthenticatedLoId(resolvedId);
+        setManagedLoId(resolvedId);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("lo_portal_auth_id", resolvedId);
+        }
+      } else if (userRole) {
+        const resolvedId = guidesState.adminLoanOfficerId || "lo-mike-ford";
+        setAuthenticatedLoId(resolvedId);
+        setManagedLoId(resolvedId);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("lo_portal_auth_id", resolvedId);
+        }
+      }
+    }
+  }, [userRole, authenticatedLoId, guidesState.loanOfficers, guidesState.adminLoanOfficerId]);
 
   // Current user / viewing context
   const [activeTab, setActiveTab] = useState<TabId>(

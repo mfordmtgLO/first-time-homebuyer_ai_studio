@@ -870,6 +870,7 @@ export default function App() {
                           profile={profile}
                           setProfile={setProfile}
                           onOpenDashboard={() => handleNavigate("dashboard", "dashboard")}
+                          onOpenProperties={() => handleNavigate("properties", "dashboard")}
                           onOpenCalculator={() => handleNavigate("calculator", "website")}
                           onOpenRoadmap={() => handleNavigate("roadmap", "website")}
                           onOpenStep4={() => handleNavigate("step4_ai_plan", "dashboard")}

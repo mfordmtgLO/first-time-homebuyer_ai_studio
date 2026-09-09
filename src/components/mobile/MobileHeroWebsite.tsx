@@ -17,6 +17,7 @@ interface MobileHeroWebsiteProps {
   profile: FinancialProfile;
   setProfile: React.Dispatch<React.SetStateAction<FinancialProfile>>;
   onOpenDashboard: () => void;
+  onOpenProperties?: () => void;
   onOpenCalculator: () => void;
   onOpenRoadmap: () => void;
   onOpenStep4?: () => void;
@@ -35,6 +36,7 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
   onOpenLeadBot,
   loanOfficer,
   onOpenDashboard,
+  onOpenProperties,
 }) => {
   const leadGenUrlwk = loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM";
 
@@ -66,7 +68,7 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
           id="mobile-single-tap-calculator-btn"
           type="button"
           onClick={onOpenCalculator}
-          className="relative w-full group overflow-hidden flex flex-col p-5 rounded-2xl bg-[#4A5D4E] hover:bg-[#3d4d40] active:scale-[0.98] transition-all shadow-lg text-left cursor-pointer border border-[#38463B]"
+          className="relative w-full group overflow-hidden flex flex-col p-5 rounded-2xl bg-[#4A5D4E] hover:bg-[#3d4d40] active:scale-[0.98] transition-all duration-100 shadow-lg text-left cursor-pointer border border-[#38463B] select-none touch-manipulation"
         >
           {/* Subtle Ambient Background Highlight */}
           <div className="absolute top-0 right-0 w-36 h-36 bg-[#C18C5D]/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
@@ -90,7 +92,7 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
                 Sliders for income, debts & monthly budget
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-white group-hover:translate-x-0.5 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-white group-hover:translate-x-0.5 group-active:scale-90 transition-transform duration-100">
               <ArrowRight className="w-5 h-5" />
             </div>
           </div>
@@ -102,10 +104,10 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
             id="mobile-single-tap-ai-journey-btn"
             type="button"
             onClick={onOpenLeadBot}
-            className="w-full flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-[#EAE7E0] dark:border-slate-800 hover:border-[#DCD7CD] shadow-sm active:scale-[0.98] transition-all text-left cursor-pointer group"
+            className="w-full flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-[#EAE7E0] dark:border-slate-800 hover:border-[#DCD7CD] shadow-sm active:scale-[0.98] transition-all duration-100 text-left cursor-pointer group select-none touch-manipulation"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#FAF9F5] dark:bg-slate-800 border border-[#EAE7E0] dark:border-slate-700 flex items-center justify-center text-[#C18C5D] shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[#FAF9F5] dark:bg-slate-800 border border-[#EAE7E0] dark:border-slate-700 flex items-center justify-center text-[#C18C5D] shrink-0 group-active:scale-95 transition-transform duration-100">
                 <MessageSquareCode className="w-5 h-5" />
               </div>
               <div>
@@ -117,7 +119,7 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
                 </p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-[#9A9488] group-hover:text-[#4A5D4E] group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+            <ArrowRight className="w-4 h-4 text-[#9A9488] group-hover:text-[#4A5D4E] group-hover:translate-x-0.5 transition-all duration-100 shrink-0 ml-2" />
           </button>
         )}
 
@@ -167,7 +169,7 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
             href={leadGenUrlwk}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-1.5 rounded-lg bg-[#FAF9F5] hover:bg-[#EAE7E0] dark:bg-slate-800 text-[#4A5D4E] dark:text-slate-200 text-xs font-bold border border-[#EAE7E0] dark:border-slate-700 flex items-center gap-1 shrink-0 transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-[#FAF9F5] hover:bg-[#EAE7E0] active:bg-[#E2DDD5] active:scale-95 dark:bg-slate-800 text-[#4A5D4E] dark:text-slate-200 text-xs font-bold border border-[#EAE7E0] dark:border-slate-700 flex items-center gap-1 shrink-0 transition-all duration-100 select-none touch-manipulation cursor-pointer"
           >
             <Smartphone className="w-3.5 h-3.5 text-[#C18C5D]" />
             <span>Apply</span>
@@ -179,15 +181,15 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
         <div className="flex items-center justify-center gap-3 text-xs font-medium text-[#606C5D] dark:text-slate-400">
           <button
             onClick={onOpenRoadmap}
-            className="flex items-center gap-1.5 hover:text-[#4A5D4E] cursor-pointer transition-colors"
+            className="flex items-center gap-1.5 hover:text-[#4A5D4E] active:scale-95 active:text-[#4A5D4E] cursor-pointer transition-all duration-100 select-none touch-manipulation py-1 px-1.5 rounded-md"
           >
             <Compass className="w-3.5 h-3.5" />
             <span>10-Step Roadmap</span>
           </button>
           <span>•</span>
           <button
-            onClick={onOpenDashboard}
-            className="flex items-center gap-1.5 hover:text-[#4A5D4E] cursor-pointer transition-colors"
+            onClick={onOpenProperties || onOpenDashboard}
+            className="flex items-center gap-1.5 hover:text-[#4A5D4E] active:scale-95 active:text-[#4A5D4E] cursor-pointer transition-all duration-100 select-none touch-manipulation py-1 px-1.5 rounded-md"
           >
             <Search className="w-3.5 h-3.5" />
             <span>Browse Homes</span>

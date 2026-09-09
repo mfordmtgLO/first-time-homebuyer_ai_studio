@@ -1,9 +1,7 @@
-import { PropertyListing, OverlayEligibility } from "../types";
+import { PropertyListing } from "../types";
 import { 
   getPropertyOhcsPriceLimit, 
-  normalizeOregonCounty, 
-  OREGON_COUNTY_PRICE_LIMITS,
-  CountyPriceLimitInfo 
+  normalizeOregonCounty 
 } from "./ohcsPurchaseLimits";
 
 /**
@@ -88,7 +86,8 @@ export function isHomeReadyHomePossibleEligible(listing: PropertyListing): boole
   return isSfr || isEligibleManufactured;
 }
 
-export function isUsdaEligible(listing: PropertyListing): boolean {
+export function isUsdaEligible(listing?: PropertyListing | null): boolean {
+  if (!listing || !listing.overlayEligibility) return false;
   const el = listing.overlayEligibility;
   return Boolean(
     el.usda === true ||
@@ -101,7 +100,7 @@ export function isUsdaEligible(listing: PropertyListing): boolean {
  * Checks whether a property is situated within an OHCS / FFIEC Low-to-Moderate Income (LMI) Census Tract
  * (qualifying for enhanced OHCS Flex Lending 3% or 5% cash assistance grants).
  */
-export function isLmiEligible(listing: PropertyListing): boolean {
+export function isLmiEligible(listing?: PropertyListing | null): boolean {
   if (!listing || !listing.overlayEligibility) return false;
   const el = listing.overlayEligibility;
   return Boolean(
@@ -116,7 +115,8 @@ export function isLmiEligible(listing: PropertyListing): boolean {
  * Checks whether a property achieves Dual Overlay Qualification:
  * Qualifying for BOTH USDA 100% 0% Down financing AND OHCS Flex Lending LMI Assistance grants.
  */
-export function isLmiUsdaDual(listing: PropertyListing): boolean {
+export function isLmiUsdaDual(listing?: PropertyListing | null): boolean {
+  if (!listing) return false;
   return isUsdaEligible(listing) && isLmiEligible(listing);
 }
 
@@ -125,7 +125,7 @@ export function isLmiUsdaDual(listing: PropertyListing): boolean {
  * (e.g. Entire Coos County, Clatsop County, Baker County, or specific census tracts/cities).
  * Targeted areas offer higher purchase price caps ($692k-$789k) and higher household income limits.
  */
-export function isTargetedArea(listing: PropertyListing): boolean {
+export function isTargetedArea(listing?: PropertyListing | null): boolean {
   if (!listing || !listing.overlayEligibility) return false;
   const el = listing.overlayEligibility;
   
@@ -151,7 +151,8 @@ export function isTargetedArea(listing: PropertyListing): boolean {
 /**
  * Checks whether a property is in an OHCS Non-Targeted Area.
  */
-export function isNonTargetedArea(listing: PropertyListing): boolean {
+export function isNonTargetedArea(listing?: PropertyListing | null): boolean {
+  if (!listing) return false;
   return !isTargetedArea(listing);
 }
 
@@ -159,7 +160,7 @@ export function isNonTargetedArea(listing: PropertyListing): boolean {
  * Checks whether the listing price falls within the official OHCS FirstHome / Flex Lending purchase price cap
  * for the respective county, targeted / non-targeted status, and census tract.
  */
-export function isFirstHomePriceEligible(listing: PropertyListing): boolean {
+export function isFirstHomePriceEligible(listing?: PropertyListing | null): boolean {
   if (!listing) return false;
   const el = listing.overlayEligibility;
 
@@ -179,7 +180,7 @@ export function isFirstHomePriceEligible(listing: PropertyListing): boolean {
  * Checks whether listing price specifically meets the NON-TARGETED maximum purchase price limit
  * for its county and census tract.
  */
-export function isNonTargetedPriceEligible(listing: PropertyListing): boolean {
+export function isNonTargetedPriceEligible(listing?: PropertyListing | null): boolean {
   if (!listing) return false;
   const el = listing.overlayEligibility;
   const limitInfo = getPropertyOhcsPriceLimit(
@@ -195,7 +196,7 @@ export function isNonTargetedPriceEligible(listing: PropertyListing): boolean {
  * Checks whether listing price specifically meets the TARGETED AREA maximum purchase price limit
  * for its county and census tract.
  */
-export function isTargetedPriceEligible(listing: PropertyListing): boolean {
+export function isTargetedPriceEligible(listing?: PropertyListing | null): boolean {
   if (!listing) return false;
   const el = listing.overlayEligibility;
   const limitInfo = getPropertyOhcsPriceLimit(
@@ -222,7 +223,8 @@ export interface OverlayBadgeInfo {
  * Returns complete badge configurations for any property listing matching user specifications:
  * "USDA RD", "Flex Lending/LMI", "USDA RD+Flex", "Targeted Area Cap", "Non-Targeted Cap", etc.
  */
-export function getListingOverlayBadges(listing: PropertyListing): OverlayBadgeInfo[] {
+export function getListingOverlayBadges(listing?: PropertyListing | null): OverlayBadgeInfo[] {
+  if (!listing) return [];
   const badges: OverlayBadgeInfo[] = [];
 
   const lakeviewNational = isLakeviewNationalEligible(listing);
@@ -348,9 +350,9 @@ export interface OverlaySummaryCounts {
 /**
  * Calculates comprehensive statistical overlay metrics across any dataset of listings.
  */
-export function calculateOverlayCounts(listings: PropertyListing[]): OverlaySummaryCounts {
+export function calculateOverlayCounts(listings?: PropertyListing[] | null): OverlaySummaryCounts {
   const counts: OverlaySummaryCounts = {
-    total: listings.length,
+    total: Array.isArray(listings) ? listings.length : 0,
     lakeviewNational: 0,
     usda: 0,
     lmi: 0,
@@ -368,7 +370,10 @@ export function calculateOverlayCounts(listings: PropertyListing[]): OverlaySumm
     townhouse: 0,
   };
 
+  if (!Array.isArray(listings)) return counts;
+
   listings.forEach((l) => {
+    if (!l) return;
     const lakeviewNational = isLakeviewNationalEligible(l);
     const usda = isUsdaEligible(l);
     const lmi = isLmiEligible(l);
@@ -406,8 +411,8 @@ export function calculateOverlayCounts(listings: PropertyListing[]): OverlaySumm
  * search term, property type, price range, targeted/non-targeted price limits, and published status.
  */
 export function filterListings(
-  listings: PropertyListing[],
-  options: {
+  listings?: PropertyListing[] | null,
+  options?: {
     overlayFilter?: string; // 'all' | 'usda' | 'lmi' | 'lmi_usda' | 'targeted' | 'non_targeted' | 'price_eligible' | 'targeted_price' | 'non_targeted_price' | 'published' | 'draft'
     searchQuery?: string;
     propertyType?: string; // 'all' | 'Single Family' | 'Manufactured' | 'Condo' | 'Townhouse' | 'Multi-Family'
@@ -418,6 +423,7 @@ export function filterListings(
     minBeds?: number;
   }
 ): PropertyListing[] {
+  if (!Array.isArray(listings)) return [];
   const {
     overlayFilter = "all",
     searchQuery = "",
@@ -427,9 +433,10 @@ export function filterListings(
     minPrice,
     maxPrice,
     minBeds,
-  } = options;
+  } = options || {};
 
   return listings.filter((listing) => {
+    if (!listing) return false;
     // 1. Overlay & Price Cap Filter Logic
     if (overlayFilter === "lakeviewNational" && !isLakeviewNationalEligible(listing)) return false;
     if (overlayFilter === "usda" && !isUsdaEligible(listing)) return false;

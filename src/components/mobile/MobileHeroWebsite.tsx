@@ -2,21 +2,16 @@ import React from "react";
 import { 
   ArrowRight, 
   Sparkles, 
-  DollarSign, 
   Compass, 
-  Smartphone,
+  MessageSquareCode,
+  CheckCircle2,
+  Lock,
   ExternalLink,
   Search,
-  CheckCircle2,
-  MessageCircle,
-  Home,
-  MapPin,
-  TrendingUp,
-  Award,
-  Zap
+  ShieldCheck,
+  Smartphone
 } from "lucide-react";
 import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile, CapturedLead, PropertyListing } from "../../types";
-import { formatUSD } from "../../utils/mortgageMath";
 
 interface MobileHeroWebsiteProps {
   profile: FinancialProfile;
@@ -35,207 +30,171 @@ interface MobileHeroWebsiteProps {
 }
 
 export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
-  profile,
   onOpenCalculator,
   onOpenRoadmap,
   onOpenLeadBot,
-  onCaptureLead,
   loanOfficer,
-  activeAgent,
-  isCoBranded = false,
-  onOpenLoPortal,
-  properties = [],
   onOpenDashboard,
 }) => {
   const leadGenUrlwk = loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM";
 
   return (
-    <div className="flex flex-col space-y-5 pb-24 bg-[#F9F8F4] dark:bg-slate-950 min-h-[100dvh] font-sans">
+    <div className="flex flex-col justify-between min-h-[calc(100dvh-5rem)] px-5 pt-5 pb-8 bg-[#F9F8F4] dark:bg-slate-950 font-sans">
       
-      {/* 1. App-Like Welcome / Quick Action Header */}
-      <section className="bg-white dark:bg-slate-900 px-5 pt-6 pb-8 rounded-b-[2rem] shadow-sm border-b border-[#EAE7E0] dark:border-slate-800">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <p className="text-sm text-[#9A9488] font-medium mb-0.5">Welcome to</p>
-            <h1 className="text-2xl font-extrabold text-[#2D362E] dark:text-white tracking-tight">
-              Homebuyer <span className="text-[#4A5D4E]">Roadmap</span>
-            </h1>
-          </div>
-          <div className="w-12 h-12 bg-[#F1EFE9] dark:bg-slate-800 rounded-full flex items-center justify-center shrink-0 border border-[#EAE7E0] dark:border-slate-700">
-            <Home className="w-6 h-6 text-[#C18C5D]" />
-          </div>
+      {/* Top Brand Badge & Hook */}
+      <div className="space-y-4 text-center">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAE7E0] dark:bg-slate-800 text-[#4A5D4E] dark:text-[#D4A373] text-[11px] font-bold tracking-wide shadow-xs mx-auto">
+          <Sparkles className="w-3.5 h-3.5 text-[#C18C5D] animate-pulse" />
+          <span>2026 First-Time Buyer Guide</span>
         </div>
 
-        {/* Primary Call to Action - Gamified */}
+        <h1 className="text-3xl sm:text-4xl font-serif font-black text-[#2D362E] dark:text-white tracking-tight leading-[1.15]">
+          How much home <br />
+          <span className="text-[#4A5D4E] dark:text-[#D4A373]">can you afford?</span>
+        </h1>
+
+        <p className="text-sm text-[#606C5D] dark:text-slate-400 max-w-xs mx-auto leading-normal font-medium">
+          Get your monthly payment, price range, and down payment grant options in 60 seconds.
+        </p>
+      </div>
+
+      {/* Main Single-Tap Conversion Action Center */}
+      <div className="my-auto py-5 space-y-3">
+        
+        {/* Primary Single-Tap: Instant Affordability Calculator */}
         <button
+          id="mobile-single-tap-calculator-btn"
+          type="button"
           onClick={onOpenCalculator}
-          className="relative w-full overflow-hidden flex flex-col items-start gap-3 p-5 rounded-2xl bg-[#4A5D4E] hover:bg-[#38463B] shadow-lg active:scale-95 transition-transform cursor-pointer"
+          className="relative w-full group overflow-hidden flex flex-col p-5 rounded-2xl bg-[#4A5D4E] hover:bg-[#3d4d40] active:scale-[0.98] transition-all shadow-lg text-left cursor-pointer border border-[#38463B]"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider">
-            <Sparkles className="w-3 h-3 text-[#D4A373]" />
-            Step 1
+          {/* Subtle Ambient Background Highlight */}
+          <div className="absolute top-0 right-0 w-36 h-36 bg-[#C18C5D]/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+
+          <div className="flex items-center justify-between w-full mb-2.5">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-xs">
+              <Sparkles className="w-3 h-3 text-[#D4A373]" />
+              Single-Tap Entry
+            </span>
+            <span className="text-[11px] text-[#E0E7E1] font-semibold flex items-center gap-1">
+              <Lock className="w-3 h-3 text-white/70" /> No SSN Required
+            </span>
           </div>
-          <div className="text-left">
-            <h3 className="text-xl font-bold text-white mb-1">Check Buying Power</h3>
-            <p className="text-sm text-[#D1DDD3]">Find out what you can afford, instantly.</p>
-          </div>
-          <div className="w-full flex justify-end mt-2">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-              <ArrowRight className="w-4 h-4 text-white" />
+
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight">
+                Calculate Instant Affordability
+              </h2>
+              <p className="text-xs text-[#D1DDD3] mt-0.5">
+                Sliders for income, debts & monthly budget
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-white group-hover:translate-x-0.5 transition-transform">
+              <ArrowRight className="w-5 h-5" />
             </div>
           </div>
         </button>
-      </section>
 
-      {/* 2. Interactive AI Search Input */}
-      <section className="px-4">
-         <div className="w-full bg-white dark:bg-slate-900 border border-[#EAE7E0] dark:border-slate-800 p-1.5 rounded-2xl shadow-sm flex items-center gap-2">
-            <div className="pl-3 py-2 flex items-center justify-center shrink-0">
-              <Search className="w-5 h-5 text-[#9A9488]" />
-            </div>
-            <form 
-              className="flex-1"
-              onSubmit={(e) => {
-                e.preventDefault();
-                alert("GeoSphere AI Search Active!\n\n(Please open the 'Homes' tab to view results!)");
-              }}
-            >
-              <input 
-                 type="text" 
-                 placeholder="Search '3 beds under $450k'..." 
-                 className="w-full py-2.5 bg-transparent text-[15px] font-medium text-[#2D362E] dark:text-slate-100 placeholder:text-[#9A9488] focus:outline-none" 
-               />
-            </form>
-            {onOpenLeadBot && (
-              <button 
-                onClick={onOpenLeadBot}
-                className="shrink-0 p-2.5 mr-1 bg-[#F1EFE9] hover:bg-[#EAE7E0] dark:bg-slate-800 rounded-xl flex items-center justify-center transition-colors cursor-pointer"
-                title="Ask AI Advisor"
-              >
-                <MessageCircle className="w-5 h-5 text-[#C18C5D]" />
-              </button>
-            )}
-         </div>
-      </section>
-
-      {/* 3. Quick Action Grid (App Style) */}
-      <section className="px-4">
-        <h3 className="text-[13px] font-bold text-[#606C5D] dark:text-slate-400 mb-3 px-1 uppercase tracking-wider">
-          Shortcuts
-        </h3>
-        <div className="grid grid-cols-4 gap-3">
-          <button onClick={onOpenRoadmap} className="flex flex-col items-center gap-2 group cursor-pointer">
-            <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-[1.25rem] border border-[#EAE7E0] dark:border-slate-800 shadow-sm flex items-center justify-center active:scale-90 transition-transform">
-              <Compass className="w-6 h-6 text-[#4A5D4E]" />
-            </div>
-            <span className="text-[11px] font-semibold text-[#2D362E] dark:text-slate-300">Plan</span>
-          </button>
-          
-          <button onClick={onOpenDashboard} className="flex flex-col items-center gap-2 group cursor-pointer">
-            <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-[1.25rem] border border-[#EAE7E0] dark:border-slate-800 shadow-sm flex items-center justify-center active:scale-90 transition-transform">
-              <TrendingUp className="w-6 h-6 text-[#C18C5D]" />
-            </div>
-            <span className="text-[11px] font-semibold text-[#2D362E] dark:text-slate-300">Market</span>
-          </button>
-          
-          <a href={leadGenUrlwk} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 group cursor-pointer">
-            <div className="w-14 h-14 bg-[#D4A373] rounded-[1.25rem] shadow-sm flex items-center justify-center active:scale-90 transition-transform">
-              <Smartphone className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-[11px] font-semibold text-[#2D362E] dark:text-slate-300">Apply</span>
-          </a>
-
-          {onOpenLeadBot && (
-            <button onClick={onOpenLeadBot} className="flex flex-col items-center gap-2 group cursor-pointer">
-              <div className="w-14 h-14 bg-[#FAF9F5] dark:bg-slate-800 rounded-[1.25rem] border border-[#DCD7CD] dark:border-slate-700 shadow-sm flex items-center justify-center active:scale-90 transition-transform">
-                <Zap className="w-6 h-6 text-[#4A5D4E]" />
+        {/* Co-Primary Single-Tap: Guided AI Journey */}
+        {onOpenLeadBot && (
+          <button
+            id="mobile-single-tap-ai-journey-btn"
+            type="button"
+            onClick={onOpenLeadBot}
+            className="w-full flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-[#EAE7E0] dark:border-slate-800 hover:border-[#DCD7CD] shadow-sm active:scale-[0.98] transition-all text-left cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#FAF9F5] dark:bg-slate-800 border border-[#EAE7E0] dark:border-slate-700 flex items-center justify-center text-[#C18C5D] shrink-0">
+                <MessageSquareCode className="w-5 h-5" />
               </div>
-              <span className="text-[11px] font-semibold text-[#2D362E] dark:text-slate-300">AI Guide</span>
-            </button>
-          )}
-        </div>
-      </section>
+              <div>
+                <h3 className="text-sm font-bold text-[#2D362E] dark:text-slate-100 leading-snug">
+                  Start Guided AI Chat Journey
+                </h3>
+                <p className="text-xs text-[#606C5D] dark:text-slate-400">
+                  Ask questions, check rates & pre-qualify 24/7
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-[#9A9488] group-hover:text-[#4A5D4E] group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+          </button>
+        )}
 
-      {/* 4. Local Expert / Trust Card */}
-      <section className="px-4">
-        <div className="w-full bg-white dark:bg-slate-900 border border-[#EAE7E0] dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden p-5 flex flex-col gap-4">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-full bg-[#F1EFE9] border-2 border-white shadow-sm overflow-hidden shrink-0">
+        {/* Micro Trust Bar */}
+        <div className="flex items-center justify-center gap-3 pt-1 text-[11px] font-semibold text-[#606C5D] dark:text-slate-400">
+          <span className="flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#4A5D4E] dark:text-emerald-400" />
+            100% Free
+          </span>
+          <span className="text-[#DCD7CD]">•</span>
+          <span className="flex items-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#4A5D4E] dark:text-emerald-400" />
+            Zero Credit Impact
+          </span>
+          <span className="text-[#DCD7CD]">•</span>
+          <span>FHA & Conv.</span>
+        </div>
+      </div>
+
+      {/* Bottom Section: Verified Local Officer & Quick Explorers */}
+      <div className="space-y-3.5 pt-2 border-t border-[#EAE7E0]/80 dark:border-slate-800">
+        
+        {/* Compact Loan Officer Card */}
+        <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-[#EAE7E0] dark:border-slate-800 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#FAF9F5] border border-[#EAE7E0] overflow-hidden shrink-0 flex items-center justify-center font-bold text-[#4A5D4E] text-sm">
               {loanOfficer?.profileImageUrl ? (
-                <img src={loanOfficer.profileImageUrl} alt="Expert" className="w-full h-full object-cover" />
+                <img src={loanOfficer.profileImageUrl} alt={loanOfficer.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-[#EAE7E0] text-[#606C5D] font-bold text-xl">
-                  {loanOfficer?.name?.charAt(0) || "M"}
-                </div>
+                loanOfficer?.name?.charAt(0) || "M"
               )}
             </div>
-            <div className="flex-1">
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-bold uppercase tracking-wider mb-1">
-                <CheckCircle2 className="w-3 h-3" />
-                Verified Local Guide
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-[#2D362E] dark:text-slate-200">
+                  {loanOfficer?.name || "Mike Ford"}
+                </span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  NMLS #{loanOfficer?.nmls || "288455"}
+                </span>
               </div>
-              <h4 className="text-base font-bold text-[#2D362E] leading-tight">
-                {loanOfficer?.name || "Mike Ford"}
-              </h4>
-              <p className="text-xs text-[#606C5D] mt-0.5 font-medium">NMLS #{loanOfficer?.nmls || "288455"}</p>
+              <p className="text-[11px] text-[#9A9488]">Verified Local Lending Advisor</p>
             </div>
           </div>
-          
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            <a 
-              href={leadGenUrlwk}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-2.5 rounded-xl bg-[#4A5D4E] active:bg-[#38463B] text-white font-bold text-xs text-center transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              Get Approved
-            </a>
-            <button 
-              onClick={onOpenLeadBot}
-              className="w-full py-2.5 rounded-xl bg-[#F9F8F4] active:bg-[#F1EFE9] border border-[#EAE7E0] text-[#4A5D4E] font-bold text-xs text-center transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <MessageCircle className="w-3.5 h-3.5" />
-              Ask a Question
-            </button>
-          </div>
-        </div>
-      </section>
 
-      {/* 5. Clean Feature List */}
-      <section className="px-6 py-4">
-        <h3 className="text-lg font-bold text-[#2D362E] dark:text-slate-100 mb-4">Why use this app?</h3>
-        <div className="space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#EBF3ED] flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-4 h-4 text-[#2F5738]" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-[#2D362E] dark:text-slate-200">100% Free & Transparent</h4>
-              <p className="text-xs text-[#606C5D] dark:text-slate-400 mt-0.5">No paywalls. No hidden fees. Just clear data.</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#FDF0E6] flex items-center justify-center shrink-0">
-              <Award className="w-4 h-4 text-[#91461A]" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-[#2D362E] dark:text-slate-200">No SSN Required</h4>
-              <p className="text-xs text-[#606C5D] dark:text-slate-400 mt-0.5">Explore scenarios and buying power with zero credit impact.</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#EAE7E0] dark:bg-slate-800 flex items-center justify-center shrink-0">
-              <MapPin className="w-4 h-4 text-[#606C5D] dark:text-slate-400" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-[#2D362E] dark:text-slate-200">Live Property Match</h4>
-              <p className="text-xs text-[#606C5D] dark:text-slate-400 mt-0.5">Search MLS homes mapped directly to your buying power.</p>
-            </div>
-          </div>
+          <a
+            href={leadGenUrlwk}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-lg bg-[#FAF9F5] hover:bg-[#EAE7E0] dark:bg-slate-800 text-[#4A5D4E] dark:text-slate-200 text-xs font-bold border border-[#EAE7E0] dark:border-slate-700 flex items-center gap-1 shrink-0 transition-colors"
+          >
+            <Smartphone className="w-3.5 h-3.5 text-[#C18C5D]" />
+            <span>Apply</span>
+            <ExternalLink className="w-3 h-3 opacity-60" />
+          </a>
         </div>
-      </section>
+
+        {/* Secondary Exploration Pills (Compact) */}
+        <div className="flex items-center justify-center gap-3 text-xs font-medium text-[#606C5D] dark:text-slate-400">
+          <button
+            onClick={onOpenRoadmap}
+            className="flex items-center gap-1.5 hover:text-[#4A5D4E] cursor-pointer transition-colors"
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span>10-Step Roadmap</span>
+          </button>
+          <span>•</span>
+          <button
+            onClick={onOpenDashboard}
+            className="flex items-center gap-1.5 hover:text-[#4A5D4E] cursor-pointer transition-colors"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Browse Homes</span>
+          </button>
+        </div>
+
+      </div>
 
     </div>
   );

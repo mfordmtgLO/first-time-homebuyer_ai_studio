@@ -92,7 +92,7 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
     name: lo.name || matchedDefault?.name || "Loan Officer",
     title: lo.title || matchedDefault?.title || "Senior Loan Officer",
     nmlsId: lo.nmlsId || matchedDefault?.nmlsId || "",
-    company: lo.company || matchedDefault?.company || "Cornerstone First Mortgage",
+    company: "Cornerstone First Mortgage, LLC NMLS#173855", // Enforce compliance name
     branch: branch,
     email: lo.email || matchedDefault?.email || "",
     phone: lo.phone || matchedDefault?.phone || "",

@@ -2,7 +2,7 @@ import { db } from "../firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { normalizeRole, RbacRole } from "./rbac";
 
-const ADMIN_EMAIL = "fordmj@gmail.com";
+const ADMIN_EMAILS = ["fordmj@gmail.com", "mford@cfmtg.com"];
 const COMPLIANCE_EMAIL = "auditor@yourcompany.com";
 
 export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admin"> {
@@ -11,7 +11,7 @@ export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admi
   const email = user.email.toLowerCase();
   
   // 1. Is this the master admin / branch manager?
-  if (email === ADMIN_EMAIL.toLowerCase()) {
+  if (ADMIN_EMAILS.map(e => e.toLowerCase()).includes(email)) {
     await setDoc(doc(db, "user_roles", user.uid), {
       email,
       role: "admin",

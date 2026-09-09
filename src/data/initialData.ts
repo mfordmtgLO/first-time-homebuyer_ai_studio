@@ -867,7 +867,7 @@ export const DEFAULT_LOAN_OFFICER: LoanOfficerProfile = {
   name: "Mike Ford",
   title: "Senior Loan Officer & Branch Admin",
   nmlsId: "288455",
-  company: "Cornerstone First Mortgage",
+  company: "Cornerstone First Mortgage, LLC NMLS#173855",
   branch: "Lake Oswego, OR (serving Oregonians state-wide since 2000)",
   email: "mford@cfmtg.com",
   phone: "(541) 729-0819",

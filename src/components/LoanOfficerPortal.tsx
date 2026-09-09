@@ -183,6 +183,7 @@ interface LoanOfficerPortalProps {
   onUpdateGuidesState: (newState: ProfessionalGuidesState) => void;
   onClose: () => void;
   onViewPublicSite: () => void;
+  onLogout?: () => void;
   properties?: PropertyListing[];
   setProperties?: React.Dispatch<React.SetStateAction<PropertyListing[]>>;
 }
@@ -193,6 +194,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   onUpdateGuidesState,
   onClose,
   onViewPublicSite,
+  onLogout,
   properties = [],
   setProperties = () => {},
 }) => {
@@ -1372,13 +1374,25 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   };
 
   // Sign out / Instant Logout
-  const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("lo_portal_auth_id");
-      localStorage.removeItem("lo_portal_auth_email");
+  const handleLogout = async () => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("lo_portal_auth_id");
+        localStorage.removeItem("lo_portal_auth_email");
+        localStorage.removeItem("lo_portal_role");
+      }
+      setAuthenticatedLoId(null);
+      await signOut(auth);
+      if (onLogout) {
+        onLogout();
+      }
+      triggerToast("Logged out of Loan Officer Dashboard.");
+    } catch (err) {
+      console.error("Logout error:", err);
+      if (onLogout) {
+        onLogout();
+      }
     }
-    setAuthenticatedLoId(null);
-    triggerToast("Logged out of Loan Officer Dashboard.");
   };
 
   // Switch viewing Loan Officer (Admin only)

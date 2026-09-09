@@ -872,6 +872,14 @@ export default function App() {
                   setShowLoPortal(false);
                   handleNavigate("hero", "website");
                 }}
+                onLogout={() => {
+                  setUserRole(null);
+                  setShowLoPortal(false);
+                  // Direct back to secure login
+                  if (typeof window !== "undefined") {
+                    window.location.href = "/lo-login";
+                  }
+                }}
                 properties={properties}
                 setProperties={setProperties}
               />

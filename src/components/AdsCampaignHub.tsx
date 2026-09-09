@@ -29,8 +29,11 @@ interface AdsCampaignHubProps {
   activeAgent: RealEstateAgentProfile;
   adCampaignDrafts: AdCampaignDraft[];
   onSaveAdDraft: (draft: AdCampaignDraft) => void;
+  onUpdateCampaign?: (campaign: AdCampaignDraft) => void;
   onUpdateAdSettings: (settings: LoanOfficerAdSettings) => void;
   pairingUrl: string;
+  onToggleCampaignState?: (id: string, newStatus: string) => void;
+  onCaptureLead?: (lead: CapturedLead) => void;
 }
 
 export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
@@ -42,6 +45,8 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
   pairingUrl
 }) => {
   const [activePlatformTab, setActivePlatformTab] = useState<"meta" | "google">("meta");
+  const [viewAuditHistoryId, setViewAuditHistoryId] = useState<string | null>(null);
+  const [targetLeadCap, setTargetLeadCap] = useState<number | "">("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("grants_calculator");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -151,18 +156,18 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
     specialCategory: "Housing (HEC - RESPA / Fair Housing Compliant)",
     objective: "Lead Generation / Instant Interactive Portal",
     dailyBudget: adSettings.dailyBudgetUSD || 25,
-    targetAudience: `Age 24-55 • Geo: ${adSettings.targetCities?.join(", ") || "Portland Metro (25 mi)"} • Interests: First-Time Buyer, Zillow, Mortgage Loans, Down Payment Assistance`,
+    targetAudience: `Age 24-55 • Geo: ${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.join(", ") || adSettings.targetCities?.join(", ") || "Portland Metro (25 mi)"} • Interests: First-Time Buyer, Zillow, Mortgage Loans, Down Payment Assistance`,
     primaryText: `Stop guessing what your monthly mortgage payment will be. 🏡 
 
-We created a free, transparent interactive First-Time Homebuyer Portal for Oregon & Washington buyers to calculate exact monthly payments (including taxes, HOA, and home insurance) and check eligibility for up to $30,000 in state Down Payment Assistance (DPA).
+We created a free, transparent interactive First-Time Homebuyer Portal for ${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.join(" & ") || "local"} buyers to calculate exact monthly payments (including taxes, HOA, and home insurance) and check eligibility for up to $30,000 in state Down Payment Assistance (DPA).
 
 ✨ Calculate your true PITI payment in 60 seconds
-✨ Browse verified Oregon & Washington Down Payment Assistance (DPA) programs
+✨ Browse verified ${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.[0] || "Local"} Down Payment Assistance (DPA) programs
 ✨ Use our home tour scorecard to inspect listings without stress
 
 Tap "Calculate Buying Power" to try the live interactive tool now!`,
     headline: "Calculate Your True Monthly Payment & DPA in 60 Sec",
-    description: `Free Interactive Tool • Powered by ${loanOfficer.name} (${loanOfficer.nmlsId}) & ${activeAgent.name} (REALTOR®)`,
+    description: `Free Interactive Tool • Powered by ${loanOfficer.name} (NMLS #${loanOfficer.nmlsId}) & ${activeAgent.name} (Lic #${activeAgent.licenseNumber || "Broker"})`,
     ctaButton: "Calculate Buying Power / Learn More",
     destinationUrl: metaCampaignUrl
   };
@@ -171,12 +176,12 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
   const googleCampaignUrl = `${pairingUrl}${pairingUrl.includes("?") ? "&" : "?"}utm_source=google_ads&utm_medium=search_cpc&utm_campaign=first_time_homebuyer_calculator&utm_term=oregon_dpa_assistance`;
 
   const googleAdSpec = aiGoogleSpec || {
-    campaignName: `[Google Search] First Time Homebuyer Oregon • ${loanOfficer.name} + ${activeAgent.name}`,
+    campaignName: `[Google Search] First Time Homebuyer ${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.[0] || "Local"} • ${loanOfficer.name} + ${activeAgent.name}`,
     network: "Google Search (High Intent Keywords)",
     dailyBudget: adSettings.dailyBudgetUSD ? adSettings.dailyBudgetUSD + 5 : 30,
-    targetGeo: adSettings.targetCities?.join(", ") || "Portland, OR Metro, Washington County, Clackamas County",
+    targetGeo: (activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.join(", ") || adSettings.targetCities?.join(", ") || "Portland, OR Metro, Washington County, Clackamas County",
     headlines: [
-      "Oregon First Time Homebuyer Hub",
+      `${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.[0] || "Local"} First Time Homebuyer Hub`,
       "Free 2026 Mortgage Calculator",
       "Check $30,000 DPA Eligibility",
       `Mike Ford NMLS #${loanOfficer.nmlsId.replace(/[^0-9]/g, "") || "184209"}`,
@@ -184,18 +189,18 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
     ],
     descriptions: [
       "Calculate exact monthly payments including property taxes, HOA & insurance. Zero guesswork.",
-      "Explore verified Oregon Down Payment Assistance (DPA), 2-1 buydowns, and 10-step closing roadmap. Try free today.",
-      `Co-presented with ${activeAgent.name} (${activeAgent.brokerage}). Transparent homebuying clarity.`,
+      `Explore verified ${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.[0] || "Local"} Down Payment Assistance (DPA), 2-1 buydowns, and 10-step closing roadmap. Try free today.`,
+      `Co-presented with ${activeAgent.name} (${activeAgent.brokerage} | Lic #${activeAgent.licenseNumber}). Transparent homebuying clarity.`,
       "Fast 14-day pre-approval options and custom budget planning. Start your interactive plan."
     ],
     keywords: [
-      "first time home buyer oregon",
-      "oregon down payment assistance dpa",
-      "mortgage payment calculator portland or",
-      "first time buyer pre approval portland",
-      "how much house can i afford oregon",
-      "piti mortgage calculator oregon",
-      "oregon bond residential loan program"
+      `first time home buyer ${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.[0]?.toLowerCase() || "oregon"}`,
+      `${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.[0]?.toLowerCase() || "oregon"} down payment assistance dpa`,
+      `mortgage payment calculator ${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.[0]?.toLowerCase() || "portland"}`,
+      `first time buyer pre approval ${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.[0]?.toLowerCase() || "portland"}`,
+      `how much house can i afford ${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.[0]?.toLowerCase() || "oregon"}`,
+      `piti mortgage calculator ${(activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas)?.[0]?.toLowerCase() || "oregon"}`,
+      "local bond residential loan program"
     ],
     destinationUrl: googleCampaignUrl
   };
@@ -214,11 +219,13 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
         descriptionText: metaAdSpec.description,
         targetUrl: metaCampaignUrl,
         dailyBudget: adSettings.dailyBudgetUSD || 25,
-        targetLocations: adSettings.targetCities || ["Portland Metro"],
+        targetLocations: (activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas) || adSettings.targetCities || ["Portland Metro"],
         specialHousingCategory: true,
         adObjective: "LEAD_GENERATION",
         status: "ready_to_launch",
-        lastSaved: new Date().toISOString().split("T")[0]
+        lastSaved: new Date().toISOString().split("T")[0],
+        leadCap: typeof targetLeadCap === "number" ? targetLeadCap : undefined,
+        currentLeads: 0
       };
       onSaveAdDraft(draft);
     } else {
@@ -234,12 +241,14 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
         descriptionText: googleAdSpec.descriptions[1],
         targetUrl: googleCampaignUrl,
         dailyBudget: googleAdSpec.dailyBudget,
-        targetLocations: adSettings.targetCities || ["Portland Metro"],
+        targetLocations: (activeAgent.activeAdCounties?.length ? activeAgent.activeAdCounties : activeAgent.marketAreas) || adSettings.targetCities || ["Portland Metro"],
         keywords: googleAdSpec.keywords,
         specialHousingCategory: true,
         adObjective: "LEAD_GENERATION",
         status: "ready_to_launch",
-        lastSaved: new Date().toISOString().split("T")[0]
+        lastSaved: new Date().toISOString().split("T")[0],
+        leadCap: typeof targetLeadCap === "number" ? targetLeadCap : undefined,
+        currentLeads: 0
       };
       onSaveAdDraft(draft);
     }
@@ -654,6 +663,137 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
           </div>
         </div>
       )}
+
+      {/* Active Campaigns Tracker UI */}
+      {adCampaignDrafts && adCampaignDrafts.length > 0 && (
+        <div className="mt-8 bg-white border border-[#EAE7E0] rounded-3xl p-6 shadow-sm">
+          <h3 className="font-serif font-bold text-lg text-[#2D362E] flex items-center gap-2 mb-4">
+            <svg className="w-5 h-5 text-[#4A5D4E]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Active & Pending Campaign Tracker
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[#EAE7E0]">
+                  <th className="pb-3 text-[10px] uppercase font-bold text-[#9A9488]">Campaign Name</th>
+                  <th className="pb-3 text-[10px] uppercase font-bold text-[#9A9488]">Platform</th>
+                  <th className="pb-3 text-[10px] uppercase font-bold text-[#9A9488]">Geo Targets</th>
+                  <th className="pb-3 text-[10px] uppercase font-bold text-[#9A9488]">Budget</th>
+                  <th className="pb-3 text-[10px] uppercase font-bold text-[#9A9488]">Leads / Cap</th>
+                  <th className="pb-3 text-[10px] uppercase font-bold text-[#9A9488]">Status</th>
+                  <th className="pb-3 text-[10px] uppercase font-bold text-[#9A9488]">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EAE7E0]">
+                {adCampaignDrafts.map((camp) => (
+                  <tr key={camp.id} className="hover:bg-[#F9F8F4] transition-colors">
+                    <td className="py-4 pr-4">
+                      <div className="font-bold text-xs text-[#2D362E]">{camp.campaignName}</div>
+                    </td>
+                    <td className="py-4 pr-4">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${camp.platform === "meta" ? "bg-blue-100 text-blue-800" : "bg-red-100 text-red-800"}`}>
+                        {camp.platform === "meta" ? "Meta" : "Google"}
+                      </span>
+                    </td>
+                    <td className="py-4 pr-4">
+                      <div className="text-[10px] text-[#606C5D] max-w-[150px] truncate" title={camp.targetLocations?.join(", ")}>
+                        {camp.targetLocations?.join(", ") || "Oregon"}
+                      </div>
+                    </td>
+                    <td className="py-4 pr-4">
+                      <div className="text-xs font-semibold text-[#4A5D4E]">${camp.dailyBudget}/day</div>
+                    </td>
+                    <td className="py-4 pr-4">
+                      {camp.isCompliancePaused ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200 inline-flex items-center gap-1">
+                          Admin Paused
+                        </span>
+                      ) : (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 border ${camp.status === "active" ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-yellow-100 text-yellow-800 border-yellow-200"}`}>
+                          {camp.status === "active" ? (
+                            <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Running</>
+                          ) : (
+                            <><span className="w-1.5 h-1.5 rounded-full bg-yellow-500" /> Pending</>
+                          )}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-4 pr-4">
+                      {!camp.isCompliancePaused && (
+                        <button
+                          onClick={() => onToggleCampaignState && onToggleCampaignState(camp.id, camp.status === "active" ? "paused" : "active")}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${camp.status === "active" ? "bg-[#F1EFE9] text-[#2D362E] hover:bg-[#EAE7E0]" : "bg-[#4A5D4E] text-white hover:bg-[#38463B]"}`}
+                        >
+                          {camp.status === "active" ? "Pause" : "Activate"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setViewAuditHistoryId(camp.id)}
+                        className="ml-2 px-2 py-1.5 rounded-lg text-[#606C5D] hover:bg-[#F1EFE9] transition-colors inline-flex items-center"
+                        title="View Change History"
+                      >
+                        <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Audit History Modal */}
+      {viewAuditHistoryId && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E]">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
+              <h4 className="font-serif font-bold text-lg text-[#2D362E] flex items-center gap-2">
+                <svg className="w-5 h-5 text-[#C18C5D]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Campaign Change History
+              </h4>
+              <button
+                onClick={() => setViewAuditHistoryId(null)}
+                className="text-xs text-[#9A9488] hover:text-[#2D362E]"
+              >
+                ✕ Close
+              </button>
+            </div>
+            
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+              {(() => {
+                const camp = adCampaignDrafts.find(c => c.id === viewAuditHistoryId);
+                const logs = camp?.auditLog || [];
+                
+                if (logs.length === 0) {
+                  return (
+                    <div className="text-center text-sm text-[#606C5D] py-8">
+                      No change history available for this campaign.
+                    </div>
+                  );
+                }
+                
+                return logs.slice().reverse().map((log, index) => (
+                  <div key={log.id} className="relative pl-6 pb-4 border-l-2 border-[#EAE7E0] last:border-transparent last:pb-0">
+                    <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-[#C18C5D]" />
+                    <div className="text-[10px] text-[#9A9488] font-mono mb-1">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </div>
+                    <div className="text-xs font-bold text-[#2D362E] mb-0.5">
+                      {log.actor}
+                    </div>
+                    <div className="text-xs text-[#606C5D]">
+                      <span className="font-medium text-[#4A5D4E]">{log.action}</span>
+                      {log.details && <span className="ml-1 opacity-75">— {log.details}</span>}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

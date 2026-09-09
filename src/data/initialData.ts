@@ -1407,6 +1407,59 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
 
 export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
   {
+    id: "agent-kanndice-mclean",
+    name: "Kanndice McLean",
+    title: "Senior Home Specialist, REALTOR®",
+    brokerage: "Cascade Valley Real Estate",
+    licenseNumber: "OR Lic #201248911",
+    email: "kanndice.mclean@cascadevalleyre.com",
+    phone: "(503) 555-0182",
+    headshotUrl: "",
+    agentType: "buyer_agent",
+    experienceYears: 10,
+    production12MoVolume: 22400000,
+    production12MoUnits: 38,
+    buysideVolume12Mo: 17200000,
+    buysideUnits12Mo: 29,
+    listingVolume12Mo: 5200000,
+    listingUnits12Mo: 9,
+    buysideSharePct: 76,
+    activeListingsCount: 7,
+    rating: 4.95,
+    bio: "Kanndice is an expert in property inspection discovery, neighborhood nuances, home details, and crafting winning offer strategies that secure homes for first-time buyers in competitive markets.",
+    specialties: [
+      "Winning Offer Strategy",
+      "Home & Inspection Nuances",
+      "First-Time Homebuyers",
+      "Portland Metro & Willamette Valley"
+    ],
+    marketAreas: ["Portland Metro", "Lake Oswego", "Beaverton", "Tigard", "West Linn"],
+    mlsAffiliation: "RMLS",
+    mlsAreas: ["Multnomah", "Washington", "Clackamas"],
+    licensedCounties: ["Multnomah", "Washington", "Clackamas"],
+    websiteUrl: "https://cascadevalleyre.com/kanndice-mclean",
+    assignedLoIds: ["lo-mike-ford", "lo-lonn-kilstrom"],
+    customSlug: "kanndice-mclean",
+    realTrendsVerified: true,
+    realTrendsRank: "America's Best - Oregon Top Buyer Specialists",
+    realTrendsSides: 38,
+    realTrendsVolume: 22400000,
+    realTrendsYear: 2025,
+    realTrendsCategory: "Individual Agent - Volume",
+    topPartners12Mo: [
+      {
+        partnerId: "lo-mike-ford",
+        partnerName: "Mike Ford",
+        partnerCompanyOrBrokerage: "Cornerstone First Mortgage",
+        partnerRole: "loan_officer",
+        closedUnits12Mo: 18,
+        closedVolume12Mo: 9200000,
+        partnerNmlsOrLicense: "NMLS #288455",
+        buysideSharePct: 100
+      }
+    ]
+  },
+  {
     id: "agent-sarah-jenkins",
     name: "Sarah Jenkins",
     title: "Senior Buyer Specialist, REALTOR®",
@@ -1904,6 +1957,19 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
 ];
 
 export const INITIAL_PAIRINGS: import("../types").LOPairing[] = [
+  {
+    id: "pair-mike-kanndice",
+    loId: "lo-mike-ford",
+    agentId: "agent-kanndice-mclean",
+    title: "Mike Ford + Kanndice McLean (Winning Offer & Financing Strategy)",
+    customSlug: "mike-and-kanndice",
+    campaignTag: "winning-offer-financing-team",
+    notes: "Local Guides pairing Mike Ford (Financing & Pre-Qual) with Kanndice McLean (Home Details & Winning Offer Strategy).",
+    createdAt: "2026-08-01",
+    active: true,
+    totalViews: 412,
+    totalLeads: 36
+  },
   {
     id: "pair-1",
     loId: "lo-mike-ford",

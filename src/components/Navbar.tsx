@@ -37,7 +37,9 @@ import {
 import { FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
 import { analyzeRateTrends, TrendHorizon } from "../utils/rateTrends";
+import { PWAInstallButton } from "./PWAInstallButton";
 import { ThemeToggle } from "./ThemeToggle";
+import { PWAInstallButton } from "./PWAInstallButton";
 
 export interface NavItem {
   id: string;
@@ -629,6 +631,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>AI Prequal</span>
             </button>
           )}
+          <div className="hidden sm:block"><PWAInstallButton className="h-8 py-1 px-2" /></div>
+          <ThemeToggle className="h-8 w-8" />
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-1.5 rounded-lg bg-white dark:bg-slate-900 text-[#606C5D] dark:text-slate-300 border border-[#EAE7E0] dark:border-slate-700 shadow-sm focus:outline-none cursor-pointer"

@@ -11,6 +11,7 @@ import {
   Building, 
   DollarSign, 
   Eye, 
+  MessageSquare,
   Filter, 
   Sparkles, 
   Check, 

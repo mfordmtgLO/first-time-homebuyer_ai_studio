@@ -25,8 +25,15 @@ import {
   ExternalLink,
   X,
   Flame,
+  Bed,
+  Bath,
+  Maximize,
+  MessageSquare,
+  PersonStanding,
+  Clock,
 } from "lucide-react";
-import { PropertyListing, FinancialProfile } from "../types";
+import { PropertyListing, FinancialProfile, PropertyConversation } from "../types";
+import { subscribeToPropertyConversation } from "../services/propertyConversationService";
 import { formatUSD } from "../utils/mortgageMath";
 import {
   getListingCoordinates,
@@ -124,7 +131,14 @@ export const ClusteredPropertyMarkers = ({
   setHoveredPropertyId,
 }: any) => {
   const [markers, setMarkers] = useState<{ [key: string]: Marker }>({});
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, property: any } | null>(null);
   const map = useMap();
+
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const clusterer = useMemo(() => {
     if (!map) return null;
@@ -194,7 +208,87 @@ export const ClusteredPropertyMarkers = ({
           </AdvancedMarker>
         );
       })}
+      
+      {/* Custom Context Menu */}
+      {contextMenu && (
+        <div 
+          className="fixed z-[9999] bg-white rounded-xl shadow-2xl border border-stone-200 py-1.5 min-w-[180px] overflow-hidden"
+          style={{ 
+            top: Math.min(contextMenu.y, window.innerHeight - 100), 
+            left: Math.min(contextMenu.x, window.innerWidth - 200) 
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+           <button
+             className="w-full text-left px-4 py-2 hover:bg-stone-50 text-[#2D362E] text-xs font-semibold flex items-center gap-2"
+             onClick={(e) => {
+               e.stopPropagation();
+               if (map) {
+                 const sv = map.getStreetView();
+                 sv.setPosition({ lat: contextMenu.property.lat, lng: contextMenu.property.lng });
+                 sv.setVisible(true);
+               }
+               setContextMenu(null);
+             }}
+           >
+             <PersonStanding className="w-3.5 h-3.5 text-blue-600"/>
+             View Street Level
+           </button>
+           <button
+             className="w-full text-left px-4 py-2 hover:bg-stone-50 text-[#2D362E] text-xs font-semibold flex items-center gap-2"
+             onClick={(e) => {
+               e.stopPropagation();
+               setSelectedPropertyId(contextMenu.property.id);
+               setContextMenu(null);
+             }}
+           >
+             <Eye className="w-3.5 h-3.5 text-[#4A5D4E]"/>
+             View Details
+           </button>
+        </div>
+      )}
     </>
+  );
+};
+
+
+const SmsShareButton = ({ property }: { property: any }) => {
+  const shareViaSMS = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const propertyLink = `${window.location.origin}${window.location.pathname}`;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const separator = isIOS ? '&' : '?';
+    const message = `Check out this property: ${property.address}, ${property.city}.\n\nView here: ${propertyLink}?property=${property.id}`;
+    window.location.href = `sms:${separator}body=${encodeURIComponent(message)}`;
+  };
+
+  return (
+    <button
+      onClick={shareViaSMS}
+      className="p-1 rounded border border-[#EAE7E0] hover:bg-stone-100 text-[#606C5D]"
+      title="Share via SMS"
+    >
+      <MessageSquare className="w-3 h-3" />
+    </button>
+  );
+};
+
+const StreetViewButton = ({ lat, lng }: { lat: number; lng: number }) => {
+  const map = useMap();
+  return (
+    <button
+      onClick={() => {
+        if (map) {
+          const sv = map.getStreetView();
+          sv.setPosition({ lat, lng });
+          sv.setVisible(true);
+        }
+      }}
+      className="p-1 rounded border border-[#EAE7E0] hover:bg-stone-100 text-[#606C5D]"
+      title="Open Google Street View"
+    >
+      <PersonStanding className="w-3 h-3" />
+    </button>
   );
 };
 
@@ -240,6 +334,27 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
 
   // Map view type: 'google' or 'fallback_vector'
   const isGoogleMapsReady = Boolean(apiKey && apiKey.trim().length > 10);
+
+  // Handle Find Me using geolocation
+  const handleFindMe = () => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setSelectedCityAnchor("custom");
+          setSearchCenter({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Error getting location", error);
+          alert("Could not get your location. Please check browser permissions.");
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by your browser");
+    }
+  };
 
   // Synchronize search center when city anchor changes
   const handleCityAnchorChange = (cityKey: string) => {
@@ -565,15 +680,25 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
           {/* Origin / City Anchor */}
           <div className="md:col-span-4 space-y-1">
-            <label className="text-[11px] font-bold text-[#606C5D] uppercase tracking-wider flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#C18C5D]" />
-              <span>Search Center Origin</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold text-[#606C5D] uppercase tracking-wider flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-[#C18C5D]" />
+                <span>Search Center Origin</span>
+              </label>
+              <button 
+                onClick={handleFindMe}
+                className="text-[10px] flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#4A5D4E]/10 text-[#4A5D4E] hover:bg-[#4A5D4E]/20 transition-colors font-bold cursor-pointer"
+                title="Center map on my current location"
+              >
+                Find Me
+              </button>
+            </div>
             <select
               value={selectedCityAnchor}
               onChange={(e) => handleCityAnchorChange(e.target.value)}
               className="w-full text-xs font-medium px-3 py-2 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] text-[#2D362E] focus:outline-none focus:border-[#4A5D4E] cursor-pointer"
             >
+              <option value="custom" className="font-bold text-[#4A5D4E] hidden">📍 My Current Location</option>
               <option value="portland">Portland Metro (Division / SE)</option>
               <option value="beaverton">Beaverton (Silicon Forest / MAX)</option>
               <option value="lake oswego">Lake Oswego (Top Ranked Schools)</option>
@@ -1071,6 +1196,67 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                           </p>
                         </div>
 
+                        {/* Beds, Baths, Sqft, DOM */}
+                        <div className="flex items-center gap-3 text-[10px] text-[#5C6F60] font-medium py-0.5">
+                          <div className="flex items-center gap-1" title="Bedrooms">
+                            <Bed className="w-3 h-3 text-[#8C9A8E]" />
+                            <span>{activeSelectedProperty.beds}</span>
+                          </div>
+                          <div className="flex items-center gap-1" title="Bathrooms">
+                            <Bath className="w-3 h-3 text-[#8C9A8E]" />
+                            <span>{activeSelectedProperty.baths}</span>
+                          </div>
+                          <div className="flex items-center gap-1" title="Square Feet">
+                            <Maximize className="w-3 h-3 text-[#8C9A8E]" />
+                            <span>{activeSelectedProperty.sqft.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-1 ml-auto" title="Days on Market">
+                            <Clock className="w-3 h-3 text-[#8C9A8E]" />
+                            <span>{activeSelectedProperty.daysOnMarket || 1} DOM</span>
+                          </div>
+                        </div>
+
+                        
+                        {/* LO & Cobrand Agent Contacts */}
+                        <div className="bg-sky-50 p-1.5 rounded-lg border border-sky-100 flex items-center justify-between text-[9px] font-medium text-sky-800">
+                           <div className="flex items-center gap-1">
+                             <div className="w-4 h-4 rounded-full bg-sky-200 flex items-center justify-center font-bold">LO</div>
+                             <span>Mike Ford (Mortgage)</span>
+                           </div>
+                           <div className="flex items-center gap-1">
+                             <div className="w-4 h-4 rounded-full bg-sky-200 flex items-center justify-center font-bold">RE</div>
+                             <span>Kanndice M. (Agent)</span>
+                           </div>
+                        </div>
+
+                        {/* GeoSphere Sync & Loan Flags */}
+                        <div className="flex flex-wrap gap-1">
+                           <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[8px] font-bold border border-emerald-200">
+                             GEO-SYNC: RENTCAST
+                           </span>
+                           <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded text-[8px] font-bold border border-purple-200">
+                             $0 DPA ELIGIBLE
+                           </span>
+                           <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[8px] font-bold border border-amber-200">
+                             SELLER CREDIT 2-1
+                           </span>
+                        </div>
+
+                        {/* Dynamic Q&A Notes */}
+                        <div className="bg-[#FAF9F5] p-2 rounded-xl border border-[#EAE7E0] text-[10px] space-y-1">
+                          <div className="font-bold text-[#4A5D4E] flex items-center justify-between">
+                            <span>Live Property Q&A</span>
+                            {propertyConversation?.hasPendingActionItem && (
+                              <span className="text-[8px] bg-red-100 text-red-600 px-1 rounded animate-pulse">Pending LO</span>
+                            )}
+                          </div>
+                          <p className="text-[9px] text-[#606C5D] italic line-clamp-2">
+                            {propertyConversation?.notes 
+                              ? `"${propertyConversation.notes}"` 
+                              : "No questions asked yet. Ask Mike about this property!"}
+                          </p>
+                        </div>
+
                         {/* Readiness & School District Snippet */}
                         <div className="bg-[#FAF9F5] p-2 rounded-xl border border-[#EAE7E0] text-[10px] space-y-1">
                           <div className="flex items-center justify-between text-[#4A5D4E] font-semibold">
@@ -1104,6 +1290,8 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                           >
                             Ask AI
                           </button>
+                          <StreetViewButton lat={activeSelectedProperty.lat} lng={activeSelectedProperty.lng} />
+                          <SmsShareButton property={activeSelectedProperty} />
                           {getZillowUrl(activeSelectedProperty) && (
                             <a
                               href={getZillowUrl(activeSelectedProperty)}

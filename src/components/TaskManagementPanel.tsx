@@ -23,7 +23,8 @@ import {
   Flame,
   FileText
 } from "lucide-react";
-import { CapturedLead, PropertyListing, RealEstateAgentProfile, CurationTask, LoanOfficerProfile } from "../types";
+import { CapturedLead, PropertyListing, RealEstateAgentProfile, CurationTask, LoanOfficerProfile, PropertyActionItem } from "../types";
+import { subscribeToAllPropertyActionItems, resolvePropertyActionItemDirectly } from "../services/propertyConversationService";
 import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 import { JourneyPhaseLabel } from "./JourneyPhaseLabel";
 
@@ -52,6 +53,45 @@ export const TaskManagementPanel: React.FC<TaskManagementPanelProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedAgentAssignments, setSelectedAgentAssignments] = useState<Record<string, string>>({});
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+
+  // Property Action Items from Firestore (real-time)
+  const [propertyActionItems, setPropertyActionItems] = useState<PropertyActionItem[]>([]);
+  const [resolvingActionId, setResolvingActionId] = useState<string | null>(null);
+  const [resolutionTextMap, setResolutionTextMap] = useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    const unsub = subscribeToAllPropertyActionItems(setPropertyActionItems);
+    return () => unsub();
+  }, []);
+
+  const handleResolveActionItem = async (item: PropertyActionItem) => {
+    const text = resolutionTextMap[item.id];
+    if (!text?.trim()) {
+      if (onTriggerToast) onTriggerToast("Please enter a resolution message before marking as resolved.");
+      return;
+    }
+    
+    setResolvingActionId(item.id);
+    try {
+      await resolvePropertyActionItemDirectly({
+        conversationId: item.conversationId,
+        actionItemId: item.id,
+        resolutionText: text,
+        loName: loanOfficer.name
+      });
+      if (onTriggerToast) onTriggerToast(`Resolved property question for ${item.leadName}`);
+      setResolutionTextMap(prev => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+    } catch (err) {
+      console.error("Failed to resolve action item:", err);
+      if (onTriggerToast) onTriggerToast("Failed to resolve action item. Please try again.");
+    } finally {
+      setResolvingActionId(null);
+    }
+  };
 
   // Custom task status override state (persisted locally per leadId)
   const [taskStateMap, setTaskStateMap] = useState<Record<string, {
@@ -130,10 +170,23 @@ export const TaskManagementPanel: React.FC<TaskManagementPanelProps> = ({
     });
   }, [generatedCurationTasks, statusFilter, searchQuery]);
 
+  // Filter property action items
+  const filteredActionItems = useMemo(() => {
+    return propertyActionItems.filter(item => {
+      if (statusFilter === 'pending' && item.status !== 'pending') return false;
+      if (statusFilter === 'completed' && item.status !== 'resolved') return false;
+      if (statusFilter === 'in_progress' && item.status !== 'pending') return false; // Treat pending as in_progress for this tab since it's an active item
+
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
+      return item.leadName.toLowerCase().includes(q) || item.propertyAddress.toLowerCase().includes(q) || item.questionText.toLowerCase().includes(q);
+    });
+  }, [propertyActionItems, statusFilter, searchQuery]);
+
   // Counts
-  const pendingCount = generatedCurationTasks.filter(t => t.status === 'pending').length;
+  const pendingCount = generatedCurationTasks.filter(t => t.status === 'pending').length + propertyActionItems.filter(t => t.status === 'pending').length;
   const inProgressCount = generatedCurationTasks.filter(t => t.status === 'in_progress').length;
-  const completedCount = generatedCurationTasks.filter(t => t.status === 'completed').length;
+  const completedCount = generatedCurationTasks.filter(t => t.status === 'completed').length + propertyActionItems.filter(t => t.status === 'resolved').length;
 
   const handleUpdateTaskStatus = (leadId: string, newStatus: 'pending' | 'in_progress' | 'completed' | 'dismissed') => {
     setTaskStateMap(prev => ({
@@ -314,24 +367,125 @@ export const TaskManagementPanel: React.FC<TaskManagementPanelProps> = ({
 
         <div className="flex items-center gap-2 text-xs text-[#5C6F60]">
           <Filter className="w-3.5 h-3.5" />
-          <span>Showing {filteredTasks.length} of {generatedCurationTasks.length} tasks</span>
+          <span>Showing {filteredTasks.length + filteredActionItems.length} active items</span>
         </div>
       </div>
 
-      {/* Task List Cards */}
-      {filteredTasks.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed border-[#EAE7E0] rounded-3xl space-y-3 bg-[#FAF8F5]">
-          <Building className="w-12 h-12 text-[#8C9A8E] mx-auto opacity-50" />
-          <div className="space-y-1">
-            <h3 className="font-bold text-[#2D362E] text-sm">No Curation Tasks Found</h3>
-            <p className="text-xs text-[#5C6F60] max-w-sm mx-auto">
-              No tasks match your current filter criteria. When new buyer leads request property samples via <code className="bg-emerald-100 text-emerald-900 px-1 py-0.5 rounded text-[10px]">chat_listings</code>, curation tasks will appear here automatically.
-            </p>
+      {/* Task List container */}
+      <div className="space-y-4">
+        {/* Render Property Action Items First if Pending */}
+        {filteredActionItems.map(item => (
+          <div key={item.id} className={`rounded-2xl border p-4 sm:p-5 shadow-xs transition-all ${
+            item.status === 'resolved' 
+              ? 'bg-[#F9F8F6] border-[#EAE7E0]'
+              : item.priority === 'urgent'
+              ? 'bg-red-50/40 border-red-200'
+              : 'bg-amber-50/40 border-amber-200'
+          }`}>
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {item.status === 'resolved' ? (
+                    <span className="px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border border-emerald-200">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Resolved Action
+                    </span>
+                  ) : item.priority === 'urgent' ? (
+                    <span className="px-2.5 py-0.5 rounded-md bg-red-100 text-red-800 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border border-red-200 animate-pulse">
+                      <Flame className="w-3 h-3 text-red-600" /> Urgent Property Q&A
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border border-amber-200">
+                      <AlertCircle className="w-3 h-3 text-amber-600" /> Priority Property Q&A
+                    </span>
+                  )}
+
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#EAE7E0] text-[#5C6F60] text-[10px] font-bold border border-[#D5D0C5]">
+                    {item.questionCategory.replace('_', ' ').toUpperCase()}
+                  </span>
+
+                  <div className="text-[10px] text-[#8C9A8E] flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>Asked: {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0 border border-amber-200">
+                    <UserPlus className="w-5 h-5 text-amber-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#2D362E]">{item.leadName}</h3>
+                    <div className="flex items-center gap-3 text-xs text-[#5C6F60] mt-0.5">
+                      {item.leadEmail && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {item.leadEmail}</span>}
+                      {item.leadPhone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {item.leadPhone}</span>}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 bg-white px-2 py-1 rounded-lg border border-[#EAE7E0] w-fit hover:border-indigo-300 transition-colors">
+                      <Building className="w-3 h-3 text-indigo-500" />
+                      <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.propertyAddress + (item.propertyCity ? ', ' + item.propertyCity : ''))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-indigo-700 hover:text-indigo-900 hover:underline flex items-center gap-1.5"
+                        title="View Property on Google Maps"
+                      >
+                        {item.propertyAddress} {item.propertyPrice ? `- ${item.propertyPrice.toLocaleString()}` : ''}
+                        <ExternalLink className="w-3 h-3 opacity-70" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white p-3 rounded-xl border border-[#F0EDF4] shadow-2xs mt-2 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
+                  <p className="text-xs font-medium text-[#2D362E] pl-2 italic">
+                    "{item.questionText}"
+                  </p>
+                </div>
+              </div>
+              
+              <div className="w-full md:w-80 shrink-0 space-y-2">
+                {item.status === 'resolved' ? (
+                  <div className="bg-emerald-50 rounded-xl p-3 text-xs border border-emerald-100">
+                    <div className="font-bold text-emerald-900 mb-1 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      Resolved by {item.resolvedBy}
+                    </div>
+                    <p className="text-emerald-800 line-clamp-3">"{item.resolutionText}"</p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl p-3 text-xs border border-[#EAE7E0] shadow-2xs">
+                    <label className="block text-[10px] font-bold text-[#5C6F60] mb-1.5 uppercase tracking-wider">Quick Reply & Resolve</label>
+                    <textarea 
+                      value={resolutionTextMap[item.id] || ''}
+                      onChange={(e) => setResolutionTextMap(prev => ({...prev, [item.id]: e.target.value}))}
+                      placeholder={`Draft answer for ${item.leadName.split(' ')[0]}...`}
+                      className="w-full h-20 text-xs p-2 rounded-lg border border-[#D5D0C5] bg-[#FAF9F5] focus:outline-hidden focus:border-[#4A5D4E] focus:bg-white resize-none"
+                    />
+                    <div className="flex justify-end mt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleResolveActionItem(item)}
+                        disabled={resolvingActionId === item.id || !resolutionTextMap[item.id]?.trim()}
+                        className="px-3 py-1.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                      >
+                        {resolvingActionId === item.id ? (
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3 animate-spin" /> Resolving...</span>
+                        ) : (
+                          <>
+                            <Send className="w-3 h-3" />
+                            <span>Reply & Resolve</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredTasks.map(task => {
+        ))}
+
+        {filteredTasks.map(task => {
             const leadObj = leads.find(l => l.id === task.leadId);
             const taskAgentId = selectedAgentAssignments[task.leadId] || task.assignedAgentId;
             const assignedAgent = agents.find(a => a.id === taskAgentId);
@@ -545,7 +699,6 @@ export const TaskManagementPanel: React.FC<TaskManagementPanelProps> = ({
             );
           })}
         </div>
-      )}
 
       {/* Manual Curation Task Creation Modal */}
       {showCreateModal && (
@@ -622,6 +775,18 @@ export const TaskManagementPanel: React.FC<TaskManagementPanelProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      
+      {filteredTasks.length === 0 && filteredActionItems.length === 0 && (
+        <div className="text-center py-12 border-2 border-dashed border-[#EAE7E0] rounded-3xl space-y-3 bg-[#FAF8F5]">
+          <Building className="w-12 h-12 text-[#8C9A8E] mx-auto opacity-50" />
+          <div className="space-y-1">
+            <h3 className="font-bold text-[#2D362E] text-sm">No Curation Tasks or Action Items Found</h3>
+            <p className="text-xs text-[#5C6F60] max-w-sm mx-auto">
+              No tasks match your current filter criteria.
+            </p>
           </div>
         </div>
       )}

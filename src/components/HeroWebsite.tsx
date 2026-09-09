@@ -20,6 +20,7 @@ import {
 import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile, PropertyListing, CapturedLead } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
 import { LocalProfessionalGuides } from "./LocalProfessionalGuides";
+import { ContextualVideoPlayer } from "./ContextualVideoPlayer";
 import { CuratedHomesSection } from "./CuratedHomesSection";
 
 interface HeroWebsiteProps {
@@ -126,6 +127,16 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
               </div>
             </div>
 
+            {/* Welcome Video (Replace videoId with your own from @mikeford1472) */}
+            <div className="w-full max-w-md mt-6 mb-4">
+              <ContextualVideoPlayer 
+                videoId="c9FUYqJtGjg" 
+                title="Welcome to your Homebuyer Portal | Mike Ford" 
+                description="A quick 60-second intro on how to use this tool to find your first home."
+                className="shadow-sm"
+              />
+            </div>
+            
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-3 pt-2 mt-4">
               <button

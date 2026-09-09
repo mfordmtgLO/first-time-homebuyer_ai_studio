@@ -1,5 +1,6 @@
 import React from 'react';
 import { Home, Compass, Sparkles, Search, LayoutDashboard } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface MobileBottomNavProps {
   activeTab: string;
@@ -44,6 +45,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, onN
         <Sparkles className="w-5 h-5 mb-1 text-[#C18C5D]" />
         <span className="text-[10px] font-bold">AI Plan</span>
       </button>
+      <div className="hidden"><PWAInstallButton /></div>
     </div>
   );
 };

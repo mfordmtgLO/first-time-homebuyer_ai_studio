@@ -24,7 +24,7 @@ import {
   TreePine,
   Calculator
 } from "lucide-react";
-import { PropertyListing, FinancialProfile } from "../types";
+import { PropertyListing, FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
 import { calculateMockWalkScore } from "../utils/walkScoreUtils";
@@ -36,6 +36,7 @@ import {
 } from "../utils/overlayClassification";
 import { getPropertyOhcsPriceLimit } from "../utils/ohcsPurchaseLimits";
 import { calculateEstimatedMarketValue } from "../utils/marketValueUtils";
+import { PropertyNotesThread } from "./PropertyNotesThread";
 
 /**
  * Curated high-resolution local architectural fallback photo suites.
@@ -153,6 +154,10 @@ export interface PropertyCardProps {
   onAskAiAboutProperty: (property: PropertyListing) => void;
   onToggleCompare: (id: string, e?: React.MouseEvent) => void;
   onOpenCalculator?: (property: PropertyListing) => void;
+  loanOfficer?: LoanOfficerProfile;
+  agent?: RealEstateAgentProfile;
+  origin?: string;
+  onOpenLoanOfficerContact?: () => void;
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -167,7 +172,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   onOpenScorecard,
   onAskAiAboutProperty,
   onToggleCompare,
-  onOpenCalculator
+  onOpenCalculator,
+  loanOfficer,
+  agent,
+  origin,
+  onOpenLoanOfficerContact
 }) => {
   // Swipeable carousel state powered by Framer Motion drag gestures
   const images = getPropertyImageGallery(property);
@@ -668,12 +677,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
           )}
 
-          {/* Notes snippet */}
-          {property.notes && (
-            <p className="text-xs text-[#606C5D] italic line-clamp-2">
-              "{property.notes}"
-            </p>
-          )}
+          {/* Bidirectional Property Notes Thread, Gamified Q&A & Co-Branded Schema */}
+          <PropertyNotesThread
+            property={property}
+            loanOfficer={loanOfficer}
+            agent={agent}
+            origin={origin}
+            onOpenLoanOfficerContact={onOpenLoanOfficerContact}
+          />
         </div>
       </div>
 

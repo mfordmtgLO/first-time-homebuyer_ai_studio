@@ -10,7 +10,47 @@ export default defineConfig(() => {
       react(), 
       tailwindcss(),
       VitePWA({
-        selfDestroying: true
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
+        manifest: {
+          id: '/',
+          name: 'GrantMatch Homebuyer',
+          short_name: 'GrantMatch',
+          description: 'Local down payment grants, mortgage calculator, and homebuyer readiness tool.',
+          theme_color: '#E2DFD2',
+          background_color: '#F9F8F4',
+          display: 'standalone',
+          start_url: '/',
+          scope: '/',
+          icons: [
+            {
+              src: '/pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'any',
+            },
+            {
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any',
+            },
+            {
+              src: '/pwa-maskable-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        },
+        devOptions: {
+          enabled: true,
+          type: 'module',
+        },
       })
     ],
     resolve: {

@@ -1,6 +1,10 @@
 {
-  "name": "First-Time Homebuyer Roadmap",
-  "description": "Comprehensive first-time homebuyer roadmap and portal featuring Google Maps radius search, school district insights, key amenity proximity, mortgage calculations, property tour scorecards, grant finder, and AI advisor.",
-  "requestFramePermissions": ["microphone"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "GrantMatch Homebuyer",
+  "description": "Find local down payment grants, calculate your mortgage, and get pre-approved for your first home.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

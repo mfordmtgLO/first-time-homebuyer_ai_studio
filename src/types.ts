@@ -366,6 +366,7 @@ export interface RealEstateAgentProfile {
   bio: string;
   specialties: string[];
   marketAreas: string[];
+  activeAdCounties?: string[];
   agentType?: 'buyer_agent' | 'listing_agent' | 'dual_agent';
   experienceYears?: number;
   production12MoVolume?: number;
@@ -483,6 +484,10 @@ export interface AdCampaignDraft {
   targetUrl: string;
   dailyBudget: number;
   targetLocations: string[];
+  isCompliancePaused?: boolean;
+  leadCap?: number;
+  currentLeads?: number;
+  auditLog?: CampaignAuditEntry[];
   keywords?: string[];
   specialHousingCategory: boolean;
   adObjective: 'LEAD_GENERATION' | 'TRAFFIC' | 'CONVERSIONS';
@@ -912,3 +917,85 @@ export interface UserPreference {
   updatedAt?: string;
 }
 
+export interface PropertyConversationMessage {
+  id: string;
+  sender: 'buyer' | 'loan_officer' | 'realtor' | 'system';
+  senderName: string;
+  senderRole?: string;
+  text: string;
+  timestamp: string;
+  messageType?: 'question' | 'response' | 'note' | 'system';
+  questionCategory?: 'financing' | 'rate_buydown' | 'down_payment' | 'property_condition' | 'qualification' | 'general';
+  status?: 'pending' | 'resolved';
+  questionId?: string;
+  actionItemId?: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolutionText?: string;
+  programTag?: string;
+  didYouKnowFact?: string;
+  pointsAwarded?: number;
+}
+
+export interface PropertyActionItem {
+  id: string; // e.g. `action-${messageId}`
+  conversationId: string;
+  messageId: string;
+  propertyId: string;
+  propertyAddress: string;
+  propertyPrice?: number;
+  propertyCity?: string;
+  leadId: string;
+  leadName: string;
+  leadEmail?: string;
+  leadPhone?: string;
+  questionText: string;
+  questionCategory: 'financing' | 'rate_buydown' | 'down_payment' | 'property_condition' | 'qualification' | 'general';
+  programTag?: string;
+  status: 'pending' | 'resolved';
+  priority: 'urgent' | 'high' | 'normal';
+  createdAt: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolutionText?: string;
+  tcpaSmsOptIn?: boolean;
+  tcpaPhoneProvided?: string;
+}
+
+export interface PropertyConversation {
+  id: string; // `${propertyId}_${leadId}` or `${propertyId}`
+  propertyId: string;
+  leadId: string;
+  leadName?: string;
+  leadEmail?: string;
+  leadPhone?: string;
+  propertyAddress: string;
+  propertyPrice?: number;
+  propertyCity?: string;
+  assignedLoId?: string;
+  assignedLoName?: string;
+  assignedAgentId?: string;
+  assignedAgentName?: string;
+  notes?: string;
+  messages: PropertyConversationMessage[];
+  pendingActionItems?: PropertyActionItem[];
+  hasPendingActionItem?: boolean;
+  lastQuestionAt?: string;
+  matchedPrograms?: string[];
+  gamifiedStats?: {
+    points: number;
+    unlockedBadges: string[];
+    quizAnsweredCount: number;
+  };
+  updatedAt: string;
+  createdAt?: string;
+}
+
+
+export interface CampaignAuditEntry {
+  id: string;
+  timestamp: string;
+  actor: string;
+  action: string;
+  details?: string;
+}

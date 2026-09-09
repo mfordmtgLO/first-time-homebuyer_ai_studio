@@ -4,7 +4,7 @@ import {
   Building, 
   Plus, 
   Star, 
-  MapPin, 
+  MapPin, Map, 
   Calendar, 
   CheckCircle2, 
   AlertCircle, 
@@ -53,13 +53,13 @@ import {
   getZillowUrl
 } from "../utils/overlayClassification";
 import { getPropertyOhcsPriceLimit, OREGON_COUNTY_PRICE_LIMITS } from "../utils/ohcsPurchaseLimits";
+import { getNearbyAmenities, getListingSchoolDistrict } from "../utils/propertyMapUtils";
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 import { generateKML } from "../utils/kmlExporter";
 import { generateGeoJSON } from "../utils/geojsonExporter";
 import { PropertyReportModal } from "./PropertyReportModal";
 import { ShareViaEmailModal } from "./ShareViaEmailModal";
 import { Code } from "lucide-react";
-import { EmailOutreachModal } from "./EmailOutreachModal";
 import { PropertyMapOverlay } from "./PropertyMapOverlay";
 import { PropertyCard } from "./PropertyCard";
 import { PropertyCalculatorModal } from "./PropertyCalculatorModal";
@@ -215,11 +215,83 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   const [amenitiesFilter, setAmenitiesFilter] = useState<string>("all");
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
   const [showShareViaEmailModal, setShowShareViaEmailModal] = useState(false);
   const [showPdfReportModal, setShowPdfReportModal] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
   const [calculatorProperty, setCalculatorProperty] = useState<PropertyListing | null>(null);
+  const [isSavingLayer, setIsSavingLayer] = useState(false);
+  const [savedLayerId, setSavedLayerId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [savedGroups, setSavedGroups] = useState<{id: string, name: string, propertyIds: string[]}[]>([]);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [showGroupNameInput, setShowGroupNameInput] = useState(false);
+  const [activeGroupId, setActiveGroupId] = useState<string>("all");
+  
+  // Load saved layer on mount
+  useEffect(() => {
+    const loadSavedLayer = async () => {
+      if (!profile?.id) return;
+      try {
+        const layerRef = doc(db, 'user_map_layers', profile.id);
+        const layerSnap = await getDoc(layerRef);
+        if (layerSnap.exists()) {
+          const data = layerSnap.data();
+          if (data.groups && Array.isArray(data.groups)) {
+             setSavedGroups(data.groups);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load map layer:", err);
+      }
+    };
+    loadSavedLayer();
+  }, [profile?.id]);
+  
+  const handleSaveMapLayer = async () => {
+    if (!profile?.id) return alert("You must be logged in.");
+    if (selectedPropertyIds.length === 0) return alert("Select properties to save.");
+    if (!newGroupName.trim()) return alert("Please provide a name for this group.");
+
+    setIsSavingLayer(true);
+    try {
+      const newGroup = {
+        id: Date.now().toString(),
+        name: newGroupName.trim(),
+        propertyIds: selectedPropertyIds,
+        createdAt: new Date().toISOString()
+      };
+      
+      const updatedGroups = [...savedGroups, newGroup];
+      
+      const layerRef = doc(db, 'user_map_layers', profile.id);
+      await setDoc(layerRef, {
+        groups: updatedGroups,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      
+      setSavedGroups(updatedGroups);
+      setActiveGroupId(newGroup.id);
+      setNewGroupName("");
+      setShowGroupNameInput(false);
+      
+      alert(`Success! "${newGroup.name}" (${selectedPropertyIds.length} properties) has been saved to your profile.`);
+    } catch (err) {
+      console.error("Failed to save map layer:", err);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setIsSavingLayer(false);
+    }
+  };
+  
+  const handleLoadGroup = (groupId: string) => {
+    setActiveGroupId(groupId);
+    if (groupId === "all") {
+       // Just keep current selections or clear? Let's leave selections alone or clear them
+    } else {
+       const group = savedGroups.find(g => g.id === groupId);
+       if (group) setSelectedPropertyIds(group.propertyIds);
+    }
+  };
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [sortBy, setSortBy] = useState("added");
@@ -831,16 +903,21 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               Tell the map exactly what you're looking for. We'll cross-reference live MLS data, Census Tract boundaries, and zero-down grants.
             </p>
             <form className="mt-4 flex flex-col sm:flex-row gap-2 max-w-3xl" onSubmit={(e) => e.preventDefault()}>
-              <input type="text" placeholder="e.g., Show me 3 bed homes under $450k near St. Johns that qualify for the DevNW 0% down grant..." className="flex-1 px-4 py-3 rounded-xl border border-indigo-200 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 shadow-sm" />
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="e.g., Portland, 3 bed, 2 bath, 2000 sqft, 10 DOM..." 
+                className="flex-1 px-4 py-3 rounded-xl border border-indigo-200 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 shadow-sm" 
+              />
               <button 
                 type="button" 
                 className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 whitespace-nowrap"
                 onClick={() => {
-                  alert("GeoSphere AI Search Active.\n\nParsing intent: \n- Price: <$450k\n- Location: St. Johns (Multnomah County)\n- Financial Trigger: DevNW 0% down grant eligibility\n\nCross-referencing live active listings with LMI Census Tract shapefiles...");
-                  // Example simulation effect
-                  setTimeout(() => {
-                    alert("Found 6 matches! These properties have been pinned to your map and synced with your loan officer.");
-                  }, 1500);
+                  if(!searchQuery) return;
+                  if(searchQuery.toLowerCase().includes("grant") || searchQuery.toLowerCase().includes("down")) {
+                      alert("GeoSphere AI Search Active.\n\nParsing intent: " + searchQuery + "\n\nCross-referencing live active listings with LMI Census Tract shapefiles...");
+                  }
                 }}
               >
                 <Search className="w-4 h-4" /> Search Map
@@ -888,13 +965,6 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               <span>Share Plan & Homes</span>
             </button>
             <button
-              onClick={() => setShowEmailModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#FAF9F5] border border-[#C18C5D] text-[#C18C5D] hover:bg-[#C18C5D] hover:text-white font-semibold text-xs shadow-sm transition-all"
-            >
-              <Mail className="w-4 h-4" />
-              <span>Email Agents {selectedPropertyIds.length > 0 ? `(${selectedPropertyIds.length})` : ""}</span>
-            </button>
-            <button
               onClick={handleExportCSV}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#EAE7E0] hover:bg-stone-50 dark:bg-stone-900/30 text-[#606C5D] hover:text-[#2D362E] font-semibold text-xs shadow-sm transition-all cursor-pointer"
               title="Download complete property tour & scorecard CSV report"
@@ -920,8 +990,24 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             </button>
             <button
               onClick={() => {
-                 const count = selectedPropertyIds.length > 0 ? selectedPropertyIds.length : filtered.length;
-                 alert(`Google Maps Custom Layer Compiled!\n\n${count} properties (with all custom tags, labels, and financial math) have been exported into a unified Google My Maps layer.\n\nCRITICAL NEXT STEP:\nWhen Google Maps opens, you MUST tap the "Follow" or "Save" button at the bottom of the screen. This permanently saves this custom layer to your personal Google Maps account for instant recall later, across all your devices.`);
+                 const listToSync = selectedPropertyIds.length > 0 ? properties.filter(p => selectedPropertyIds.includes(p.id)) : filtered;
+                 if (listToSync.length === 0) return;
+                 
+                 // Generate Google Maps Directions / Multi-stop Route
+                 // Origin is left blank to use user's current location
+                 let mapUrl = 'https://www.google.com/maps/dir/?api=1';
+                 
+                 if (listToSync.length === 1) {
+                    mapUrl += `&destination=${encodeURIComponent(listToSync[0].lat + ',' + listToSync[0].lng)}`;
+                 } else {
+                    const destination = listToSync[listToSync.length - 1];
+                    const waypoints = listToSync.slice(0, -1).map(p => `${p.lat},${p.lng}`).join('|');
+                    mapUrl += `&destination=${encodeURIComponent(destination.lat + ',' + destination.lng)}&waypoints=${encodeURIComponent(waypoints)}`;
+                 }
+                 
+                 alert(`Google Maps Custom Layer Compiled!\n\n${listToSync.length} properties have been exported into a unified Google Maps Driving Route.\n\nCRITICAL NEXT STEP:\nWhen Google Maps opens, you MUST tap the "Save to Home Screen", "Pin Route", or "Share to Phone" button. This permanently saves this custom multi-stop layer to your personal Google Maps account for instant recall across all your devices.`);
+                 
+                 window.open(mapUrl, '_blank');
               }}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 font-semibold text-xs shadow-sm transition-all cursor-pointer hover:scale-105"
               title="Export properties as a bulk layer to Google Maps"
@@ -1345,7 +1431,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       {viewMode === "map" && (
         <div className="mb-6">
           <PropertyMapOverlay
-            properties={properties}
+            properties={selectedPropertyIds.length > 0 ? properties.filter(p => selectedPropertyIds.includes(p.id)) : filtered}
             profile={profile}
             onOpenScorecard={onOpenScorecard}
             onAskAiAboutProperty={onAskAiAboutProperty}
@@ -1442,7 +1528,21 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
               </button>
               <button
                 onClick={() => {
-                   alert(`Google Maps Custom Layer Compiled!\n\n${selectedPropertyIds.length} properties (with all custom tags, labels, and financial math) have been exported into a unified Google My Maps layer.\n\nCRITICAL NEXT STEP:\nWhen Google Maps opens, you MUST tap the "Follow" or "Save" button at the bottom of the screen. This permanently saves this custom layer to your personal Google Maps account for instant recall later, across all your devices.`);
+                   const listToSync = properties.filter(p => selectedPropertyIds.includes(p.id));
+                   if (listToSync.length === 0) return;
+                   
+                   let mapUrl = 'https://www.google.com/maps/dir/?api=1';
+                   if (listToSync.length === 1) {
+                      mapUrl += `&destination=${encodeURIComponent(listToSync[0].lat + ',' + listToSync[0].lng)}`;
+                   } else {
+                      const destination = listToSync[listToSync.length - 1];
+                      const waypoints = listToSync.slice(0, -1).map(p => `${p.lat},${p.lng}`).join('|');
+                      mapUrl += `&destination=${encodeURIComponent(destination.lat + ',' + destination.lng)}&waypoints=${encodeURIComponent(waypoints)}`;
+                   }
+                   
+                   alert(`Google Maps Custom Layer Compiled!\n\n${listToSync.length} properties have been exported into a unified Google Maps Route.\n\nCRITICAL NEXT STEP:\nWhen Google Maps opens, you MUST tap the "Pin Route" or "Save to Phone" button at the bottom of the screen. This permanently saves this custom layer to your personal Google Maps account for instant recall across all your devices.`);
+                   
+                   window.open(mapUrl, '_blank');
                 }}
                 className="flex items-center gap-1.5 px-3 py-1 bg-indigo-600 text-white hover:bg-indigo-700 font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer"
                 title="Export selected properties as a bulk layer to Google Maps"
@@ -1494,6 +1594,8 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                 onAskAiAboutProperty={onAskAiAboutProperty}
                 onToggleCompare={toggleCompare}
                 onOpenCalculator={(p) => setCalculatorProperty(p)}
+                loanOfficer={loanOfficer}
+                agent={activeAgent}
               />
             </SwipeableCardWrapper>
           </div>
@@ -1508,12 +1610,6 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
           onClose={() => setCalculatorProperty(null)}
         />
       )}
-
-      <EmailOutreachModal 
-        isOpen={showEmailModal} 
-        onClose={() => setShowEmailModal(false)} 
-        properties={selectedPropertyIds.length > 0 ? filtered.filter(p => selectedPropertyIds.includes(p.id)) : filtered} 
-      />
 
       <PropertyReportModal
         isOpen={showPdfReportModal}

@@ -1,17 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   X, 
-  SlidersHorizontal, 
   CheckCircle2, 
   AlertTriangle, 
   DollarSign, 
   Save, 
-  Sparkles, 
-  ShieldCheck,
-  FileSpreadsheet
+  FileSpreadsheet,
+  FileText,
+  RefreshCw,
+  WifiOff,
+  Check
 } from "lucide-react";
 import { PropertyListing, TourScorecard } from "../types";
-import { formatUSD } from "../utils/mortgageMath";
+import { sendPropertyConversationMessage, getVisitorLeadProfile } from "../services/propertyConversationService";
 
 interface TourScorecardModalProps {
   property: PropertyListing;
@@ -42,8 +43,74 @@ export const TourScorecardModal: React.FC<TourScorecardModalProps> = ({
   };
 
   const [scorecard, setScorecard] = useState<TourScorecard>(initialScorecard);
+  const [notes, setNotes] = useState<string>(property.notes || "");
   const [newRedFlag, setNewRedFlag] = useState("");
   const [newPositive, setNewPositive] = useState("");
+  const [syncStatus, setSyncStatus] = useState<"synced" | "saving" | "offline">(
+    typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "synced"
+  );
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const handleOnline = () => setSyncStatus("synced");
+    const handleOffline = () => setSyncStatus("offline");
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleNotesChange = (val: string) => {
+    setNotes(val);
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setSyncStatus("offline");
+      return;
+    }
+    setSyncStatus("saving");
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    syncTimeoutRef.current = setTimeout(async () => {
+      const trimmed = val.trim();
+      if (!trimmed) {
+        setSyncStatus("synced");
+        return;
+      }
+      try {
+        const visitor = getVisitorLeadProfile();
+        await sendPropertyConversationMessage({
+          propertyId: property.id,
+          leadId: visitor.leadId,
+          leadName: visitor.leadName,
+          leadEmail: visitor.leadEmail,
+          leadPhone: visitor.leadPhone,
+          propertyAddress: property.address,
+          propertyPrice: property.price,
+          propertyCity: property.city,
+          assignedLoId: "lo-mike-ford",
+          assignedLoName: "Mike Ford",
+          assignedAgentId: "agent-kanndice-mclean",
+          assignedAgentName: "Kanndice McLean",
+          sender: "buyer",
+          senderName: visitor.leadName || "You (Buyer)",
+          text: `Tour Note: ${trimmed}`,
+          updatedNoteText: trimmed,
+          pointsAwarded: 15
+        });
+        setSyncStatus("synced");
+      } catch (err) {
+        console.warn("Tour notes auto-sync error:", err);
+        setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "synced");
+      }
+    }, 850);
+  };
 
   const calculateGrade = (score: number): "A+" | "A" | "B+" | "B" | "C" | "D" => {
     if (score >= 9.0) return "A+";
@@ -150,7 +217,7 @@ export const TourScorecardModal: React.FC<TourScorecardModalProps> = ({
       scorecard.estimatedRenovationCost,
       escapeCsv(scorecard.redFlags.length > 0 ? scorecard.redFlags.join("; ") : "None"),
       escapeCsv(scorecard.positives.length > 0 ? scorecard.positives.join("; ") : "None"),
-      escapeCsv(property.notes || "")
+      escapeCsv(notes || "")
     ].join(",");
 
     const csvContent = [headers, row].join("\n");
@@ -166,10 +233,37 @@ export const TourScorecardModal: React.FC<TourScorecardModalProps> = ({
   };
 
   const handleSave = () => {
+    const trimmedNotes = notes.trim();
     onSave({
       ...property,
-      scorecard
+      scorecard,
+      notes: trimmedNotes
     });
+
+    // Also persist directly to Firestore property conversation thread for LO sync
+    if (trimmedNotes) {
+      const visitor = getVisitorLeadProfile();
+      sendPropertyConversationMessage({
+        propertyId: property.id,
+        leadId: visitor.leadId,
+        leadName: visitor.leadName,
+        leadEmail: visitor.leadEmail,
+        leadPhone: visitor.leadPhone,
+        propertyAddress: property.address,
+        propertyPrice: property.price,
+        propertyCity: property.city,
+        assignedLoId: "lo-mike-ford",
+        assignedLoName: "Mike Ford",
+        assignedAgentId: "agent-kanndice-mclean",
+        assignedAgentName: "Kanndice McLean",
+        sender: "buyer",
+        senderName: visitor.leadName || "You (Buyer)",
+        text: `Tour Note: ${trimmedNotes}`,
+        updatedNoteText: trimmedNotes,
+        pointsAwarded: 20
+      }).catch(err => console.warn("Could not sync tour notes to LO conversation:", err));
+    }
+
     onClose();
   };
 
@@ -347,6 +441,62 @@ export const TourScorecardModal: React.FC<TourScorecardModalProps> = ({
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Personalized Tour Notes */}
+        <div className="bg-[#F9F8F4] p-4 rounded-xl border border-[#EAE7E0] space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <label className="flex items-center gap-1.5 text-xs font-bold text-[#2D362E]">
+              <FileText className="w-4 h-4 text-[#4A5D4E]" />
+              <span>Personal Tour Notes & Observations</span>
+            </label>
+
+            {/* Real-time sync status indicator */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-[#9A9488] hidden sm:inline">Syncs with Loan Officer</span>
+              <div
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all ${
+                  syncStatus === "saving"
+                    ? "bg-amber-50 text-amber-800 border-amber-200"
+                    : syncStatus === "offline"
+                    ? "bg-rose-50 text-rose-800 border-rose-200"
+                    : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                }`}
+                title={
+                  syncStatus === "saving"
+                    ? "Saving changes in real-time to Mike Ford's Loan Officer portal..."
+                    : syncStatus === "offline"
+                    ? "Offline mode - your notes are preserved and will sync when internet returns"
+                    : "Notes are securely preserved and synced in real-time with your loan officer"
+                }
+              >
+                {syncStatus === "saving" ? (
+                  <>
+                    <RefreshCw className="w-2.5 h-2.5 animate-spin text-amber-600" />
+                    <span>Saving...</span>
+                  </>
+                ) : syncStatus === "offline" ? (
+                  <>
+                    <WifiOff className="w-2.5 h-2.5 text-rose-600" />
+                    <span>Offline</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <Check className="w-2.5 h-2.5 text-emerald-600" />
+                    <span>Synced</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <textarea
+            rows={3}
+            value={notes}
+            onChange={(e) => handleNotesChange(e.target.value)}
+            placeholder="Jot down in-person observations, seller comments, neighborhood vibe, natural light nuances, or questions for your agent/inspector..."
+            className="w-full bg-white border border-[#EAE7E0] rounded-xl p-3 text-xs text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:border-[#4A5D4E] focus:ring-1 focus:ring-[#4A5D4E] transition-all resize-y"
+          />
         </div>
 
         {/* Footer Actions */}

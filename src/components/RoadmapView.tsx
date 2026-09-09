@@ -24,6 +24,7 @@ import { RoadmapMilestone, FinancialProfile, PropertyListing, DocumentItem, Loan
 import { HomebuyingPlanPrintModal } from "./HomebuyingPlanPrintModal";
 import { ShareViaEmailModal } from "./ShareViaEmailModal";
 import { DEFAULT_FINANCIAL_PROFILE } from "../data/initialData";
+import { ContextualVideoPlayer } from "./ContextualVideoPlayer";
 import { getMilestoneAlertSettings, triggerMilestoneEmailNotification } from "../utils/milestoneNotifier";
 
 interface RoadmapViewProps {
@@ -302,6 +303,16 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
         </div>
       )}
 
+      {/* Contextual Video Embed for Roadmap */}
+      <div className="w-full">
+        <ContextualVideoPlayer 
+          videoId="7gJ_U5D8334" 
+          title="The 10-Step Homebuyer Playbook Explained | Mike Ford" 
+          description="Watch Mike explain the critical milestones in the journey from Pre-Approval to Clear to Close."
+          className="shadow-sm"
+        />
+      </div>
+      
       {/* Header & Overall Progress Bar */}
       <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 space-y-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">

@@ -30,7 +30,6 @@ import { hasAuthenticPropertyPhoto, getZillowUrl } from "../utils/overlayClassif
 import { SavingsGoalTracker } from "./SavingsGoalTracker";
 import { RAGDocumentsWidget } from "./RAGDocumentsWidget";
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
-import { RealTimeMortgageRateTracker } from "./RealTimeMortgageRateTracker";
 import { MarketTrends } from "./MarketTrends";
 import { HomebuyingPlanPrintModal } from "./HomebuyingPlanPrintModal";
 import { ShareViaEmailModal } from "./ShareViaEmailModal";
@@ -290,12 +289,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         onNavigate={onNavigate}
       />
 
-      {/* Real-Time Search-Grounded National Mortgage Rate Tracker (Dashboard Users Only) */}
-      <RealTimeMortgageRateTracker
-        profile={profile}
-        setProfile={setProfile}
-        onNavigate={onNavigate}
-      />
 
       {/* Main Grid: Pipeline Preview & Quick Action Hub */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

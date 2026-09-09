@@ -27,6 +27,9 @@ import {
 import { MfaSetupModal } from "./MfaSetupModal";
 import { BranchAuditLogSection } from "./BranchAuditLogSection";
 import { SupplyChainSbomSection } from "./SupplyChainSbomSection";
+
+import { AdminAdComplianceSection } from "./AdminAdComplianceSection";
+
 import { 
   RbacRole, 
   RBAC_ROLE_CONFIGS, 
@@ -462,6 +465,8 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
         <SupplyChainSbomSection
           onTriggerToast={showFeedback}
         />
+      ) : activeSectionTab === "ads" ? (
+        <AdminAdComplianceSection onTriggerToast={showFeedback} />
       ) : (
         <div className="space-y-6">
           {/* RBAC Role Counts Summary Bar */}

@@ -1,9 +1,27 @@
 const fs = require('fs');
-let c = fs.readFileSync('src/components/LoanOfficerPortal.tsx', 'utf8');
+let code = fs.readFileSync('src/components/LoanOfficerPortal.tsx', 'utf8');
 
-c = c.replace(
-    '<MasterLeadJourneyTab\\n                  leads={guidesState.leads || []}\\n                  loanOfficer={currentLo}',
-    '<MasterLeadJourneyTab\\n                  properties={properties}\\n                  setProperties={setProperties}\\n                  leads={guidesState.leads || []}\\n                  loanOfficer={currentLo}'
-);
+const targetHubProps = `                onUpdateAdSettings={(adSettings) => {
+                  updateCurrentLoField("adSettings", adSettings);
+                }}
+                pairingUrl={activePairingUrl}
+              />`;
 
-fs.writeFileSync('src/components/LoanOfficerPortal.tsx', c);
+const replacementHubProps = `                onUpdateAdSettings={(adSettings) => {
+                  updateCurrentLoField("adSettings", adSettings);
+                }}
+                pairingUrl={activePairingUrl}
+                onToggleCampaignState={(id, newStatus) => {
+                  const updatedDrafts = (guidesState.adCampaignDrafts || []).map(draft => 
+                    draft.id === id ? { ...draft, status: newStatus } : draft
+                  );
+                  onUpdateGuidesState({
+                    ...guidesState,
+                    adCampaignDrafts: updatedDrafts
+                  });
+                }}
+              />`;
+
+code = code.replace(targetHubProps, replacementHubProps);
+
+fs.writeFileSync('src/components/LoanOfficerPortal.tsx', code);

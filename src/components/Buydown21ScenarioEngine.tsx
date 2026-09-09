@@ -156,6 +156,16 @@ ${currentLo?.name || "Mike Ford"} | ${currentLo?.company || "Mortgage Advisory G
 
   return (
     <div className="space-y-6">
+      {/* Contextual Video Embed for Buydown Strategy */}
+      <div className="w-full">
+        <ContextualVideoPlayer 
+          videoId="sXQxhojSdZM" 
+          title="How a 2-1 Buydown Saves You $500+/mo | Mike Ford" 
+          description="Watch Mike explain exactly how seller-paid buydowns work and why they are the ultimate hack in today's market."
+          className="shadow-sm"
+        />
+      </div>
+      
       {/* Header Banner */}
       <div className="bg-[#2D362E] rounded-3xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-emerald-500/15 to-transparent pointer-events-none" />

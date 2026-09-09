@@ -1,13 +1,16 @@
 const fs = require('fs');
-let c = fs.readFileSync('src/types.ts', 'utf8');
+let code = fs.readFileSync('src/types.ts', 'utf8');
 
-const target = `  price: number;
-  beds: number;`;
-const injection = `  price: number;
-  originalPrice?: number;
-  priceDropAmount?: number;
-  priceDropDate?: string;
-  beds: number;`;
+// Add activeAdCounties
+code = code.replace(
+  "  marketAreas: string[];",
+  "  marketAreas: string[];\n  activeAdCounties?: string[];"
+);
 
-c = c.replace(target, injection);
-fs.writeFileSync('src/types.ts', c);
+// Add isCompliancePaused to AdCampaignDraft
+code = code.replace(
+  "  targetLocations: string[];",
+  "  targetLocations: string[];\n  isCompliancePaused?: boolean;"
+);
+
+fs.writeFileSync('src/types.ts', code);

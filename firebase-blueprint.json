@@ -353,9 +353,107 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["themePreference"]
+    },
+    "PropertyConversation": {
+      "title": "PropertyConversation",
+      "description": "Bidirectional persistent property conversation and lead-to-loan-officer note thread with mortgage loan program Q&A syncing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "leadId": { "type": "string" },
+        "leadName": { "type": "string" },
+        "leadEmail": { "type": "string" },
+        "leadPhone": { "type": "string" },
+        "propertyAddress": { "type": "string" },
+        "propertyPrice": { "type": "number" },
+        "propertyCity": { "type": "string" },
+        "assignedLoId": { "type": "string" },
+        "assignedLoName": { "type": "string" },
+        "assignedAgentId": { "type": "string" },
+        "assignedAgentName": { "type": "string" },
+        "notes": { "type": "string" },
+        "hasPendingActionItem": { "type": "boolean" },
+        "lastQuestionAt": { "type": "string" },
+        "pendingActionItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "conversationId": { "type": "string" },
+              "messageId": { "type": "string" },
+              "propertyId": { "type": "string" },
+              "propertyAddress": { "type": "string" },
+              "propertyPrice": { "type": "number" },
+              "propertyCity": { "type": "string" },
+              "leadId": { "type": "string" },
+              "leadName": { "type": "string" },
+              "leadEmail": { "type": "string" },
+              "leadPhone": { "type": "string" },
+              "questionText": { "type": "string" },
+              "questionCategory": { "type": "string" },
+              "programTag": { "type": "string" },
+              "status": { "type": "string", "enum": ["pending", "resolved"] },
+              "priority": { "type": "string", "enum": ["urgent", "high", "normal"] },
+              "createdAt": { "type": "string" },
+              "resolvedAt": { "type": "string" },
+              "resolvedBy": { "type": "string" },
+              "resolutionText": { "type": "string" }
+            },
+            "required": ["id", "conversationId", "propertyId", "leadId", "questionText", "status", "createdAt"]
+          }
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "sender": { "type": "string", "enum": ["buyer", "loan_officer", "realtor", "system"] },
+              "senderName": { "type": "string" },
+              "senderRole": { "type": "string" },
+              "text": { "type": "string" },
+              "timestamp": { "type": "string" },
+              "messageType": { "type": "string", "enum": ["question", "response", "note", "system"] },
+              "questionCategory": { "type": "string" },
+              "status": { "type": "string", "enum": ["pending", "resolved"] },
+              "actionItemId": { "type": "string" },
+              "resolvedAt": { "type": "string" },
+              "resolvedBy": { "type": "string" },
+              "resolutionText": { "type": "string" },
+              "programTag": { "type": "string" },
+              "didYouKnowFact": { "type": "string" }
+            },
+            "required": ["id", "sender", "text", "timestamp"]
+          }
+        },
+        "matchedPrograms": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "gamifiedStats": {
+          "type": "object",
+          "properties": {
+            "points": { "type": "number" },
+            "unlockedBadges": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "quizAnsweredCount": { "type": "number" }
+          }
+        },
+        "updatedAt": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "propertyId", "updatedAt"]
     }
   },
   "firestore": {
+    "property_conversations/{conversationId}": {
+      "schema": { "$ref": "#/entities/PropertyConversation" },
+      "description": "Bidirectional synced lead and loan officer property conversations, gamified mortgage education Q&A, and notes"
+    },
     "daily_pulses/{pulseId}": {
       "schema": { "$ref": "#/entities/DailyPulse" },
       "description": "Cross-session persistent daily AI reviews, task completion metrics, and performance coaching history"

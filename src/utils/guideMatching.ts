@@ -266,7 +266,11 @@ export function findMatchingPairing(
     if (clean === "lonnandelena" && (slugClean.includes("lonn") && slugClean.includes("elena"))) return true;
     if (clean === "lonnandtyler" && (slugClean.includes("lonn") && slugClean.includes("tyler"))) return true;
     if (clean === "mikeandsarah" && (slugClean.includes("mike") && slugClean.includes("sarah"))) return true;
+    if (clean === "mikeandkanndice" && (slugClean.includes("mike") && slugClean.includes("kanndice"))) return true;
 
+    if (clean.includes("mike") && clean.includes("kanndice")) {
+      if (id === "pair-mike-kanndice" || slug === "mike-and-kanndice" || (p.loId.includes("mike") && p.agentId.includes("kanndice"))) return true;
+    }
     if (clean.includes("lonn") && clean.includes("marcus")) {
       if (id === "pair-2" || slug === "lonn-and-marcus" || (p.loId.includes("lonn") && p.agentId.includes("marcus"))) return true;
     }

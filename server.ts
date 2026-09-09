@@ -8,6 +8,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { loadKnowledgeBase, searchKnowledge, addDocumentToKnowledge } from "./vantageKnowledge.js";
 import { searchLiveRegistry } from "./liveWebSearch.js";
+import { handleIncomingTwilioWebhook } from "./src/services/smsSyncService.js";
 
 // Enterprise Encryption Vault Setup (Zero-Trust Security Architecture)
 // In production, MASTER_ENCRYPTION_KEY can be configured via Cloud Secrets / Environment.
@@ -2466,800 +2467,73 @@ INSTRUCTIONS:
     }
   });
 
-  // API Route: Offer Strategy Generator
-  app.post("/api/gemini/offer-strategy", async (req, res) => {
-    const { propertyDetails, buyerFinances, marketCondition } = req.body || {};
-    try {
-      const prompt = `Generate a customized Offer Strategy for this property:
-Property Details:
-- List Price: $${propertyDetails?.price || 450000}
-- Address: ${propertyDetails?.address || "123 Maple St"}
-- Days on Market: ${propertyDetails?.daysOnMarket || 12} days
-- Property Condition/Notes: ${propertyDetails?.notes || "Turnkey, recent cosmetic updates"}
-- Market Climate: ${marketCondition || "Balanced Market"}
 
-Buyer Financials:
-- Pre-approved Max Loan: $${buyerFinances?.preApprovalAmount || 480000}
-- Available Cash for Down Payment & Closing: $${buyerFinances?.cashAvailable || 65000}
-- Loan Program: ${buyerFinances?.loanType || "30-Year Conventional"}`;
-
-      const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.7-flash",
-        contents: prompt,
-        config: {
-          systemInstruction: `You are a top-tier Real Estate Negotiation and Offer Strategist for First-Time Homebuyers. Provide pricing strategy, EMD, inspection contingency advice, and seller concession (IPC) utilization.`,
-          temperature: 0.6,
-        },
-      });
-
-      res.json({
-        strategy:
-          response.text ||
-          getOfferStrategyFallback(propertyDetails, buyerFinances, marketCondition),
-      });
-    } catch (error: any) {
-      console.log("Offer strategy notice (using fallback):", "API Limitation handled.");
-      res.json({
-        strategy: getOfferStrategyFallback(propertyDetails, buyerFinances, marketCondition),
-        isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error),
-      });
-    }
-  });
-
-  // API Route: Inspection Report Triage & Repair Credit Helper
-  app.post("/api/gemini/inspection-audit", async (req, res) => {
-    const { inspectionNotes, propertyPrice } = req.body || {};
-    if (!inspectionNotes) {
-      return res.status(400).json({ error: "Inspection notes required" });
+  // API Route: Advanced AI Pre-Qualification (Structured Data + Chat)
+  app.post("/api/gemini/advanced-prequal", authenticateUser, async (req, res) => {
+    const { message, chatHistory, financialProfile, loanOfficer } = req.body || {};
+    const loName = loanOfficer?.name || "Mike Ford";
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      return res.status(500).json({ error: "API Key missing" });
     }
 
     try {
-      const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.7-flash",
-        contents: `Property Price: $${propertyPrice || 400000}\nInspection Issues & Notes:\n${inspectionNotes}`,
-        config: {
-          systemInstruction: `You are a licensed building inspector and real estate closing negotiator for first-time buyers. Evaluate home inspection findings into Safety/Structural, Important Maintenance, and Minor Cosmetic with a draft repair credit request addendum.`,
-          temperature: 0.5,
-        },
-      });
-
-      res.json({
-        analysis: response.text || getInspectionAuditFallback(inspectionNotes, propertyPrice),
-      });
-    } catch (error: any) {
-      console.log("Inspection audit notice (using fallback):", "API Limitation handled.");
-      res.json({
-        analysis: getInspectionAuditFallback(inspectionNotes, propertyPrice),
-        isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error),
-      });
-    }
-  });
-
-  // API Route: Mortgage & Affordability Health Check
-  app.post("/api/gemini/mortgage-analysis", async (req, res) => {
-    const {
-      income,
-      monthlyDebt,
-      downPayment,
-      creditScore,
-      targetHomePrice,
-      state,
-      loanOfficer,
-      agent,
-    } = req.body || {};
-    try {
-      const loName = loanOfficer?.name || "Mike Ford";
-      const loContact =
-        loanOfficer?.phone || loanOfficer?.email
-          ? `(${loanOfficer.phone || ""} ${loanOfficer.email || ""})`
-          : "";
-      const agentName = agent?.name || "Kanndice McLean";
-      const agentBrokerage = agent?.brokerage ? ` of ${agent.brokerage}` : "";
-      const agentContact =
-        agent?.phone || agent?.email ? `(${agent.phone || ""} ${agent.email || ""})` : "";
-
-      const prompt = `Analyze this first-time homebuyer's financial profile:
-- Annual Gross Income: $${income}
-- Total Monthly Non-Mortgage Debt: $${monthlyDebt}
-- Available Down Payment: $${downPayment}
-- Credit Score Tier: ${creditScore}
-- Target Home Price: $${targetHomePrice}
-- Target State/Market: ${state || "National Average"}`;
-
-      const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.7-flash",
-        contents: prompt,
-        config: {
-          systemInstruction: `You are a senior mortgage underwriter and financial planner providing actionable, encouraging, and financially prudent guidance to first-time homebuyers. Represent their local guides: ${loName} ${loContact} and ${agentName}${agentBrokerage} ${agentContact}. End the analysis with a clear call-to-action to contact their guides for a custom strategy.`,
-          temperature: 0.6,
-        },
-      });
-
-      res.json({
-        analysis:
-          response.text ||
-          getMortgageAnalysisFallback({
-            income,
-            monthlyDebt,
-            downPayment,
-            creditScore,
-            targetHomePrice,
-          }),
-      });
-    } catch (error: any) {
-      console.log("Mortgage analysis notice (using fallback):", "API Limitation handled.");
-      res.json({
-        analysis: getMortgageAnalysisFallback({
-          income,
-          monthlyDebt,
-          downPayment,
-          creditScore,
-          targetHomePrice,
-        }),
-        isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error),
-      });
-    }
-  });
-
-  // API Route: Generate Outreach Email
-  app.post("/api/gemini/generate-outreach", async (req, res) => {
-    try {
-      const { candidateName, yearsExperience, company, recruitmentStatus, myName, myTitle } =
-        req.body;
-      const ai = getGeminiClient();
-      const prompt = `Draft a personalized, professional outreach email to a Loan Officer candidate. 
-Candidate details:
-- Name: ${candidateName || "Loan Officer"}
-- Experience: ${yearsExperience ? yearsExperience + " years" : "experienced"}
-- Current Company: ${company || "their current brokerage"}
-- Status: ${recruitmentStatus || "Not Contacted"}
-
-Sender details:
-- Name: ${myName || "Mike Ford"}
-- Title: ${myTitle || "Branch Manager"}
-
-The email should be warm, inviting, and focus on growth opportunities. Mention their experience. Do not include subject line, just the body of the email. Make it 2-3 short paragraphs.`;
-
-      const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.7-flash",
-        contents: prompt,
-        config: { temperature: 0.7 },
-      });
-
-      res.json({ emailBody: response.text });
-    } catch (error) {
-      console.error("Outreach generation error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate outreach email" });
-    }
-  });
-
-  // API Route: AI Agent Profile Lookup & Generation
-  app.post("/api/gemini/agent-lookup", async (req, res) => {
-    try {
-      const { query } = req.body;
-      if (!query || typeof query !== "string" || !query.trim()) {
-        return res.status(400).json({ error: "Agent search query required" });
+      
+      // Check if we have Vantage AI context
+      let vantageContext = "";
+      try {
+        const db = getFirestore(adminApp);
+        const docs = await db.collection("lo_documents").where("loanOfficerId", "==", loanOfficer?.id || "lo_1").limit(5).get();
+        if (!docs.empty) {
+          vantageContext = "Vantage Mortgage 2nd Brain Guidelines Available:\n";
+          docs.forEach(doc => {
+            const data = doc.data();
+            vantageContext += `- ${data.title}: ${data.summary}\n`;
+          });
+        }
+      } catch (e) {
+        console.warn("Could not load Vantage context:", e);
       }
 
-      const ai = getGeminiClient();
-      const systemInstruction = `You are a specialized AI Real Estate Intelligence Assistant.
-Given an agent's name, website URL, brokerage office, or city location, generate a comprehensive, realistic, and complete professional real estate agent profile object.
+      const prompt = `
+You are the advanced AI Underwriter Assistant powered by the Vantage AI Mortgage Second Brain. You are working on behalf of ${loName}.
+Your goal is to guide a homebuyer through a pre-qualification process conversationally, while extracting their financial data in real-time.
 
-You MUST respond strictly with valid JSON (no markdown fences, no formatting backticks) conforming to this exact structure:
+${vantageContext}
+
+Current Known Financial Profile:
+${JSON.stringify(financialProfile, null, 2)}
+
+Chat History:
+${chatHistory?.map((h: any) => `${h.sender}: ${h.text}`).join("\n") || "None"}
+
+User's Latest Message: "${message}"
+
+Instructions:
+1. Respond conversationally to the user's message. Be encouraging, professional, and clear.
+2. If the user's situation matches any of the Vantage Mortgage Guidelines provided above (e.g. they mention a specific program, or their income/credit fits a guideline), proactively mention it as a potential option!
+3. Identify what financial data is still missing (annualIncome, monthlyDebt, downPaymentSavings, creditScore).
+4. In your reply, ask ONE clear question to gather the next missing piece of information. If all core info is gathered, congratulate them and tell them they are ready to see their scenario.
+5. Extract any new financial data provided in the user's latest message and return it in the "extractedData" object. Only include fields that you are confident the user provided. Parse numbers as raw integers (e.g., 85000 not "85k").
+
+Respond STRICTLY in JSON format matching this schema:
 {
-  "name": "Full Agent Name",
-  "title": "Professional Title (e.g., Senior Buyer Specialist, REALTOR®)",
-  "brokerage": "Brokerage / Firm Name",
-  "licenseNumber": "License number (e.g. OR Lic #202409811)",
-  "email": "professional.email@domain.com",
-  "phone": "(503) 555-0192",
-  "websiteUrl": "https://brokerage.com/agent-name",
-  "headshotUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-  "agentType": "buyer_agent",
-  "experienceYears": 9,
-  "activeListingsCount": 11,
-  "rating": 4.9,
-  "bio": "Comprehensive, compelling professional biography detailing local market experience, advocacy for first-time homebuyers, offer negotiation skills, and collaboration with zero-down mortgage programs.",
-  "specialties": ["First-Time Homebuyers", "USDA 0% Down Loans", "Down Payment Assistance Grants", "Inspection Negotiations"],
-  "marketAreas": ["Portland Metro", "Beaverton", "Clackamas", "Hillsboro"],
-  "socialLinks": {
-    "zillow": "https://zillow.com/profile/agent",
-    "linkedin": "https://linkedin.com/in/agent",
-    "instagram": "https://instagram.com/agent_realtor"
+  "reply": "Your conversational response here",
+  "extractedData": {
+    "annualIncome": number (or null if not provided/changed),
+    "monthlyDebt": number (or null),
+    "downPaymentSavings": number (or null),
+    "creditScore": number (or null),
+    "isComplete": boolean (true if income, debt, savings, and credit score are all known)
   }
 }
-Note on agentType: If the query emphasizes buyers or purchasing, use "buyer_agent". If listings or selling, use "listing_agent". Otherwise use "dual_agent". Choose realistic Unsplash portrait images for headshotUrl.`;
-
-      const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.7-flash",
-        contents: `Search Query: "${query.trim()}"`,
-        config: {
-          systemInstruction,
-          temperature: 0.4,
-          responseMimeType: "application/json",
-        },
-      });
-
-      const jsonText = response.text || "{}";
-      const profileData = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
-      res.json({ success: true, profile: profileData });
-    } catch (error: any) {
-      console.error("Agent lookup error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate AI agent profile" });
-    }
-  });
-
-  // API Route: AI Loan Officer Roster Lookup & Generation
-  app.post("/api/gemini/lo-roster-lookup", async (req, res) => {
-    try {
-      const { query, minYearsExp, minUnits, minVolume, licenseStateFilter } = req.body || {};
-      if (!query || typeof query !== "string" || !query.trim()) {
-        return res.status(400).json({ error: "LO search query required" });
-      }
-
-      const cleanQuery = query.trim();
-      const stateName = licenseStateFilter || "Oregon (OR)";
-      const expYears = Number(minYearsExp) || 3;
-      const unitsMin = Number(minUnits) || 20;
-      const volumeMin = Number(minVolume) || 10;
-
-      const systemInstruction = `You are a specialized AI Real Estate & Mortgage Intelligence Assistant.
-Given a query like a branch name, team website, or company name, generate a comprehensive array of professional loan officer profiles. Return at least 4-6 realistic profiles to simulate scraping a team roster.
-
-STRICT RECRUITING FILTERS APPLIED:
-- ALL returned loan officers MUST hold a mortgage license in: ${stateName} (Ensure this is in their licenseStates array).
-- ALL returned loan officers MUST have at least ${expYears} years of experience as a licensed LO.
-- ALL returned loan officers MUST have closed at least ${unitsMin} units in the last 12 months.
-- ALL returned loan officers MUST have produced at least ${volumeMin} Million in volume in the last 12 months.
-
-You MUST respond strictly with valid JSON containing a single array called "profiles" (no markdown fences). Structure:
-{
-  "profiles": [
-    {
-      "name": "Full LO Name",
-      "title": "Professional Title (e.g., Senior Mortgage Advisor)",
-      "nmlsId": "NMLS #123456",
-      "company": "Brokerage / Firm Name",
-      "branch": "Branch Name",
-      "city": "City Name",
-      "county": "County Name",
-      "state": "State Name",
-      "isTeamMember": false,
-      "email": "professional.email@domain.com",
-      "phone": "(503) 555-0192",
-      "websiteUrl": "https://brokerage.com/lo-name",
-      "headshotUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-      "bio": "Comprehensive, compelling professional biography detailing mortgage experience, zero-down programs, etc.",
-      "specialties": ["First-Time Homebuyers", "USDA 0% Down Loans", "Down Payment Assistance Grants"],
-      "licenseStates": ["Oregon", "Washington"],
-      "yearsExperience": 5,
-      "production12MoVolume": 15000000,
-      "production12MoUnits": 35
-    }
-  ]
-}
-Choose realistic Unsplash portrait images for headshotUrl.`;
-
-      try {
-        const response = await generateWithModelFallback({
-          preferredModel: "gemini-3.7-flash",
-          contents: `Search Query: "${cleanQuery}"`,
-          config: {
-            systemInstruction,
-            temperature: 0.5,
-            responseMimeType: "application/json",
-          },
-        });
-
-        const jsonText = response.text || "{}";
-        const data = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
-        if (data.profiles && Array.isArray(data.profiles) && data.profiles.length > 0) {
-          return res.json({ success: true, profiles: data.profiles });
-        }
-      } catch (geminiError) {
-        console.log(
-          "Gemini remote call failed for LO scraper, generating realistic query-matched profiles:",
-          "API Limitation handled."
-        );
-      }
-
-      // Resilient fallback generator based on search query (e.g. Guild Mortgage in Portland Metro)
-      const companyMatch = cleanQuery.split(/[\+\s,]+/)[0] || "Guild Mortgage";
-      const displayCompany = companyMatch.charAt(0).toUpperCase() + companyMatch.slice(1);
-
-      const sampleNames = [
-        {
-          name: "Sarah Jenkins",
-          title: "Senior Vice President of Mortgage Lending",
-          nmls: "184920",
-          headshot:
-            "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-          city: "Portland",
-          county: "Multnomah",
-        },
-        {
-          name: "Marcus Vance",
-          title: "Branch Manager & Senior Mortgage Advisor",
-          nmls: "349102",
-          headshot:
-            "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop&q=80",
-          city: "Lake Oswego",
-          county: "Clackamas",
-        },
-        {
-          name: "Elena Rostova",
-          title: "Executive Loan Officer | DPA Specialist",
-          nmls: "492018",
-          headshot:
-            "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
-          city: "Beaverton",
-          county: "Washington",
-        },
-        {
-          name: "David Chen",
-          title: "Producing Sales Manager",
-          nmls: "291048",
-          headshot:
-            "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80",
-          city: "Oregon City",
-          county: "Clackamas",
-        },
-        {
-          name: "Rachel Morales",
-          title: "Senior Residential Mortgage Specialist",
-          nmls: "518392",
-          headshot:
-            "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80",
-          city: "Gresham",
-          county: "Multnomah",
-        },
-      ];
-
-      const fallbackProfiles = sampleNames.map((s, idx) => ({
-        name: s.name,
-        title: s.title,
-        nmlsId: `NMLS #${s.nmls}`,
-        company: `${displayCompany} Pacific Northwest`,
-        branch: `${s.city} Regional Branch`,
-        city: s.city,
-        county: `${s.county} County`,
-        state: "Oregon",
-        isTeamMember: false,
-        email: `${s.name.toLowerCase().replace(" ", ".")}@${companyMatch.toLowerCase()}.com`,
-        phone: `(503) 555-01${20 + idx}`,
-        websiteUrl: `https://${companyMatch.toLowerCase()}.com/branches/${s.city.toLowerCase()}/${s.name.toLowerCase().replace(" ", "-")}`,
-        headshotUrl: s.headshot,
-        bio: `Top 1% producing loan officer in the ${s.county} market with over ${expYears + idx + 2} years of dedicated mortgage origination experience. Specialized in OHCS DPA state grants, FirstHome targeted census tract financing, USDA 100% 0%-down programs, and 2-1 seller concession buydowns.`,
-        specialties: [
-          "First-Time Homebuyer Grants",
-          "OHCS Flex Lending",
-          "USDA 0% Down",
-          "2-1 Temporary Buydowns",
-          "Jumbo & Conforming",
-        ],
-        licenseStates: ["Oregon", "Washington", "California"],
-        yearsExperience: expYears + idx + 2,
-        production12MoVolume: Math.round((volumeMin + 4 + idx * 3.5) * 1000000),
-        production12MoUnits: unitsMin + 6 + idx * 8,
-      }));
-
-      res.json({ success: true, profiles: fallbackProfiles });
-    } catch (error: any) {
-      console.error("LO lookup error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate AI LO profiles" });
-    }
-  });
-
-  app.post("/api/gemini/realtor-roster-lookup", async (req, res) => {
-    try {
-      const { query, minYearsExp, minUnits, minVolume, licenseStateFilter } = req.body || {};
-      if (!query || typeof query !== "string" || !query.trim()) {
-        return res.status(400).json({ error: "Realtor search query required" });
-      }
-
-      const cleanQuery = query.trim();
-      const stateName = licenseStateFilter || "Oregon (OR)";
-      const expYears = Number(minYearsExp) || 3;
-      const unitsMin = Number(minUnits) || 20;
-      const volumeMin = Number(minVolume) || 10;
-
-      const systemInstruction = `You are a specialized AI Real Estate & Mortgage Intelligence Assistant.
-Given a query like a branch name, team website, or company name, generate a comprehensive array of professional real estate agent profiles. Return at least 4-6 realistic profiles to simulate scraping a team roster.
-
-STRICT RECRUITING FILTERS APPLIED:
-- ALL returned agents MUST operate in: ${stateName} (Ensure this is in their marketAreas array).
-- ALL returned agents MUST have at least ${expYears} years of experience as a licensed Agent.
-- ALL returned agents MUST have closed at least ${unitsMin} units in the last 12 months.
-- ALL returned agents MUST have produced at least ${volumeMin} Million in volume in the last 12 months.
-
-You MUST respond strictly with valid JSON containing a single array called "profiles" (no markdown fences). Structure:
-{
-  "profiles": [
-    {
-      "name": "Full Agent Name",
-      "title": "Professional Title (e.g., Senior Broker)",
-      "licenseNumber": "License #123456",
-      "company": "Brokerage Name",
-      "city": "City Name",
-      "county": "County Name",
-      "state": "State Name",
-      "email": "agent.email@domain.com",
-      "phone": "(503) 555-0192",
-      "websiteUrl": "https://brokerage.com/agent-name",
-      "headshotUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-      "bio": "Comprehensive, compelling professional biography detailing real estate experience.",
-      "specialties": ["First-Time Homebuyers", "Luxury Homes", "Relocation"],
-      "marketAreas": ["Portland Metro", "Oregon"],
-      "agentType": "buyer_agent",
-      "experienceYears": 5,
-      "production12MoVolume": 15000000,
-      "production12MoUnits": 35,
-      "activeListingsCount": 4
-    }
-  ]
-}
-Choose realistic Unsplash portrait images for headshotUrl.`;
-
-      try {
-        const response = await generateWithModelFallback({
-          preferredModel: "gemini-3.7-flash",
-          contents: `Search Query: "${cleanQuery}"`,
-          config: {
-            systemInstruction,
-            temperature: 0.5,
-            responseMimeType: "application/json",
-          },
-        });
-
-        const jsonText = response.text || "{}";
-        const data = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
-        if (data.profiles && Array.isArray(data.profiles) && data.profiles.length > 0) {
-          return res.json({ success: true, profiles: data.profiles });
-        }
-      } catch (geminiError) {
-        console.log(
-          "Gemini remote call failed for Realtor scraper, generating realistic query-matched profiles:",
-          "API Limitation handled."
-        );
-      }
-
-      // Resilient fallback generator based on search query
-      const companyMatch = cleanQuery.split(/[\+\s,]+/)[0] || "Premiere Property Group";
-      const displayCompany = companyMatch.charAt(0).toUpperCase() + companyMatch.slice(1);
-
-      const sampleAgents = [
-        {
-          name: "Jessica Taylor",
-          title: "Principal Broker | Top 1% Producer",
-          license: "201204891",
-          headshot:
-            "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-          city: "Portland",
-          county: "Multnomah",
-        },
-        {
-          name: "Brian Kowalski",
-          title: "Lead Buyer Specialist",
-          license: "201809214",
-          headshot:
-            "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
-          city: "Clackamas",
-          county: "Clackamas",
-        },
-        {
-          name: "Amanda Sterling",
-          title: "Senior Real Estate Advisor",
-          license: "201503892",
-          headshot:
-            "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
-          city: "Lake Oswego",
-          county: "Clackamas",
-        },
-        {
-          name: "Robert Hayes",
-          title: "Associate Broker",
-          license: "201402918",
-          headshot:
-            "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80",
-          city: "Beaverton",
-          county: "Washington",
-        },
-        {
-          name: "Michelle Duong",
-          title: "First-Time Homebuyer & Relocation Director",
-          license: "201908472",
-          headshot:
-            "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80",
-          city: "Hillsboro",
-          county: "Washington",
-        },
-      ];
-
-      const fallbackProfiles = sampleAgents.map((s, idx) => ({
-        name: s.name,
-        title: s.title,
-        licenseNumber: `OR License #${s.license}`,
-        company: `${displayCompany} Real Estate`,
-        city: s.city,
-        county: `${s.county} County`,
-        state: "Oregon",
-        email: `${s.name.toLowerCase().replace(" ", ".")}@${companyMatch.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
-        phone: `(503) 555-02${30 + idx}`,
-        websiteUrl: `https://${companyMatch.toLowerCase().replace(/[^a-z0-9]/g, "")}.com/agents/${s.name.toLowerCase().replace(" ", "-")}`,
-        headshotUrl: s.headshot,
-        bio: `Accomplished real estate broker in ${s.city} and ${s.county} County with over ${expYears + idx + 1} years of full-time residential experience. Known for negotiating aggressive seller concession closing credits and guiding first-time homebuyers through competitive multiple-offer situations.`,
-        specialties: [
-          "First-Time Homebuyers",
-          "Seller Concessions",
-          "New Construction",
-          "Relocation",
-          "Buyer Representation",
-        ],
-        marketAreas: [
-          `${s.city} Metro`,
-          `${s.county} County`,
-          "Portland Metro",
-          "Willamette Valley",
-        ],
-        agentType: "buyer_agent",
-        experienceYears: expYears + idx + 1,
-        production12MoVolume: Math.round((volumeMin + 3.5 + idx * 2.8) * 1000000),
-        production12MoUnits: unitsMin + 4 + idx * 6,
-        activeListingsCount: 3 + idx,
-      }));
-
-      res.json({ success: true, profiles: fallbackProfiles });
-    } catch (error: any) {
-      console.error("Realtor lookup error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate AI Realtor profiles" });
-    }
-  });
-
-  // API Route: Live Web Search Engine (Google Search Grounded + Live Internet Candidate Extraction)
-  app.post("/api/recruitment/search-registry", async (req, res) => {
-    try {
-      const {
-        query,
-        company,
-        city,
-        county,
-        state,
-        minYears,
-        minUnits,
-        minVolume,
-        minBuysideUnits,
-        minBuysideVolume,
-        type = "lo",
-      } = req.body || {};
-      const searchRes = await searchLiveRegistry(
-        {
-          query: query ? String(query).trim() : "",
-          company: company ? String(company).trim() : "",
-          city: city ? String(city).trim() : "",
-          county: county ? String(county).trim() : "",
-          state: state ? String(state).trim() : "OR",
-          minYears: Number(minYears) || 0,
-          minUnits: Number(minUnits) || 0,
-          minVolume: Number(minVolume) || 0,
-          minBuysideUnits: Number(minBuysideUnits) || 0,
-          minBuysideVolume: Number(minBuysideVolume) || 0,
-        },
-        type === "agent" ? "agent" : "lo"
-      );
-
-      res.json({
-        success: true,
-        results: searchRes.results,
-        source: searchRes.source,
-        queryUsed: searchRes.queryUsed,
-      });
-    } catch (err: any) {
-      console.error("Recruitment live search error:", err);
-      res.status(500).json({ error: err.message || "Failed to search live registry" });
-    }
-  });
-
-  // API Route: AI LO Recruiter Outreach Draft
-  app.post("/api/gemini/lo-outreach-draft", async (req, res) => {
-    try {
-      const { adminName, adminTitle, adminCompany, outreachType, tone, keywords, loCount } =
-        req.body || {};
-
-      const ai = getGeminiClient();
-
-      const systemInstruction = `You are an elite real estate & mortgage recruiting copywriter.
-You are drafting an ${outreachType} (email or SMS) on behalf of ${adminName}, ${adminTitle} at ${adminCompany}.
-The goal is to recruit ${loCount > 1 ? "multiple Loan Officers" : "a Loan Officer"} to join the team.
-Tone: ${tone}.
-Keywords/Focus: ${keywords || "General opportunities, better technology, proprietary tools"}.
-
-If outreachType is 'sms', make it very short (under 160 characters if possible), punchy, and include a call to action to reply or call. DO NOT INCLUDE A SUBJECT LINE.
-If outreachType is 'email', write a compelling subject line and a professional body paragraph (2-3 short paragraphs), focusing on the value proposition.
-
-Respond ONLY with a valid JSON object:
-{
-  "subject": "Email Subject Line (leave empty if SMS)",
-  "draft": "The body of the message."
-}
-No markdown formatting.`;
-
-      const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.7-flash",
-        contents: "Generate the recruiting draft.",
-        config: {
-          systemInstruction,
-          temperature: 0.7,
-          responseMimeType: "application/json",
-        },
-      });
-
-      const jsonText = response.text || "{}";
-      const data = JSON.parse(jsonText.replace(/```json\n?|\n?```/g, "").trim());
-      res.json({ success: true, subject: data.subject, draft: data.draft });
-    } catch (error: any) {
-      console.error("LO Outreach draft error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate outreach draft" });
-    }
-  });
-
-  // API Route: AI Mortgage 2nd Brain - SMS Nurture Template Generator
-  app.post("/api/gemini/generate-sms-template", async (req, res) => {
-    try {
-      const { goal, customPrompt, tone, loName, loCompany, category } = req.body || {};
-      const officer = loName || "Mike Ford";
-      const company = loCompany || "Cornerstone First Mortgage";
-
-      const systemInstruction = `You are an expert mortgage copywriter and TCPA compliance specialist for Mortgage Loan Officers (Cornerstone First Mortgage).
-Generate a high-converting, concise text message (SMS) template for loan officers to send to prospective homebuyer leads.
-
-RULES:
-1. Length: Keep it under 240 characters (ideally 140-190 characters).
-2. Use merge variables where appropriate:
-   - {{firstName}} for lead's first name
-   - {{loName}} for Loan Officer's first name
-   - {{location}} for target city/area
-   - [AgentName] for real estate agent partner
-   - {{targetPrice}} for target price/budget
-3. Include TCPA opt-out text at the end: "Reply STOP to opt out."
-4. Voice: ${tone || "friendly, consultative, transparent, professional"}. No cheesy spam phrases.
-5. Focus/Goal: ${customPrompt || goal || "Pre-approval check-in and down payment grant overview"}.
-6. Category: ${category || "follow_up"}.
-
-Respond ONLY with a valid JSON object matching this schema:
-{
-  "title": "A concise, engaging template title with a relevant emoji (under 50 chars)",
-  "content": "The exact SMS text message with merge variables and opt-out notice",
-  "category": "${category || "follow_up"}",
-  "tags": ["Tag1", "Tag2"]
-}
-No markdown formatting or extra text outside JSON.`;
-
-      try {
-        const response = await generateWithModelFallback({
-          preferredModel: "gemini-3.7-flash",
-          contents: `Create a mortgage nurture SMS template for: ${customPrompt || goal || "home financing inquiry"}`,
-          config: {
-            systemInstruction,
-            temperature: 0.7,
-            responseMimeType: "application/json",
-          },
-        });
-
-        const text = response.text || "{}";
-        const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
-        const parsed = JSON.parse(cleaned);
-
-        return res.json({
-          success: true,
-          template: {
-            id: `sms-tpl-ai-${Date.now()}`,
-            title: parsed.title || "✨ AI Custom Mortgage Nurture",
-            content:
-              parsed.content ||
-              `Hi {{firstName}}, this is {{loName}} with ${company}. Checking in on your home search in {{location}}. Would you like to review custom loan options this week? Reply STOP to opt out.`,
-            category: parsed.category || category || "follow_up",
-            tags: parsed.tags || ["AI Generated", "Mortgage 2nd Brain"],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            ownerId: "ai_copilot",
-          },
-        });
-      } catch (genError) {
-        // Fallback generator when API limit occurs
-        const fallbackTitle = goal ? `✨ ${goal}` : "✨ AI Mortgage Check-in";
-        const fallbackContent = `Hi {{firstName}}, {{loName}} here with ${company}. Saw you were researching homes in {{location}}. We have special down payment grants and low-rate programs available this month. Want to review numbers? Reply STOP to opt out.`;
-        return res.json({
-          success: true,
-          template: {
-            id: `sms-tpl-ai-${Date.now()}`,
-            title: fallbackTitle,
-            content: fallbackContent,
-            category: category || "follow_up",
-            tags: ["AI Generated", "Mortgage 2nd Brain"],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            ownerId: "ai_copilot",
-          },
-        });
-      }
-    } catch (error: any) {
-      console.error("SMS template generation error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate SMS template" });
-    }
-  });
-
-  // API Route: AI Buyer Lead Outreach & Co-Branded Template Generator
-  app.post("/api/gemini/website-lead-email", async (req, res) => {
-    const { lead, lo, agent, matchingListings } = req.body || {};
-    try {
-      const ai = getGeminiClient();
-
-      const loName = lo?.name || "Mike Ford";
-      const loTitle = lo?.title || "Senior Loan Officer";
-      const loNmls = lo?.nmlsId || "184209";
-
-      const agentName = agent?.name;
-      const agentBrokerage = agent?.brokerage;
-      const agentTitle = agent?.title || "Senior Real Estate Agent";
-      const agentPhone = agent?.phone;
-      const agentEmail = agent?.email;
-
-      const leadName = lead?.fullName || "Valued Homebuyer";
-      const leadCity = lead?.preferredLocations || "your target area";
-      const targetBudget = lead?.targetPriceRange || "$400,000";
-      const requestedHomeList = Boolean(lead?.sendSampleHomes);
-
-      const listingsSummary = (matchingListings || [])
-        .map(
-          (p: any) =>
-            `- ${p.address}, ${p.city} (${p.beds}bd/${p.baths}ba, $${(p.price || 0).toLocaleString()}): ${p.overlayEligibility?.usda ? "🌾 100% USDA Zero Down Eligible" : "💳 Flex DPA 3.5% Grant Eligible"} (Est. PITI: ~$${Math.round((p.price || 0) * 0.0065).toLocaleString()}/mo)`
-        )
-        .join("\n");
-
-      const systemInstruction = `You are a top-producing Mortgage & Real Estate Conversion Strategist.
-Generate a personalized, warm, highly conversion-focused outreach email for a prospective first-time homebuyer who submitted an intake request on the website chatbot.
-
-CRITICAL MANDATES:
-1. If an assigned Real Estate Agent is provided (${agentName || "None"}), you MUST include a clear co-branded team introduction plug explaining that ${loName} (${loTitle}) and ${agentName} (${agentTitle} at ${agentBrokerage}) work together as a co-branded local guide team to help them find zero-down and low-down homes, request property tours, and navigate state DPA grants in ${leadCity} and surrounding areas.
-2. If the lead requested sample homes (${requestedHomeList ? "YES - Requested home list" : "NO"}), prominently feature the pre-screened low and zero-down homes list in or around ${leadCity}.
-3. Break down why buying with 0% down (USDA Rural Development) or 3.5% Flex DPA grants makes sense compared to local rent.
-4. Keep the tone encouraging, clear, transparent, and easy to respond to with zero pressure.
-5. You MUST include the full contact information for the team at the end of the email:
-   - Loan Officer: ${loName} (${lo?.phone || ""} ${lo?.email || ""})
-   ${agentName ? `- Real Estate Agent: ${agentName} (${agentPhone || ""} ${agentEmail || ""})` : ""}
-
-
-Respond with strict JSON:
-{
-  "subject": "Compelling personalized subject line referencing city and low/no down homes",
-  "body": "Full structured email text with co-branded guide plug, home list section, and clear call-to-action",
-  "smsFollowup": "Short 2-sentence SMS follow-up text message"
-}`;
-
-      const prompt = `Lead Information:
-Name: ${leadName}
-Email: ${lead?.email}
-Target City/Location: ${leadCity}
-Target Price/Budget: ${targetBudget}
-Down Payment Savings: ${lead?.downPaymentSavings || "Low"}
-Timeline: ${lead?.timeline || "30-60 Days"}
-Requested Sample Home List: ${requestedHomeList ? "YES - Wants recent $0/Low Down listings" : "No"}
-DPA Interest: ${lead?.grantInterest ? "YES" : "No"}
-
-Loan Officer: ${loName} (${loTitle}, NMLS #${loNmls})
-${agentName ? `Co-Branded Realtor Partner: ${agentName} (${agentTitle} @ ${agentBrokerage}, Phone: ${agentPhone}, Email: ${agentEmail})` : "Individual LO Outreach"}
-
-Qualifying Listings in/around ${leadCity}:
-${listingsSummary || `- Qualifying 100% USDA Zero-Down & Flex DPA homes available across ${leadCity} and surrounding towns.`}`;
+`;
 
       const response = await generateWithModelFallback({
         preferredModel: "gemini-3.7-flash",
         contents: prompt,
         config: {
-          systemInstruction,
           temperature: 0.7,
           responseMimeType: "application/json",
         },
@@ -3272,100 +2546,32 @@ ${listingsSummary || `- Qualifying 100% USDA Zero-Down & Flex DPA homes availabl
       } catch {
         result = null;
       }
-
-      if (!result || !result.subject) {
-        throw new Error("Invalid format");
-      }
-      res.json({ success: true, email: result });
+      
+      res.json(result || { reply: "I'm having trouble analyzing that right now. Could you clarify?", extractedData: {} });
     } catch (error: any) {
-      console.log("Website lead email notice (using fallback):", "API Limitation handled.");
-
-      const agentPlug = agent?.name
-        ? `\n\n🤝 YOUR LOCAL CO-BRANDED GUIDE TEAM:\nAs part of your dedicated homebuyer support team, I work in close partnership with ${agent.name} (${agent.title || "Real Estate Specialist"} at ${agent.brokerage || "Premier Realty"}). Together, we handle both your 100% pre-approval financing and private home tours across ${lead?.preferredLocations || "your target area"} and surrounding cities to ensure you get the best deal with zero stress.`
-        : "";
-
-      const sampleHomesBlock =
-        matchingListings && matchingListings.length > 0
-          ? `\n\n🏡 RECENT LOW & ZERO-DOWN HOMES FOR SALE IN/AROUND ${(lead?.preferredLocations || "YOUR AREA").toUpperCase()}:\n` +
-            matchingListings
-              .slice(0, 3)
-              .map(
-                (p: any) =>
-                  `• ${p.address}, ${p.city} - $${(p.price || 0).toLocaleString()} (${p.beds}bd/${p.baths}ba) | ${p.overlayEligibility?.usda ? "100% USDA Zero Down Eligible ($0 Down)" : "Flex DPA 3.5% Grant Eligible"}`
-              )
-              .join("\n")
-          : `\n\n🏡 LOW & ZERO-DOWN HOMES IN ${(lead?.preferredLocations || "YOUR AREA").toUpperCase()}:\nWe have compiled a curated list of homes in ${lead?.preferredLocations || "your area"} that qualify for 100% USDA Zero Down ($0 down required) or 3.5% Flex DPA Grants!`;
-
+      console.log("Advanced Prequal API notice:", "API Limitation handled.");
       res.json({
-        success: true,
+        reply: "Sorry, I'm experiencing a temporary delay. Please check back in a moment or ask a simpler question.",
+        extractedData: {},
         isFallback: true,
         quotaDepleted: isQuotaOrDepleted(error),
-        email: {
-          subject: `Your Low & Zero-Down Home List for ${lead?.preferredLocations || "Oregon"} + First-Time Buyer Blueprint`,
-          body: `Hi ${lead?.fullName ? lead.fullName.split(" ")[0] : "there"},\n\nThank you for reaching out through our interactive First-Time Homebuyer Portal! Based on your target budget of ${lead?.targetPriceRange || "$400,000"} and timeline (${lead?.timeline || "30-60 days"}), we have prepared your customized pre-approval blueprint.${agentPlug}${sampleHomesBlock}\n\nDid you know that many buyers in ${lead?.preferredLocations || "our market"} assume they need $40,000+ in cash for a down payment—when in reality, you can purchase with 0% down or combine 3.5% DPA grants with seller concessions?\n\nLet's schedule a quick 10-minute call this week at your preferred time (${lead?.preferredContactTime || "whenever convenient"}) to review your exact monthly numbers and set up property alerts for new qualifying listings.\n\nBest regards,\n${lo?.name || "Mike Ford"}\n${lo?.title || "Senior Loan Officer"} | NMLS #${lo?.nmlsId || "184209"}\nPhone: ${lo?.phone || "(503) 555-0199"}`,
-          smsFollowup: `Hi ${lead?.fullName ? lead.fullName.split(" ")[0] : "there"}! Sent over your requested zero-down home list for ${lead?.preferredLocations || "your target area"} + your co-branded buyer blueprint. Check your inbox when you get a chance!`,
-        },
       });
     }
   });
 
-  // API Route: AI Buyer Agent Outreach Email & Campaign Generator
-  app.post("/api/gemini/buyer-agent-email", async (req, res) => {
-    const {
-      agentNames,
-      properties,
-      loName,
-      loPhone,
-      loEmail,
-      loanOfficer,
-      campaignType,
-      tone,
-      customNotes,
-    } = req.body || {};
-
-    // Resolve dynamically from multiple possible input styles (backward compat)
-    const finalLoName = loanOfficer?.name || loName || "Mike Ford";
-    const finalLoContact = loanOfficer
-      ? loanOfficer.phone || loanOfficer.email
-        ? `(${loanOfficer.phone || ""} ${loanOfficer.email || ""})`
-        : ""
-      : `(${loPhone || ""} ${loEmail || ""})`;
+  // API Route: Generate Buyer Agent Campaign Email
+  app.post("/api/gemini/agent-campaign", authenticateUser, async (req, res) => {
+    const { campaignType, tone, agentNames, propertySummary, customNotes, loanOfficer } = req.body || {};
+    const loName = loanOfficer?.name || "Mike Ford";
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      return res.status(500).json({ error: "API Key missing" });
+    }
 
     try {
-      const propertySummary = (properties || [])
-        .map(
-          (p: any) =>
-            `- ${p.address}, ${p.city} ($${(p.price || 0).toLocaleString()}): ${p.overlayEligibility?.usda ? "USDA 100% Zero Down Eligible" : "Flex DPA 3.5% Grant Eligible"}, Est. Payment: ~$${Math.round((p.price || 0) * 0.0065).toLocaleString()}/mo vs Avg Local Rent ~$2,150/mo`
-        )
-        .join("\n");
-
-      const systemInstruction = `You are an expert Mortgage Co-Marketing Strategist building high-converting B2B outreach email drafts for Loan Officers targeting Buyer's Agents.
-Your goal is to convince local Buyer's Agents to partner up with Senior Loan Officer ${finalLoName} ${finalLoContact} to co-market zero-down and low-down property listings to renters who want to stop paying rent and buy their first home. Include the Loan Officer's full contact information elegantly in the sign-off.
-
-Key themes to emphasize:
-1. Renters who assume they need 20% down or $50k cash can actually buy with 0% down (USDA Rural Development) or 3.5% Flex DPA grants.
-2. Partnering up on co-branded landing pages, flyer attachments, and open house marketing.
-3. Highlighting specific pre-screened zero/low-down listings in the area.
-4. Engaging, professional, non-salesy tone that respects the Realtor's time.
-
-Respond with strict JSON:
-{
-  "subject": "Compelling, high open-rate subject line",
-  "body": "Full professional email body text using placeholders like [AgentName] where appropriate",
-  "smsScript": "Short 2-sentence SMS text message script to follow up with the agent",
-  "openHouseTalkingPoints": [
-    "Talking point 1 for buyer agent open house visitors",
-    "Talking point 2 for buyer agent open house visitors",
-    "Talking point 3 for buyer agent open house visitors"
-  ],
-  "rentVsBuyComparison": {
-    "avgLocalRent": "$2,200/mo",
-    "estMortgagePayment": "$2,140/mo",
-    "downPaymentRequired": "$0 (USDA 100% RD / Flex DPA)",
-    "monthlySavings": "$60/mo + equity building"
-  }
-}`;
-
+      const systemInstruction = `You are an expert real estate and mortgage marketing copywriter working for ${loName}. Write an engaging, high-converting outreach email targeted at real estate buyer agents.`;
+      
       const prompt = `Campaign Focus: ${campaignType || "Attract Buyer Agents - Stop Renting Zero-Down Push"}
 Tone Strategy: ${tone || "High-Converting & Professional"}
 Target Agents: ${Array.isArray(agentNames) && agentNames.length > 0 ? agentNames.join(", ") : "Local Buyer Specialists"}
@@ -4311,6 +3517,13 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to fetch HFA programs" });
     }
+  });
+
+  
+  // API Route: Twilio SMS Webhook for Incoming LO Replies
+  app.post("/api/twilio/webhook", express.urlencoded({ extended: false }), async (req, res) => {
+    // Delegated to dedicated smsSyncService for payload parsing, sender verification, and sync
+    return handleIncomingTwilioWebhook(req, res, adminApp, decryptVault);
   });
 
   // API Route: Twilio SMS Carrier Integration Proxy

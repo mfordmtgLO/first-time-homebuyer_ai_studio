@@ -2,6 +2,7 @@ import { auth, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
+  AlertCircle,
   Users,
   UserPlus,
   Link,
@@ -116,12 +117,14 @@ import {
   CapturedLead,
   PropertyListing,
   SmsTemplate,
+  PropertyActionItem,
 } from "../types";
 import { SocialPushHub } from "./SocialPushHub";
 import { AdsCampaignHub } from "./AdsCampaignHub";
 import { LoanOfficerLoginView } from "./LoanOfficerLoginView";
 import { StateLicensingSelector } from "./StateLicensingSelector";
 import { processLocalImageFile } from "../utils/imageUtils";
+import { sendRealTimePushNotification } from "../utils/pushNotifications";
 import { HeadshotAvatar } from "./HeadshotAvatar";
 import { GeoSphereSyncHub } from "./GeoSphereSyncHub";
 import { EmailOutreachModal } from "./EmailOutreachModal";
@@ -137,7 +140,9 @@ import { BatchLeadRecommendations } from "./BatchLeadRecommendations";
 import { DailyMorningBriefing } from "./DailyMorningBriefing";
 import { TaskManagementPanel } from "./TaskManagementPanel";
 import { AgenticOrchestratorDiagnostics } from "./AgenticOrchestratorDiagnostics";
+import { subscribeToAllPropertyActionItems } from "../services/propertyConversationService";
 import { SmsTemplateLibrary } from "./SmsTemplateLibrary";
+import { LeadPropertyConversationSync } from "./LeadPropertyConversationSync";
 import { BulkSmsModal } from "./BulkSmsModal";
 import { DEFAULT_SMS_TEMPLATES } from "../data/smsTemplates";
 import { ScrapeLoRosterModal } from "./ScrapeLoRosterModal";
@@ -207,6 +212,50 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     undefined
   );
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  
+  const [propertyActionItems, setPropertyActionItems] = useState<PropertyActionItem[]>([]);
+  useEffect(() => {
+    const unsub = subscribeToAllPropertyActionItems(setPropertyActionItems);
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleDeepLink = (e: any) => {
+      const payload = e.detail;
+      if (payload.targetTab) {
+        setActiveTab(payload.targetTab);
+      }
+      if (payload.targetLeadId) {
+        // Find lead if it exists
+        const lead = guidesState.capturedLeads?.find((l: any) => l.id === payload.targetLeadId);
+        if (lead) setViewingJourneyLead(lead);
+      }
+    };
+    
+    const handleAppToast = (e: any) => {
+      if (e.detail?.message) {
+        setSuccessToast(e.detail.message);
+        setTimeout(() => setSuccessToast(null), 5000);
+      }
+    };
+
+    window.addEventListener("DEEP_LINK_NAV", handleDeepLink);
+    window.addEventListener("APP_TOAST", handleAppToast);
+    return () => {
+      window.removeEventListener("DEEP_LINK_NAV", handleDeepLink);
+      window.removeEventListener("APP_TOAST", handleAppToast);
+    };
+  }, [guidesState.capturedLeads]);
+  const pendingPropertyQuestions = propertyActionItems.filter(item => item.status === 'pending');
+
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [viewingHistoryLo, setViewingHistoryLo] = useState<string | null>(null);
 
@@ -2108,8 +2157,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     ? `${origin}/?pair=${matchedActivePairing.customSlug}`
     : `${origin}/?lo=${currentLoSlug}&agent=${activeAgentSlug}`;
 
-  return (
-    <div className="min-h-screen bg-[#F7F6F2] text-[#2D362E] pb-24">
+  return (<>
+<div className="min-h-screen bg-[#F7F6F2] text-[#2D362E] pb-24">
       {/* Toast Notification */}
       {successToast && (
         <div className="fixed bottom-6 right-6 z-50 bg-[#2D362E] text-white px-5 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-bottom-5">
@@ -2861,6 +2910,27 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         )}
       </header>
 
+      {/* GLOBAL PENDING PROPERTY QUESTION ALERTS */}
+      {pendingPropertyQuestions.length > 0 && (
+        <div className="bg-red-600 text-white px-4 py-3 shadow-md flex flex-col sm:flex-row items-center justify-center gap-3 animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 animate-pulse" />
+            <span className="font-bold text-sm">
+              ACTION REQUIRED: {pendingPropertyQuestions.length} Pending Property Inquir{pendingPropertyQuestions.length === 1 ? 'y' : 'ies'}!
+            </span>
+          </div>
+          <button 
+            onClick={() => {
+              setActiveTab('curation');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="px-3 py-1.5 bg-white text-red-700 rounded-lg text-xs font-black shadow-sm hover:bg-red-50 transition-colors"
+          >
+            Review & Answer Now
+          </button>
+        </div>
+      )}
+
       {/* Portal Layout: Left Collapsible Sidebar with Sticky AI Daily Rhythm + Main Workspace */}
       <div className="flex flex-1 min-h-[calc(100vh-65px)]">
         {/* Left Sidebar */}
@@ -3160,8 +3230,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     },
                   ];
 
-                  return (
-                    <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 space-y-6 shadow-2xs">
+                  return (<div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 space-y-6 shadow-2xs">
                       {/* Funnel Header */}
                       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#EAE7E0]">
                         <div className="space-y-1">
@@ -3225,8 +3294,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           const StageIcon = stage.icon;
                           const isSelected = leadStatusFilter === stage.id;
 
-                          return (
-                            <div
+                          return (<div
                               key={stage.id}
                               onClick={() => setLeadStatusFilter(isSelected ? "all" : stage.id)}
                               className={`relative cursor-pointer p-4 rounded-2xl border transition-all duration-200 hover:shadow-md ${
@@ -3747,8 +3815,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     leadDateRangeFilter !== "all" ||
                     leadSearchQuery.trim() !== "";
 
-                  return (
-                    <div className="space-y-4">
+                  return (<div className="space-y-4">
                       {/* Results Count & Reset Bar */}
                       <div className="flex items-center justify-between text-xs px-1">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -4545,8 +4612,7 @@ Best regards,`,
                               (a) => a.id === lead.assignedAgentId
                             );
 
-                            return (
-                              <div
+                            return (<div
                                 key={lead.id}
                                 className="bg-white p-5 rounded-3xl border border-[#EAE7E0] shadow-2xs space-y-4 hover:border-[#4A5D4E]/30 transition-all"
                               >
@@ -4903,6 +4969,34 @@ Best regards,`,
                                     </p>
                                   )}
                                 </div>
+
+                                {/* Bidirectional Synced Property Conversations & Gamified Notes */}
+                                {properties && properties.length > 0 && (
+                                  <div className="space-y-2 pt-1">
+                                    <span className="text-[11px] font-bold text-[#4A5D4E] flex items-center gap-1">
+                                      <MessageSquare className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                                      Bidirectional Property Card Notes (Live Website Sync)
+                                    </span>
+                                    <div className="space-y-2">
+                                      {properties.slice(0, 2).map((prop) => (
+                                        <LeadPropertyConversationSync
+                                          key={prop.id}
+                                          propertyId={prop.id}
+                                          propertyAddress={prop.address}
+                                          propertyPrice={prop.price}
+                                          propertyCity={prop.city}
+                                          leadId={lead.id}
+                                          leadName={lead.name}
+                                          leadEmail={lead.email}
+                                          leadPhone={lead.phone}
+                                          currentLo={currentLo}
+                                          assignedAgent={assignedAgent}
+                                          onTriggerToast={(msg) => triggerToast(msg)}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
 
                                 {/* Footer Actions & Team Assignments */}
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 text-xs">
@@ -5319,8 +5413,7 @@ Best regards,`,
                     return true;
                   });
 
-                  return (
-                    <div className="space-y-4">
+                  return (<div className="space-y-4">
                       <div className="flex flex-col xl:flex-row gap-3 bg-[#FAF9F5] p-4 rounded-2xl border border-[#EAE7E0]">
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                           {/* Name Search */}
@@ -5484,8 +5577,7 @@ Best regards,`,
                           const isMike = lo.isAdmin;
                           const isSelected = selectedRosterLoIds.has(lo.id);
 
-                          return (
-                            <div
+                          return (<div
                               key={lo.id}
                               className={`bg-white rounded-3xl border transition-colors ${
                                 isSelected
@@ -6169,8 +6261,7 @@ Mike Ford`;
                       guidesState.loanOfficer.id === lo.id &&
                       guidesState.activeAgentId === agent?.id;
 
-                    return (
-                      <div
+                    return (<div
                         key={pairing.id}
                         className={`bg-white rounded-3xl border ${
                           isActive
@@ -6598,8 +6689,7 @@ Mike Ford`;
                       const isSelected = guidesState.activeAgentId === agent.id;
                       const agentType = agent.agentType || "buyer_agent";
 
-                      return (
-                        <div
+                      return (<div
                           key={agent.id}
                           className={`bg-white rounded-3xl border ${
                             isSelected
@@ -6628,8 +6718,13 @@ Mike Ford`;
                               <div className="space-y-1 min-w-0 flex-1">
                                 <div className="flex items-center justify-between gap-1 flex-wrap">
                                   <div className="flex items-center gap-2 min-w-0">
-                                    <h4 className="font-serif font-bold text-base text-[#2D362E] truncate">
+                                    <h4 className="font-serif font-bold text-base text-[#2D362E] truncate flex items-center gap-1.5">
                                       {agent.name}
+                                      {agent.activeAdCounties && agent.activeAdCounties.length > 0 && (
+                                        <span title={`Active Ad Campaign running in ${agent.activeAdCounties.join(", ")}`}>
+                                          <svg className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005z" clipRule="evenodd" /></svg>
+                                        </span>
+                                      )}
                                     </h4>
                                     <OutreachHistoryBadge agent={agent} compact={true} />
                                   </div>
@@ -7014,8 +7109,7 @@ Mike Ford`;
                       (a) => a.id === spotAgent?.id
                     );
 
-                    return (
-                      <div className="space-y-4 bg-gradient-to-br from-[#FAF9F5] via-white to-[#F5F2EA] p-5 sm:p-6 rounded-2xl border-2 border-[#C18C5D]/30 shadow-xs">
+                    return (<div className="space-y-4 bg-gradient-to-br from-[#FAF9F5] via-white to-[#F5F2EA] p-5 sm:p-6 rounded-2xl border-2 border-[#C18C5D]/30 shadow-xs">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EAE7E0] pb-3">
                           <div>
                             <div className="flex items-center gap-2">
@@ -7272,6 +7366,19 @@ Mike Ford`;
                   onUpdateGuidesState({
                     ...guidesState,
                     adCampaignDrafts: [draft, ...(guidesState.adCampaignDrafts || [])],
+                  });
+                }}
+                onUpdateCampaign={(campaign) => {
+                  const updatedDrafts = (guidesState.adCampaignDrafts || []).map(d => d.id === campaign.id ? campaign : d);
+                  onUpdateGuidesState({
+                    ...guidesState,
+                    adCampaignDrafts: updatedDrafts
+                  });
+                }}
+                onCaptureLead={(newLead) => {
+                  onUpdateGuidesState({
+                    ...guidesState,
+                    capturedLeads: [newLead, ...(guidesState.capturedLeads || [])]
                   });
                 }}
                 onUpdateAdSettings={(adSettings) => {
@@ -7822,6 +7929,52 @@ Mike Ford`;
                       </button>
                     </div>
                   )}
+                </div>
+              </div>
+
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D] flex items-center gap-2">
+                  Ad Coverage Area (MLS Counties)
+                  <span className="text-[10px] text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">Used for Dynamic Ad Targeting</span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                  {[
+                    "Multnomah County", 
+                    "Washington County", 
+                    "Clackamas County", 
+                    "Marion County", 
+                    "Lane County", 
+                    "Deschutes County", 
+                    "Jackson County", 
+                    "Clark County, WA"
+                  ].map(county => {
+                    const currentCounties = editingAgent ? (editingAgent.activeAdCounties || editingAgent.marketAreas || []) : (newAgentForm.activeAdCounties || newAgentForm.marketAreas || []);
+                    const isActive = currentCounties.includes(county);
+                    return (
+                      <label key={county} className={`flex items-center gap-2 p-2 border rounded-xl cursor-pointer transition-colors ${isActive ? 'bg-[#4A5D4E]/10 border-[#4A5D4E]' : 'bg-[#F9F8F4] border-[#EAE7E0] hover:border-[#C18C5D]'}`}>
+                        <input 
+                          type="checkbox"
+                          className="hidden"
+                          checked={isActive}
+                          onChange={(e) => {
+                            const updated = e.target.checked 
+                              ? [...currentCounties, county] 
+                              : currentCounties.filter(c => c !== county);
+                            if (editingAgent) {
+                              setEditingAgent({ ...editingAgent, activeAdCounties: updated, marketAreas: updated });
+                            } else {
+                              setNewAgentForm((p) => ({ ...p, activeAdCounties: updated, marketAreas: updated }));
+                            }
+                          }}
+                        />
+                        <div className={`w-4 h-4 rounded flex items-center justify-center border ${isActive ? 'bg-[#4A5D4E] border-[#4A5D4E]' : 'bg-white border-gray-300'}`}>
+                          {isActive && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </div>
+                        <span className="text-[10px] font-medium text-[#2D362E]">{county}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -8886,8 +9039,7 @@ Mike Ford`;
                   guidesState.agentRoster[0];
 
                 if (activeNurtureTab === "overview") {
-                  return (
-                    <div className="space-y-5">
+                  return (<div className="space-y-5">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="bg-white p-4 rounded-2xl border border-[#EAE7E0] space-y-2 shadow-2xs">
                           <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
@@ -9065,8 +9217,7 @@ Mike Ford`;
 
                 if (activeNurtureTab === "logs") {
                   const logs = targetLead?.nurtureSequenceLogs || [];
-                  return (
-                    <div className="space-y-4">
+                  return (<div className="space-y-4">
                       <div className="bg-white p-4 rounded-2xl border border-[#EAE7E0] flex items-center justify-between">
                         <div>
                           <h4 className="font-bold text-sm text-[#2D362E]">
@@ -9218,8 +9369,7 @@ Don't forget to file your State Homestead Tax Exemption!`,
                 const currentStageInfo =
                   stageDetailsMap[activeNurtureTab] || stageDetailsMap["stage_1"];
 
-                return (
-                  <div className="space-y-4">
+                return (<div className="space-y-4">
                     {/* Stage Details Banner */}
                     <div className="bg-white p-4 rounded-2xl border border-[#EAE7E0] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                       <div>
@@ -9695,8 +9845,7 @@ Don't forget to file your State Homestead Tax Exemption!`,
           const lo = guidesState.loanOfficers.find((l) => l.id === viewingHistoryLo);
           if (!lo) return null;
 
-          return (
-            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          return (<div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E] max-h-[90vh] flex flex-col">
                 <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3 shrink-0">
                   <div>
@@ -9829,5 +9978,7 @@ Don't forget to file your State Homestead Tax Exemption!`,
         })}
       />
     </div>
+    
+    </>
   );
 };

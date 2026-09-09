@@ -764,19 +764,6 @@ export default function App() {
             isFullScreen={isFullScreen}
             onToggleFullScreen={toggleFullScreen}
           />
-          {/* Mobile Only: Horizontal Step Banner */}
-          <div className="lg:hidden w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 bg-[#F9F8F4] border-t border-[#EAE7E0]/80 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.05)]">
-            <StepNavigationBanner
-              currentTab={activeTab}
-              currentMode={currentMode}
-              onNavigate={handleNavigate}
-              onNavigateToGuides={handleNavigateToGuides}
-              loanOfficerName={guidesState.loanOfficer.name}
-              activeAgentName={activeAgent.name}
-              isFullScreen={isFullScreen}
-              onToggleFullScreen={toggleFullScreen}
-            />
-          </div>
         </div>
       )}
 

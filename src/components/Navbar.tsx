@@ -471,9 +471,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Main Header Brand & Value Proposition Line (Moved to its own dedicated centered row) */}
-      <div className="border-b border-[#EAE7E0] dark:border-slate-800 bg-[#FAF9F5]/70 dark:bg-slate-900/70 py-2.5 md:py-4 px-3 sm:px-6 lg:px-8 transition-colors duration-200">
-        <div className="max-w-7xl mx-auto flex flex-col items-start md:items-center text-left md:text-center relative">
+      {/* Main Header Brand & Value Proposition Line (Desktop & Tablet Only) */}
+      <div className="hidden md:block border-b border-[#EAE7E0] dark:border-slate-800 bg-[#FAF9F5]/70 dark:bg-slate-900/70 py-4 px-6 lg:px-8 transition-colors duration-200">
+        <div className="max-w-7xl mx-auto flex flex-col items-center text-center relative">
           
           {/* Top Pill / Trust Hook for Renters */}
           <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAE7E0]/80 border border-[#DCD7CD] text-[11px] sm:text-xs font-bold text-[#4A5D4E] mb-1.5 shadow-2xs">
@@ -599,9 +599,49 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* FULL-WIDTH HORIZONTAL SCROLLING MENU WITH LEFT/RIGHT CONTROLS */}
+      {/* MOBILE-ONLY COMPACT HEADER                               */}
       {/* ======================================================== */}
-      <div className="lg:hidden border-t border-[#EAE7E0] dark:border-slate-800 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 bg-white dark:bg-slate-950 transition-colors duration-200">
+      <div className="md:hidden flex items-center justify-between px-4 py-2.5 bg-white/95 dark:bg-slate-950/95 border-b border-[#EAE7E0] dark:border-slate-800">
+        <button
+          onClick={() => {
+            setActiveMode("website");
+            setCurrentTab("hero");
+            setMobileMenuOpen(false);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className="flex items-center gap-2 cursor-pointer focus:outline-none"
+        >
+          <div className="w-7 h-7 bg-[#4A5D4E] rounded-xl flex items-center justify-center shrink-0 shadow-sm">
+            <Compass className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-serif font-black tracking-tight text-sm text-[#2D362E] dark:text-slate-100">
+            First-Time <span className="text-[#4A5D4E] dark:text-[#D4A373]">Homebuyer</span>
+          </span>
+        </button>
+        
+        <div className="flex items-center gap-2">
+          {onOpenLeadBot && (
+            <button
+              onClick={onOpenLeadBot}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#C18C5D] active:bg-[#a67448] text-white font-bold text-[10px] shadow-sm transition-all"
+            >
+              <Zap className="w-3 h-3" />
+              <span>AI Prequal</span>
+            </button>
+          )}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-1.5 rounded-lg bg-white dark:bg-slate-900 text-[#606C5D] dark:text-slate-300 border border-[#EAE7E0] dark:border-slate-700 shadow-sm focus:outline-none cursor-pointer"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* TABLET HORIZONTAL SCROLLING MENU (hidden on mobile and desktop) */}
+      {/* ======================================================== */}
+      <div className="hidden md:block lg:hidden border-t border-[#EAE7E0] dark:border-slate-800 max-w-7xl mx-auto px-6 py-2 bg-white dark:bg-slate-950 transition-colors duration-200">
         <div className="flex items-center justify-between gap-2">
           
           {/* Scroll Navigation Left Button */}

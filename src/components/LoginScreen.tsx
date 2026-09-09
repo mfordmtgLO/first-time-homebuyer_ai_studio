@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { 
   GoogleAuthProvider, 
-  signInWithPopup, 
+  signInWithRedirect, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   signOut 
@@ -26,7 +26,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setError(null);
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithRedirect(auth, provider);
       try {
         const role = await checkAndProvisionUser(result.user);
         onLogin(role);

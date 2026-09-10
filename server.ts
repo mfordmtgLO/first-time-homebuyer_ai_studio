@@ -4262,7 +4262,7 @@ Return ONLY valid JSON in this exact structure:
   }
 
   // API Route: GeoSphere Coordinate Classification (Single)
-  app.post("/api/geosphere/classify", authenticateUser, async (req, res) => {
+  app.post("/api/geosphere/classify", async (req, res) => {
     try {
       const { lat, lng, features } = req.body;
       if (typeof lat !== "number" || typeof lng !== "number") {

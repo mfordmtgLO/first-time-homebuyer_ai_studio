@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { CapturedLead, LoanOfficerProfile, FinancialProfile } from "../types";
 import { calculateMonthlyPI, formatUSD } from "../utils/mortgageMath";
+import { ContextualVideoPlayer } from "./ContextualVideoPlayer";
 
 interface Buydown21ScenarioEngineProps {
   currentLo?: LoanOfficerProfile;

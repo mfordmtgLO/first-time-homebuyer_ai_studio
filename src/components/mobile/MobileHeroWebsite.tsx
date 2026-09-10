@@ -49,6 +49,7 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
   onOpenProperties,
   onOpenCostOfWaiting,
   onOpenBuydown,
+  onOpenLoPortal,
 }) => {
   const leadGenUrlwk = loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM";
 
@@ -390,6 +391,18 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
             <Search className="w-3.5 h-3.5" />
             <span>Browse Homes</span>
           </button>
+          {onOpenLoPortal && (
+            <>
+              <span>•</span>
+              <button
+                onClick={onOpenLoPortal}
+                className="flex items-center gap-1.5 text-[#4A5D4E] dark:text-[#A9BBAA] font-bold hover:text-[#2D362E] active:scale-95 cursor-pointer transition-all duration-100 select-none touch-manipulation py-1 px-1.5 rounded-md"
+              >
+                <Lock className="w-3 h-3 text-[#C18C5D]" />
+                <span>LO Portal</span>
+              </button>
+            </>
+          )}
         </div>
 
       </div>

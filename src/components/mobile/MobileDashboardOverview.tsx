@@ -20,7 +20,8 @@ import {
   ExternalLink,
   Users,
   Compass,
-  FileCheck
+  FileCheck,
+  Lock
 } from "lucide-react";
 import { motion, AnimatePresence, PanInfo } from "motion/react";
 import { 
@@ -70,6 +71,7 @@ export const MobileDashboardOverview: React.FC<MobileDashboardOverviewProps> = (
   loanOfficer,
   activeAgent,
   isCoBranded = false,
+  onOpenLoPortal,
   onSaveLead,
   agentRoster,
 }) => {
@@ -765,6 +767,17 @@ export const MobileDashboardOverview: React.FC<MobileDashboardOverviewProps> = (
                         <span>Apply & Get Pre-Approved</span>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
+                    )}
+
+                    {onOpenLoPortal && (
+                      <button
+                        type="button"
+                        onClick={onOpenLoPortal}
+                        className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl bg-[#F1EFE9] dark:bg-slate-800 text-[#4A5D4E] dark:text-[#A9BBAA] hover:text-[#2D362E] text-[11px] font-bold border border-[#EAE7E0] dark:border-slate-700 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <Lock className="w-3 h-3 text-[#C18C5D]" />
+                        <span>Loan Officer Portal Access</span>
+                      </button>
                     )}
                   </div>
                 )}

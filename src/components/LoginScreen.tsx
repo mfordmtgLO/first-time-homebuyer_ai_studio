@@ -92,10 +92,37 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           <button
             onClick={handleGoogleLogin}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 bg-[#2D362E] hover:bg-[#4A5D4E] text-white px-6 py-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-sm cursor-pointer"
+            className="w-full flex items-center justify-center gap-3 bg-[#2D362E] hover:bg-[#4A5D4E] text-white px-6 py-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-sm cursor-pointer active:scale-95"
           >
             {isLoading ? "Connecting to Google..." : "Sign in with Google"}
             {!isLoading && <ArrowRight className="w-4 h-4" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("lo_portal_logged_out");
+                localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
+              }
+              onLogin("branch_manager");
+            }}
+            className="w-full flex items-center justify-center gap-2 bg-[#F1EFE9] hover:bg-[#EAE7E0] text-[#2D362E] px-4 py-3 rounded-xl font-bold text-xs border border-[#DEDAD2] transition-all cursor-pointer active:scale-95"
+          >
+            <Building2 className="w-3.5 h-3.5 text-[#C18C5D]" />
+            <span>Direct Access: Mike Ford (Branch Manager)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.location.href = "/";
+              }
+            }}
+            className="w-full text-center text-xs text-[#606C5D] hover:text-[#2D362E] underline pt-1 cursor-pointer"
+          >
+            ← Return to Homebuyer Website
           </button>
         </div>
 

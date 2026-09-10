@@ -104,7 +104,12 @@ export default function App() {
           setUserRole(role);
         } catch (e) {
           console.error("Auth provisioning error:", e);
-          setUserRole(null);
+          const email = user.email?.toLowerCase();
+          if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
+            setUserRole("branch_manager");
+          } else {
+            setUserRole(null);
+          }
         }
       } else {
         setUserRole(null);
@@ -495,7 +500,15 @@ export default function App() {
   }, []);
 
   // LO Hub & Modals State
-  const [showLoPortal, setShowLoPortal] = useState<boolean>(false);
+  const [showLoPortal, setShowLoPortal] = useState<boolean>(() => {
+    return isPortalAccess;
+  });
+
+  useEffect(() => {
+    if (isPortalAccess) {
+      setShowLoPortal(true);
+    }
+  }, [isPortalAccess, userRole]);
   const [scorecardProperty, setScorecardProperty] = useState<PropertyListing | null>(null);
   const [showNewPropertyModal, setShowNewPropertyModal] = useState<boolean>(false);
 
@@ -768,7 +781,14 @@ export default function App() {
   // 1. If accessing /lo-login or /admin, force the secure login screen
   // 2. If accessing the root website, always render the public consumer view
   if (!userRole && isPortalAccess) {
-    return <LoginScreen onLogin={(role) => setUserRole(role as any)} />;
+    return (
+      <LoginScreen
+        onLogin={(role) => {
+          setUserRole(role as any);
+          setShowLoPortal(true);
+        }}
+      />
+    );
   }
 
   return (

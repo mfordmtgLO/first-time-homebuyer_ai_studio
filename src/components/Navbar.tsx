@@ -631,6 +631,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>AI Prequal</span>
             </button>
           )}
+          <div className="sm:hidden"><PWAInstallButton className="h-7 py-0.5 px-2 text-[10px]" /></div>
           <div className="hidden sm:block"><PWAInstallButton className="h-8 py-1 px-2" /></div>
           <ThemeToggle className="h-8 w-8" />
           <button
@@ -872,6 +873,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Quick Actions Footer inside Drawer */}
           <div className="pt-3 border-t border-[#EAE7E0] dark:border-slate-800 space-y-2">
+            <div className="w-full py-1">
+              <PWAInstallButton />
+            </div>
+
             <div className="w-full flex items-center justify-between px-2 py-2 mb-2 border-b border-[#EAE7E0] dark:border-slate-800">
               <span className="text-sm font-semibold text-[#606C5D] dark:text-slate-400">Appearance</span>
               <ThemeToggle id="navbar-theme-toggle-btn-mobile" showLabel />

@@ -160,9 +160,9 @@ ${currentLo?.name || "Mike Ford"} | ${currentLo?.company || "Mortgage Advisory G
       {/* Contextual Video Embed for Buydown Strategy */}
       <div className="w-full">
         <ContextualVideoPlayer 
-          videoId="sXQxhojSdZM" 
-          title="How a 2-1 Buydown Saves You $500+/mo | Mike Ford" 
-          description="Watch Mike explain exactly how seller-paid buydowns work and why they are the ultimate hack in today's market."
+          videoId="YprqzJp5hTc" 
+          title="Understanding the 2-1 Rate Buydown Strategy" 
+          description="Learn exactly how a seller-paid 2-1 buydown works to temporarily lower your interest rate and save you money."
           className="shadow-sm"
         />
       </div>

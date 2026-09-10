@@ -13,7 +13,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
   label,
   className = '',
 }) => {
-  const { isInstallable, isInstalled, isIOS, isChromeIOS, isAndroid, install } = usePWAInstall();
+  const { isInstallable, isInstalled, isIOS, isAndroid, install } = usePWAInstall();
   const [showGuide, setShowGuide] = useState(false);
 
   // If already running as an installed standalone PWA, hide or show minimal confirmation
@@ -144,51 +144,50 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
 
             {/* Platform-specific instructions */}
             {isIOS ? (
-              isChromeIOS ? (
-                <div className="bg-[#FAF9F5] dark:bg-slate-800/60 rounded-2xl p-4 space-y-3.5 border border-[#EAE7E0] dark:border-slate-700">
+              <div className="bg-[#FAF9F5] dark:bg-slate-800/60 rounded-2xl p-4 space-y-3.5 border border-[#EAE7E0] dark:border-slate-700">
+                <div className="flex items-center justify-between">
                   <div className="text-[11px] font-bold uppercase tracking-wider text-[#C18C5D]">
-                    iPhone Chrome Instructions
+                    iPhone Instructions
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white flex items-center justify-center text-xs font-bold shrink-0">
-                      1
-                    </div>
-                    <div className="text-xs text-[#2D362E] dark:text-slate-200 pt-0.5">
-                      Tap the <strong>Menu (•••)</strong> button in Chrome's top-right or bottom toolbar.
-                    </div>
+                  <span className="text-[10px] bg-[#C18C5D]/15 text-[#C18C5D] px-2 py-0.5 rounded-full font-bold">
+                    Top-Right Share Button
+                  </span>
+                </div>
+
+                {/* Visual address bar hint matching Safari top bar */}
+                <div className="flex items-center justify-between bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-[#EAE7E0] dark:border-slate-700 text-xs shadow-2xs">
+                  <div className="flex items-center gap-1.5 text-[#606C5D] dark:text-slate-300 font-mono text-[11px] truncate">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span className="truncate max-w-[190px]">first-time-homebuyer...</span>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white flex items-center justify-center text-xs font-bold shrink-0">
-                      2
-                    </div>
-                    <div className="text-xs text-[#2D362E] dark:text-slate-200 pt-0.5">
-                      Scroll down and tap <strong>Add to Home Screen</strong>.
-                    </div>
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-[#C18C5D]/15 rounded-lg border border-[#C18C5D]/40 text-[#C18C5D] font-sans font-bold text-[11px] shrink-0">
+                    <Share className="w-3.5 h-3.5" />
+                    <span>Top Right</span>
                   </div>
                 </div>
-              ) : (
-                <div className="bg-[#FAF9F5] dark:bg-slate-800/60 rounded-2xl p-4 space-y-3.5 border border-[#EAE7E0] dark:border-slate-700">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#C18C5D]">
-                    iPhone Safari Instructions
+
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                    1
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white flex items-center justify-center text-xs font-bold shrink-0">
-                      1
-                    </div>
-                    <div className="text-xs text-[#2D362E] dark:text-slate-200 pt-0.5">
-                      Tap the <strong>Share</strong> button <Share className="w-3.5 h-3.5 inline mx-1 text-[#4A5D4E]" /> at the bottom of Safari.
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white flex items-center justify-center text-xs font-bold shrink-0">
-                      2
-                    </div>
-                    <div className="text-xs text-[#2D362E] dark:text-slate-200 pt-0.5">
-                      Scroll down and tap <strong>Add to Home Screen</strong> <PlusSquare className="w-3.5 h-3.5 inline mx-1 text-[#4A5D4E]" />.
-                    </div>
+                  <div className="text-xs text-[#2D362E] dark:text-slate-200 pt-0.5 leading-relaxed">
+                    Tap the <strong>Share</strong> button <Share className="w-3.5 h-3.5 inline mx-1 text-[#4A5D4E] dark:text-[#A9BBAA]" /> in the <strong>top right</strong> of your screen (inside the address bar).
                   </div>
                 </div>
-              )
+
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#4A5D4E] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                    2
+                  </div>
+                  <div className="text-xs text-[#2D362E] dark:text-slate-200 pt-0.5 leading-relaxed">
+                    Scroll down the share sheet and tap <strong>Add to Home Screen</strong> <PlusSquare className="w-3.5 h-3.5 inline mx-1 text-[#4A5D4E] dark:text-[#A9BBAA]" />.
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-[#606C5D] dark:text-slate-400 bg-white/70 dark:bg-slate-900/50 p-2.5 rounded-xl border border-[#EAE7E0] dark:border-slate-700/70 leading-relaxed">
+                  💡 <strong>iPhone Note:</strong> The <em>"Add to Home Screen"</em> option is only located in the <strong>top-right Share button</strong> menu on iPhone.
+                </div>
+              </div>
             ) : isAndroid ? (
               <div className="bg-[#FAF9F5] dark:bg-slate-800/60 rounded-2xl p-4 space-y-3.5 border border-[#EAE7E0] dark:border-slate-700">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-[#C18C5D]">

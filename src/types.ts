@@ -407,6 +407,39 @@ export interface RealEstateAgentProfile {
   licensedCounties?: string[];
 }
 
+export interface Top50Candidate {
+  rank: number;
+  previousRank?: number;
+  rankDelta?: number; // positive = climbed spots (e.g. +2), negative = dropped spots (e.g. -3), 0 = unchanged
+  isNewEntry?: boolean;
+  id: string;
+  name: string;
+  title: string;
+  company: string;
+  officeLocation: string;
+  city: string;
+  state: string;
+  licenseOrNmls: string;
+  email: string;
+  phone: string;
+  headshotUrl: string;
+  yearsExperience: number;
+  production12MoVolume: number;
+  production12MoUnits: number;
+  buysideSharePct: number;
+  buysideVolume12Mo: number;
+  buysideUnits12Mo: number;
+  listingVolume12Mo: number;
+  listingUnits12Mo: number;
+  accoladeRank: string;
+  accoladeVerified: boolean;
+  source: 'active_pipeline' | 'organic_web_sweep';
+  inActivePipeline: boolean;
+  pipelineStatus?: string;
+  candidateType: 'loan_officer' | 'real_estate_agent';
+  lastSweptAt: string;
+}
+
 export interface BigPurpleDotConfig {
   apiKey: string;
   apiSecret: string;
@@ -764,7 +797,7 @@ export interface CrmAuditLogEntry {
   timestamp: string; // ISO 8601 string
   actorEmail: string;
   actorName: string;
-  actorRole: 'branch_manager' | 'senior_lo' | 'team_lo' | 'processor';
+  actorRole: 'admin' | 'branch_manager' | 'sales_manager' | 'loan_officer' | 'senior_lo' | 'team_lo' | 'processor';
   actionType: AuditActionType;
   actionLabel: string;
   assetCategory: AuditAssetCategory;

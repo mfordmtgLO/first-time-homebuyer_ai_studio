@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { AIDailyRhythmCard } from "./AIDailyRhythmCard";
 import { LoanOfficerProfile, ProfessionalGuidesState } from "../types";
+import { canAccessLoRecruiting, canAccessAgentRecruiting, isProcessorRole } from "../utils/rbac";
 
 export type TabId =
   | "leads"
@@ -78,6 +79,7 @@ export interface NavCategory {
     badgeColor?: string;
     requiresAdmin?: boolean;
     urgentBadge?: boolean;
+    hidden?: boolean;
   }[];
 }
 
@@ -112,6 +114,12 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({
     marketing: false, // keep open by default
   });
+
+  const isMasterAdmin = loggedInUser?.email === "fordmj@gmail.com" || loggedInUser?.email === "mford@cfmtg.com";
+  const effectiveRole = userRole || (isAdminUser ? "branch_manager" : "team_lo");
+  const isProcessor = isProcessorRole(effectiveRole);
+  const canManageLoRecruits = canAccessLoRecruiting(effectiveRole, loggedInUser?.email);
+  const canManageAgentRecruits = canAccessAgentRecruiting(effectiveRole, loggedInUser?.email);
 
   const toggleCategory = (catId: string) => {
     setCollapsedCategories((prev) => ({
@@ -309,10 +317,10 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
         },
         {
           id: "recruitment_pipeline",
-          label: "Recruitment Pipeline",
+          label: canManageLoRecruits ? "LO+Agent Recruit Command Center" : "Find Top Agents",
           icon: <Target className="w-4 h-4" />,
           badge: "NMLS",
-          requiresAdmin: true,
+          hidden: !canManageLoRecruits && !canManageAgentRecruits,
         },
       ],
     },
@@ -435,8 +443,9 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
             }
           }
 
-          // Filter items based on user admin status
+          // Filter items based on user admin status and hidden flag
           const visibleItems = category.items.filter((item) => {
+            if (item.hidden) return false;
             if (item.requiresAdmin && !isAdminUser) return false;
             return true;
           });

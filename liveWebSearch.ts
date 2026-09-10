@@ -471,7 +471,7 @@ Return a JSON array of up to 6 real candidates. Each candidate MUST have:
 Output strictly valid JSON (an array of objects).`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],

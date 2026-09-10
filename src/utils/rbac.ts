@@ -1,4 +1,4 @@
-export type RbacRole = 'branch_manager' | 'senior_lo' | 'team_lo' | 'processor';
+export type RbacRole = 'branch_manager' | 'sales_manager' | 'senior_lo' | 'team_lo' | 'processor';
 
 export interface RbacPermissions {
   canManageBranchUsers: boolean;
@@ -45,6 +45,31 @@ export const RBAC_ROLE_CONFIGS: Record<RbacRole, RbacRoleDefinition> = {
       canViewAllAuditLogs: true,
       canViewAllLeads: true,
       canEditBranchSettings: true,
+    },
+    privilegeHighlights: {
+      webhooks: 'Full / Branch',
+      apiKeys: 'Enterprise Vault',
+      auditLogs: 'Branch-Wide',
+      leadsAccess: 'All Branch Leads',
+    },
+  },
+  sales_manager: {
+    role: 'sales_manager',
+    displayName: 'Sales Manager',
+    shortLabel: 'Sales Mgr',
+    badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+    badgeBg: 'bg-indigo-50',
+    badgeText: 'text-indigo-700',
+    badgeBorder: 'border-indigo-200',
+    description: 'Sales and production leadership. Authorized to manage LO & Agent recruiting pipelines, conduct state sweeps, track candidate outreach, and review production pacing.',
+    permissions: {
+      canManageBranchUsers: false,
+      canManageWebhooks: true,
+      canManageApiKeys: true,
+      canViewAllAuditLogs: true,
+      canViewAllLeads: true,
+      canEditBranchSettings: false,
+      canViewBranchMetrics: true,
     },
     privilegeHighlights: {
       webhooks: 'Full / Branch',
@@ -140,10 +165,11 @@ export interface WhitelistedUserRecord {
 export function normalizeRole(rawRole?: string | null): RbacRole {
   if (!rawRole) return 'team_lo';
   const clean = rawRole.toLowerCase().trim();
-  if (clean === 'admin' || clean === 'branch_manager' || clean === 'manager') return 'branch_manager';
-  if (clean === 'senior_lo' || clean === 'senior') return 'senior_lo';
-  if (clean === 'processor' || clean === 'assistant') return 'processor';
-  if (clean === 'team_lo' || clean === 'lo') return 'team_lo';
+  if (clean === 'admin' || clean === 'superadmin' || clean === 'branch_manager' || clean === 'manager' || clean === 'branch manager') return 'branch_manager';
+  if (clean === 'sales_manager' || clean === 'sales manager' || clean === 'sales_mgr' || clean === 'salesmgr') return 'sales_manager';
+  if (clean === 'senior_lo' || clean === 'senior' || clean === 'senior lo' || clean === 'senior loan officer') return 'senior_lo';
+  if (clean === 'processor' || clean === 'assistant' || clean === 'loan processor') return 'processor';
+  if (clean === 'team_lo' || clean === 'lo' || clean === 'loan_officer' || clean === 'loan officer') return 'team_lo';
   return 'team_lo';
 }
 
@@ -162,6 +188,49 @@ export function getRolePermissions(
 
 export function isBranchManager(rawRole?: string | null): boolean {
   return normalizeRole(rawRole) === 'branch_manager';
+}
+
+export function isProcessorRole(rawRole?: string | null): boolean {
+  if (!rawRole) return false;
+  return normalizeRole(rawRole) === 'processor';
+}
+
+/**
+ * Access control for Loan Officer recruit functions:
+ * Mike Ford admin dashboard user role (Mike is also branch manager role+loan officer role
+ * for audit and compliance logging search and sort logging audit trails purposes Mike Ford must appear in several roles)
+ * and Branch Manager dashboard user role and newly created Sales Manager dashboard user role
+ * are the only role designations that can see and use loan officer recruit functions
+ * in their combined “LO+Agent Recruit Command Center” tab.
+ */
+export function canAccessLoRecruiting(rawRole?: string | null, userEmail?: string | null): boolean {
+  if (userEmail) {
+    const emailLower = userEmail.toLowerCase().trim();
+    if (emailLower === 'fordmj@gmail.com' || emailLower === 'mford@cfmtg.com') return true;
+  }
+  const clean = (rawRole || '').toLowerCase().trim();
+  if (clean === 'admin' || clean === 'superadmin') return true;
+  const role = normalizeRole(rawRole);
+  return role === 'branch_manager' || role === 'sales_manager';
+}
+
+/**
+ * Access control for Real Estate Agent recruiting functions:
+ * Loan officer dashboard user role can only see and use agent recruiting functions
+ * including Top 50 in their “Find Top Agents” tab.
+ * Processor dashboard user role does not see or have any loan officer recruit
+ * or agent recruit functions or tab at all.
+ */
+export function canAccessAgentRecruiting(rawRole?: string | null, userEmail?: string | null): boolean {
+  if (userEmail) {
+    const emailLower = userEmail.toLowerCase().trim();
+    if (emailLower === 'fordmj@gmail.com' || emailLower === 'mford@cfmtg.com') return true;
+  }
+  const clean = (rawRole || '').toLowerCase().trim();
+  if (clean === 'admin' || clean === 'superadmin') return true;
+  const role = normalizeRole(rawRole);
+  if (role === 'processor') return false;
+  return true;
 }
 
 export function canAccessMemberData(

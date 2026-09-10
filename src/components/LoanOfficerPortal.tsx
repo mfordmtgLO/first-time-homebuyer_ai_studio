@@ -148,6 +148,7 @@ import { DEFAULT_SMS_TEMPLATES } from "../data/smsTemplates";
 import { ScrapeLoRosterModal } from "./ScrapeLoRosterModal";
 import { ScrapeRealtorModal } from "./ScrapeRealtorModal";
 import { LoOutreachModal } from "./LoOutreachModal";
+import { canAccessLoRecruiting, canAccessAgentRecruiting, isProcessorRole } from "../utils/rbac";
 import { RecruitingCampaignModal } from "./RecruitingCampaignModal";
 import { GrantFinder } from "./GrantFinder";
 import { LoanOfficerScenarioWorkbench } from "./LoanOfficerScenarioWorkbench";
@@ -2764,7 +2765,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 </button>
               )}
 
-              {isSuperAdmin && (
+              {(canAccessLoRecruiting(effectiveRbacRole, auth.currentUser?.email) || canAccessAgentRecruiting(effectiveRbacRole, auth.currentUser?.email)) && (
                 <button
                   data-tab-id="recruitment_pipeline"
                   onClick={() => setActiveTab("recruitment_pipeline")}
@@ -2775,7 +2776,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   }`}
                 >
                   <Target className="w-4 h-4" />
-                  <span>Recruitment Pipeline</span>
+                  <span>{canAccessLoRecruiting(effectiveRbacRole, auth.currentUser?.email) ? "LO+Agent Recruit Command Center" : "Find Top Agents"}</span>
                 </button>
               )}
 

@@ -48,7 +48,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, 
               <span>Consumer SMS & Cellular Privacy Commitment</span>
             </div>
             <p className="text-xs text-emerald-950 leading-relaxed font-medium">
-              <strong>Strict No-Sharing Policy:</strong> No mobile information or phone numbers collected through our website, chatbots, or inquiry forms will be shared with third parties or affiliates for marketing or promotional purposes. Information sharing to subcontractors in support services (such as SMS delivery) is permitted solely for delivering the requested transaction services.
+              <strong>Strict No-Sharing Policy:</strong> We do not share, sell, or provide your mobile phone number or messaging consent data to third parties or affiliates for marketing or promotional purposes.
             </p>
           </div>
 

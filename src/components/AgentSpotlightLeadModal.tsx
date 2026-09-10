@@ -53,6 +53,7 @@ export const AgentSpotlightLeadModal: React.FC<AgentSpotlightLeadModalProps> = (
   const [cellPhone, setCellPhone] = useState("");
   const [desiredCity, setDesiredCity] = useState(initialCity || "");
   const [wantsCuratedList, setWantsCuratedList] = useState(true);
+  const [smsConsent, setSmsConsent] = useState(false);
   const [downPaymentPreference, setDownPaymentPreference] = useState<string>("any_low_down");
   const [timeline, setTimeline] = useState<string>("ready_30_60");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,6 +121,10 @@ export const AgentSpotlightLeadModal: React.FC<AgentSpotlightLeadModalProps> = (
     }
     if (!cellPhone.trim() || cellPhone.replace(/\D/g, "").length < 7) {
       setErrorMsg("Please enter a valid cell phone number for property alerts.");
+      return;
+    }
+    if (!smsConsent && cellPhone.trim()) {
+      setErrorMsg("You must check the SMS authorization box to receive text updates.");
       return;
     }
     if (!desiredCity.trim()) {
@@ -444,7 +449,7 @@ export const AgentSpotlightLeadModal: React.FC<AgentSpotlightLeadModalProps> = (
               </div>
 
               {/* 4. Explicit Opt-In Confirmation Checkbox (The Exact Lead Gen Mindset Hook) */}
-              <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-2">
+              <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-4">
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
                     type="checkbox"
@@ -461,9 +466,23 @@ export const AgentSpotlightLeadModal: React.FC<AgentSpotlightLeadModalProps> = (
                   </span>
                 </label>
 
-                <p className="text-[10px] text-[#9A9488] leading-tight pl-6.5">
-                  Your privacy is respected. By submitting, you authorize {agent.name} and {loanOfficer?.name || "your Loan Officer"} to send text property updates and loan prequalification details. Message & data rates may apply.
-                </p>
+                {/* Unbundled SMS Consent (Twilio Compliant) */}
+                <div className="space-y-1">
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={smsConsent}
+                      onChange={(e) => setSmsConsent(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded text-[#4A5D4E] focus:ring-[#4A5D4E] border-[#DCD7CD] cursor-pointer"
+                    />
+                    <span className="text-xs text-[#2D362E] font-medium leading-relaxed">
+                      I authorize {agent.name} and {loanOfficer?.name || "my Loan Officer"} to send text messages (SMS) regarding property updates, home listings, and loan details.
+                    </span>
+                  </label>
+                  <p className="text-[10px] text-[#9A9488] leading-tight pl-6.5">
+                    Message and data rates may apply. Reply STOP anytime to opt out. View our <a href="/privacy-policy.html" target="_blank" rel="noreferrer" className="underline text-[#4A5D4E] hover:text-[#2D362E]">Privacy Policy &amp; Terms</a>.
+                  </p>
+                </div>
               </div>
 
               {/* Submit Action */}

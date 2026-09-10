@@ -132,8 +132,8 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
     let detectedYears = Math.max(minYears, 12);
     let detectedBio = "";
     let detectedRating = 4.9;
-    let sourceLink = links[0]?.url || `https://nmlsconsumeraccess.org`;
-    let sourceDomain = links[0]?.domain || "nmlsconsumeraccess.org";
+    const sourceLink = links[0]?.url || `https://nmlsconsumeraccess.org`;
+    const sourceDomain = links[0]?.domain || "nmlsconsumeraccess.org";
 
     for (let i = 0; i < snippets.length; i++) {
       const s = snippets[i];

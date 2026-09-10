@@ -144,6 +144,14 @@ export async function handleIncomingTwilioWebhook(req: any, res: any, adminApp: 
               }
             }
             
+            if ((!matchingVault || !matchingVault.accountSid) && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+              matchingVault = {
+                accountSid: process.env.TWILIO_ACCOUNT_SID,
+                authToken: process.env.TWILIO_AUTH_TOKEN,
+                phoneNumber: process.env.TWILIO_PHONE_NUMBER || To || "+15035550199"
+              };
+            }
+
             if (matchingVault && matchingVault.accountSid && matchingVault.authToken) {
               // We will use native fetch to call Twilio REST API to avoid requiring the twilio SDK if it's not installed
               const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${matchingVault.accountSid}/Messages.json`;

@@ -3526,12 +3526,28 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     return handleIncomingTwilioWebhook(req, res, adminApp, decryptVault);
   });
 
+  // API Route: Twilio Integration Status & Webhook Info
+  app.get("/api/twilio/status", async (req, res) => {
+    const hasEnvSid = Boolean(process.env.TWILIO_ACCOUNT_SID);
+    const hasEnvToken = Boolean(process.env.TWILIO_AUTH_TOKEN);
+    const hasEnvPhone = Boolean(process.env.TWILIO_PHONE_NUMBER);
+    const isEnvConfigured = hasEnvSid && hasEnvToken && hasEnvPhone;
+
+    res.json({
+      success: true,
+      isEnvConfigured,
+      phoneNumber: process.env.TWILIO_PHONE_NUMBER ? `${process.env.TWILIO_PHONE_NUMBER.slice(0, 3)}***${process.env.TWILIO_PHONE_NUMBER.slice(-4)}` : null,
+      webhookUrl: "https://ais-dev-h5e42vrshqrry7uiwwuhmv-427099073161.us-east5.run.app/api/twilio/webhook",
+      webhookPath: "/api/twilio/webhook",
+      supportedFeatures: ["outbound_sms", "incoming_webhook_routing", "byok_encrypted_vault", "carrier_mms"]
+    });
+  });
+
   // API Route: Twilio SMS Carrier Integration Proxy
   app.post("/api/twilio/send-sms", authenticateUser, async (req, res) => {
     try {
       const { to, message, accountSid, authToken, fromNumber, attachmentUrl, encryptedVault } =
         req.body;
-
       let sid = accountSid;
       let token = authToken;
       let from = fromNumber;
@@ -3551,11 +3567,16 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
         }
       }
 
+      // Environmental Fallbacks (Platform Environment Credentials)
+      sid = sid || process.env.TWILIO_ACCOUNT_SID;
+      token = token || process.env.TWILIO_AUTH_TOKEN;
+      from = from || process.env.TWILIO_PHONE_NUMBER;
+
       if (!sid || !token || !from) {
         return res.status(400).json({
           success: false,
           error:
-            "Twilio credentials missing. Please configure your Twilio Vault in dashboard settings.",
+            "Twilio credentials missing. Please configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER in settings, or save your credentials in the Twilio Vault.",
           isConfigured: false,
         });
       }
@@ -4153,7 +4174,7 @@ Return ONLY valid JSON in this exact structure:
   // ==========================================
 
   // In-memory BPD configuration state (initialized from env if available)
-  let bpdConfig = {
+  const bpdConfig = {
     apiKey: process.env.BIG_PURPLE_DOT_API_KEY || "",
     apiSecret: process.env.BIG_PURPLE_DOT_SECRET || "",
     subdomain: process.env.BIG_PURPLE_DOT_SUBDOMAIN || "cornerstone",

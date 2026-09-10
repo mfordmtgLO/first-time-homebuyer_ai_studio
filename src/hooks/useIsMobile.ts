@@ -1,14 +1,20 @@
 import { useState, useEffect } from 'react';
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isMobileUA = /iphone|ipad|ipod|android|blackberry|mini|windows\sce|palm|mobile/i.test(userAgent);
+    return isMobileUA || window.innerWidth < 1024;
+  });
 
   useEffect(() => {
     const checkIsMobile = () => {
-      // 1024px is Tailwind's 'lg' breakpoint.
-      setIsMobile(window.innerWidth < 1024);
+      const userAgent = window.navigator.userAgent.toLowerCase();
+      const isMobileUA = /iphone|ipad|ipod|android|blackberry|mini|windows\sce|palm|mobile/i.test(userAgent);
+      setIsMobile(isMobileUA || window.innerWidth < 1024);
     };
-    
+
     checkIsMobile();
 
     window.addEventListener('resize', checkIsMobile);
@@ -17,3 +23,4 @@ export function useIsMobile() {
 
   return isMobile;
 }
+

@@ -46,9 +46,15 @@ export const TotalExpertSettingsModal: React.FC<TotalExpertSettingsModalProps> =
   };
 
   useEffect(() => {
+    let isMounted = true;
     if (isOpen) {
-      loadVaultState();
+      Promise.resolve().then(() => {
+        if (isMounted) loadVaultState();
+      });
     }
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen]);
 
   

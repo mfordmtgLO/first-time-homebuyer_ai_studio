@@ -78,7 +78,7 @@ export const AgentSpotlightLeadModal: React.FC<AgentSpotlightLeadModalProps> = (
   const matchedPreviewProperties = useMemo(() => {
     if (!listings || listings.length === 0) return [];
     
-    let filtered = listings.filter((l) => {
+    const filtered = listings.filter((l) => {
       // Must be eligible for at least one low/no down program
       const isEligible =
         l.overlayEligibility?.usdaEligible ||

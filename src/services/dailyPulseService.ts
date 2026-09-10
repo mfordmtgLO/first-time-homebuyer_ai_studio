@@ -17,7 +17,7 @@ import {
   WeeklyPulseEntry, 
   MonthlyHorizonPulseEntry,
   DailySalesManagerCritique,
-  RatioCritiqueTier 
+   
 } from "../types";
 
 const DAILY_COLLECTION = "daily_pulses";
@@ -467,22 +467,14 @@ export function generateSalesManagerDailyReview(payload: DailyReviewPayload) {
 
   const critique = evaluateTaskToGoalRatio(completed, total, phase, timeStr);
 
-  let headline = "";
-  let motivationalBadge = "";
-  let whatDoneSummary = "";
-  let managerPerspective = "";
-  let topProducerTip = {
-    headline: "Top Producer Rule of 2",
-    advice: "Pick the single hottest buyer lead and 1 top realtor partner. Converting those two turns any off-track day into a high-income day.",
-    focusOutcome: "Lock in 1 realtor coffee or 1 buyer credit review."
-  };
-  let topPriorities: string[] = [];
-  let coachingQuote = "";
-  let nextActionRecommendation = {
-    tabId: "leads",
-    actionTitle: "Direct Outreach to Hot Buyer",
-    actionReason: "A live conversation immediately flips your daily rhythm and momentum."
-  };
+  let headline: string;
+  let motivationalBadge: string;
+  let whatDoneSummary: string;
+  let managerPerspective: string;
+  let topProducerTip: { headline: string; advice: string; focusOutcome: string; };
+  let topPriorities: string[];
+  let coachingQuote: string;
+  let nextActionRecommendation: { tabId: string; actionTitle: string; actionReason: string; };
 
   if (completed === 0) {
     headline = `${phase === 'morning' ? 'Morning Kickoff & Alignment' : phase === 'midday' ? 'Midday Reality Check & Reset' : phase === 'afternoon' ? 'Afternoon Power Pivot' : 'End-of-Day Candid Review'} (${timeStr})`;

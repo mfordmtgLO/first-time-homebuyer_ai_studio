@@ -26,7 +26,7 @@ export const GrowthDashboard: React.FC<GrowthDashboardProps> = ({ guidesState })
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const filteredLeads = useMemo(() => {
-    let leads = guidesState.leads || [];
+    const leads = guidesState.leads || [];
     const now = new Date();
     
     return leads.filter(lead => {

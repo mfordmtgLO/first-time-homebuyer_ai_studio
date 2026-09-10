@@ -185,7 +185,7 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
   const [smsHistory, setSmsHistory] = useState(initialSmsList);
 
   const handleApplyTemplate = (tplText: string) => {
-    let replaced = tplText
+    const replaced = tplText
       .replace(/{{firstName}}/g, firstName)
       .replace(/{{loName}}/g, loName)
       .replace(/{{company}}/g, loanOfficer.company || "Guild Mortgage")
@@ -250,7 +250,7 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
 
     // Attempt Twilio Carrier API dispatch if credentials saved
     try {
-      let reqBody: any = {
+      const reqBody: any = {
         to: lead.phone,
         message: currentMsgText,
         attachmentUrl: attachedItem.attachmentUrl
@@ -277,20 +277,63 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
       }
 
       const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
-      const res = await fetch("/api/twilio/send-sms", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          ...(token && { "Authorization": `Bearer ${token}` })
-        },
-        body: JSON.stringify(reqBody)
-      });
+      let data: any = null;
+      try {
+        const res = await fetch("/api/twilio/send-sms", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            ...(token && { "Authorization": `Bearer ${token}` })
+          },
+          body: JSON.stringify(reqBody)
+        });
+        const text = await res.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          // not json
+        }
+      } catch (e: any) {
+        console.warn("Backend /api/twilio/send-sms error:", e);
+      }
       
-      const data = await res.json();
-      if (data.success) {
+      if (data && data.success) {
         setTwilioDispatchStatus(`📡 Live Twilio SMS sent to ${lead.phone} (SID: ${data.messageSid.slice(0, 8)}...)`);
-      } else {
+      } else if (data && data.error) {
         setTwilioDispatchStatus(`⚠️ Twilio notice: ${data.error}`);
+      } else {
+        // Fallback directly to Twilio REST API if serverless/static environment doesn't proxy
+        const twilioCfg = getSavedTwilioConfig();
+        if (twilioCfg.accountSid && twilioCfg.authToken && twilioCfg.phoneNumber) {
+          try {
+            const cleanTo = lead.phone.replace(/[^0-9+]/g, "");
+            const formattedTo = cleanTo.startsWith("+") ? cleanTo : cleanTo.length === 10 ? `+1${cleanTo}` : `+${cleanTo}`;
+            const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(twilioCfg.accountSid)}/Messages.json`;
+            const authHeader = "Basic " + btoa(`${twilioCfg.accountSid}:${twilioCfg.authToken}`);
+            const formParams = new URLSearchParams();
+            formParams.append("To", formattedTo);
+            formParams.append("From", twilioCfg.phoneNumber);
+            formParams.append("Body", currentMsgText);
+
+            const directRes = await fetch(twilioEndpoint, {
+              method: "POST",
+              headers: {
+                "Authorization": authHeader,
+                "Content-Type": "application/x-www-form-urlencoded"
+              },
+              body: formParams.toString()
+            });
+
+            const directData = await directRes.json().catch(() => ({}));
+            if (directRes.ok) {
+              setTwilioDispatchStatus(`📡 Live Twilio SMS sent directly to ${formattedTo} (SID: ${(directData.sid || '').slice(0, 8)}...)`);
+            } else {
+              setTwilioDispatchStatus(`⚠️ Twilio error: ${directData.message || directData.detail || 'Dispatch failed'}`);
+            }
+          } catch (directErr: any) {
+            setTwilioDispatchStatus(`⚠️ Twilio notice: ${directErr.message || 'Check credentials'}`);
+          }
+        }
       }
     } catch (e: any) {
       console.error("Twilio send error:", e);

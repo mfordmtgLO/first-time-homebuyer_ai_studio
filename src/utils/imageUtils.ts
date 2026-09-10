@@ -22,8 +22,8 @@ export function processLocalImageFile(file: File, maxDimension = 600, quality = 
       const img = new Image();
       img.onerror = () => reject(new Error("Failed to decode image data."));
       img.onload = () => {
-        let srcWidth = img.width;
-        let srcHeight = img.height;
+        const srcWidth = img.width;
+        const srcHeight = img.height;
         let destWidth = srcWidth;
         let destHeight = srcHeight;
         

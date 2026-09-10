@@ -29,6 +29,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { checkAndProvisionUser } from "./utils/authUtils";
 import { applyMetadataToDocument, fetchSavedSeoMetadata } from "./utils/seoManager";
 import { SEOSchemaInjector } from "./components/SEOSchemaInjector";
+import { PrivacyPolicyModal } from "./components/PrivacyPolicyModal";
 import {
   INITIAL_PROFILE,
   INITIAL_PROPERTIES,
@@ -70,6 +71,7 @@ export default function App() {
   const isMobile = useIsMobile();
   const [currentMode, setCurrentMode] = useState<"website" | "dashboard">("website");
   const [activeTab, setActiveTab] = useState<string>("hero");
+  const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
   const [isLeadBotOpen, setIsLeadBotOpen] = useState<boolean>(false);
   const [showTelemetryModal, setShowTelemetryModal] = useState<boolean>(false);
   const [leadBotSourceContext, setLeadBotSourceContext] = useState<
@@ -530,7 +532,7 @@ export default function App() {
   useEffect(() => {
     if (!headerRef.current) return;
     const resizeObserver = new ResizeObserver((entries) => {
-      for (let entry of entries) {
+      for (const entry of entries) {
         const height = entry.borderBoxSize
           ? entry.borderBoxSize[0].blockSize
           : entry.contentRect.height;
@@ -1115,8 +1117,35 @@ export default function App() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-medium">
-                  <a href="#" className="hover:text-[#4A5D4E] dark:hover:text-slate-300 transition-colors">Privacy Policy</a>
-                  <a href="#" className="hover:text-[#4A5D4E] dark:hover:text-slate-300 transition-colors">Terms of Service</a>
+                  <a
+                    href="/privacy-policy.html"
+                    onClick={(e) => {
+                      // Allow direct opening in new tab or open modal for instant review
+                      if (!e.ctrlKey && !e.metaKey) {
+                        e.preventDefault();
+                        setShowPrivacyModal(true);
+                      }
+                    }}
+                    className="hover:text-[#4A5D4E] dark:hover:text-slate-300 transition-colors cursor-pointer"
+                  >
+                    Privacy Policy
+                  </a>
+                  <a
+                    href="/terms-and-conditions.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-[#4A5D4E] dark:hover:text-slate-300 transition-colors"
+                  >
+                    Terms and Conditions
+                  </a>
+                  <a
+                    href="/sms-opt-in.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-[#4A5D4E] dark:hover:text-slate-300 transition-colors"
+                  >
+                    SMS Terms &amp; Opt-In
+                  </a>
                   <a href="https://www.nmlsconsumeraccess.org/" target="_blank" rel="noopener noreferrer" className="hover:text-[#4A5D4E] dark:hover:text-slate-300 transition-colors">NMLS Consumer Access</a>
                 </div>
               </div>
@@ -1221,6 +1250,12 @@ export default function App() {
       <TelemetryDiagnosticsModal
         isOpen={showTelemetryModal}
         onClose={() => setShowTelemetryModal(false)}
+      />
+
+      {/* Privacy Policy & TCPA Disclosures Modal */}
+      <PrivacyPolicyModal
+        isOpen={showPrivacyModal}
+        onClose={() => setShowPrivacyModal(false)}
       />
     </div>
     </>

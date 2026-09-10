@@ -22,7 +22,7 @@ export function containsSSN(text: string): boolean {
   if (raw9DigitsRegex.test(clean)) return true;
 
   // Pattern 3: Any explicit mention like "ssn is 123456789" or "social: 123-45-6789"
-  const ssnKeywordRegex = /(?:ssn|social\s*security|social\s*#|social\s*sec)\s*(?:is|#|:|\-)?\s*\d{3}[-.\s]?\d{2}[-.\s]?\d{4}/i;
+  const ssnKeywordRegex = /(?:ssn|social\s*security|social\s*#|social\s*sec)\s*(?:is|#|:-)?\s*\d{3}[-.\s]?\d{2}[-.\s]?\d{4}/i;
   if (ssnKeywordRegex.test(clean)) return true;
 
   // Pattern 4: Generalized 9 digits sequence even without strict word boundaries if preceded or followed by punctuation

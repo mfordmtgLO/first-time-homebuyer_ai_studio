@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from "react";
 import {
-  X, ShieldCheck, Key, Smartphone, CheckCircle2, AlertTriangle, Send, Eye, EyeOff, ExternalLink, Sparkles, Server, Zap
+  X,
+  ShieldCheck,
+  Key,
+  Smartphone,
+  CheckCircle2,
+  AlertTriangle,
+  Send,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  Sparkles,
+  Server,
+  Zap,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -34,37 +46,45 @@ export function getSavedTwilioConfig(): TwilioConfig {
     accountSid: "",
     authToken: "",
     phoneNumber: "",
-    enableLiveCarrierSms: false
+    enableLiveCarrierSms: false,
   };
 }
 
 export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
   isOpen,
   onClose,
-  onSaveConfig
+  onSaveConfig,
 }) => {
   const [config, setConfig] = useState<TwilioConfig>({
-    accountSid: "", authToken: "", phoneNumber: "", enableLiveCarrierSms: false
+    accountSid: "",
+    authToken: "",
+    phoneNumber: "",
+    enableLiveCarrierSms: false,
   });
-  
+
   const [showToken, setShowToken] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  
+
   // Test SMS state
   const [testPhoneNumber, setTestPhoneNumber] = useState<string>("");
   const [testMessageText, setTestMessageText] = useState<string>(
     "Hello from your Oregon Homebuyer CRM! Your Twilio SMS API integration is active and working."
   );
   const [testLoading, setTestLoading] = useState<boolean>(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string; sid?: string } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+    sid?: string;
+  } | null>(null);
 
   const [hasEncryptedVault, setHasEncryptedVault] = useState<boolean>(false);
-  
+
   // Try to load encrypted vault on mount
   useEffect(() => {
     if (!isOpen) return;
-    
+
     const loadVault = async () => {
       if (auth.currentUser) {
         try {
@@ -74,12 +94,12 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
             const data = docSnap.data();
             if (data.encryptedVault) {
               setHasEncryptedVault(true);
-              setConfig(prev => ({
+              setConfig((prev) => ({
                 ...prev,
                 enableLiveCarrierSms: data.enableLiveCarrierSms || false,
                 accountSid: "••••••••••••••••••••••••••••••••", // mask visually
                 authToken: "••••••••••••••••••••••••••••••••••••••", // mask visually
-                phoneNumber: "Secure Vault active"
+                phoneNumber: "Secure Vault active",
               }));
             }
           }
@@ -88,7 +108,7 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
         }
       }
     };
-    
+
     // Using onAuthStateChanged to ensure auth is ready
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) loadVault();
@@ -100,6 +120,9 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
     try {
       let user = auth.currentUser;
       if (!user) {
@@ -109,24 +132,38 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
         user = result.user;
       }
 
+      if (!user) {
+        throw new Error("You must be signed in with your Google account to save credentials.");
+      }
+
       // If user typed entirely new credentials (not the mask dots)
       if (config.accountSid && !config.accountSid.includes("••••")) {
+        if (!config.authToken || config.authToken.includes("••••")) {
+          throw new Error("Please enter your complete Twilio Auth Token.");
+        }
+
         // 1. Send raw credentials to secure server to encrypt
         const token = await user.getIdToken();
         const encryptRes = await fetch("/api/twilio/vault/encrypt", {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            accountSid: config.accountSid,
-            authToken: config.authToken,
-            phoneNumber: config.phoneNumber
-          })
+            accountSid: config.accountSid.trim(),
+            authToken: config.authToken.trim(),
+            phoneNumber: config.phoneNumber.trim(),
+          }),
         });
-        
-        if (!encryptRes.ok) throw new Error("Failed to encrypt credentials on server.");
+
+        if (!encryptRes.ok) {
+          const errData = await encryptRes.json().catch(() => ({}));
+          throw new Error(
+            errData.error || `Server encryption failed with status ${encryptRes.status}.`
+          );
+        }
+
         const encryptData = await encryptRes.json();
         const encryptedVault = encryptData.encryptedVault;
 
@@ -135,27 +172,41 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
           encryptedVault,
           enableLiveCarrierSms: config.enableLiveCarrierSms,
           ownerId: user.uid,
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         });
 
         setHasEncryptedVault(true);
+        // Mask inputs visually
+        setConfig((prev) => ({
+          ...prev,
+          accountSid: "••••••••••••••••••••••••••••••••",
+          authToken: "••••••••••••••••••••••••••••••••••••••",
+          phoneNumber: config.phoneNumber.trim() || "Secure Vault active",
+        }));
       } else {
-        // Just updating the boolean toggle
-        await setDoc(doc(db, "twilio_vault", user.uid), {
-          enableLiveCarrierSms: config.enableLiveCarrierSms,
-          ownerId: user.uid,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
+        // Just updating the boolean toggle or settings for an existing vault
+        await setDoc(
+          doc(db, "twilio_vault", user.uid),
+          {
+            enableLiveCarrierSms: config.enableLiveCarrierSms,
+            ownerId: user.uid,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
       }
 
       setSaveSuccess(true);
       if (onSaveConfig) {
         onSaveConfig(config);
       }
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (e) {
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } catch (e: any) {
       console.error("Save error:", e);
-      alert("Failed to securely save Twilio Vault.");
+      setSaveError(
+        e.message ||
+          "Failed to securely save Twilio Vault. Please check your credentials and try again."
+      );
     } finally {
       setIsSaving(false);
     }
@@ -163,7 +214,10 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
 
   const handleSendTestSms = async () => {
     if (!testPhoneNumber.trim()) {
-      setTestResult({ success: false, message: "Please enter a recipient phone number for the test." });
+      setTestResult({
+        success: false,
+        message: "Please enter a recipient phone number for the test.",
+      });
       return;
     }
 
@@ -171,9 +225,9 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
     setTestResult(null);
 
     try {
-      let reqBody: any = {
+      const reqBody: any = {
         to: testPhoneNumber,
-        message: testMessageText
+        message: testMessageText,
       };
 
       if (auth.currentUser) {
@@ -184,7 +238,7 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
           reqBody.encryptedVault = docSnap.data().encryptedVault;
         }
       }
-      
+
       // Fallback if they haven't saved to vault but are trying to test raw inputs
       if (!reqBody.encryptedVault) {
         reqBody.accountSid = config.accountSid;
@@ -193,33 +247,125 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
       }
 
       const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
-      const res = await fetch("/api/twilio/send-sms", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          ...(token && { "Authorization": `Bearer ${token}` })
-        },
-        body: JSON.stringify(reqBody)
-      });
+      let res: Response | null = null;
+      let rawText = "";
 
-      const data = await res.json();
+      try {
+        res = await fetch("/api/twilio/send-sms", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify(reqBody),
+        });
+        rawText = await res.text();
+      } catch (fetchErr: any) {
+        console.warn("Backend /api/twilio/send-sms fetch error:", fetchErr);
+      }
 
-      if (res.ok && data.success) {
+      let data: any = null;
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          // If server returned non-JSON (e.g. HTML 404 or 405 on static hosting like Vercel)
+          console.warn("Backend returned non-JSON:", rawText.slice(0, 150));
+        }
+      }
+
+      if (res && res.ok && data?.success) {
         setTestResult({
           success: true,
-          message: `Test SMS sent successfully to ${data.to}! Status: ${data.status}`,
-          sid: data.messageSid
+          message: `Test SMS sent successfully to ${data.to}! Status: ${data.status || "sent"}`,
+          sid: data.messageSid,
         });
-      } else {
+        return;
+      }
+
+      // If backend returned a clear business error in JSON (e.g. Twilio API error or credentials error)
+      if (data && data.error) {
         setTestResult({
           success: false,
-          message: data.error || "Failed to dispatch test SMS via Twilio API."
+          message: data.error + (data.code ? ` (Twilio Code: ${data.code})` : ""),
         });
+        return;
       }
+
+      // Client-side Direct Twilio REST Fallback if on static hosting (like Vercel where custom server.ts isn't deployed)
+      // or if backend route returned 404/405/HTML
+      const sid = config.accountSid;
+      const authToken = config.authToken;
+      const from = config.phoneNumber;
+
+      if (sid && authToken && from) {
+        try {
+          const cleanTo = testPhoneNumber.replace(/[^0-9+]/g, "");
+          const formattedTo = cleanTo.startsWith("+")
+            ? cleanTo
+            : cleanTo.length === 10
+              ? `+1${cleanTo}`
+              : `+${cleanTo}`;
+
+          const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(sid)}/Messages.json`;
+          const authHeader = "Basic " + btoa(`${sid}:${authToken}`);
+          const formParams = new URLSearchParams();
+          formParams.append("To", formattedTo);
+          formParams.append("From", from);
+          formParams.append("Body", testMessageText);
+
+          const clientTwilioRes = await fetch(twilioEndpoint, {
+            method: "POST",
+            headers: {
+              Authorization: authHeader,
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: formParams.toString(),
+          });
+
+          const clientTwilioData = await clientTwilioRes.json().catch(() => ({}));
+
+          if (clientTwilioRes.ok) {
+            setTestResult({
+              success: true,
+              message: `Test SMS dispatched directly via Twilio to ${formattedTo}! Status: ${clientTwilioData.status || "queued"}`,
+              sid: clientTwilioData.sid,
+            });
+            return;
+          } else {
+            setTestResult({
+              success: false,
+              message:
+                clientTwilioData.message ||
+                clientTwilioData.detail ||
+                `Twilio Error HTTP ${clientTwilioRes.status}`,
+            });
+            return;
+          }
+        } catch (directErr: any) {
+          console.error("Direct Twilio fetch error:", directErr);
+          setTestResult({
+            success: false,
+            message:
+              directErr.message ||
+              "Failed to contact Twilio API. Please verify Account SID, Auth Token, and phone number.",
+          });
+          return;
+        }
+      }
+
+      setTestResult({
+        success: false,
+        message:
+          data?.error ||
+          (res?.status
+            ? `Server responded with HTTP ${res.status}. Please check your Twilio credentials.`
+            : "Unable to reach SMS gateway service."),
+      });
     } catch (error: any) {
       setTestResult({
         success: false,
-        message: error.message || "Network error reaching backend SMS API route."
+        message: error.message || "Failed to execute test SMS dispatch.",
       });
     } finally {
       setTestLoading(false);
@@ -242,11 +388,15 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
                 </span>
               </h3>
               <p className="text-xs text-stone-300 mt-0.5">
-                Configure your Twilio credentials securely. Keys are encrypted and synced across all your devices.
+                Configure your Twilio credentials securely. Keys are encrypted and synced across all
+                your devices.
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl text-stone-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-stone-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -271,26 +421,30 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
               )}
             </div>
             <p className="text-xs text-[#606C5D] leading-relaxed">
-              Your API keys will be encrypted on our Node.js server and stored securely in your private database profile. The raw keys are never stored in your browser.
+              Your API keys will be encrypted on our Node.js server and stored securely in your
+              private database profile. The raw keys are never stored in your browser.
             </p>
           </div>
 
-          
           <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 shadow-2xs space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
               <Zap className="w-4 h-4 text-indigo-500" />
               Incoming SMS Webhook URL (Required)
             </h4>
             <p className="text-[11px] text-indigo-800/80 leading-relaxed">
-              To receive replies from your mobile device and sync them back to the buyer's property thread, paste this URL into your Twilio Phone Number configuration under <strong>"A MESSAGE COMES IN"</strong>.
+              To receive replies from your mobile device and sync them back to the buyer's property
+              thread, paste this URL into your Twilio Phone Number configuration under{" "}
+              <strong>"A MESSAGE COMES IN"</strong>.
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 bg-white border border-indigo-200 rounded-xl px-3 py-2 text-[10px] text-indigo-900 font-mono overflow-x-auto whitespace-nowrap">
                 https://ais-pre-h5e42vrshqrry7uiwwuhmv-427099073161.us-east5.run.app/api/twilio/webhook
               </code>
-              <button 
+              <button
                 onClick={() => {
-                  navigator.clipboard.writeText("https://ais-pre-h5e42vrshqrry7uiwwuhmv-427099073161.us-east5.run.app/api/twilio/webhook");
+                  navigator.clipboard.writeText(
+                    "https://ais-pre-h5e42vrshqrry7uiwwuhmv-427099073161.us-east5.run.app/api/twilio/webhook"
+                  );
                   alert("Webhook URL copied to clipboard!");
                 }}
                 className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] rounded-xl shrink-0 cursor-pointer"
@@ -327,14 +481,20 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
                   onChange={(e) => setConfig({ ...config, authToken: e.target.value.trim() })}
                   className="w-full bg-[#FAF9F5] border border-[#EAE7E0] focus:border-[#4A5D4E] rounded-xl px-3.5 py-2.5 text-xs text-[#2D362E] font-mono focus:outline-none pr-10"
                 />
-                <button type="button" onClick={() => setShowToken(!showToken)} className="absolute right-3 top-2.5 text-[#9A9488] hover:text-[#2D362E]">
+                <button
+                  type="button"
+                  onClick={() => setShowToken(!showToken)}
+                  className="absolute right-3 top-2.5 text-[#9A9488] hover:text-[#2D362E]"
+                >
                   {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="block text-xs font-bold text-[#2D362E]">Twilio Phone Number / Service SID</label>
+              <label className="block text-xs font-bold text-[#2D362E]">
+                Twilio Phone Number / Service SID
+              </label>
               <input
                 type="text"
                 placeholder="+15035550199 or MGXXXXXXXXXXXXXXXX"
@@ -346,17 +506,35 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
 
             <div className="pt-2 border-t border-[#EAE7E0] flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-[#2D362E] block">Enable Live Carrier Dispatch</span>
-                <span className="text-[11px] text-[#606C5D] block">When enabled, outbound messages will trigger real Twilio SMS delivery.</span>
+                <span className="text-xs font-bold text-[#2D362E] block">
+                  Enable Live Carrier Dispatch
+                </span>
+                <span className="text-[11px] text-[#606C5D] block">
+                  When enabled, outbound messages will trigger real Twilio SMS delivery.
+                </span>
               </div>
               <button
                 type="button"
-                onClick={() => setConfig({ ...config, enableLiveCarrierSms: !config.enableLiveCarrierSms })}
+                onClick={() =>
+                  setConfig({ ...config, enableLiveCarrierSms: !config.enableLiveCarrierSms })
+                }
                 className={`w-12 h-6 rounded-full p-1 transition-colors cursor-pointer ${config.enableLiveCarrierSms ? "bg-emerald-600" : "bg-stone-300"}`}
               >
-                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${config.enableLiveCarrierSms ? "translate-x-6" : "translate-x-0"}`} />
+                <div
+                  className={`w-4 h-4 rounded-full bg-white transition-transform ${config.enableLiveCarrierSms ? "translate-x-6" : "translate-x-0"}`}
+                />
               </button>
             </div>
+
+            {saveError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-xs text-rose-800 animate-fade-in">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Save Failed: </span>
+                  <span>{saveError}</span>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-between pt-2">
               <button
@@ -370,7 +548,8 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
               </button>
               {saveSuccess && (
                 <span className="text-xs text-emerald-700 font-bold flex items-center gap-1 animate-fade-in">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Saved!
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Credentials Encrypted &
+                  Saved!
                 </span>
               )}
             </div>
@@ -406,10 +585,18 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
               <span>{testLoading ? "Dispatching via Vault..." : "Test Encrypted Payload"}</span>
             </button>
             {testResult && (
-              <div className={`p-3 rounded-xl border text-xs space-y-1 ${testResult.success ? "bg-emerald-50 border-emerald-300 text-emerald-900" : "bg-rose-50 border-rose-300 text-rose-900"}`}>
+              <div
+                className={`p-3 rounded-xl border text-xs space-y-1 ${testResult.success ? "bg-emerald-50 border-emerald-300 text-emerald-900" : "bg-rose-50 border-rose-300 text-rose-900"}`}
+              >
                 <div className="font-bold flex items-center gap-1.5">
-                  {testResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertTriangle className="w-4 h-4 text-rose-600" />}
-                  <span>{testResult.success ? "SMS Delivered via Twilio!" : "Twilio Dispatch Error"}</span>
+                  {testResult.success ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-rose-600" />
+                  )}
+                  <span>
+                    {testResult.success ? "SMS Delivered via Twilio!" : "Twilio Dispatch Error"}
+                  </span>
                 </div>
                 <p className="font-mono text-[11px]">{testResult.message}</p>
               </div>

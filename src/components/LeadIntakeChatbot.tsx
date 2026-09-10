@@ -1912,7 +1912,16 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                       </span>
                     </label>
                     <p className="text-[10px] text-[#9A9488] pl-5">
-                      Message and data rates may apply. Reply STOP anytime to opt out.
+                      Message and data rates may apply. Reply STOP anytime to opt out. View our{" "}
+                      <a
+                        href="/privacy-policy.html"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline text-[#4A5D4E] hover:text-[#2D362E]"
+                      >
+                        Privacy Policy &amp; Terms
+                      </a>
+                      .
                     </p>
                   </div>
 

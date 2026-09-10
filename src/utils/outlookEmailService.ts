@@ -31,7 +31,7 @@ export function getWorkEmailSignature(loanOfficer?: LoanOfficerProfile): string 
     if (custom && custom.trim().length > 10) {
       return custom.trim();
     }
-  } catch (e) {
+  } catch {
     // ignore local storage errors
   }
 
@@ -97,7 +97,7 @@ export function generateLeadDraftEmailContent(
   const budgetStr = (lead as any).targetPrice 
     ? `$${Number((lead as any).targetPrice).toLocaleString()}` 
     : (lead.targetPriceRange || "$425,000");
-  const loName = loanOfficer?.name || "Mike Ford";
+  // const loName = loanOfficer?.name || "Mike Ford";
   const agentName = agent?.name || lead.assignedAgent || "Sarah Jenkins";
   const agentBrokerage = agent?.brokerage || "Cascade Valley Real Estate";
   const agentPhone = agent?.phone || "(503) 555-0144";
@@ -144,7 +144,7 @@ export function generateAgentDraftEmailContent(
   customPortalUrl?: string
 ): { subject: string; body: string } {
   const firstName = (agent.name || "Partner").split(" ")[0];
-  const loName = loanOfficer?.name || "Mike Ford";
+  // const loName = loanOfficer?.name || "Mike Ford";
   const portalUrl = customPortalUrl || (agent as any).coBrandedLandingUrl || agent.websiteUrl || `https://geosphere.mortgage/agent/${(agent as any).customSlug || "partner"}`;
 
   const subject = `Co-Branded Homebuyer Portal & 2-1 Buydown Flyer Kit for ${agent.name}`;
@@ -217,7 +217,7 @@ export function launchLocalOutlookDraft(options: LaunchOutlookOptions): void {
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(fullBody).catch(() => {});
     }
-  } catch (e) {
+  } catch {
     // non-fatal
   }
 
@@ -242,18 +242,18 @@ export function launchLocalOutlookDraft(options: LaunchOutlookOptions): void {
         document.body.removeChild(a);
       }
     }, 500);
-  } catch (err) {
+  } catch {
     // Fallback direct location assignment
     try {
       window.location.href = mailtoUri;
-    } catch (err2) {
+    } catch {
       window.open(mailtoUri, "_top");
     }
   }
 
   // 5. Create audit history log item for CRM tracking
   const timestamp = new Date().toISOString();
-  const loName = loanOfficer?.name || "Mike Ford";
+  // const loName = loanOfficer?.name || "Mike Ford";
   const recipientName = lead?.fullName || agent?.name || to;
 
   const historyItem: EmailHistoryItem = {

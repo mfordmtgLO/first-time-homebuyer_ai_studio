@@ -3,6 +3,7 @@ import {
   Users, Building, Award, CheckCircle2, ChevronDown, 
   ExternalLink, TrendingUp, Handshake, ArrowUpRight, Copy, Check
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { CoClosedBusinessPartner, LoanOfficerProfile, RealEstateAgentProfile } from '../types';
 
 export interface TopBusinessPartnersCardProps {
@@ -228,92 +229,99 @@ export const TopBusinessPartnersCard: React.FC<TopBusinessPartnersCardProps> = (
       {/* Partner Rows (Top 3 in Descending Order) */}
       {isExpanded && (
         <div className="p-1.5 space-y-1 divide-y divide-black/5">
-          {resolvedPartners.map((partner, idx) => {
-            const rank = idx + 1;
-            const isTopRank = rank === 1;
+          <AnimatePresence>
+            {resolvedPartners.map((partner, idx) => {
+              const rank = idx + 1;
+              const isTopRank = rank === 1;
 
-            return (
-              <div 
-                key={idx}
-                onClick={() => onPartnerSelect?.(partner)}
-                className={`pt-1 first:pt-0 group flex items-center justify-between gap-2 p-1.5 rounded-lg transition-colors ${
-                  onPartnerSelect ? "cursor-pointer hover:bg-white/80" : "hover:bg-white/60"
-                }`}
-              >
-                {/* Left: Rank badge & Partner Identity */}
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {/* Rank Badge */}
-                  <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black shrink-0 shadow-2xs ${
-                    rank === 1 
-                      ? "bg-amber-400 text-amber-950 ring-1 ring-amber-500/40" 
-                      : rank === 2 
-                      ? "bg-slate-300 text-slate-900 ring-1 ring-slate-400/40" 
-                      : "bg-[#E6DEC8] text-[#554C39] ring-1 ring-[#D0C4A9]"
-                  }`}>
-                    #{rank}
-                  </div>
+              return (
+                <motion.div 
+                  key={idx}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.15, delay: idx * 0.05 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onPartnerSelect?.(partner)}
+                  className={`pt-1 first:pt-0 group flex items-center justify-between gap-2 p-1.5 rounded-lg transition-colors select-none ${
+                    onPartnerSelect ? "cursor-pointer hover:bg-white/80" : "hover:bg-white/60"
+                  }`}
+                >
+                  {/* Left: Rank badge & Partner Identity */}
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {/* Rank Badge */}
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black shrink-0 shadow-2xs ${
+                      rank === 1 
+                        ? "bg-amber-400 text-amber-950 ring-1 ring-amber-500/40" 
+                        : rank === 2 
+                        ? "bg-slate-300 text-slate-900 ring-1 ring-slate-400/40" 
+                        : "bg-[#E6DEC8] text-[#554C39] ring-1 ring-[#D0C4A9]"
+                    }`}>
+                      #{rank}
+                    </div>
 
-                  {/* Partner Name & Brokerage/Company */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[11px] font-bold text-[#2D362E] truncate group-hover:text-[#4A5D4E] transition-colors">
-                        {partner.partnerName}
-                      </span>
-                      {isTopRank && (
-                        <span className="text-[8px] font-bold uppercase tracking-wider px-1 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-200">
-                          Primary Pair
+                    {/* Partner Name & Brokerage/Company */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] font-bold text-[#2D362E] truncate group-hover:text-[#4A5D4E] transition-colors">
+                          {partner.partnerName}
                         </span>
-                      )}
-                    </div>
+                        {isTopRank && (
+                          <span className="text-[8px] font-bold uppercase tracking-wider px-1 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-200">
+                            Primary Pair
+                          </span>
+                        )}
+                      </div>
 
-                    <p className="text-[9.5px] text-[#606C5D] truncate flex items-center gap-1">
-                      <span className="truncate">{partner.partnerCompanyOrBrokerage}</span>
-                      {partner.partnerNmlsOrLicense && (
-                        <>
-                          <span>•</span>
-                          <span className="font-mono text-[8.5px] text-slate-500">{partner.partnerNmlsOrLicense}</span>
-                        </>
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right: Closed Units & Volume Funded together as a pair */}
-                <div className="text-right shrink-0 flex items-center gap-1.5">
-                  <div className="space-y-0.5 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <span className="text-[10px] font-black text-emerald-950 bg-emerald-100/90 px-1.5 py-0.2 rounded border border-emerald-300/80 shadow-2xs">
-                        {formatVolume(partner.closedVolume12Mo)}
-                      </span>
-                      <span className="text-[10px] font-bold text-slate-800 bg-white px-1.5 py-0.2 rounded border border-slate-200 shadow-2xs">
-                        {partner.closedUnits12Mo} Units
-                      </span>
-                    </div>
-
-                    {partner.buysideSharePct && isLo && (
-                      <p className="text-[8.5px] text-emerald-800 font-semibold text-right">
-                        {partner.buysideSharePct}% Buyside Share
+                      <p className="text-[9.5px] text-[#606C5D] truncate flex items-center gap-1">
+                        <span className="truncate">{partner.partnerCompanyOrBrokerage}</span>
+                        {partner.partnerNmlsOrLicense && (
+                          <>
+                            <span>•</span>
+                            <span className="font-mono text-[8.5px] text-slate-500">{partner.partnerNmlsOrLicense}</span>
+                          </>
+                        )}
                       </p>
-                    )}
+                    </div>
                   </div>
 
-                  {/* Quick Copy Action */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleCopyPartner(partner, idx, e)}
-                    title="Copy pairing info for recruiting outreach"
-                    className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-white transition-colors cursor-pointer"
-                  >
-                    {copiedIndex === idx ? (
-                      <Check className="w-3 h-3 text-emerald-600" />
-                    ) : (
-                      <Copy className="w-3 h-3" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                  {/* Right: Closed Units & Volume Funded together as a pair */}
+                  <div className="text-right shrink-0 flex items-center gap-1.5">
+                    <div className="space-y-0.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="text-[10px] font-black text-emerald-950 bg-emerald-100/90 px-1.5 py-0.2 rounded border border-emerald-300/80 shadow-2xs">
+                          {formatVolume(partner.closedVolume12Mo)}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-800 bg-white px-1.5 py-0.2 rounded border border-slate-200 shadow-2xs">
+                          {partner.closedUnits12Mo} Units
+                        </span>
+                      </div>
+
+                      {partner.buysideSharePct && isLo && (
+                        <p className="text-[8.5px] text-emerald-800 font-semibold text-right">
+                          {partner.buysideSharePct}% Buyside Share
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Quick Copy Action */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleCopyPartner(partner, idx, e)}
+                      title="Copy pairing info for recruiting outreach"
+                      className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-white transition-colors cursor-pointer"
+                    >
+                      {copiedIndex === idx ? (
+                        <Check className="w-3 h-3 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       )}
 

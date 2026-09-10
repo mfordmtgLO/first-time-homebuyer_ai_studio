@@ -130,9 +130,9 @@ export function analyzeRateTrends(
   const rateDiff = Math.round((currentRate - comparisonPoint.rate) * 100) / 100;
   const diffBasisPoints = Math.round(rateDiff * 100);
 
-  let direction: "up" | "down" | "flat" = "flat";
-  let directionLabel = "Holding Steady";
-  let sentiment: "favorable" | "unfavorable" | "neutral" = "neutral";
+  let direction: "up" | "down" | "flat";
+  let directionLabel: string;
+  let sentiment: "favorable" | "unfavorable" | "neutral";
 
   if (rateDiff <= -0.02) {
     direction = "down";
@@ -149,8 +149,8 @@ export function analyzeRateTrends(
   }
 
   // Summary generation
-  let summary = "";
-  let insight = "";
+  let summary: string;
+  let insight: string;
 
   if (direction === "down") {
     summary = `Rates trending downward over the last ${horizonLabel}. Monthly purchasing power has expanded.`;

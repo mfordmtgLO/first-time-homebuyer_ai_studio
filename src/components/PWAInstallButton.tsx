@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
 export const PWAInstallButton: React.FC = () => {
-  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
+  const { isInstallable, isInstalled, isIOS, isChromeIOS, install } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
 
   // If already running as an installed PWA, hide the button
@@ -26,7 +26,7 @@ export const PWAInstallButton: React.FC = () => {
     );
   }
 
-  // iOS Safari flow (beforeinstallprompt is not supported by WebKit)
+  // iOS Safari or iOS Chrome flow
   if (isIOS) {
     return (
       <>
@@ -49,25 +49,44 @@ export const PWAInstallButton: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-center text-[#2D362E] mb-2">Install on iPhone</h3>
+              <h3 className="text-xl font-bold text-center text-[#2D362E] mb-2">
+                Install on iPhone {isChromeIOS ? '(Chrome)' : '(Safari)'}
+              </h3>
               <p className="text-center text-sm text-[#4A5D4E] mb-6">
-                Install this app on your home screen for quick access.
+                Add GrantMatch to your iPhone home screen for standalone mobile app access.
               </p>
               
-              <div className="bg-[#F9F8F4] rounded-xl p-4 space-y-4 mb-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm font-bold text-[#183922]">1</div>
-                  <p className="text-sm text-[#2D362E] pt-1">
-                    Tap the <strong>Share</strong> button at the bottom of Safari.
-                  </p>
+              {isChromeIOS ? (
+                <div className="bg-[#F9F8F4] rounded-xl p-4 space-y-4 mb-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm font-bold text-[#183922]">1</div>
+                    <p className="text-sm text-[#2D362E] pt-1">
+                      Tap the <strong>Menu (•••)</strong> icon in Chrome's top/bottom bar.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm font-bold text-[#183922]">2</div>
+                    <p className="text-sm text-[#2D362E] pt-1">
+                      Tap <strong>Add to Home Screen</strong> (or tap <strong>Open in Safari</strong> then Share &gt; Add to Home Screen).
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm font-bold text-[#183922]">2</div>
-                  <p className="text-sm text-[#2D362E] pt-1">
-                    Scroll down and tap <strong>Add to Home Screen</strong>.
-                  </p>
+              ) : (
+                <div className="bg-[#F9F8F4] rounded-xl p-4 space-y-4 mb-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm font-bold text-[#183922]">1</div>
+                    <p className="text-sm text-[#2D362E] pt-1">
+                      Tap the <strong>Share</strong> button at the bottom of Safari.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm font-bold text-[#183922]">2</div>
+                    <p className="text-sm text-[#2D362E] pt-1">
+                      Scroll down and tap <strong>Add to Home Screen</strong>.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
               
               <button
                 onClick={() => setShowIOSGuide(false)}

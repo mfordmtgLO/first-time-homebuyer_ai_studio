@@ -120,7 +120,7 @@ export function getSafeGoogleWorkspaceUrl(url?: string, defaultType: "docs" | "s
 }
 
 const STORAGE_KEY = "fthb_google_workspace_auth";
-const DEFAULT_CLIENT_ID = "664893075850-8g6f9h8g8g8g8g8g.apps.googleusercontent.com"; // Default / fallback or injected
+// const DEFAULT_CLIENT_ID = "664893075850-8g6f9h8g8g8g8g8g.apps.googleusercontent.com"; // Default / fallback or injected
 
 const ALL_WORKSPACE_SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
@@ -166,7 +166,7 @@ class GoogleWorkspaceService {
             parsed.picture = "/mike-ford-headshot.jpg";
             try {
               localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-            } catch {}
+            } catch { /* ignore */ }
           }
           this.user = parsed;
         } else {
@@ -362,7 +362,7 @@ class GoogleWorkspaceService {
       }
 
       return await res.json();
-    } catch (e) {
+    } catch {
       return {
         id: "event_" + Date.now(),
         htmlLink: `https://calendar.google.com/calendar`,
@@ -432,7 +432,7 @@ class GoogleWorkspaceService {
       }
 
       return await res.json();
-    } catch (e) {
+    } catch {
       return { id: "msg_sent_" + Date.now() };
     }
   }
@@ -991,10 +991,10 @@ class GoogleWorkspaceService {
     }
 
     // Filter subfolders of currentFolder
-    let subfolders = allFolders.filter(f => f.parentId === currentFolder.id);
+    const subfolders = allFolders.filter(f => f.parentId === currentFolder.id);
 
     // Filter files inside currentFolder (or all files if searching across drive)
-    let files: any[] = [];
+    let files: any[];
     if (query) {
       const qLower = query.toLowerCase();
       files = allFiles.filter(f => f.name.toLowerCase().includes(qLower));
@@ -1050,7 +1050,6 @@ class GoogleWorkspaceService {
     const isDoc = mimeType.includes("document") || name.endsWith(".gdoc");
     const isSheet = mimeType.includes("spreadsheet") || name.endsWith(".gsheet");
     const isImage = mimeType.includes("image");
-    const isPdf = mimeType.includes("pdf") || name.endsWith(".pdf");
 
     let previewType: DriveFilePreviewData["previewType"] = "pdf";
     if (isDoc) previewType = "document";
@@ -1064,9 +1063,9 @@ class GoogleWorkspaceService {
 
     // Smart contextual underwriting snippets based on file name/type
     const lower = name.toLowerCase();
-    let snippet = "";
-    let keyInsights: DriveFilePreviewData["keyInsights"] = [];
-    let checkpoints: string[] = [];
+    let snippet: string;
+    let keyInsights: DriveFilePreviewData["keyInsights"];
+    let checkpoints: string[];
     let docCategory = "Income & Taxes";
 
     if (lower.includes("w2") || lower.includes("w-2") || lower.includes("wage")) {

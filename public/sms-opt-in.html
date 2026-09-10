@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMS Opt-In Consent &amp; Verification - Mike Ford</title>
+  <meta name="description" content="Official SMS Opt-In Consent Form and TCPA Disclosures for Mike Ford Homebuyer Advisory.">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #2D362E;
+      background-color: #FAF9F5;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 680px;
+      margin: 30px auto;
+      background: #ffffff;
+      padding: 36px 32px;
+      border-radius: 20px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+      border: 1px solid #EAE7E0;
+    }
+    .brand-badge {
+      display: inline-block;
+      background-color: #2D362E;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      color: #2D362E;
+      font-size: 24px;
+      margin: 0 0 8px 0;
+      line-height: 1.3;
+    }
+    .subhead {
+      color: #606C5D;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .form-card {
+      background: #FAF9F5;
+      border: 1px solid #EAE7E0;
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label.field-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #2D362E;
+      margin-bottom: 6px;
+    }
+    input[type="text"], input[type="tel"], input[type="email"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 14px;
+      border: 1px solid #D5D0C6;
+      border-radius: 10px;
+      font-size: 14px;
+      background: #ffffff;
+      color: #2D362E;
+    }
+    .consent-box {
+      background: #ffffff;
+      border: 1.5px solid #4A5D4E;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 18px;
+    }
+    .consent-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #2D362E;
+      line-height: 1.5;
+    }
+    .consent-label input[type="checkbox"] {
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+      accent-color: #4A5D4E;
+      cursor: pointer;
+    }
+    .disclosures {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #EAE7E0;
+      font-size: 12px;
+      color: #606C5D;
+      line-height: 1.5;
+    }
+    .disclosures p {
+      margin: 4px 0;
+    }
+    .submit-btn {
+      display: block;
+      width: 100%;
+      background-color: #4A5D4E;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 14px;
+      text-align: center;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 18px;
+    }
+    .info-section {
+      border-top: 1px solid #EAE7E0;
+      padding-top: 20px;
+      font-size: 12px;
+      color: #606C5D;
+    }
+    .info-section h3 {
+      font-size: 14px;
+      color: #2D362E;
+      margin: 0 0 8px 0;
+    }
+    .info-section ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .info-section li {
+      margin-bottom: 6px;
+    }
+    a {
+      color: #4A5D4E;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand-badge">Official Opt-In Verification</div>
+    <h1>Mike Ford — SMS Opt-In &amp; Notification Consent</h1>
+    <div class="subhead">
+      First-Time Homebuyer Down Payment Grant Alerts &amp; Listing Inquiries
+    </div>
+
+    <!-- Live Web Opt-In Form Demonstration Card -->
+    <div class="form-card">
+      <form onsubmit="event.preventDefault(); alert('Consent registered successfully. A confirmation text will be sent to your mobile phone.');">
+        <div class="form-group">
+          <label class="field-label" for="full-name">Full Name</label>
+          <input type="text" id="full-name" placeholder="Jane Doe" required>
+        </div>
+        
+        <div class="form-group">
+          <label class="field-label" for="phone">Mobile Phone Number</label>
+          <input type="tel" id="phone" placeholder="(503) 555-0199" required>
+        </div>
+
+        <div class="form-group">
+          <label class="field-label" for="email">Email Address</label>
+          <input type="email" id="email" placeholder="jane@example.com" required>
+        </div>
+
+        <!-- Carrier Required Explicit Consent Checkbox -->
+        <div class="consent-box">
+          <label class="consent-label">
+            <input type="checkbox" id="sms-consent" required>
+            <span>
+              <strong>I authorize Mike Ford to send SMS text messages</strong> to the mobile phone number provided above regarding mortgage interest rate alerts, down payment assistance (DPA) grant updates, and answers to property listing questions.
+            </span>
+          </label>
+
+          <div class="disclosures">
+            <p><strong>Message &amp; Data Rates:</strong> Message and data rates may apply.</p>
+            <p><strong>Frequency:</strong> Message frequency varies based on your requested alerts and inquiries.</p>
+            <p><strong>Opt-Out:</strong> Text <strong>STOP</strong> at any time to opt out. You will receive a single confirmation of unsubscription.</p>
+            <p><strong>Help &amp; Support:</strong> Text <strong>HELP</strong> for assistance, or email <a href="mailto:fordmj@gmail.com">fordmj@gmail.com</a>.</p>
+            <p><strong>Carriers:</strong> Supported carriers include AT&amp;T, Verizon, T-Mobile, and independent providers. Carriers are not liable for delayed or undelivered messages.</p>
+            <p><strong>Privacy:</strong> We will not share your mobile information or phone number with third parties or affiliates for marketing or promotional purposes. View our <a href="/privacy-policy.html" target="_blank">Privacy Policy</a> and <a href="/terms-and-conditions.html" target="_blank">Terms and Conditions</a>.</p>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn">Submit &amp; Opt In to SMS Notifications</button>
+      </form>
+    </div>
+
+    <!-- Detailed Program Terms Section -->
+    <div class="info-section">
+      <h3>SMS Notification Program Details</h3>
+      <ul>
+        <li><strong>Sender:</strong> Mike Ford (NMLS #288455)</li>
+        <li><strong>Website:</strong> <a href="https://first-time-homebuyer-ai-studio.vercel.app/" target="_blank">first-time-homebuyer-ai-studio.vercel.app</a></li>
+        <li><strong>Program Purpose:</strong> Direct 1-on-1 communication in response to consumer requests for homebuyer education, grant programs, and property information.</li>
+        <li><strong>Contact:</strong> 17850 Pilkington Rd, Lake Oswego, OR 97035 · Phone: (503) 555-0199 · Email: <a href="mailto:fordmj@gmail.com">fordmj@gmail.com</a></li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

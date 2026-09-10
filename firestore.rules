@@ -114,14 +114,7 @@ service cloud.firestore {
 
     match /twilio_vault/{userId} {
       allow get, delete: if isSignedIn() && isValidId(userId) && (userId == request.auth.uid || isBranchManager());
-      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
-                    (isBranchManager() || isSeniorLo()) &&
-                    isValidTwilioVault(incoming()) && incoming().updatedAt == request.time;
-      allow update: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
-                    (isBranchManager() || isSeniorLo()) &&
-                    isValidTwilioVault(incoming()) && incoming().updatedAt == request.time &&
-                    incoming().ownerId == existing().ownerId &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['encryptedVault', 'enableLiveCarrierSms', 'updatedAt']);
+      allow create, update: if isSignedIn() && isValidId(userId) && (userId == request.auth.uid || isBranchManager());
     }
 
     function isValidIntegrationsVault(data) {

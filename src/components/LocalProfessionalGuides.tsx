@@ -684,7 +684,16 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
                   </span>
                 </label>
                 <p className="text-[10px] text-[#9A9488] pl-5">
-                  Msg & data rates may apply. Reply STOP to cancel anytime.
+                  Msg & data rates may apply. Reply STOP to cancel anytime. Read our{" "}
+                  <a
+                    href="/privacy-policy.html"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline text-[#4A5D4E] hover:text-[#2D362E]"
+                  >
+                    Privacy Policy
+                  </a>
+                  .
                 </p>
               </div>
 

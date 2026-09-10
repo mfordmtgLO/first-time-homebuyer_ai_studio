@@ -5950,10 +5950,8 @@ Best regards,`,
                                       <span className="font-semibold text-[#4A5D4E] block">
                                         {lo.licenseStates.join(", ")}
                                       </span>
-                                      {Boolean(
-                                        (lo.licenseVerificationYear ?? new Date().getFullYear()) ===
-                                          new Date().getFullYear() && lo.licenseStates.length > 0
-                                      ) ? (
+                                      {(lo.licenseVerificationYear ?? new Date().getFullYear()) ===
+                                          new Date().getFullYear() && lo.licenseStates.length > 0 ? (
                                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5">
                                           <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
                                           <span>Verified {new Date().getFullYear()}</span>
@@ -9757,7 +9755,7 @@ Don't forget to file your State Homestead Tax Exemption!`,
           const updatedLos = guidesState.loanOfficers.map((lo) => {
             if (selectedRosterLoIds.has(lo.id)) {
               // Create an immediate history entry for the first step if it's Day 0
-              let newHistory = [...(lo.outreachHistory || [])];
+              const newHistory = [...(lo.outreachHistory || [])];
               const immediateStep = campaign.steps.find((s) => s.dayOffset === 0);
 
               if (immediateStep) {

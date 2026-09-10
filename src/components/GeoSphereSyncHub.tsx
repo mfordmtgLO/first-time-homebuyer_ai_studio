@@ -236,7 +236,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
         let city = "Portland";
         let county = "Multnomah";
         let zip = line.trim();
-        let price = Math.floor(Math.random() * 300000) + 300000;
+        const price = Math.floor(Math.random() * 300000) + 300000;
         
         if (isUrl) {
             zip = "97204"; // Default for random URLs

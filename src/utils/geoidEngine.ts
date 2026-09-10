@@ -168,7 +168,7 @@ export function parseGeoid(rawInput: string | number): ParsedGeoid {
   const isLmiSample = (tractNum % 3 === 0) || (tractNum % 5 === 0);
   const amiPercentage = isLmiSample ? 55 + (tractNum % 25) : 88 + (tractNum % 35);
   
-  let lmiCategory: ParsedGeoid['lmiCategory'] = 'Middle';
+  let lmiCategory: ParsedGeoid['lmiCategory'];
   if (amiPercentage < 50) lmiCategory = 'Low';
   else if (amiPercentage <= 80) lmiCategory = 'Moderate';
   else if (amiPercentage <= 120) lmiCategory = 'Middle';
@@ -219,7 +219,7 @@ export function buildGeoid(stateCode: string, countyFipsOrName: string, tractNum
 
   // Parse tract number e.g. "10", "10.02", "1002"
   const tractStr = String(tractNumber).replace(/[^0-9.]/g, "");
-  let tractFips = "000100";
+  let tractFips: string;
   if (tractStr.includes(".")) {
     const [whole, dec] = tractStr.split(".");
     tractFips = whole.padStart(4, "0") + dec.padEnd(2, "0").substring(0, 2);

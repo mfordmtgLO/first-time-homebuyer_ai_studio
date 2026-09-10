@@ -1,8 +1,41 @@
 {
   "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/((?!privacy-policy|terms-and-conditions|sms-opt-in|.*\\..*).*)",
+      "source": "/privacy-policy",
+      "destination": "/privacy-policy.html"
+    },
+    {
+      "source": "/terms-and-conditions",
+      "destination": "/terms-and-conditions.html"
+    },
+    {
+      "source": "/sms-opt-in",
+      "destination": "/sms-opt-in.html"
+    },
+    {
+      "source": "/lo-login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/portal",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/secure-login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]

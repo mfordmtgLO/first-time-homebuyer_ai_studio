@@ -156,8 +156,12 @@ export default function App() {
     pathname === "/secure-login" ||
     hash.includes("portal") ||
     hash.includes("admin") ||
+    hash.includes("lo-login") ||
+    hash.includes("login") ||
     search.includes("portal=lo") ||
-    search.includes("admin=lo");
+    search.includes("admin=lo") ||
+    search.includes("lo-login") ||
+    search.includes("login=");
 
   // Global State
   const [profile, setProfile] = useState<FinancialProfile>(() => {

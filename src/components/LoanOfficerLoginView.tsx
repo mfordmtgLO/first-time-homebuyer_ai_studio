@@ -38,11 +38,13 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
     setIsLoading(true);
     setError(null);
     try {
+      console.log("LO Login: Starting Google Auth popup...");
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
       const result = await signInWithPopup(auth, provider);
       
       const email = result.user.email?.toLowerCase();
+      console.log("LO Login: Auth successful", email);
       
       // Auto-match user to LO roster or default to admin (Mike Ford)
       let targetLoId = guidesState.adminLoanOfficerId || "lo-mike-ford";
@@ -56,7 +58,9 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
       }
 
       try {
+        console.log("LO Login: Provisioning user...");
         await checkAndProvisionUser(result.user);
+        console.log("LO Login: Provisioning complete.");
       } catch (provisionErr: any) {
         console.warn("Provisioning warning:", provisionErr);
         if (provisionErr.message === "NOT_WHITELISTED") {
@@ -64,6 +68,16 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
           await signOut(auth);
           setIsLoading(false);
           return;
+        } else {
+          // Fallback for Mike if Firestore times out
+          if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
+            console.warn("LO Login: Provisioning failed, but user is admin. Proceeding with fallback access.");
+          } else {
+            setError(`Authentication check error: ${provisionErr.message || "Please contact support."}`);
+            await signOut(auth);
+            setIsLoading(false);
+            return;
+          }
         }
       }
 
@@ -166,6 +180,15 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
               <span>{isLoading ? "Connecting to Google..." : "Sign in with Google"}</span>
               {!isLoading && <ArrowRight className="w-4 h-4 ml-1" />}
             </button>
+            
+            {isLoading && (
+              <p className="text-center text-[11px] text-[#606C5D] mt-2 px-4">
+                If the popup gets stuck or closes without logging you in, third-party cookies or popups might be blocked.{" "}
+                <a href={typeof window !== "undefined" ? window.location.href : "#"} target="_blank" rel="noopener noreferrer" className="text-[#2D362E] font-semibold underline">
+                  Try opening in a new tab
+                </a>.
+              </p>
+            )}
           </div>
 
           <div className="mt-8 pt-6 border-t border-[#EAE7E0] flex items-center justify-center gap-2 text-xs text-[#9A9488]">

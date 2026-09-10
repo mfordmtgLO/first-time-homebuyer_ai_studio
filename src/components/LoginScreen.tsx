@@ -17,16 +17,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setIsLoading(true);
     setError(null);
     try {
+      console.log("Starting Google Auth popup...");
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
       const result = await signInWithPopup(auth, provider);
       
+      console.log("Auth successful, provisioning user...", result.user.email);
+      
       try {
         const role = await checkAndProvisionUser(result.user);
+        console.log("Provisioning successful, role:", role);
         if (typeof window !== "undefined") {
           localStorage.removeItem("lo_portal_logged_out");
-        localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
+          localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
         }
+        
+        console.log("Calling onLogin callback...");
         onLogin(role);
       } catch (err: any) {
         console.error("Provisioning check error:", err);
@@ -97,6 +103,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             {isLoading ? "Connecting to Google..." : "Sign in with Google"}
             {!isLoading && <ArrowRight className="w-4 h-4" />}
           </button>
+          
+          {isLoading && (
+            <p className="text-center text-[11px] text-[#606C5D] mt-2 px-4">
+              If the popup gets stuck or closes without logging you in, third-party cookies or popups might be blocked.{" "}
+              <a href={typeof window !== "undefined" ? window.location.href : "#"} target="_blank" rel="noopener noreferrer" className="text-[#2D362E] font-semibold underline">
+                Try opening in a new tab
+              </a>.
+            </p>
+          )}
 
           <button
             type="button"

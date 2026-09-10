@@ -22,6 +22,7 @@ import { MarketTrends } from "./components/MarketTrends";
 import { Step4AIScenarioSummary } from "./components/Step4AIScenarioSummary";
 import { AIPrequalWizard } from "./components/AIPrequalWizard";
 import { LoanOfficerPortal } from "./components/LoanOfficerPortal";
+import { MobileLoanOfficerPortal } from "./components/mobile/MobileLoanOfficerPortal";
 import { LeadIntakeChatbot } from "./components/LeadIntakeChatbot";
 import { LoginScreen } from "./components/LoginScreen";
 import { BranchManagement } from "./components/BranchManagement";
@@ -85,6 +86,7 @@ export default function App() {
   const [isSettingsChecking, setIsSettingsChecking] = useState(true);
   const [userRole, setUserRole] = useState<RbacRole | "admin" | "lo" | null>(null);
   const [isAppPublic, setIsAppPublic] = useState(false);
+  const [forceDesktopLoPortal, setForceDesktopLoPortal] = useState(false);
 
   useEffect(() => {
     // Safety timeout to prevent infinite blank screen if Firebase offline or blocked
@@ -873,26 +875,51 @@ export default function App() {
           >
             {/* LOAN OFFICER PORTAL VIEW */}
             {showLoPortal ? (
-              <LoanOfficerPortal
-                userRole={userRole}
-                guidesState={guidesState}
-                onUpdateGuidesState={handleUpdateGuidesState}
-                onClose={() => setShowLoPortal(false)}
-                onViewPublicSite={() => {
-                  setShowLoPortal(false);
-                  handleNavigate("hero", "website");
-                }}
-                onLogout={() => {
-                  setUserRole(null);
-                  setShowLoPortal(false);
-                  // Direct back to secure login
-                  if (typeof window !== "undefined") {
-                    window.location.href = "/lo-login";
-                  }
-                }}
-                properties={properties}
-                setProperties={setProperties}
-              />
+              isMobile && !forceDesktopLoPortal ? (
+                <MobileLoanOfficerPortal
+                  userRole={userRole}
+                  guidesState={guidesState}
+                  onUpdateGuidesState={handleUpdateGuidesState}
+                  onClose={() => setShowLoPortal(false)}
+                  onViewPublicSite={() => {
+                    setShowLoPortal(false);
+                    handleNavigate("hero", "website");
+                  }}
+                  onLogout={() => {
+                    setUserRole(null);
+                    setShowLoPortal(false);
+                    // Direct back to secure login
+                    if (typeof window !== "undefined") {
+                      window.location.href = "/lo-login";
+                    }
+                  }}
+                  properties={properties}
+                  setProperties={setProperties}
+                  onSwitchToDesktop={() => setForceDesktopLoPortal(true)}
+                />
+              ) : (
+                <LoanOfficerPortal
+                  userRole={userRole}
+                  guidesState={guidesState}
+                  onUpdateGuidesState={handleUpdateGuidesState}
+                  onClose={() => setShowLoPortal(false)}
+                  onViewPublicSite={() => {
+                    setShowLoPortal(false);
+                    handleNavigate("hero", "website");
+                  }}
+                  onLogout={() => {
+                    setUserRole(null);
+                    setShowLoPortal(false);
+                    // Direct back to secure login
+                    if (typeof window !== "undefined") {
+                      window.location.href = "/lo-login";
+                    }
+                  }}
+                  properties={properties}
+                  setProperties={setProperties}
+                  onSwitchToMobile={() => setForceDesktopLoPortal(false)}
+                />
+              )
             ) : (
               <>
                 {/* WEBSITE MODE VIEWS */}
@@ -1206,8 +1233,8 @@ export default function App() {
           </footer>
         )}
       </div>
-      {/* Bottom Nav (Flex None - Pinned to Bottom on Mobile - Hidden when in Full-Screen Workspace) */}
-      {!isFullScreen && <MobileBottomNav activeTab={activeTab} onNavigate={handleNavigate} />}
+      {/* Bottom Nav (Flex None - Pinned to Bottom on Mobile - Hidden when in Full-Screen Workspace or LO Portal) */}
+      {!isFullScreen && !showLoPortal && <MobileBottomNav activeTab={activeTab} onNavigate={handleNavigate} />}
 
       {/* Scorecard Modal */}
       {scorecardProperty && (

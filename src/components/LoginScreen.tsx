@@ -3,6 +3,7 @@ import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { checkAndProvisionUser } from "../utils/authUtils";
 import { Building2, ArrowRight, ShieldCheck, AlertCircle } from "lucide-react";
+import { PWAInstallButton } from "./PWAInstallButton";
 
 interface LoginScreenProps {
   onLogin: (role: any) => void;
@@ -63,6 +64,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-[#F4F1EA] flex flex-col items-center justify-center p-4">
+      <div className="max-w-md w-full mb-4">
+        <PWAInstallButton
+          variant="banner"
+          label="Install Loan Officer App"
+          className="shadow-md"
+        />
+      </div>
+
       <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 border border-[#EAE7E0]">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-[#2D362E] rounded-2xl flex items-center justify-center text-white mb-4 shadow-md">

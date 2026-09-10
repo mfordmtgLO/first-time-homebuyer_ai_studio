@@ -176,6 +176,7 @@ import {
   OREGON_MLS_SYSTEMS,
 } from "../utils/marketNewsListingMatcher";
 import { RbacRole, normalizeRole, getRolePermissions } from "../utils/rbac";
+import { PWAInstallButton } from "./PWAInstallButton";
 
 interface LoanOfficerPortalProps {
   userRole?: RbacRole | "admin" | "lo" | string | null;
@@ -186,6 +187,7 @@ interface LoanOfficerPortalProps {
   onLogout?: () => void;
   properties?: PropertyListing[];
   setProperties?: React.Dispatch<React.SetStateAction<PropertyListing[]>>;
+  onSwitchToMobile?: () => void;
 }
 
 export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
@@ -197,6 +199,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   onLogout,
   properties = [],
   setProperties = () => {},
+  onSwitchToMobile,
 }) => {
   // Authentication & Session State (loaded from localStorage)
   const [authenticatedLoId, setAuthenticatedLoId] = useState<string | null>(() => {
@@ -2223,6 +2226,15 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         </div>
       )}
 
+      {/* Top PWA Install Banner */}
+      <div className="bg-[#2D362E] px-4 py-2 text-white border-b border-[#4A5D4E]/30">
+        <PWAInstallButton
+          variant="banner"
+          label="Install Loan Officer Hub"
+          className="max-w-[1600px] mx-auto shadow-md"
+        />
+      </div>
+
       {/* Top Navigation Bar */}
       <header className="bg-white border-b border-[#EAE7E0] sticky top-0 z-40 px-4 sm:px-8 py-3 shadow-2xs">
         <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -2411,6 +2423,21 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Top Tabs</span>
             </button>
+
+            {/* PWA Install Button */}
+            <PWAInstallButton variant="header" label="Install" />
+
+            {/* Mobile View Toggle */}
+            {onSwitchToMobile && (
+              <button
+                type="button"
+                onClick={onSwitchToMobile}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] hover:bg-[#F1EFE9] text-xs font-bold text-[#4A5D4E] transition-colors cursor-pointer"
+                title="Switch to mobile layout"
+              >
+                <span>Mobile View</span>
+              </button>
+            )}
 
             {/* Preview Public Site Button */}
             <button
@@ -2989,28 +3016,30 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
       {/* Portal Layout: Left Collapsible Sidebar with Sticky AI Daily Rhythm + Main Workspace */}
       <div className="flex flex-1 min-h-[calc(100vh-65px)]">
-        {/* Left Sidebar */}
-        <LoanOfficerSidebar
-          userRole={userRole as string}
-          activeTab={activeTab}
-          onSelectTab={setActiveTab}
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => {
-            setIsSidebarCollapsed((prev) => {
-              const next = !prev;
-              if (typeof window !== "undefined") {
-                localStorage.setItem("lo_sidebar_collapsed", String(next));
-              }
-              return next;
-            });
-          }}
-          currentLo={currentLo}
-          loggedInUser={loggedInUser}
-          guidesState={guidesState}
-          isAdminUser={isAdminUser}
-          onOpenDailyReview={handleOpenDailyReview}
-          workspaceConnected={Boolean(workspaceUser)}
-        />
+        {/* Left Sidebar (Desktop only to prevent horizontal overflow on mobile screens) */}
+        <div className="hidden lg:flex shrink-0">
+          <LoanOfficerSidebar
+            userRole={userRole as string}
+            activeTab={activeTab}
+            onSelectTab={setActiveTab}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={() => {
+              setIsSidebarCollapsed((prev) => {
+                const next = !prev;
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("lo_sidebar_collapsed", String(next));
+                }
+                return next;
+              });
+            }}
+            currentLo={currentLo}
+            loggedInUser={loggedInUser}
+            guidesState={guidesState}
+            isAdminUser={isAdminUser}
+            onOpenDailyReview={handleOpenDailyReview}
+            workspaceConnected={Boolean(workspaceUser)}
+          />
+        </div>
 
         {/* Main Content Area */}
         <div className="flex-1 min-w-0 overflow-y-auto">

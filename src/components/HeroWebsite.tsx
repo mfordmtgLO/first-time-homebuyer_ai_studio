@@ -109,7 +109,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
                   className="flex flex-col sm:flex-row gap-2"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    alert("GeoSphere AI Search Active!\n\nParsing your intent...\nCross-referencing live MLS and Oregon Down Payment Assistance boundaries.\n\n(Please open the 'Property Map Tracker' tab to view results!)");
+                    onOpenDashboard();
                   }}
                 >
                   <input 

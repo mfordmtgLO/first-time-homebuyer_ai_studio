@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   TrendingUp, 
   DollarSign, 
@@ -17,7 +17,8 @@ import {
   Hourglass,
   HelpCircle,
   Award,
-  AlertTriangle
+  AlertTriangle,
+  ArrowLeft
 } from "lucide-react";
 import { FinancialProfile, CapturedLead, SavedScenario, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { 
@@ -25,7 +26,7 @@ import {
   calculateAmortizationCurve, 
   calculateClosingCosts, 
   calculateRentVsBuy, 
-  calculateMonthlyPI,
+  calculateMonthlyPI, 
   formatUSD 
 } from "../utils/mortgageMath";
 import { LeadScenarioSearch } from "./LeadScenarioSearch";
@@ -43,6 +44,7 @@ interface MortgageLabProps {
   onOpenSmsOutreach?: (leadId: string, text?: string) => void;
   initialTab?: "buydown" | "costofwaiting" | "accelerator" | "amortization" | "closingcosts" | "rentvsbuy";
   isLoanOfficerMode?: boolean;
+  onBack?: () => void;
 }
 
 export const MortgageLab: React.FC<MortgageLabProps> = ({
@@ -54,9 +56,16 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
   onOpenEmailOutreach,
   onOpenSmsOutreach,
   initialTab = "buydown",
-  isLoanOfficerMode = false
+  isLoanOfficerMode = false,
+  onBack
 }) => {
   const [activeTab, setActiveTab] = useState<"buydown" | "costofwaiting" | "accelerator" | "amortization" | "closingcosts" | "rentvsbuy">(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [extraPrincipal, setExtraPrincipal] = useState<number>(150);
   const [currentRent, setCurrentRent] = useState<number>(2100);
   const [appreciationRate, setAppreciationRate] = useState<number>(3.8);
@@ -186,6 +195,20 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
           onSelectLead={(lead) => setSelectedLead(lead)}
           toolName="Mortgage Lab & Financial Modeling Suite"
         />
+      )}
+
+      {/* Back Button (e.g. from mobile or deep link) */}
+      {onBack && (
+        <div>
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A5D4E] hover:text-[#2D362E] dark:text-[#A9BBAA] bg-white dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-[#EAE7E0] dark:border-slate-700 shadow-2xs cursor-pointer active:scale-95 transition-all"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to Overview</span>
+          </button>
+        </div>
       )}
 
       {/* Header */}

@@ -73,6 +73,9 @@ export default function App() {
   const isMobile = useIsMobile();
   const [currentMode, setCurrentMode] = useState<"website" | "dashboard">("website");
   const [activeTab, setActiveTab] = useState<string>("hero");
+  const [mortgageLabInitialTab, setMortgageLabInitialTab] = useState<
+    "buydown" | "costofwaiting" | "accelerator" | "amortization" | "closingcosts" | "rentvsbuy"
+  >("buydown");
   const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
   const [isLeadBotOpen, setIsLeadBotOpen] = useState<boolean>(false);
   const [showTelemetryModal, setShowTelemetryModal] = useState<boolean>(false);
@@ -949,6 +952,14 @@ export default function App() {
                           isCoBranded={guidesState.isCoBranded}
                           onOpenLoPortal={() => setShowLoPortal(true)}
                           properties={properties}
+                          onOpenCostOfWaiting={() => {
+                            setMortgageLabInitialTab("costofwaiting");
+                            handleNavigate("mortgagelab", "dashboard");
+                          }}
+                          onOpenBuydown={() => {
+                            setMortgageLabInitialTab("buydown");
+                            handleNavigate("mortgagelab", "dashboard");
+                          }}
                         />
                       ) : (
                         <HeroWebsite
@@ -1117,6 +1128,8 @@ export default function App() {
                         loanOfficer={guidesState.loanOfficer}
                         activeAgent={activeAgent}
                         isLoanOfficerMode={false}
+                        initialTab={mortgageLabInitialTab}
+                        onBack={() => handleNavigate(isMobile ? "hero" : "dashboard", isMobile ? "website" : "dashboard")}
                       />
                     )}
 

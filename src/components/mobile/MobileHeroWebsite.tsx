@@ -14,7 +14,9 @@ import {
   ChevronRight,
   Gift,
   Percent,
-  Calculator
+  Calculator,
+  Hourglass,
+  TrendingUp
 } from "lucide-react";
 import { motion, AnimatePresence, PanInfo } from "motion/react";
 import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile, CapturedLead, PropertyListing } from "../../types";
@@ -34,6 +36,8 @@ interface MobileHeroWebsiteProps {
   isCoBranded?: boolean;
   onOpenLoPortal?: () => void;
   properties?: PropertyListing[];
+  onOpenCostOfWaiting?: () => void;
+  onOpenBuydown?: () => void;
 }
 
 export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
@@ -43,6 +47,8 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
   loanOfficer,
   onOpenDashboard,
   onOpenProperties,
+  onOpenCostOfWaiting,
+  onOpenBuydown,
 }) => {
   const leadGenUrlwk = loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM";
 
@@ -64,6 +70,21 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
       bgGradient: "from-[#4A5D4E] to-[#36453A]",
       borderColor: "border-[#38463B]",
       accentCircle: "bg-[#C18C5D]/20",
+    },
+    {
+      id: "costofwaiting",
+      badge: "Cost of Waiting",
+      badgeIcon: <Hourglass className="w-3 h-3 text-amber-300" />,
+      badgeRight: "Lost Equity & Rates",
+      badgeRightIcon: <TrendingUp className="w-3 h-3 text-emerald-300" />,
+      title: "Cost of Waiting Analysis",
+      description: "See what waiting 6mo to 3yrs costs in home price inflation, lost appreciation & monthly payments.",
+      ctaText: "Analyze Cost of Waiting",
+      ctaIcon: <Hourglass className="w-4 h-4" />,
+      onClick: onOpenCostOfWaiting || onOpenCalculator,
+      bgGradient: "from-[#334438] to-[#202E24]",
+      borderColor: "border-[#202E24]",
+      accentCircle: "bg-amber-500/20",
     },
     {
       id: "grants",
@@ -90,7 +111,7 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
       description: "Lower your initial mortgage payment by up to 2% in year one.",
       ctaText: "Calculate Buydown",
       ctaIcon: <ArrowRight className="w-4 h-4" />,
-      onClick: onOpenCalculator,
+      onClick: onOpenBuydown || onOpenCalculator,
       bgGradient: "from-[#3D4D40] to-[#2B382D]",
       borderColor: "border-[#2B382D]",
       accentCircle: "bg-amber-500/20",

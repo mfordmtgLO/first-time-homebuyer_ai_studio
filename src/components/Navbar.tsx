@@ -39,7 +39,6 @@ import { formatUSD } from "../utils/mortgageMath";
 import { analyzeRateTrends, TrendHorizon } from "../utils/rateTrends";
 import { PWAInstallButton } from "./PWAInstallButton";
 import { ThemeToggle } from "./ThemeToggle";
-import { PWAInstallButton } from "./PWAInstallButton";
 
 export interface NavItem {
   id: string;
@@ -116,10 +115,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "hero", label: "Home / Overview", shortLabel: "Overview", icon: Home, mode: "website" },
     { id: "calculator", label: "Step 1: Calculate Buying Power", shortLabel: "Step 1: Buying Power", icon: Calculator, mode: "website" },
     { id: "roadmap", label: "Step 2: Explore Roadmap", shortLabel: "Step 2: Roadmap", icon: Compass, mode: "website" },
-    { id: "dashboard", label: "Step 3: Buyer Dashboard", shortLabel: "Step 3: Dashboard", icon: LayoutDashboard, mode: "dashboard" },
+    { id: "properties", label: `Step 3: Browse Homes (${savedCount})`, shortLabel: `Homes (${savedCount})`, icon: Building, mode: "dashboard" },
     { id: "step4_ai_plan", label: "Step 4: AI Plan & Guides", shortLabel: "Step 4: AI Plan", icon: Sparkles, badge: "AI Plan", mode: "dashboard", highlight: true },
     { id: "grants", label: "Down Payment Assistance (DPA) Finder", shortLabel: "DPA Finder", icon: Award, mode: "dashboard" },
-    { id: "properties", label: `Saved Homes (${savedCount})`, shortLabel: `Homes (${savedCount})`, icon: Building, mode: "dashboard" },
     { id: "mortgagelab", label: "Mortgage Lab & PITI", shortLabel: "Mortgage Lab", icon: TrendingUp, mode: "dashboard" },
     { id: "ai_copilot", label: "AI Advisor Copilot", shortLabel: "AI Advisor", icon: Sparkles, badge: "Gemini 3.7", mode: "dashboard" },
     { id: "escrow", label: "Closing & Escrow Tracker", shortLabel: "Closing Tracker", icon: ShieldCheck, mode: "dashboard" },
@@ -128,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   // Secondary Tools Nav Items (Steps 1-4 removed because they are in the dedicated Guided 4-Step block; DPA is secured to dashboard mode)
   const nonStepNavItems = allNavItems.filter((item) => {
-    if (["hero", "calculator", "roadmap", "dashboard", "step4_ai_plan"].includes(item.id)) return false;
+    if (["hero", "calculator", "roadmap", "properties", "step4_ai_plan", "dashboard"].includes(item.id)) return false;
     if (activeMode === "website" && item.id === "grants") return false;
     return true;
   });
@@ -921,19 +919,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Sparkles className="w-4 h-4 text-[#D4A373]" />
               <span>Step 4: AI Plan & Summary</span>
             </button>
-
-            {onOpenLoPortal && (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenLoPortal();
-                }}
-                className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-[#9A9488] hover:text-[#4A5D4E] transition-colors"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#C18C5D]" />
-                <span>Loan Officer / Partner Access</span>
-              </button>
-            )}
           </div>
         </div>
       )}

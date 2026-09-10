@@ -11,6 +11,7 @@ import { MobileHeroWebsite } from "./components/mobile/MobileHeroWebsite";
 import { InstantAffordabilityCalculator } from "./components/InstantAffordabilityCalculator";
 import { RoadmapView } from "./components/RoadmapView";
 import { DashboardOverview } from "./components/DashboardOverview";
+import { MobileDashboardOverview } from "./components/mobile/MobileDashboardOverview";
 import { PropertyTracker } from "./components/PropertyTracker";
 import { TourScorecardModal } from "./components/TourScorecardModal";
 import { NewPropertyModal } from "./components/NewPropertyModal";
@@ -511,6 +512,13 @@ export default function App() {
     });
   };
 
+  // Listen for internal telemetry modal opening
+  useEffect(() => {
+    const handleOpenTelemetry = () => setShowTelemetryModal(true);
+    window.addEventListener("open-telemetry", handleOpenTelemetry);
+    return () => window.removeEventListener("open-telemetry", handleOpenTelemetry);
+  }, []);
+
   // Keyboard shortcut: Press Escape to exit full-screen workspace mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -915,7 +923,7 @@ export default function App() {
                         <HeroWebsite
                           profile={profile}
                           setProfile={setProfile}
-                          onOpenDashboard={() => handleNavigate("dashboard", "dashboard")}
+                          onOpenDashboard={() => handleNavigate("properties", "dashboard")}
                           onOpenCalculator={() => handleNavigate("calculator", "website")}
                           onOpenRoadmap={() => handleNavigate("roadmap", "website")}
                           onOpenStep4={() => handleNavigate("step4_ai_plan", "dashboard")}
@@ -950,7 +958,7 @@ export default function App() {
                       <RoadmapView
                         milestones={milestones}
                         setMilestones={setMilestones}
-                        onGoToDashboard={() => handleNavigate("dashboard", "dashboard")}
+                        onGoToDashboard={() => handleNavigate("step4_ai_plan", "dashboard")}
                         onBackToStep1={() => handleNavigate("calculator", "website")}
                         onNavigate={handleNavigate}
                         profile={profile}
@@ -978,23 +986,42 @@ export default function App() {
                         "escrow",
                         "market_trends",
                       ].includes(activeTab)) && (
-                      <DashboardOverview
-                        profile={profile}
-                        setProfile={setProfile}
-                        properties={properties}
-                        milestones={milestones}
-                        documents={documents}
-                        setDocuments={setDocuments}
-                        onNavigate={handleNavigate}
-                        onOpenNewPropertyModal={() => setShowNewPropertyModal(true)}
-                        loanOfficer={guidesState.loanOfficer}
-                        activeAgent={activeAgent}
-                        onOpenLoPortal={() => setShowLoPortal(true)}
-                        isSidebarCollapsed={isSidebarCollapsed}
-                        onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
-                        onSaveLead={handleSaveLead}
-                        agentRoster={guidesState.agentRoster}
-                      />
+                      isMobile ? (
+                        <MobileDashboardOverview
+                          profile={profile}
+                          setProfile={setProfile}
+                          properties={properties}
+                          milestones={milestones}
+                          documents={documents}
+                          setDocuments={setDocuments}
+                          onNavigate={handleNavigate}
+                          onOpenNewPropertyModal={() => setShowNewPropertyModal(true)}
+                          loanOfficer={guidesState.loanOfficer}
+                          activeAgent={activeAgent}
+                          isCoBranded={guidesState.isCoBranded}
+                          onOpenLoPortal={() => setShowLoPortal(true)}
+                          onSaveLead={handleSaveLead}
+                          agentRoster={guidesState.agentRoster}
+                        />
+                      ) : (
+                        <DashboardOverview
+                          profile={profile}
+                          setProfile={setProfile}
+                          properties={properties}
+                          milestones={milestones}
+                          documents={documents}
+                          setDocuments={setDocuments}
+                          onNavigate={handleNavigate}
+                          onOpenNewPropertyModal={() => setShowNewPropertyModal(true)}
+                          loanOfficer={guidesState.loanOfficer}
+                          activeAgent={activeAgent}
+                          onOpenLoPortal={() => setShowLoPortal(true)}
+                          isSidebarCollapsed={isSidebarCollapsed}
+                          onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+                          onSaveLead={handleSaveLead}
+                          agentRoster={guidesState.agentRoster}
+                        />
+                      )
                     )}
 
 
@@ -1199,23 +1226,6 @@ export default function App() {
         />
       )}
 
-      {/* Return to LO Dashboard Floating Button */}
-      {!showLoPortal &&
-        typeof window !== "undefined" &&
-        localStorage.getItem("lo_portal_auth_id") && (
-          <button
-            onClick={() => {
-              setShowLoPortal(true);
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-            className="fixed bottom-24 right-6 md:bottom-6 md:left-6 z-50 bg-[#2D362E] hover:bg-[#1E241F] text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 font-bold text-sm transition-all animate-in slide-in-from-bottom-5 border border-white/20 hover:scale-105 active:scale-95"
-          >
-            <span className="bg-[#4A5D4E] w-6 h-6 rounded-full flex items-center justify-center text-[10px]">
-              👑
-            </span>
-            <span>Return to LO Dashboard</span>
-          </button>
-        )}
 
       {/* 24/7 AI Lead Intake & Prequal Chatbot */}
       {!showLoPortal && (
@@ -1236,15 +1246,6 @@ export default function App() {
         />
       )}
 
-      {/* Floating Production Telemetry & Diagnostics Button */}
-      <button
-        onClick={() => setShowTelemetryModal(true)}
-        className="fixed bottom-6 right-6 z-40 bg-slate-900 hover:bg-slate-800 text-purple-400 border border-purple-500/30 px-3.5 py-2.5 rounded-xl shadow-2xl flex items-center space-x-2 text-xs font-mono font-medium transition hover:scale-105 active:scale-95"
-        title="Open Production Telemetry & Breadcrumbs Inspector"
-      >
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        <span>Telemetry Inspector</span>
-      </button>
 
       {/* Telemetry Diagnostics Modal */}
       <TelemetryDiagnosticsModal

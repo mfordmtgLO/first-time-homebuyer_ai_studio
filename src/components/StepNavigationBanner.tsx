@@ -121,12 +121,12 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
     },
     {
       stepNum: 3,
-      id: "dashboard",
+      id: "properties",
       mode: "dashboard" as const,
-      label: "Buyer Dashboard",
-      tagline: "Brings it all together",
-      shortLabel: "Dashboard",
-      icon: LayoutDashboard
+      label: "Browse & Tour Homes",
+      tagline: "Saved listings & scorecards",
+      shortLabel: "Homes",
+      icon: Building
     },
     {
       stepNum: 4,

@@ -472,7 +472,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
 
           {/* Stage 4 */}
           <div 
-            onClick={onOpenDashboard}
+            onClick={onOpenRoadmap}
             className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm min-w-[260px] md:min-w-0 snap-center shrink-0"
           >
             <div className="w-9 h-9 rounded-lg bg-[#F1EFE9] border border-[#EAE7E0] flex items-center justify-center text-[#4A5D4E] font-bold text-xs group-hover:bg-[#4A5D4E] group-hover:text-white transition-colors">
@@ -485,14 +485,14 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
               Craft protective contingencies, appraisal gap clauses, and seller closing credit requests with AI.
             </p>
             <div className="text-[11px] font-semibold text-[#4A5D4E] flex items-center gap-1">
-              <span>Offer Strategist</span>
+              <span>View in Roadmap</span>
               <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
 
           {/* Stage 5 */}
           <div 
-            onClick={onOpenDashboard}
+            onClick={onOpenRoadmap}
             className="group cursor-pointer bg-white hover:bg-[#F9F8F4] border border-[#EAE7E0] hover:border-[#4A5D4E] rounded-2xl p-5 space-y-3 transition-all shadow-sm min-w-[260px] md:min-w-0 snap-center shrink-0"
           >
             <div className="w-9 h-9 rounded-lg bg-[#F1EFE9] border border-[#EAE7E0] flex items-center justify-center text-[#4A5D4E] font-bold text-xs group-hover:bg-[#4A5D4E] group-hover:text-white transition-colors">
@@ -505,7 +505,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
               30-day countdown with wire fraud protections, inspection repairs, CD review, and final walkthrough.
             </p>
             <div className="text-[11px] font-semibold text-[#4A5D4E] flex items-center gap-1">
-              <span>Closing Pipeline</span>
+              <span>View in Roadmap</span>
               <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>

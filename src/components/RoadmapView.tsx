@@ -12,7 +12,7 @@ import {
   Trophy, 
   Award,
   ArrowRight,
-  LayoutDashboard,
+  Sparkles,
   Calculator,
   RotateCcw,
   Printer,
@@ -568,11 +568,11 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
             </div>
 
             <h3 className="text-xl sm:text-2xl font-serif font-bold text-white leading-tight">
-              Ready for Step 3: Your Live Buyer Dashboard & Command Center?
+              Ready for Your AI Scenario Plan &amp; Local Guides?
             </h3>
 
             <p className="text-xs sm:text-sm text-[#DEDAD2] leading-relaxed">
-              Bring together all your monthly budget calculations, saved touring properties, document prep vault, and closing milestones in your dedicated buyer workspace.
+              Review customized financing scenarios, down payment assistance grant findings, and connect directly with your dedicated Loan Officer and Real Estate Agent.
             </p>
           </div>
 
@@ -595,18 +595,18 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
 
             <button
               type="button"
-              id="step2-proceed-to-step3-btn"
+              id="step2-proceed-to-ai-plan-btn"
               onClick={() => {
-                if (onGoToDashboard) {
+                if (onNavigate) {
+                  onNavigate("step4_ai_plan", "dashboard");
+                } else if (onGoToDashboard) {
                   onGoToDashboard();
-                } else if (onNavigate) {
-                  onNavigate("dashboard", "dashboard");
                 }
               }}
               className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#C18C5D] hover:bg-[#A87448] active:scale-[0.99] text-white font-bold text-sm shadow-lg transition-all cursor-pointer group"
             >
-              <LayoutDashboard className="w-4 h-4 text-white" />
-              <span>Continue to Step 3: Buyer Dashboard</span>
+              <Sparkles className="w-4 h-4 text-white" />
+              <span>Continue to AI Plan &amp; Local Guides</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>

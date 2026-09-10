@@ -16,11 +16,18 @@ export function usePWAInstall() {
   });
   const [isIOS] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+    const ua = window.navigator.userAgent.toLowerCase();
+    const isIOSDevice = /iphone|ipad|ipod/.test(ua);
+    const isIPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    return isIOSDevice || isIPad;
   });
   const [isChromeIOS] = useState(() => {
     if (typeof window === 'undefined') return false;
     return /crios/.test(window.navigator.userAgent.toLowerCase());
+  });
+  const [isAndroid] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return /android/.test(window.navigator.userAgent.toLowerCase());
   });
 
   useEffect(() => {
@@ -60,6 +67,7 @@ export function usePWAInstall() {
     isInstalled,
     isIOS,
     isChromeIOS,
+    isAndroid,
     install,
   };
 }

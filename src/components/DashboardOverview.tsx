@@ -33,6 +33,7 @@ import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 import { MarketTrends } from "./MarketTrends";
 import { HomebuyingPlanPrintModal } from "./HomebuyingPlanPrintModal";
 import { ShareViaEmailModal } from "./ShareViaEmailModal";
+import { PWAInstallButton } from "./PWAInstallButton";
 
 interface DashboardOverviewProps {
   profile: FinancialProfile;
@@ -102,7 +103,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const offeredHomes = properties.filter(p => p.status === "offered" || p.status === "under_contract");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* PWA Install Banner */}
+      <div id="desktop-dashboard-pwa-install-banner">
+        <PWAInstallButton variant="banner" label="Install Homebuyer App on Your Phone" />
+      </div>
+
       {/* Dashboard Top Hero Greeting */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
         <div className="space-y-2">
@@ -119,6 +125,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          <PWAInstallButton variant="header" label="Install App" />
           {onToggleSidebar && (
             <button
               type="button"

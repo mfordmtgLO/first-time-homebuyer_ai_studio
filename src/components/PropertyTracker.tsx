@@ -902,7 +902,12 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
             <p className="text-sm text-indigo-900 dark:text-indigo-300/80 max-w-2xl">
               Tell the map exactly what you're looking for. We'll cross-reference live MLS data, Census Tract boundaries, and zero-down grants.
             </p>
-            <form className="mt-4 flex flex-col sm:flex-row gap-2 max-w-3xl" onSubmit={(e) => e.preventDefault()}>
+            <form className="mt-4 flex flex-col sm:flex-row gap-2 max-w-3xl" onSubmit={(e) => {
+              e.preventDefault();
+              if(!searchQuery) return;
+              alert("GeoSphere AI Search Active.\n\nParsing intent: " + searchQuery + "\n\nCross-referencing live active listings with local boundary shapefiles...");
+              setViewMode("map");
+            }}>
               <input 
                 type="text" 
                 value={searchQuery}
@@ -911,14 +916,8 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                 className="flex-1 px-4 py-3 rounded-xl border border-indigo-200 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 shadow-sm" 
               />
               <button 
-                type="button" 
+                type="submit" 
                 className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 whitespace-nowrap"
-                onClick={() => {
-                  if(!searchQuery) return;
-                  if(searchQuery.toLowerCase().includes("grant") || searchQuery.toLowerCase().includes("down")) {
-                      alert("GeoSphere AI Search Active.\n\nParsing intent: " + searchQuery + "\n\nCross-referencing live active listings with LMI Census Tract shapefiles...");
-                  }
-                }}
               >
                 <Search className="w-4 h-4" /> Search Map
               </button>

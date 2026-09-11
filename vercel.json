@@ -1,42 +1,22 @@
 {
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/privacy-policy",
-      "destination": "/privacy-policy.html"
+      "src": "package.json",
+      "use": "@vercel/node",
+      "config": {
+        "installCommand": "npm install"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server.js"
     },
     {
-      "source": "/terms-and-conditions",
-      "destination": "/terms-and-conditions.html"
-    },
-    {
-      "source": "/sms-opt-in",
-      "destination": "/sms-opt-in.html"
-    },
-    {
-      "source": "/lo-login",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/admin",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/login",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/portal",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/secure-login",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }

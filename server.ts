@@ -306,7 +306,7 @@ async function startServer() {
 
   const app = express();
   app.set("trust proxy", 1);
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
 
   // Priority 3 Item 8: Strict Origin Whitelist
   const ALLOWED_ORIGINS = [

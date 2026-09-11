@@ -88,6 +88,7 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
   const [candidateType, setCandidateType] = useState<"loan_officer" | "real_estate_agent">(canManageLoRecruits ? "loan_officer" : "real_estate_agent");
   const [isSweeping, setIsSweeping] = useState<boolean>(false);
   const [sweepProgress, setSweepProgress] = useState<number>(0);
+  const [fresh50, setFresh50] = useState<boolean>(false);
   const [sweepDetails, setSweepDetails] = useState<{ activeCount: number; organicCount: number } | null>(null);
 
   // Roster state keyed by type and state
@@ -141,6 +142,7 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
         body: JSON.stringify({
           state: selectedState,
           type: candidateType,
+          fresh50,
           activeCandidates,
           previousRoster: currentRoster.map(c => ({ id: c.id, name: c.name, rank: c.rank, previousRank: c.previousRank }))
         })
@@ -581,6 +583,16 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
 
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center gap-2.5">
+              <label className="flex items-center gap-1.5 text-xs text-white/80 cursor-pointer hover:text-white transition-colors mr-2">
+                <input 
+                  type="checkbox" 
+                  checked={fresh50} 
+                  onChange={(e) => setFresh50(e.target.checked)} 
+                  className="w-3.5 h-3.5 accent-amber-500 rounded-sm cursor-pointer" 
+                />
+                <span title="Ignore dashboard LOs/Agents initially; run a fresh search for 50 candidates, then merge/update any existing matches.">Fresh 50</span>
+              </label>
+
               <button
                 onClick={() => handleExecuteSweep(true)}
                 disabled={isSweeping}

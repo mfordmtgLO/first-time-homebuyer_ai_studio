@@ -527,8 +527,43 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
             </div>
             <form
               className="flex gap-2"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
+                const form = e.target as HTMLFormElement;
+                const input = form.elements[0] as HTMLInputElement;
+                const query = input.value;
+                if (!query) return;
+
+                let parsed: any = null;
+                try {
+                  const res = await fetch("/api/gemini/parse-property-search", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ query })
+                  });
+                  if (res.ok) {
+                    parsed = await res.json();
+                  }
+                } catch (err) {
+                  console.error("Failed to parse via Gemini", err);
+                }
+
+                let city = (parsed?.city || "portland").toLowerCase();
+                
+                // Fallback normalizations for common OR cities
+                if (!OREGON_CITY_COORDINATES[city] && city !== "veneta") {
+                   city = "portland";
+                }
+
+                setSelectedCityAnchor(city);
+                const coords = OREGON_CITY_COORDINATES[city] || OREGON_CITY_COORDINATES["portland"];
+                
+                // If it's a specific custom area not in standard keys, manually set coordinates
+                if (city === "veneta") {
+                   setSearchCenter({ lat: 44.0492, lng: -123.3486 });
+                } else {
+                   setSearchCenter(coords);
+                }
               }}
             >
               <input
@@ -537,12 +572,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                 className="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-400"
               />
               <button
-                type="button"
-                onClick={() =>
-                  alert(
-                    "GeoSphere AI Search logic would trigger here. Prompt parsed, bounding box applied, shapefile grants cross-referenced, and map coordinates snapped."
-                  )
-                }
+                type="submit"
                 className="px-4 py-2 bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-lg text-sm font-bold transition-colors whitespace-nowrap"
               >
                 Search Map

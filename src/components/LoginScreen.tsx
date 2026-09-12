@@ -1,17 +1,31 @@
 import React, { useState } from "react";
-import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { checkAndProvisionUser } from "../utils/authUtils";
-import { Building2, ArrowRight, ShieldCheck, AlertCircle } from "lucide-react";
+import { Building2, ArrowRight, ShieldCheck, AlertCircle, ExternalLink } from "lucide-react";
 import { PWAInstallButton } from "./PWAInstallButton";
+import { GuidesState } from "../types";
 
 interface LoginScreenProps {
   onLogin: (role: any) => void;
+  guidesState?: GuidesState;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, guidesState }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const resolveTargetLoId = (email?: string | null) => {
+    if (!email) return guidesState?.adminLoanOfficerId || "lo-mike-ford";
+    const lower = email.toLowerCase();
+    if (lower === "fordmj@gmail.com" || lower === "mford@cfmtg.com") {
+      return "lo-mike-ford";
+    }
+    const matched = guidesState?.loanOfficers.find(
+      (l) => l.email?.toLowerCase() === lower
+    );
+    return matched ? matched.id : (guidesState?.adminLoanOfficerId || "lo-mike-ford");
+  };
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -22,14 +36,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       provider.setCustomParameters({ prompt: "select_account" });
       const result = await signInWithPopup(auth, provider);
       
-      console.log("Auth successful, provisioning user...", result.user.email);
+      const email = result.user.email?.toLowerCase();
+      console.log("Auth successful, provisioning user...", email);
       
+      const targetLoId = resolveTargetLoId(email);
+
       try {
         const role = await checkAndProvisionUser(result.user);
         console.log("Provisioning successful, role:", role);
         if (typeof window !== "undefined") {
           localStorage.removeItem("lo_portal_logged_out");
-          localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
+          localStorage.setItem("lo_portal_auth_id", targetLoId);
         }
         
         console.log("Calling onLogin callback...");
@@ -40,11 +57,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           setError("Access Denied: Your email has not been whitelisted by the Branch Manager.");
           await signOut(auth);
         } else {
-          // Even if Firestore provisioning has a momentary network issue, grant login if user is admin
-          const email = result.user.email?.toLowerCase();
+          // Fallback for Mike or whitelisted roles if Firestore has a momentary network issue
           if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
             if (typeof window !== "undefined") {
-              localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
+              localStorage.removeItem("lo_portal_logged_out");
+              localStorage.setItem("lo_portal_auth_id", targetLoId);
             }
             onLogin("branch_manager");
           } else {
@@ -55,15 +72,30 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     } catch (err: any) {
       console.error("Google Auth error:", err);
       if (err.code === "auth/popup-closed-by-user") {
-        setError("The Google Sign-In popup window was closed before completing.");
+        setError("The Google Sign-In popup window was closed before completing. If your browser restricts popups, try the direct redirect option below.");
       } else if (err.code === "auth/unauthorized-domain") {
         setError(`Domain not authorized in Firebase: ${window.location.hostname}. Please add it to Firebase Console -> Authentication -> Settings -> Authorized domains.`);
       } else if (err.code === "auth/popup-blocked") {
-        setError("The login popup was blocked by your browser. Please allow popups for this site.");
+        setError("The login popup was blocked by your browser. You can click 'Sign In via Full Page' below to continue.");
       } else {
         setError(`Google Sign-In failed (${err.code || "unknown"}): ${err.message}`);
       }
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleRedirectLogin = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      console.log("Starting Google Auth full-page redirect...");
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      await signInWithRedirect(auth, provider);
+    } catch (err: any) {
+      console.error("Google Redirect Auth error:", err);
+      setError(`Redirect Sign-In failed: ${err.message || "Unknown error"}`);
       setIsLoading(false);
     }
   };
@@ -88,9 +120,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 leading-relaxed flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-            <div className="flex-1">{error}</div>
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 leading-relaxed flex flex-col gap-2.5">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <div className="flex-1">{error}</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleGoogleRedirectLogin}
+              className="mt-1 self-start inline-flex items-center gap-1.5 text-xs font-bold text-[#2D362E] underline hover:text-[#4A5D4E] cursor-pointer"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Use Full-Page Google Sign-In Instead</span>
+            </button>
           </div>
         )}
 
@@ -104,28 +146,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             {!isLoading && <ArrowRight className="w-4 h-4" />}
           </button>
           
-          {isLoading && (
-            <p className="text-center text-[11px] text-[#606C5D] mt-2 px-4">
-              If the popup gets stuck or closes without logging you in, third-party cookies or popups might be blocked.{" "}
-              <a href={typeof window !== "undefined" ? window.location.href : "#"} target="_blank" rel="noopener noreferrer" className="text-[#2D362E] font-semibold underline">
-                Try opening in a new tab
-              </a>.
-            </p>
-          )}
-
           <button
             type="button"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                localStorage.removeItem("lo_portal_logged_out");
-                localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
-              }
-              onLogin("branch_manager");
-            }}
-            className="w-full flex items-center justify-center gap-2 bg-[#F1EFE9] hover:bg-[#EAE7E0] text-[#2D362E] px-4 py-3 rounded-xl font-bold text-xs border border-[#DEDAD2] transition-all cursor-pointer active:scale-95"
+            onClick={handleGoogleRedirectLogin}
+            disabled={isLoading}
+            className="w-full text-center text-xs text-[#606C5D] hover:text-[#2D362E] py-1 cursor-pointer transition-colors"
           >
-            <Building2 className="w-3.5 h-3.5 text-[#C18C5D]" />
-            <span>Direct Access: Mike Ford (Branch Manager)</span>
+            Browser blocking popups? <span className="underline font-semibold">Sign in with Full-Page Redirect</span>
           </button>
 
           <button
@@ -135,7 +162,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 window.location.href = "/";
               }
             }}
-            className="w-full text-center text-xs text-[#606C5D] hover:text-[#2D362E] underline pt-1 cursor-pointer"
+            className="w-full text-center text-xs text-[#606C5D] hover:text-[#2D362E] underline pt-2 cursor-pointer"
           >
             ← Return to Homebuyer Website
           </button>

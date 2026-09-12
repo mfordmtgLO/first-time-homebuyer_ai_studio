@@ -48,12 +48,7 @@ service cloud.firestore {
       allow list: if isBranchManager();
       allow create, update: if isSignedIn() && (
         isBranchManager() ||
-        (request.auth.uid == userId && (
-          (request.auth.token.email != null && request.auth.token.email.lower() == 'fordmj@gmail.com') ||
-          !incoming().keys().hasAny(['rbacRole']) || 
-          incoming().rbacRole == 'team_lo' ||
-          (resource != null && incoming().rbacRole == existing().rbacRole)
-        ))
+        request.auth.uid == userId
       );
       allow delete: if isBranchManager();
     }

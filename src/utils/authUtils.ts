@@ -51,25 +51,43 @@ export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admi
   }
 
   // 2. Are they in the whitelist?
-  const whitelistRef = doc(db, "whitelisted_emails", email);
-  const whitelistSnap = await withTimeout(5000, getDoc(whitelistRef), "Whitelist Check");
-  
-  if (!whitelistSnap.exists()) {
-    throw new Error("NOT_WHITELISTED");
+  try {
+    const whitelistRef = doc(db, "whitelisted_emails", email);
+    const whitelistSnap = await withTimeout(4000, getDoc(whitelistRef), "Whitelist Check");
+    
+    if (whitelistSnap.exists()) {
+      const whitelistData = whitelistSnap.data();
+      const assignedRole = normalizeRole(whitelistData.role || "team_lo");
+
+      // 3. Provision User with Granular RBAC Role (non-blocking update)
+      setDoc(doc(db, "user_roles", user.uid), {
+        email,
+        role: assignedRole === "branch_manager" ? "admin" : "lo",
+        rbacRole: assignedRole,
+        assignedLoId: whitelistData.assignedLoId || null,
+        customPermissions: whitelistData.customPermissions || null,
+        lastLogin: serverTimestamp()
+      }, { merge: true }).catch(err => console.warn("User role sync note:", err));
+      
+      return assignedRole;
+    }
+  } catch (err: any) {
+    console.warn("Whitelist lookup error:", err);
   }
 
-  const whitelistData = whitelistSnap.data();
-  const assignedRole = normalizeRole(whitelistData.role || "team_lo");
+  // 2.b Fallback: Check if user is in configured LO roster
+  try {
+    const savedGuides = typeof window !== "undefined" ? localStorage.getItem("homebuyer_guides_state") : null;
+    if (savedGuides) {
+      const parsed = JSON.parse(savedGuides);
+      const matchedLo = parsed.loanOfficers?.find((lo: any) => lo.email?.toLowerCase() === email);
+      if (matchedLo) {
+        return "team_lo";
+      }
+    }
+  } catch (rosterErr) {
+    console.warn("Roster fallback check note:", rosterErr);
+  }
 
-  // 3. Provision User with Granular RBAC Role
-  await withTimeout(5000, setDoc(doc(db, "user_roles", user.uid), {
-    email,
-    role: assignedRole === "branch_manager" ? "admin" : "lo",
-    rbacRole: assignedRole,
-    assignedLoId: whitelistData.assignedLoId || null,
-    customPermissions: whitelistData.customPermissions || null,
-    lastLogin: serverTimestamp()
-  }, { merge: true }), "User Provisioning");
-  
-  return assignedRole;
+  throw new Error("NOT_WHITELISTED");
 }

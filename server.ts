@@ -345,7 +345,8 @@ async function startServer() {
   // Priority 3 Item 9: Enterprise Security Headers (CSP, X-Content-Type-Options, HSTS)
   app.use(
     helmet({
-      crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+      crossOriginOpenerPolicy: false,
+      crossOriginEmbedderPolicy: false,
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],

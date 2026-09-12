@@ -27,7 +27,7 @@ import { LeadIntakeChatbot } from "./components/LeadIntakeChatbot";
 import { LoginScreen } from "./components/LoginScreen";
 import { BranchManagement } from "./components/BranchManagement";
 import { auth } from "./firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut, getRedirectResult } from "firebase/auth";
 import { checkAndProvisionUser } from "./utils/authUtils";
 import { applyMetadataToDocument, fetchSavedSeoMetadata } from "./utils/seoManager";
 import { SEOSchemaInjector } from "./components/SEOSchemaInjector";
@@ -97,6 +97,17 @@ export default function App() {
       setIsAuthChecking(false);
       setIsSettingsChecking(false);
     }, 2500);
+    // Catch redirect auth completion if user returned from a full-page Google sign-in
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          console.log("Redirect login completed for:", result.user.email);
+        }
+      })
+      .catch((err) => {
+        console.warn("Redirect check note:", err);
+      });
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const email = user.email?.toLowerCase();
@@ -112,6 +123,9 @@ export default function App() {
         try {
           const role = await checkAndProvisionUser(user);
           setUserRole(role);
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("lo_portal_logged_out");
+          }
         } catch (e) {
           console.error("Auth provisioning error:", e);
           if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
@@ -790,6 +804,7 @@ export default function App() {
   if (!userRole && isPortalAccess) {
     return (
       <LoginScreen
+        guidesState={guidesState}
         onLogin={(role) => {
           setUserRole(role as any);
           setShowLoPortal(true);

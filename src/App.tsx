@@ -85,8 +85,16 @@ export default function App() {
   >(undefined);
 
   // Authentication & Site Visibility State
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
-  const [isSettingsChecking, setIsSettingsChecking] = useState(true);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      // If user explicitly logged out, skip loading wait and show login immediately
+      if (localStorage.getItem("lo_portal_logged_out") === "true") {
+        return false;
+      }
+    }
+    return true;
+  });
+  const [isSettingsChecking, setIsSettingsChecking] = useState(false);
   const [userRole, setUserRole] = useState<RbacRole | "admin" | "lo" | null>(null);
   const [isAppPublic, setIsAppPublic] = useState(false);
   const [forceDesktopLoPortal, setForceDesktopLoPortal] = useState(false);
@@ -95,8 +103,7 @@ export default function App() {
     // Safety timeout to prevent infinite blank screen if Firebase offline or blocked
     const timer = setTimeout(() => {
       setIsAuthChecking(false);
-      setIsSettingsChecking(false);
-    }, 2500);
+    }, 800);
     // Catch redirect auth completion if user returned from a full-page Google sign-in
     getRedirectResult(auth)
       .then((result) => {
@@ -184,6 +191,7 @@ export default function App() {
     );
 
     return () => {
+      clearTimeout(timer);
       unsubscribeAuth();
       unsubscribeSettings();
     };
@@ -830,8 +838,8 @@ export default function App() {
     }
   };
 
-  // Access Verification Loading Screen (Wait for Auth & Firestore App Settings to resolve)
-  if (isAuthChecking || isSettingsChecking) {
+  // Access Verification Loading Screen (Wait for Auth to resolve)
+  if (isAuthChecking) {
     return (
       <div className="min-h-screen bg-[#F9F8F4] dark:bg-slate-950 flex items-center justify-center transition-colors duration-200">
         <div className="animate-pulse flex flex-col items-center">

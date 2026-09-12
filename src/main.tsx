@@ -9,22 +9,31 @@ import { ThemeProvider } from './components/ThemeProvider';
 // Initialize real-time telemetry & breadcrumb interception
 telemetry.init();
 
-// Force unregister any lingering service workers from previous PWA setups
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const registration of registrations) {
-      registration.unregister();
-    }
-  });
+// Force unregister any lingering service workers and purge stale cache storage
+if (typeof window !== "undefined") {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister();
+      }
+    });
+  }
+  if ('caches' in window) {
+    caches.keys().then((keys) => {
+      for (const key of keys) {
+        caches.delete(key);
+      }
+    });
+  }
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="light" storageKey="app-theme">
-      <ErrorBoundary>
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="light" storageKey="app-theme">
         <App />
-      </ErrorBoundary>
-    </ThemeProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );
 

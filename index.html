@@ -25,7 +25,32 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body class="bg-[#F9F8F4] dark:bg-slate-950 text-[#2D362E] dark:text-slate-100 antialiased transition-colors duration-200">
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-preloader" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #F9F8F4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px;">
+        <div style="width: 48px; height: 48px; border-radius: 14px; background: #2D362E; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(45,54,46,0.15);">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div style="width: 24px; height: 24px; border: 2.5px solid #EAE7E0; border-top-color: #4A5D4E; border-radius: 50%; animation: gm-spin 0.8s linear infinite; margin-bottom: 12px;"></div>
+        <p style="color: #606C5D; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; margin: 0;">Loading Platform...</p>
+        <div id="app-reload-prompt" style="display: none; margin-top: 18px; text-align: center;">
+          <button onclick="window.location.reload(true)" style="background: #4A5D4E; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Refresh Page</button>
+        </div>
+      </div>
+      <style>
+        @keyframes gm-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      </style>
+      <script>
+        setTimeout(function() {
+          var prompt = document.getElementById('app-reload-prompt');
+          if (prompt && document.getElementById('app-preloader')) {
+            prompt.style.display = 'block';
+          }
+        }, 6000);
+      </script>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -358,6 +358,7 @@ async function startServer() {
             "https://*.googleapis.com",
             "https://maps.googleapis.com",
             "https://*.firebaseapp.com",
+            "https://accounts.google.com",
           ],
           connectSrc: [
             "'self'",
@@ -368,6 +369,7 @@ async function startServer() {
             "https://*.run.app",
             "https://identitytoolkit.googleapis.com",
             "https://securetoken.googleapis.com",
+            "https://accounts.google.com",
             "wss:",
           ],
           frameSrc: [
@@ -5896,11 +5898,26 @@ At the end, include a strong, dynamic Call to Action encouraging the user to rea
     });
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    app.use(
+      express.static(distPath, {
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith("index.html") || filePath.endsWith("sw.js")) {
+            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            res.setHeader("Pragma", "no-cache");
+            res.setHeader("Expires", "0");
+          }
+        },
+      })
+    );
     app.get("*", (req, res, next) => {
       if (req.originalUrl.startsWith("/api")) {
         return next();
       }
+      res.set({
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      });
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

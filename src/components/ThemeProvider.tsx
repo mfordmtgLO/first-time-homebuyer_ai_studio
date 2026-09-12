@@ -27,6 +27,27 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
+function getSafeStorage(key: string): string | null {
+  try {
+    if (typeof window !== "undefined" && window.localStorage) {
+      return localStorage.getItem(key);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function setSafeStorage(key: string, value: string): void {
+  try {
+    if (typeof window !== "undefined" && window.localStorage) {
+      localStorage.setItem(key, value);
+    }
+  } catch {
+    // storage disabled
+  }
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "system",
@@ -34,7 +55,7 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
-    () => (typeof window !== "undefined" && (localStorage.getItem(storageKey) as Theme)) || defaultTheme
+    () => (getSafeStorage(storageKey) as Theme) || defaultTheme
   );
   
   const [userId, setUserId] = useState<string | null>(null);
@@ -42,10 +63,14 @@ export function ThemeProvider({
 
   const [isDark, setIsDark] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
-    const stored = (localStorage.getItem(storageKey) as Theme) || defaultTheme;
+    const stored = (getSafeStorage(storageKey) as Theme) || defaultTheme;
     if (stored === "dark") return true;
     if (stored === "light") return false;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    try {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    } catch {
+      return false;
+    }
   });
   
   // Listen to Firebase Auth state to fetch user's theme preference on login
@@ -61,7 +86,7 @@ export function ThemeProvider({
             if (data.themePreference && ["dark", "light", "system"].includes(data.themePreference)) {
               // Apply remote preference to local state without triggering an immediate re-save
               skipNextSyncRef.current = true;
-              localStorage.setItem(storageKey, data.themePreference);
+              setSafeStorage(storageKey, data.themePreference);
               setTheme(data.themePreference as Theme);
             }
           }
@@ -126,12 +151,12 @@ export function ThemeProvider({
     theme,
     isDark,
     setTheme: (newTheme: Theme) => {
-      localStorage.setItem(storageKey, newTheme);
+      setSafeStorage(storageKey, newTheme);
       setTheme(newTheme);
     },
     toggleTheme: () => {
       const nextTheme = isDark ? "light" : "dark";
-      localStorage.setItem(storageKey, nextTheme);
+      setSafeStorage(storageKey, nextTheme);
       setTheme(nextTheme);
     },
   };

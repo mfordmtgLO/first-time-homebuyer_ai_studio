@@ -102,6 +102,9 @@ export default function App() {
       .then((result) => {
         if (result?.user) {
           console.log("Redirect login completed for:", result.user.email);
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("lo_portal_logged_out");
+          }
         }
       })
       .catch((err) => {
@@ -109,6 +112,19 @@ export default function App() {
       });
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      const isExplicitlyLoggedOut =
+        typeof window !== "undefined" &&
+        localStorage.getItem("lo_portal_logged_out") === "true";
+
+      if (isExplicitlyLoggedOut) {
+        setUserRole(null);
+        setIsAuthChecking(false);
+        if (user) {
+          signOut(auth).catch(() => {});
+        }
+        return;
+      }
+
       if (user) {
         const email = user.email?.toLowerCase();
         // Fast-path: Master Admin / Branch Manager is recognized instantly without blocking on network/Firestore
@@ -784,6 +800,36 @@ export default function App() {
     guidesState.agentRoster.find((a) => a.id === guidesState.activeAgentId) ||
     guidesState.agentRoster[0];
 
+  const handleAppLogout = async () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("lo_portal_logged_out", "true");
+      localStorage.removeItem("lo_portal_auth_id");
+      localStorage.removeItem("lo_portal_auth_email");
+      localStorage.removeItem("lo_portal_role");
+      sessionStorage.clear();
+    }
+    setUserRole(null);
+    setShowLoPortal(true);
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.warn("SignOut error:", e);
+    }
+    if (typeof window !== "undefined") {
+      const isPortalUrl =
+        window.location.pathname.includes("portal") ||
+        window.location.search.includes("portal=lo") ||
+        window.location.pathname.includes("login") ||
+        window.location.pathname.includes("admin");
+
+      const targetUrl = isPortalUrl
+        ? (window.location.search.includes("portal=lo") ? "/?portal=lo" : (window.location.pathname.includes("portal") ? window.location.pathname : "/lo-login"))
+        : "/lo-login";
+
+      window.history.replaceState(null, "", targetUrl);
+    }
+  };
+
   // Access Verification Loading Screen (Wait for Auth & Firestore App Settings to resolve)
   if (isAuthChecking || isSettingsChecking) {
     return (
@@ -798,14 +844,17 @@ export default function App() {
     );
   }
 
-  // Routing Logic for Vercel Deployment
-  // 1. If accessing /lo-login or /admin, force the secure login screen
+  // Routing Logic:
+  // 1. If unauthenticated and accessing a portal route or LO portal is active, force the Google Sign-In screen
   // 2. If accessing the root website, always render the public consumer view
-  if (!userRole && isPortalAccess) {
+  if (!userRole && (isPortalAccess || showLoPortal)) {
     return (
       <LoginScreen
         guidesState={guidesState}
         onLogin={(role) => {
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("lo_portal_logged_out");
+          }
           setUserRole(role as any);
           setShowLoPortal(true);
         }}
@@ -934,14 +983,7 @@ export default function App() {
                     setShowLoPortal(false);
                     handleNavigate("hero", "website");
                   }}
-                  onLogout={() => {
-                    setUserRole(null);
-                    setShowLoPortal(false);
-                    // Direct back to secure login
-                    if (typeof window !== "undefined") {
-                      window.location.href = "/lo-login";
-                    }
-                  }}
+                  onLogout={handleAppLogout}
                   properties={properties}
                   setProperties={setProperties}
                   onSwitchToDesktop={() => setForceDesktopLoPortal(true)}
@@ -956,14 +998,7 @@ export default function App() {
                     setShowLoPortal(false);
                     handleNavigate("hero", "website");
                   }}
-                  onLogout={() => {
-                    setUserRole(null);
-                    setShowLoPortal(false);
-                    // Direct back to secure login
-                    if (typeof window !== "undefined") {
-                      window.location.href = "/lo-login";
-                    }
-                  }}
+                  onLogout={handleAppLogout}
                   properties={properties}
                   setProperties={setProperties}
                   onSwitchToMobile={() => setForceDesktopLoPortal(false)}

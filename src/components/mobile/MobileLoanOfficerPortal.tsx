@@ -96,12 +96,19 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
   };
 
   // Logout handler
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("lo_portal_auth_id");
+      localStorage.removeItem("lo_portal_auth_email");
+      localStorage.removeItem("lo_portal_role");
       localStorage.setItem("lo_portal_logged_out", "true");
+      sessionStorage.clear();
     }
-    signOut(auth).catch(() => {});
+    try {
+      await signOut(auth);
+    } catch (authErr) {
+      console.warn("Mobile SignOut notice:", authErr);
+    }
     if (onLogout) {
       onLogout();
     } else {

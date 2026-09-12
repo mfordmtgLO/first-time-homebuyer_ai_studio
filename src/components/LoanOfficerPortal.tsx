@@ -1391,16 +1391,18 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         sessionStorage.clear();
       }
       setAuthenticatedLoId(null);
-      await signOut(auth);
+      try {
+        await signOut(auth);
+      } catch (authErr) {
+        console.warn("SignOut notice:", authErr);
+      }
       if (onLogout) {
         onLogout();
-      } else if (typeof window !== "undefined") {
-        window.location.href = "/lo-login";
       }
     } catch (err) {
       console.error("Logout error:", err);
-      if (typeof window !== "undefined") {
-        window.location.href = "/lo-login";
+      if (onLogout) {
+        onLogout();
       }
     }
   };

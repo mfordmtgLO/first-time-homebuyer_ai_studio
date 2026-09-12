@@ -99,12 +99,21 @@ export default function App() {
     }, 2500);
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        const email = user.email?.toLowerCase();
+        // Fast-path: Master Admin / Branch Manager is recognized instantly without blocking on network/Firestore
+        if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
+          setUserRole("branch_manager");
+          setIsAuthChecking(false);
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("lo_portal_logged_out");
+            localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
+          }
+        }
         try {
           const role = await checkAndProvisionUser(user);
           setUserRole(role);
         } catch (e) {
           console.error("Auth provisioning error:", e);
-          const email = user.email?.toLowerCase();
           if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
             setUserRole("branch_manager");
           } else {
@@ -155,13 +164,11 @@ export default function App() {
   const search = typeof window !== "undefined" ? window.location.search.toLowerCase() : "";
 
   const isPortalAccess =
-    pathname === "/portal" ||
-    pathname.startsWith("/portal/") ||
-    pathname === "/admin" ||
-    pathname.startsWith("/admin/") ||
+    pathname.includes("portal") ||
+    pathname.includes("admin") ||
+    pathname.includes("lo-login") ||
+    pathname.includes("secure-login") ||
     pathname === "/login" ||
-    pathname === "/lo-login" ||
-    pathname === "/secure-login" ||
     hash.includes("portal") ||
     hash.includes("admin") ||
     hash.includes("lo-login") ||

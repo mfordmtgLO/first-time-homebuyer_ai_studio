@@ -29,23 +29,24 @@ export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admi
   
   // 1. Is this the master admin / branch manager?
   if (ADMIN_EMAILS.map(e => e.toLowerCase()).includes(email)) {
-    await withTimeout(5000, setDoc(doc(db, "user_roles", user.uid), {
+    // Non-blocking fire-and-forget sync to Firestore so auth is instant
+    setDoc(doc(db, "user_roles", user.uid), {
       email,
       role: "admin",
       rbacRole: "branch_manager",
       lastLogin: serverTimestamp()
-    }, { merge: true }), "Admin Provisioning");
+    }, { merge: true }).catch(err => console.warn("Admin Firestore sync note:", err));
     return "branch_manager";
   }
 
   // 1.b Is this a compliance auditor?
   if (email === COMPLIANCE_EMAIL.toLowerCase()) {
-    await withTimeout(5000, setDoc(doc(db, "user_roles", user.uid), {
+    setDoc(doc(db, "user_roles", user.uid), {
       email,
       role: "admin",
       rbacRole: "compliance_auditor",
       lastLogin: serverTimestamp()
-    }, { merge: true }), "Auditor Provisioning");
+    }, { merge: true }).catch(err => console.warn("Auditor Firestore sync note:", err));
     return "compliance_auditor" as RbacRole;
   }
 

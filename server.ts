@@ -345,6 +345,7 @@ async function startServer() {
   // Priority 3 Item 9: Enterprise Security Headers (CSP, X-Content-Type-Options, HSTS)
   app.use(
     helmet({
+      crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
@@ -355,16 +356,25 @@ async function startServer() {
             "https://apis.google.com",
             "https://*.googleapis.com",
             "https://maps.googleapis.com",
+            "https://*.firebaseapp.com",
           ],
           connectSrc: [
             "'self'",
             "https://*.googleapis.com",
             "https://*.firebaseio.com",
             "https://*.firebase.com",
+            "https://*.firebaseapp.com",
             "https://*.run.app",
             "https://identitytoolkit.googleapis.com",
             "https://securetoken.googleapis.com",
             "wss:",
+          ],
+          frameSrc: [
+            "'self'",
+            "https://*.firebaseapp.com",
+            "https://*.firebase.com",
+            "https://accounts.google.com",
+            "https://*.google.com",
           ],
           imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
           styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],

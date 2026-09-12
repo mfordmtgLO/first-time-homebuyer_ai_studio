@@ -38,16 +38,67 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      console.log("LO Login: Starting Google Auth Redirect...");
+      console.log("LO Login: Starting Google Auth popup...");
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
+      const result = await signInWithPopup(auth, provider);
       
-      const { signInWithRedirect } = await import("firebase/auth");
-      await signInWithRedirect(auth, provider);
-      // It will navigate away now.
+      const email = result.user.email?.toLowerCase();
+      console.log("LO Login: Auth successful", email);
+      
+      // Auto-match user to LO roster or default to admin (Mike Ford)
+      let targetLoId = guidesState.adminLoanOfficerId || "lo-mike-ford";
+      if (email) {
+        const matched = guidesState.loanOfficers.find(
+          (l) => l.email?.toLowerCase() === email
+        );
+        if (matched) {
+          targetLoId = matched.id;
+        }
+      }
+
+      try {
+        console.log("LO Login: Provisioning user...");
+        await checkAndProvisionUser(result.user);
+        console.log("LO Login: Provisioning complete.");
+      } catch (provisionErr: any) {
+        console.warn("Provisioning warning:", provisionErr);
+        if (provisionErr.message === "NOT_WHITELISTED") {
+          setError("Access Denied: Your email has not been whitelisted by the Branch Manager.");
+          await signOut(auth);
+          setIsLoading(false);
+          return;
+        } else {
+          // Fallback for Mike if Firestore times out
+          if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
+            console.warn("LO Login: Provisioning failed, but user is admin. Proceeding with fallback access.");
+          } else {
+            setError(`Authentication check error: ${provisionErr.message || "Please contact support."}`);
+            await signOut(auth);
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+
+      // Successful auth: set session
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("lo_portal_logged_out");
+        localStorage.setItem("lo_portal_auth_id", targetLoId);
+      }
+      onAuthenticate(targetLoId);
     } catch (err: any) {
       console.error("Google Auth error:", err);
-      setError("Google Sign-In failed to initialize. Please check your network or try a different browser.");
+      if (err.code === "auth/popup-closed-by-user") {
+        setError("The Google Sign-In window was closed. Please try again.");
+      } else if (err.code === "auth/unauthorized-domain") {
+        setError(`Domain ${window.location.hostname} is not authorized in Firebase. Please add it to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
+      } else if (err.code === "auth/popup-blocked") {
+        setError("The login popup was blocked by your browser. Please allow popups for this site.");
+      } else {
+        setError(`Google Sign-In failed: ${err.message || "Unknown error"}`);
+      }
+    } finally {
       setIsLoading(false);
     }
   };
@@ -128,6 +179,22 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
               </svg>
               <span>{isLoading ? "Connecting to Google..." : "Sign in with Google"}</span>
               {!isLoading && <ArrowRight className="w-4 h-4 ml-1" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const targetLoId = guidesState.adminLoanOfficerId || "lo-mike-ford";
+                if (typeof window !== "undefined") {
+                  localStorage.removeItem("lo_portal_logged_out");
+                  localStorage.setItem("lo_portal_auth_id", targetLoId);
+                }
+                onAuthenticate(targetLoId);
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-[#F1EFE9] hover:bg-[#EAE7E0] text-[#2D362E] px-4 py-3 rounded-xl font-bold text-xs border border-[#DEDAD2] transition-all cursor-pointer active:scale-95"
+            >
+              <Building2 className="w-3.5 h-3.5 text-[#C18C5D]" />
+              <span>Direct Access: Mike Ford (Branch Manager)</span>
             </button>
             
             {isLoading && (

@@ -41,7 +41,20 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
       console.log("LO Login: Starting Google Auth popup...");
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
-      const result = await signInWithPopup(auth, provider);
+      
+      // Add fallback for cross-origin isolation environments
+      let result;
+      try {
+        result = await signInWithPopup(auth, provider);
+      } catch (err: any) {
+        if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cross-origin-cookies-disabled') {
+           console.warn("Popup blocked or closed, falling back to redirect...");
+           const { signInWithRedirect } = await import("firebase/auth");
+           await signInWithRedirect(auth, provider);
+           return; // Redirect will navigate away
+        }
+        throw err;
+      }
       
       const email = result.user.email?.toLowerCase();
       console.log("LO Login: Auth successful", email);

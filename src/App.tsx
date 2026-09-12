@@ -92,6 +92,14 @@ export default function App() {
   const [forceDesktopLoPortal, setForceDesktopLoPortal] = useState(false);
 
   useEffect(() => {
+    // Catch Google Redirect Errors if any
+    import("firebase/auth").then(({ getRedirectResult, getAuth }) => {
+      getRedirectResult(getAuth()).catch(err => {
+        console.error("LO Login Redirect Error:", err);
+        alert("Google Sign-In failed: " + (err.message || "Unknown error. Check Google Cloud OAuth settings."));
+      });
+    });
+
     // Safety timeout to prevent infinite blank screen if Firebase offline or blocked
     const timer = setTimeout(() => {
       setIsAuthChecking(false);

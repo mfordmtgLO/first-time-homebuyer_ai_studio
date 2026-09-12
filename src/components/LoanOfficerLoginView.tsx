@@ -38,80 +38,16 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      console.log("LO Login: Starting Google Auth popup...");
+      console.log("LO Login: Starting Google Auth Redirect...");
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
       
-      // Add fallback for cross-origin isolation environments
-      let result;
-      try {
-        result = await signInWithPopup(auth, provider);
-      } catch (err: any) {
-        if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cross-origin-cookies-disabled') {
-           console.warn("Popup blocked or closed, falling back to redirect...");
-           const { signInWithRedirect } = await import("firebase/auth");
-           await signInWithRedirect(auth, provider);
-           return; // Redirect will navigate away
-        }
-        throw err;
-      }
-      
-      const email = result.user.email?.toLowerCase();
-      console.log("LO Login: Auth successful", email);
-      
-      // Auto-match user to LO roster or default to admin (Mike Ford)
-      let targetLoId = guidesState.adminLoanOfficerId || "lo-mike-ford";
-      if (email) {
-        const matched = guidesState.loanOfficers.find(
-          (l) => l.email?.toLowerCase() === email
-        );
-        if (matched) {
-          targetLoId = matched.id;
-        }
-      }
-
-      try {
-        console.log("LO Login: Provisioning user...");
-        await checkAndProvisionUser(result.user);
-        console.log("LO Login: Provisioning complete.");
-      } catch (provisionErr: any) {
-        console.warn("Provisioning warning:", provisionErr);
-        if (provisionErr.message === "NOT_WHITELISTED") {
-          setError("Access Denied: Your email has not been whitelisted by the Branch Manager.");
-          await signOut(auth);
-          setIsLoading(false);
-          return;
-        } else {
-          // Fallback for Mike if Firestore times out
-          if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
-            console.warn("LO Login: Provisioning failed, but user is admin. Proceeding with fallback access.");
-          } else {
-            setError(`Authentication check error: ${provisionErr.message || "Please contact support."}`);
-            await signOut(auth);
-            setIsLoading(false);
-            return;
-          }
-        }
-      }
-
-      // Successful auth: set session
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("lo_portal_logged_out");
-      localStorage.setItem("lo_portal_auth_id", targetLoId);
-      }
-      onAuthenticate(targetLoId);
+      const { signInWithRedirect } = await import("firebase/auth");
+      await signInWithRedirect(auth, provider);
+      // It will navigate away now.
     } catch (err: any) {
       console.error("Google Auth error:", err);
-      if (err.code === "auth/popup-closed-by-user") {
-        setError("Sign-in popup was closed before completing.");
-      } else if (err.code === "auth/unauthorized-domain") {
-        setError(`Domain ${window.location.hostname} is not authorized in Firebase. Please add it to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
-      } else if (err.code === "auth/popup-blocked") {
-        setError("The login popup was blocked by your browser. Please allow popups for this site.");
-      } else {
-        setError(`Google Sign-In failed: ${err.message || "Unknown error"}`);
-      }
-    } finally {
+      setError("Google Sign-In failed to initialize. Please check your network or try a different browser.");
       setIsLoading(false);
     }
   };

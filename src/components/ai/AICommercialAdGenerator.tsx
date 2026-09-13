@@ -17,7 +17,9 @@ import {
   Film, 
   Tv, 
   X,
-  Wand2
+  Wand2,
+  Activity,
+  Share2
 } from "lucide-react";
 import { 
   CommercialScriptVariation, 
@@ -31,6 +33,8 @@ import {
   AdCampaignDraft 
 } from "../../types";
 import { AdDeploymentModal } from "./AdDeploymentModal";
+import { LiveAdSpendSyncModal } from "./LiveAdSpendSyncModal";
+import { SocialMediaPushModal } from "./SocialMediaPushModal";
 
 interface AICommercialAdGeneratorProps {
   loanOfficer: LoanOfficerProfile;
@@ -155,6 +159,8 @@ export const AICommercialAdGenerator: React.FC<AICommercialAdGeneratorProps> = (
   const [deploymentModalOpen, setDeploymentModalOpen] = useState<boolean>(false);
   const [deployTargetPlatform, setDeployTargetPlatform] = useState<'meta' | 'google'>('meta');
   const [activeDeployVariation, setActiveDeployVariation] = useState<CommercialScriptVariation | null>(null);
+  const [liveSpendModalOpen, setLiveSpendModalOpen] = useState<boolean>(false);
+  const [socialPushModalOpen, setSocialPushModalOpen] = useState<boolean>(false);
 
   // Preview modals for Luma / HeyGen
   const [previewMediaModal, setPreviewMediaModal] = useState<{
@@ -376,12 +382,20 @@ export const AICommercialAdGenerator: React.FC<AICommercialAdGeneratorProps> = (
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="px-3 py-2 rounded-xl bg-[#F9F8F4] border border-[#EAE7E0] text-xs space-y-0.5 text-right">
-              <div className="text-[10px] uppercase font-bold text-[#606C5D]">Ad Spend Guard</div>
+            <button
+              type="button"
+              onClick={() => setLiveSpendModalOpen(true)}
+              className="px-3 py-2 rounded-xl bg-[#F9F8F4] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-xs space-y-0.5 text-right transition-all cursor-pointer group"
+              title="Click to open Live Ad Spend & Billing Sync Hub (Google Ads & Meta Ads API reporting)"
+            >
+              <div className="text-[10px] uppercase font-bold text-[#606C5D] group-hover:text-[#2D362E] flex items-center justify-end gap-1">
+                <span>Ad Spend Guard</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
               <div className="font-extrabold text-[#2D362E]">
                 ${loAdSettings.dailyBudgetUSD || 25}/day · Max ${loAdSettings.adSpendMonthlyCap || 750}/mo
               </div>
-            </div>
+            </button>
 
             <button
               onClick={handleGenerateAds}
@@ -633,8 +647,17 @@ export const AICommercialAdGenerator: React.FC<AICommercialAdGeneratorProps> = (
                 </p>
               </div>
 
-              {/* Action Buttons: Deploy to Facebook / Google Ads */}
+              {/* Action Buttons: Deploy to Facebook / Google Ads & Push Ad to Post Hub */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setSocialPushModalOpen(true)}
+                  className="px-4 py-2.5 rounded-xl bg-[#C18C5D] hover:bg-[#b07b4c] text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  title="Push Ad to Post / Live Sync across Instagram, Facebook, Google GMB/Maps, TikTok, LinkedIn & YouTube"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Push Ad to Post (All Social & Google)</span>
+                </button>
+
                 <button
                   onClick={() => openDeploymentModal(activeVariation, 'meta')}
                   className="px-4 py-2.5 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
@@ -966,6 +989,25 @@ export const AICommercialAdGenerator: React.FC<AICommercialAdGeneratorProps> = (
           </div>
         </div>
       )}
+
+      {/* Live Ad Spend & Billing Sync Modal */}
+      <LiveAdSpendSyncModal
+        isOpen={liveSpendModalOpen}
+        onClose={() => setLiveSpendModalOpen(false)}
+        loanOfficer={loanOfficer}
+        adSettings={loAdSettings}
+      />
+
+      {/* Universal Social & Google Push Ad to Post Modal */}
+      <SocialMediaPushModal
+        isOpen={socialPushModalOpen}
+        onClose={() => setSocialPushModalOpen(false)}
+        variation={activeVariation}
+        loanOfficer={loanOfficer}
+        activeAgent={activeAgent}
+        adSettings={loAdSettings}
+        pairingUrl={pairingUrl}
+      />
 
     </div>
   );

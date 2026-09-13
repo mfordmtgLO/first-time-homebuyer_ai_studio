@@ -476,142 +476,145 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Main Header Brand & Value Proposition Line (Desktop & Tablet Only) */}
       <div className="hidden md:block border-b border-[#EAE7E0] dark:border-slate-800 bg-[#FAF9F5]/70 dark:bg-slate-900/70 py-4 px-6 lg:px-8 transition-colors duration-200">
-        <div className="max-w-7xl mx-auto flex flex-col items-center text-center relative">
+        <div className="max-w-7xl mx-auto space-y-3">
           
-          {/* Top Pill / Trust Hook for Renters */}
-          <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAE7E0]/80 border border-[#DCD7CD] text-[11px] sm:text-xs font-bold text-[#4A5D4E] mb-1.5 shadow-2xs">
-            <Sparkles className="w-3.5 h-3.5 text-[#C18C5D] animate-pulse" />
-            <span className="font-extrabold uppercase tracking-wider text-[#C18C5D]">Stop Paying Rent</span>
-            <span className="text-[#606C5D]">•</span>
-            <span className="text-[#2D362E]">2026 Interactive First-Time Homebuyer Blueprint</span>
-          </div>
-
-          {/* Centered Main Title: Larger Font, High Impact, Return to Start Button */}
-          <button
-            id="navbar-brand-logo-btn"
-            type="button"
-            onClick={() => {
-              setActiveMode("website");
-              setCurrentTab("hero");
-              setMobileMenuOpen(false);
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-            className="group inline-flex items-center justify-start md:justify-center gap-2 md:gap-3 cursor-pointer focus:outline-none transition-transform hover:scale-[1.01]"
-            title="Return to First-Time Homebuyer Roadmap Overview"
-          >
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-[#4A5D4E] rounded-2xl flex items-center justify-center text-white font-bold shadow-sm group-hover:bg-[#38463B] transition-colors shrink-0">
-              <Compass className="w-4 h-4 md:w-6 md:h-6 text-white group-hover:rotate-45 transition-transform duration-300" />
-            </div>
-            <h1 className="text-xl md:text-3xl lg:text-4xl font-serif font-black tracking-tight text-[#2D362E] dark:text-slate-100 drop-shadow-2xs text-left md:text-center leading-tight">
-              First-Time <span className="hidden sm:inline">Homebuyer</span><br className="sm:hidden" />
-              <span className="sm:hidden text-[#4A5D4E] dark:text-[#D4A373] font-serif"> Homebuyer Roadmap</span>
-              <span className="hidden sm:inline text-[#4A5D4E] dark:text-[#D4A373] font-serif">Roadmap</span>
-            </h1>
-          </button>
-
-          {/* Renter Conversion Subtitle: Clear Purpose & Actionable Excitement */}
-          <p className="mt-1.5 hidden md:block text-xs sm:text-sm md:text-base text-[#606C5D] max-w-3xl font-medium leading-relaxed px-2">
-            Calculate your true buying power, check verified Down Payment Assistance (DPA), and model prequal scenarios across <strong className="text-[#2D362E] font-bold">Steps 1–4</strong> with zero guesswork.
-          </p>
-
-          {/* Quick Renter Trust Chips */}
-          <div className="mt-2 hidden md:flex items-center justify-center gap-3 sm:gap-5 text-[11px] font-semibold text-[#606C5D]">
-            <span className="flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
-              100% Free & Transparent
-            </span>
-            <span className="flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
-              No Credit Card or SSN Required
-            </span>
-            <span className="flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
-              FHA 3.5% & Conv 3% Models
-            </span>
-          </div>
-
-          {/* Absolute Top-Right Controls on Desktop (Prequal CTA + Fullscreen + Theme + Mobile Hamburger) */}
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
-            <div className="hidden sm:flex">
-              <ThemeToggle />
+          {/* Top Utility Toolbar: Renter Hook on Left, Action Buttons on Right */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#EAE7E0]/60 dark:border-slate-800">
+            {/* Top Pill / Trust Hook for Renters */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAE7E0]/80 border border-[#DCD7CD] text-[11px] sm:text-xs font-bold text-[#4A5D4E] shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 text-[#C18C5D] animate-pulse" />
+              <span className="font-extrabold uppercase tracking-wider text-[#C18C5D]">Stop Paying Rent</span>
+              <span className="text-[#606C5D]">•</span>
+              <span className="text-[#2D362E]">2026 Interactive First-Time Homebuyer Blueprint</span>
             </div>
 
-            {onToggleFullScreen && (
-              <button
-                id="navbar-fullscreen-toggle-btn"
-                type="button"
-                onClick={onToggleFullScreen}
-                className={`hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer border ${
-                  isFullScreen 
-                    ? "bg-[#C18C5D] text-white border-[#A67448] hover:bg-[#A67448]" 
-                    : "bg-white text-[#4A5D4E] border-[#EAE7E0] hover:bg-[#F1EFE9] hover:text-[#2D362E]"
-                }`}
-                title={isFullScreen ? "Exit Full-Screen Workspace (Esc)" : "Full-Screen Workspace (Hides navigation & sidebar for maximum document & property analysis area)"}
-              >
-                {isFullScreen ? (
-                  <>
-                    <Minimize2 className="w-4 h-4 text-white" />
-                    <span>Exit Full Screen</span>
-                  </>
-                ) : (
-                  <>
-                    <Maximize2 className="w-4 h-4 text-[#4A5D4E]" />
-                    <span>Full Screen</span>
-                  </>
-                )}
-              </button>
-            )}
+            {/* Top-Right Action Controls Toolbar */}
+            <div className="flex items-center gap-2">
+              <div className="flex sm:flex">
+                <ThemeToggle />
+              </div>
 
-            {/* Direct Loan Officer Portal & AI Video Ads Generator Button */}
-            {(onOpenLoAds || onOpenLoPortal) && (
-              <button
-                id="navbar-lo-ads-portal-btn"
-                type="button"
-                onClick={onOpenLoAds || onOpenLoPortal}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer"
-                title="Open Loan Officer Marketing Suite: AI Commercial & Video Ads Studio"
-              >
-                <Video className="w-4 h-4 text-amber-600" />
-                <span className="hidden sm:inline">AI Video Ads Studio</span>
-                <span className="text-[10px] bg-amber-200 text-amber-950 font-bold px-1.5 py-0.5 rounded-md">
-                  LO Portal
-                </span>
-              </button>
-            )}
+              {onToggleFullScreen && (
+                <button
+                  id="navbar-fullscreen-toggle-btn"
+                  type="button"
+                  onClick={onToggleFullScreen}
+                  className={`hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer border ${
+                    isFullScreen 
+                      ? "bg-[#C18C5D] text-white border-[#A67448] hover:bg-[#A67448]" 
+                      : "bg-white text-[#4A5D4E] border-[#EAE7E0] hover:bg-[#F1EFE9] hover:text-[#2D362E]"
+                  }`}
+                  title={isFullScreen ? "Exit Full-Screen Workspace (Esc)" : "Full-Screen Workspace (Hides navigation & sidebar for maximum document & property analysis area)"}
+                >
+                  {isFullScreen ? (
+                    <>
+                      <Minimize2 className="w-4 h-4 text-white" />
+                      <span>Exit Full Screen</span>
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="w-4 h-4 text-[#4A5D4E]" />
+                      <span>Full Screen</span>
+                    </>
+                  )}
+                </button>
+              )}
 
-            {/* Pop-out / Open in New Tab Button */}
-            <a
-              id="navbar-open-newtab-btn"
-              href={window.location.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer border bg-white text-[#606C5D] border-[#EAE7E0] hover:bg-[#F1EFE9] hover:text-[#2D362E]"
-              title="Open application in a full independent browser tab (↗)"
+              {/* Direct Loan Officer Portal & AI Video Ads Generator Button */}
+              {(onOpenLoAds || onOpenLoPortal) && (
+                <button
+                  id="navbar-lo-ads-portal-btn"
+                  type="button"
+                  onClick={onOpenLoAds || onOpenLoPortal}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer"
+                  title="Open Loan Officer Marketing Suite: AI Commercial & Video Ads Studio"
+                >
+                  <Video className="w-4 h-4 text-amber-600" />
+                  <span className="hidden sm:inline">AI Video Ads Studio</span>
+                  <span className="text-[10px] bg-amber-200 text-amber-950 font-bold px-1.5 py-0.5 rounded-md">
+                    LO Portal
+                  </span>
+                </button>
+              )}
+
+              {/* Pop-out / Open in New Tab Button */}
+              <a
+                id="navbar-open-newtab-btn"
+                href={window.location.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer border bg-white text-[#606C5D] border-[#EAE7E0] hover:bg-[#F1EFE9] hover:text-[#2D362E]"
+                title="Open application in a full independent browser tab (↗)"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                <span className="hidden md:inline">New Tab</span>
+              </a>
+
+              {onOpenLeadBot && (
+                <button
+                  onClick={onOpenLeadBot}
+                  className="hidden lg:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-bold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer"
+                  title="Start 24/7 AI Prequalification Assessment"
+                >
+                  <Zap className="w-4 h-4 text-white" />
+                  <span>24/7 AI Prequal</span>
+                </button>
+              )}
+
+              {/* Mobile menu hamburger button */}
+              <div className="flex md:hidden items-center">
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="p-2 rounded-xl bg-white text-[#606C5D] hover:text-[#2D362E] border border-[#EAE7E0] shadow-2xs focus:outline-none cursor-pointer"
+                  aria-label="Toggle Navigation Menu"
+                >
+                  {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Centered Main Title Area */}
+          <div className="flex flex-col items-center text-center pt-1">
+            <button
+              id="navbar-brand-logo-btn"
+              type="button"
+              onClick={() => {
+                setActiveMode("website");
+                setCurrentTab("hero");
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className="group inline-flex items-center justify-center gap-3 cursor-pointer focus:outline-none transition-transform hover:scale-[1.01]"
+              title="Return to First-Time Homebuyer Roadmap Overview"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-[#4A5D4E]" />
-              <span className="hidden md:inline">New Tab</span>
-            </a>
+              <div className="w-10 h-10 bg-[#4A5D4E] rounded-2xl flex items-center justify-center text-white font-bold shadow-sm group-hover:bg-[#38463B] transition-colors shrink-0">
+                <Compass className="w-6 h-6 text-white group-hover:rotate-45 transition-transform duration-300" />
+              </div>
+              <h1 className="text-2xl lg:text-4xl font-serif font-black tracking-tight text-[#2D362E] dark:text-slate-100 drop-shadow-2xs text-center leading-tight">
+                First-Time Homebuyer <span className="text-[#4A5D4E] dark:text-[#D4A373] font-serif">Roadmap</span>
+              </h1>
+            </button>
 
-            {onOpenLeadBot && (
-              <button
-                onClick={onOpenLeadBot}
-                className="hidden lg:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#C18C5D] hover:bg-[#a67448] text-white font-bold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer"
-                title="Start 24/7 AI Prequalification Assessment"
-              >
-                <Zap className="w-4 h-4 text-white" />
-                <span>24/7 AI Prequal</span>
-              </button>
-            )}
+            {/* Renter Conversion Subtitle: Clear Purpose & Actionable Excitement */}
+            <p className="mt-2 text-xs sm:text-sm md:text-base text-[#606C5D] max-w-3xl font-medium leading-relaxed px-2">
+              Calculate your true buying power, check verified Down Payment Assistance (DPA), and model prequal scenarios across <strong className="text-[#2D362E] font-bold">Steps 1–4</strong> with zero guesswork.
+            </p>
 
-            {/* Mobile menu hamburger button */}
-            <div className="flex md:hidden items-center">
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-xl bg-white text-[#606C5D] hover:text-[#2D362E] border border-[#EAE7E0] shadow-2xs focus:outline-none cursor-pointer"
-                aria-label="Toggle Navigation Menu"
-              >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
+            {/* Quick Renter Trust Chips */}
+            <div className="mt-2.5 flex items-center justify-center gap-3 sm:gap-6 text-[11px] font-semibold text-[#606C5D]">
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                100% Free & Transparent
+              </span>
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                No Credit Card or SSN Required
+              </span>
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                FHA 3.5% & Conv 3% Models
+              </span>
             </div>
           </div>
 

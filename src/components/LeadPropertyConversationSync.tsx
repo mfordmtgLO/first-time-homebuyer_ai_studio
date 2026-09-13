@@ -1,3 +1,4 @@
+import { PropertyLinkedAds } from "./ai/PropertyLinkedAds";
 import React, { useState, useEffect } from "react";
 import {
   MessageSquare,
@@ -284,6 +285,10 @@ export const LeadPropertyConversationSync: React.FC<LeadPropertyConversationSync
             )}
           </div>
 
+          
+          {/* VANTAGE AI ADS ENGINE: LINKED ADS */}
+          <PropertyLinkedAds propertyId={propertyId} propertyAddress={propertyAddress} leadId={leadId} loanOfficerId={currentLo?.id} />
+    
           {/* Quick LO 1-Tap Responses */}
           <div className="flex items-center gap-1.5 flex-wrap pt-1">
             <span className="text-[10px] font-bold text-[#606C5D]">1-Tap Reply:</span>

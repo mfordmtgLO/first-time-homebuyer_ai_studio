@@ -1,0 +1,171 @@
+Please implement the "Property-Targeted AI Ad Matrix" inside our Vantage AI Ads Engine project. I need this project to organically integrate property listing data (Rentcast, agent info, USDA/DPA tags) and Loan Officer + Agent pairing URLs directly into the ad creation workflow, and push the final assets directly into the First-Time Homebuyer Dashboard's GeoSphere property pins.
+
+Execute the following steps exactly as written:
+
+### Step 1: Create the Shared Property Ad Types
+Create `src/types/PropertyAds.ts` to define the data structure we are ingesting from the First-Time Homebuyer GeoMap.
+
+```typescript
+export interface ExternalPropertyListing {
+  propertyId: string;
+  address: string;
+  city: string;
+  price: number;
+  beds: number;
+  baths: number;
+  rentcastEstRent?: number;
+  agentName?: string;
+  agentPhone?: string;
+  tags: string[]; // e.g., ["USDA", "Zero Down", "LMI"]
+}
+```
+
+### Step 2: Implement the Property-Aware 2nd Brain Prompting
+Update the backend route (e.g., `/api/gemini/generate-ad`) to intercept property data and Agent/LO Pairing URLs, forcing the AI to use the Outreach Methodology.
+
+```typescript
+app.post("/api/gemini/generate-property-ad", async (req, res) => {
+  const { prompt, propertyData, loName, pairingUrl } = req.body;
+  
+  try {
+    const ai = getGeminiClient();
+    
+    // Injecting the Co-Branded Outreach Methodology
+    let systemInstruction = `You are an elite Mortgage Ad Copywriter powered by the Vantage AI 2nd Brain. 
+    Your goal is to create highly engaging ad copy and video scripts specific to a single property listing.
+    
+    OUTREACH METHODOLOGY:
+    - Never just advertise the rate. Advertise the MONTHLY PAYMENT vs. LOCAL RENT.
+    - Always highlight the Co-Branding Agent and Loan Officer as the "Local Guide Team".
+    - Always push the viewer to click the LO + Agent Pairing URL to check eligibility.`;
+    
+    if (propertyData) {
+      systemInstruction += `\n\nPROPERTY CONTEXT:
+      Address: ${propertyData.address}
+      Price: $${propertyData.price}
+      Estimated Rent (Rentcast): $${propertyData.rentcastEstRent || 'Unknown'}
+      Listing Agent: ${propertyData.agentName || 'Unknown'}
+      Eligible Loan Programs: ${propertyData.tags.join(', ')}
+      Pairing URL: ${pairingUrl}`;
+    }
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.7-flash",
+      contents: prompt,
+      config: { systemInstruction }
+    });
+    
+    res.json({ adCopy: response.text });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to generate property ad" });
+  }
+});
+```
+
+### Step 3: Build the UI Component for the Ads Dashboard
+Create `src/components/PropertyTargetedAdGenerator.tsx`. This UI will sit organically inside the chat prompt scenario box, allowing the marketer to select a property and instantly generate targeted ads.
+
+```tsx
+import React, { useState } from 'react';
+import { MapPin, Send, Video, Tag } from 'lucide-react';
+import { ExternalPropertyListing } from '../types/PropertyAds';
+
+export const PropertyTargetedAdGenerator = () => {
+  const [selectedProperty, setSelectedProperty] = useState<ExternalPropertyListing | null>(null);
+  const [prompt, setPrompt] = useState('');
+  const [pairingUrl, setPairingUrl] = useState('https://vantage-mortgage.com/apply/mike-ford');
+  const [adCopy, setAdCopy] = useState('');
+  const [syncStatus, setSyncStatus] = useState('idle');
+
+  // Mock fetching listings from the GeoSphere backend
+  const handleLoadProperty = () => {
+    setSelectedProperty({
+      propertyId: 'mls_12345',
+      address: '123 Umatilla Dr',
+      city: 'Umatilla',
+      price: 320000,
+      beds: 3,
+      baths: 2,
+      rentcastEstRent: 2200,
+      agentName: 'Sarah Realtor',
+      tags: ['USDA', 'Zero Down', 'OHCS Eligible']
+    });
+  };
+
+  const handleGenerate = async () => {
+    const res = await fetch('/api/gemini/generate-property-ad', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, propertyData: selectedProperty, loName: 'Mike Ford', pairingUrl })
+    });
+    const data = await res.json();
+    setAdCopy(data.adCopy);
+  };
+
+  const handlePushToGeoMap = async () => {
+    setSyncStatus('syncing');
+    
+    // Cross-project webhook push to the First-Time Homebuyer LO Dashboard!
+    // This targets the endpoint we just built in the other app.
+    await fetch('https://your-loan-officer-dashboard-url.run.app/api/webhooks/ads-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: `Property Ad: ${selectedProperty?.address}`,
+        adCopy: adCopy,
+        videoUrl: 'https://vjs.zencdn.net/v/oceans.mp4',
+        platformTarget: 'Facebook Ads / Property Notes',
+        campaignGoal: 'Property Lead Gen',
+        status: 'Ready for Publication',
+        propertyId: selectedProperty?.propertyId,
+        propertyAddress: selectedProperty?.address,
+        tags: selectedProperty?.tags
+      })
+    });
+    
+    setSyncStatus('success');
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-xl border shadow-sm">
+      <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><MapPin className="w-5 h-5 text-blue-600"/> Property-Targeted Ad Engine</h3>
+      
+      <div className="mb-4">
+        <button onClick={handleLoadProperty} className="bg-gray-100 px-4 py-2 rounded-lg text-sm mb-2 hover:bg-gray-200">Load Active Listing from GeoSphere</button>
+        {selectedProperty && (
+          <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg text-sm">
+            <strong>{selectedProperty.address}</strong> • ${selectedProperty.price}
+            <div className="flex gap-2 mt-2">
+              {selectedProperty.tags.map(t => <span key={t} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs"><Tag className="w-3 h-3 inline"/> {t}</span>)}
+            </div>
+            <div className="mt-2 text-gray-600">Rentcast: ${selectedProperty.rentcastEstRent}/mo • Agent: {selectedProperty.agentName}</div>
+          </div>
+        )}
+      </div>
+
+      <textarea 
+        value={prompt} onChange={e => setPrompt(e.target.value)}
+        placeholder="e.g., Write a 60-second video script focusing on how the $0 down USDA loan beats paying $2200/mo in rent..."
+        className="w-full border rounded-lg p-3 text-sm h-24 mb-3"
+      />
+      
+      <button onClick={handleGenerate} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold w-full mb-4">Generate Property Ad</button>
+
+      {adCopy && (
+        <div className="border-t pt-4">
+          <h4 className="font-bold text-sm mb-2">Generated Copy & Script</h4>
+          <div className="bg-gray-50 p-3 rounded-lg text-sm whitespace-pre-wrap mb-4">{adCopy}</div>
+          
+          <button 
+            onClick={handlePushToGeoMap} 
+            className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 text-white ${syncStatus === 'success' ? 'bg-emerald-600' : 'bg-indigo-600'}`}
+          >
+            {syncStatus === 'success' ? <Check className="w-5 h-5"/> : <Send className="w-5 h-5"/>}
+            Push Asset to GeoMap Property Pin & LO Dashboard
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+```

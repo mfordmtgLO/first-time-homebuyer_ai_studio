@@ -1,3 +1,4 @@
+import { AdAssetsLibrary } from "./AdAssetsLibrary";
 import React, { useState, useRef } from "react";
 import { 
   Sparkles, 
@@ -347,6 +348,7 @@ export const AICommercialAdGenerator: React.FC<AICommercialAdGeneratorProps> = (
 
   return (
     <div className="space-y-6">
+      <AdAssetsLibrary />
       
       {/* Hidden audio element */}
       {audioUrl && (

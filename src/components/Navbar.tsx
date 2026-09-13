@@ -32,7 +32,8 @@ import {
   Globe,
   Maximize2,
   Minimize2,
-  ExternalLink
+  ExternalLink,
+  Video
 } from "lucide-react";
 import { FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
@@ -59,6 +60,7 @@ interface NavbarProps {
   setProfile?: React.Dispatch<React.SetStateAction<FinancialProfile>>;
   savedCount: number;
   onOpenLoPortal?: () => void;
+  onOpenLoAds?: () => void;
   onOpenLeadBot?: () => void;
   onNavigateToGuides?: () => void;
   loName?: string;
@@ -75,6 +77,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   setProfile,
   savedCount,
   onOpenLoPortal,
+  onOpenLoAds,
   onOpenLeadBot,
   onNavigateToGuides,
   loName = "Mike Ford",
@@ -559,6 +562,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
+            {/* Direct Loan Officer Portal & AI Video Ads Generator Button */}
+            {(onOpenLoAds || onOpenLoPortal) && (
+              <button
+                id="navbar-lo-ads-portal-btn"
+                type="button"
+                onClick={onOpenLoAds || onOpenLoPortal}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer"
+                title="Open Loan Officer Marketing Suite: AI Commercial & Video Ads Studio"
+              >
+                <Video className="w-4 h-4 text-amber-600" />
+                <span className="hidden sm:inline">AI Video Ads Studio</span>
+                <span className="text-[10px] bg-amber-200 text-amber-950 font-bold px-1.5 py-0.5 rounded-md">
+                  LO Portal
+                </span>
+              </button>
+            )}
+
             {/* Pop-out / Open in New Tab Button */}
             <a
               id="navbar-open-newtab-btn"
@@ -890,6 +910,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Zap className="w-4 h-4 text-white" />
                 <span>Start 24/7 AI Prequal</span>
+              </button>
+            )}
+
+            {(onOpenLoAds || onOpenLoPortal) && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  if (onOpenLoAds) onOpenLoAds();
+                  else if (onOpenLoPortal) onOpenLoPortal();
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-sm border border-amber-300 shadow-xs cursor-pointer"
+              >
+                <Video className="w-4 h-4 text-amber-600" />
+                <span>AI Video Ads Studio (LO Portal)</span>
               </button>
             )}
 

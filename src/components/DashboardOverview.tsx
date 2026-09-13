@@ -22,7 +22,8 @@ import {
   Award,
   Printer,
   Mail,
-  FolderLock
+  FolderLock,
+  Video
 } from "lucide-react";
 import { FinancialProfile, PropertyListing, RoadmapMilestone, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile, CapturedLead } from "../types";
 import { calculateMortgageBreakdown, formatUSD, getDTIStatus } from "../utils/mortgageMath";
@@ -49,6 +50,7 @@ interface DashboardOverviewProps {
   activeAgent?: RealEstateAgentProfile;
   isCoBranded?: boolean;
   onOpenLoPortal?: () => void;
+  onOpenLoAds?: () => void;
   isSidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
   onSaveLead?: (lead: CapturedLead) => void;
@@ -70,6 +72,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   activeAgent,
   isCoBranded = false,
   onOpenLoPortal,
+  onOpenLoAds,
   isSidebarCollapsed = false,
   onToggleSidebar,
   onSaveLead,
@@ -180,6 +183,17 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <Sparkles className="w-4 h-4 text-[#C18C5D]" />
             <span>AI Advisor</span>
           </button>
+
+          {(onOpenLoAds || onOpenLoPortal) && (
+            <button
+              onClick={onOpenLoAds || onOpenLoPortal}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs border border-amber-300 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+              title="Open Loan Officer Marketing Suite: AI Video Ads Generator"
+            >
+              <Video className="w-4 h-4 text-amber-600" />
+              <span>AI Video Ads Studio</span>
+            </button>
+          )}
         </div>
       </div>
 

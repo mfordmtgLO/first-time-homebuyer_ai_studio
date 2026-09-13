@@ -21,7 +21,8 @@ import {
   Users,
   Compass,
   FileCheck,
-  Lock
+  Lock,
+  Video
 } from "lucide-react";
 import { motion, AnimatePresence, PanInfo } from "motion/react";
 import { 
@@ -53,6 +54,7 @@ interface MobileDashboardOverviewProps {
   activeAgent?: RealEstateAgentProfile;
   isCoBranded?: boolean;
   onOpenLoPortal?: () => void;
+  onOpenLoAds?: () => void;
   onSaveLead?: (lead: CapturedLead) => void;
   onTriggerToast?: (msg: string) => void;
   agentRoster?: RealEstateAgentProfile[];
@@ -72,6 +74,7 @@ export const MobileDashboardOverview: React.FC<MobileDashboardOverviewProps> = (
   activeAgent,
   isCoBranded = false,
   onOpenLoPortal,
+  onOpenLoAds,
   onSaveLead,
   agentRoster,
 }) => {
@@ -199,6 +202,17 @@ export const MobileDashboardOverview: React.FC<MobileDashboardOverviewProps> = (
             <Sparkles className="w-4 h-4 text-[#C18C5D] mb-1" />
             <span className="text-[10px] font-semibold truncate w-full">AI Advisor</span>
           </button>
+
+          {(onOpenLoAds || onOpenLoPortal) && (
+            <button
+              type="button"
+              onClick={onOpenLoAds || onOpenLoPortal}
+              className="flex flex-col items-center justify-center p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-colors active:scale-95 cursor-pointer text-center"
+            >
+              <Video className="w-4 h-4 text-amber-600 mb-1" />
+              <span className="text-[10px] font-semibold truncate w-full">AI Ads</span>
+            </button>
+          )}
 
           <button
             type="button"

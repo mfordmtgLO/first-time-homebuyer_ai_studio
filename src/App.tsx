@@ -556,6 +556,7 @@ export default function App() {
   }, [isPortalAccess, userRole]);
   const [scorecardProperty, setScorecardProperty] = useState<PropertyListing | null>(null);
   const [showNewPropertyModal, setShowNewPropertyModal] = useState<boolean>(false);
+  const [loPortalInitialTab, setLoPortalInitialTab] = useState<string>("leads");
 
   // Collapsible Sidebar Layout State (Initial state: collapsed)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true);
@@ -889,6 +890,10 @@ export default function App() {
             setProfile={setProfile}
             savedCount={properties.length}
             onOpenLoPortal={() => setShowLoPortal(true)}
+            onOpenLoAds={() => {
+              setLoPortalInitialTab("ai_ad_generator");
+              setShowLoPortal(true);
+            }}
             onOpenLeadBot={() => {
               setLeadBotSourceContext(undefined);
               setIsLeadBotOpen(true);
@@ -965,6 +970,11 @@ export default function App() {
                 propertiesCount={properties.length}
                 isFullScreen={isFullScreen}
                 onToggleFullScreen={toggleFullScreen}
+                onOpenLoPortal={() => setShowLoPortal(true)}
+                onOpenLoAds={() => {
+                  setLoPortalInitialTab("ai_ad_generator");
+                  setShowLoPortal(true);
+                }}
               />
             </aside>
           )}
@@ -995,6 +1005,7 @@ export default function App() {
                   properties={properties}
                   setProperties={setProperties}
                   onSwitchToDesktop={() => setForceDesktopLoPortal(true)}
+                  initialTab={loPortalInitialTab as any}
                 />
               ) : (
                 <LoanOfficerPortal
@@ -1010,6 +1021,7 @@ export default function App() {
                   properties={properties}
                   setProperties={setProperties}
                   onSwitchToMobile={() => setForceDesktopLoPortal(false)}
+                  initialTab={loPortalInitialTab as any}
                 />
               )
             ) : (
@@ -1127,6 +1139,10 @@ export default function App() {
                           activeAgent={activeAgent}
                           isCoBranded={guidesState.isCoBranded}
                           onOpenLoPortal={() => setShowLoPortal(true)}
+                          onOpenLoAds={() => {
+                            setLoPortalInitialTab("ai_ad_generator");
+                            setShowLoPortal(true);
+                          }}
                           onSaveLead={handleSaveLead}
                           agentRoster={guidesState.agentRoster}
                         />
@@ -1143,6 +1159,10 @@ export default function App() {
                           loanOfficer={guidesState.loanOfficer}
                           activeAgent={activeAgent}
                           onOpenLoPortal={() => setShowLoPortal(true)}
+                          onOpenLoAds={() => {
+                            setLoPortalInitialTab("ai_ad_generator");
+                            setShowLoPortal(true);
+                          }}
                           isSidebarCollapsed={isSidebarCollapsed}
                           onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
                           onSaveLead={handleSaveLead}

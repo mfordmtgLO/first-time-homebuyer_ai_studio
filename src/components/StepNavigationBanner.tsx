@@ -31,7 +31,8 @@ import {
   Copy,
   Globe,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Video
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
@@ -57,6 +58,8 @@ interface StepNavigationBannerProps {
   propertiesCount?: number;
   isFullScreen?: boolean;
   onToggleFullScreen?: () => void;
+  onOpenLoPortal?: () => void;
+  onOpenLoAds?: () => void;
 }
 
 export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
@@ -77,7 +80,9 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
   activeAgent,
   propertiesCount = 0,
   isFullScreen = false,
-  onToggleFullScreen
+  onToggleFullScreen,
+  onOpenLoPortal,
+  onOpenLoAds,
 }) => {
   const effectiveMode = activeMode || currentMode;
   const [showNavQrModal, setShowNavQrModal] = useState<boolean>(false);
@@ -318,6 +323,17 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
             >
               <Users className="w-4 h-4 text-[#C18C5D]" />
             </button>
+
+            {(onOpenLoAds || onOpenLoPortal) && (
+              <button
+                type="button"
+                onClick={onOpenLoAds || onOpenLoPortal}
+                className="w-9 h-9 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                title="AI Commercial & Video Ads Studio (LO Portal)"
+              >
+                <Video className="w-4 h-4 text-amber-600" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -816,6 +832,48 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
                 <span>Contact Local Guides</span>
               </button>
             </div>
+
+            {/* Section 5.5: Marketing & Loan Officer Suite */}
+            {(onOpenLoAds || onOpenLoPortal) && (
+              <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/60 border border-amber-300/80 space-y-2 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Video className="w-3.5 h-3.5 text-amber-700" />
+                    <span className="text-[11px] font-extrabold text-amber-950">Marketing & LO Suite</span>
+                  </div>
+                  <span className="text-[9px] font-black text-amber-950 bg-amber-200 px-1.5 py-0.5 rounded-md">
+                    AI Studio
+                  </span>
+                </div>
+
+                <p className="text-[10px] text-amber-900 leading-tight">
+                  Commercials, 30s video scripts, ElevenLabs voiceovers, and Meta/Google ad campaigns.
+                </p>
+
+                <div className="space-y-1.5 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={onOpenLoAds || onOpenLoPortal}
+                    className="w-full py-2 px-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                  >
+                    <Video className="w-3.5 h-3.5" />
+                    <span>AI Commercial & Video Ads</span>
+                    <ArrowRight className="w-3 h-3 ml-auto opacity-80" />
+                  </button>
+
+                  {onOpenLoPortal && (
+                    <button
+                      type="button"
+                      onClick={onOpenLoPortal}
+                      className="w-full py-1.5 px-2 rounded-lg bg-white/90 hover:bg-white text-amber-950 border border-amber-200 font-semibold text-[11px] flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <ShieldCheck className="w-3 h-3 text-[#4A5D4E]" />
+                      <span>Loan Officer Command Center</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Section 6: Search-Grounded Mortgage Education AI Bot */}
             {profile && (

@@ -43,6 +43,7 @@ interface MobileLoanOfficerPortalProps {
   properties?: PropertyListing[];
   setProperties?: React.Dispatch<React.SetStateAction<PropertyListing[]>>;
   onSwitchToDesktop?: () => void;
+  initialTab?: string;
 }
 
 export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = ({
@@ -54,6 +55,7 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
   onLogout,
   properties = [],
   onSwitchToDesktop,
+  initialTab,
 }) => {
   // Current logged in LO profile
   const currentLo = useMemo(() => {
@@ -81,7 +83,9 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
   );
 
   // Active Mobile Tab
-  const [mobileTab, setMobileTab] = useState<"leads" | "ai_rhythm" | "calculators" | "realtors" | "tools">("leads");
+  const [mobileTab, setMobileTab] = useState<"leads" | "ai_rhythm" | "calculators" | "realtors" | "tools">(
+    (initialTab as any) || "leads"
+  );
 
   // Filter & Search states for Leads
   const [leadSearch, setLeadSearch] = useState("");

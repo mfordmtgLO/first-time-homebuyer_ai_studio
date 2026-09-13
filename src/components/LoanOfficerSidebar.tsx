@@ -31,6 +31,7 @@ import {
   Calendar,
   PanelLeftClose,
   PanelRightClose,
+  Video,
 } from "lucide-react";
 import { AIDailyRhythmCard } from "./AIDailyRhythmCard";
 import { LoanOfficerProfile, ProfessionalGuidesState } from "../types";
@@ -60,6 +61,7 @@ export type TabId =
   | "my_profile"
   | "social_push"
   | "ad_campaigns"
+  | "ai_ad_generator"
   | "system_pitch_deck"
   | "branch_management"
   | "branch_seo_metadata"
@@ -198,6 +200,48 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
       ],
     },
     {
+      id: "marketing",
+      title: "Marketing & Campaigns",
+      icon: <Globe className="w-3.5 h-3.5 text-[#C18C5D]" />,
+      items: [
+        {
+          id: "ai_ad_generator",
+          label: "AI Ad Generator",
+          icon: <Video className="w-4 h-4 text-amber-600" />,
+          badge: "AI Video",
+          badgeColor: "bg-amber-100 text-amber-900 font-bold",
+        },
+        {
+          id: "ad_campaigns",
+          label: "Meta & Google Ads Builder",
+          icon: <Sparkles className="w-4 h-4 text-blue-600" />,
+          badge: "Ads",
+          badgeColor: "bg-blue-100 text-blue-800",
+        },
+        {
+          id: "geosphere_sync",
+          label: "GeoSphere Map Sync",
+          icon: <Globe className="w-4 h-4" />,
+          badge: `${guidesState.syncedProperties?.length || 6}`,
+        },
+        {
+          id: "social_push",
+          label: "Social Push & Blasts",
+          icon: <Share2 className="w-4 h-4" />,
+        },
+        {
+          id: "system_pitch_deck",
+          label: "Pitch Deck & ROI Metrics",
+          icon: <PieChart className="w-4 h-4" />,
+        },
+        {
+          id: "my_profile",
+          label: "Edit My LO Profile",
+          icon: <Edit3 className="w-4 h-4" />,
+        },
+      ],
+    },
+    {
       id: "underwriting",
       title: "Underwriting & Financial",
       icon: <Brain className="w-3.5 h-3.5 text-[#C18C5D]" />,
@@ -321,41 +365,6 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
           icon: <Target className="w-4 h-4" />,
           badge: "NMLS",
           hidden: !canManageLoRecruits && !canManageAgentRecruits,
-        },
-      ],
-    },
-    {
-      id: "marketing",
-      title: "Marketing & Automation",
-      icon: <Globe className="w-3.5 h-3.5 text-[#C18C5D]" />,
-      items: [
-        {
-          id: "geosphere_sync",
-          label: "GeoSphere Map Sync",
-          icon: <Globe className="w-4 h-4" />,
-          badge: `${guidesState.syncedProperties?.length || 6}`,
-        },
-        {
-          id: "ad_campaigns",
-          label: "Meta & Google Ads Builder",
-          icon: <Sparkles className="w-4 h-4" />,
-          badge: "Ads",
-          badgeColor: "bg-blue-100 text-blue-800",
-        },
-        {
-          id: "social_push",
-          label: "Social Push & Blasts",
-          icon: <Share2 className="w-4 h-4" />,
-        },
-        {
-          id: "system_pitch_deck",
-          label: "Pitch Deck & ROI Metrics",
-          icon: <PieChart className="w-4 h-4" />,
-        },
-        {
-          id: "my_profile",
-          label: "Edit My LO Profile",
-          icon: <Edit3 className="w-4 h-4" />,
         },
       ],
     },

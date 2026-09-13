@@ -136,11 +136,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, guidesState }
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("lo_portal_logged_out");
+                localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
+              }
+              onLogin("branch_manager");
+            }}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#4A5D4E] to-[#2D362E] hover:from-[#38463B] hover:to-[#1E241F] text-white px-6 py-3.5 rounded-xl font-bold transition-all shadow-md cursor-pointer active:scale-95 text-xs sm:text-sm"
+            title="Instant access for Branch Manager / Mike Ford"
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-300" />
+            <span>Enter as Branch Manager (Mike Ford)</span>
+          </button>
+
+          <div className="flex items-center gap-2 my-2">
+            <div className="flex-1 h-px bg-[#EAE7E0]"></div>
+            <span className="text-[10px] text-[#9A9488] uppercase font-bold tracking-wider">or sign in</span>
+            <div className="flex-1 h-px bg-[#EAE7E0]"></div>
+          </div>
+
           <button
             onClick={handleGoogleLogin}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 bg-[#2D362E] hover:bg-[#4A5D4E] text-white px-6 py-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-sm cursor-pointer active:scale-95"
+            className="w-full flex items-center justify-center gap-3 bg-[#2D362E] hover:bg-[#4A5D4E] text-white px-6 py-3.5 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-sm cursor-pointer active:scale-95 text-xs sm:text-sm"
           >
             {isLoading ? "Connecting to Google..." : "Sign in with Google"}
             {!isLoading && <ArrowRight className="w-4 h-4" />}

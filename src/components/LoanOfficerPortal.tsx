@@ -78,6 +78,7 @@ import {
   PanelLeft,
   SlidersHorizontal,
   Printer,
+  Video,
 } from "lucide-react";
 import { LoanOfficerSidebar, TabId } from "./LoanOfficerSidebar";
 import { MasterRoleManager } from "./MasterRoleManager";
@@ -121,6 +122,7 @@ import {
 } from "../types";
 import { SocialPushHub } from "./SocialPushHub";
 import { AdsCampaignHub } from "./AdsCampaignHub";
+import { AICommercialAdGenerator } from "./ai/AICommercialAdGenerator";
 import { LoanOfficerLoginView } from "./LoanOfficerLoginView";
 import { StateLicensingSelector } from "./StateLicensingSelector";
 import { processLocalImageFile } from "../utils/imageUtils";
@@ -189,6 +191,7 @@ interface LoanOfficerPortalProps {
   properties?: PropertyListing[];
   setProperties?: React.Dispatch<React.SetStateAction<PropertyListing[]>>;
   onSwitchToMobile?: () => void;
+  initialTab?: TabId;
 }
 
 export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
@@ -201,6 +204,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   properties = [],
   setProperties = () => {},
   onSwitchToMobile,
+  initialTab,
 }) => {
   // Authentication & Session State (loaded from localStorage)
   const [authenticatedLoId, setAuthenticatedLoId] = useState<string | null>(() => {
@@ -251,8 +255,14 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
   // Current user / viewing context
   const [activeTab, setActiveTab] = useState<TabId>(
-    userRole === "compliance_auditor" ? "compliance_audit" : "leads"
+    initialTab || (userRole === "compliance_auditor" ? "compliance_audit" : "leads")
   );
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [scenarioWorkbenchLeadId, setScenarioWorkbenchLeadId] = useState<string | undefined>(
     undefined
   );
@@ -2405,6 +2415,20 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               <span>Quick AI Review</span>
             </button>
 
+            {/* Quick Link to AI Video Ads Studio */}
+            <button
+              onClick={() => setActiveTab("ai_ad_generator")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                activeTab === "ai_ad_generator"
+                  ? "bg-amber-600 text-white ring-2 ring-amber-400"
+                  : "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300"
+              }`}
+              title="Open AI Commercial & Video Ads Studio"
+            >
+              <Video className={`w-3.5 h-3.5 ${activeTab === "ai_ad_generator" ? "text-white" : "text-amber-700"}`} />
+              <span>AI Video Ads Studio</span>
+            </button>
+
             {/* Top Tabs Toggle Button */}
             <button
               onClick={() => {
@@ -2526,6 +2550,28 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   }`}
                 >
                   {guidesState.leads?.length || 0}
+                </span>
+              </button>
+
+              <button
+                data-tab-id="ai_ad_generator"
+                onClick={() => setActiveTab("ai_ad_generator")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer shadow-xs ${
+                  activeTab === "ai_ad_generator"
+                    ? "bg-amber-600 text-white shadow-md ring-2 ring-amber-400"
+                    : "bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100"
+                }`}
+              >
+                <Video className={`w-4 h-4 ${activeTab === "ai_ad_generator" ? "text-white" : "text-amber-600"}`} />
+                <span>AI Commercial & Video Ads</span>
+                <span
+                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                    activeTab === "ai_ad_generator"
+                      ? "bg-white/25 text-white"
+                      : "bg-amber-200 text-amber-950 font-bold"
+                  }`}
+                >
+                  NEW • AI Studio
                 </span>
               </button>
 
@@ -7465,6 +7511,33 @@ Mike Ford`;
                   onUpdateGuidesState({
                     ...guidesState,
                     capturedLeads: [newLead, ...(guidesState.capturedLeads || [])]
+                  });
+                }}
+                onUpdateAdSettings={(adSettings) => {
+                  const updatedLo = { ...currentLo, adSettings };
+                  const updatedLos = guidesState.loanOfficers.map((l) =>
+                    l.id === currentLo.id ? updatedLo : l
+                  );
+                  onUpdateGuidesState({
+                    ...guidesState,
+                    loanOfficer: updatedLo,
+                    loanOfficers: updatedLos,
+                  });
+                }}
+                pairingUrl={activePairingUrl}
+              />
+            )}
+
+            {/* Tab: AI Commercial & Ads Generator */}
+            {activeTab === "ai_ad_generator" && (
+              <AICommercialAdGenerator
+                loanOfficer={currentLo}
+                activeAgent={activeAgent}
+                adCampaignDrafts={guidesState.adCampaignDrafts || []}
+                onSaveAdDraft={(draft) => {
+                  onUpdateGuidesState({
+                    ...guidesState,
+                    adCampaignDrafts: [draft, ...(guidesState.adCampaignDrafts || [])],
                   });
                 }}
                 onUpdateAdSettings={(adSettings) => {

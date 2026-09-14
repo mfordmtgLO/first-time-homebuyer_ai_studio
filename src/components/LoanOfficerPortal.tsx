@@ -7505,6 +7505,7 @@ Mike Ford`;
                 properties={properties}
                 setProperties={setProperties}
                 onTriggerToast={triggerToast}
+                onNavigateToAdsPortal={() => setActiveTab("ad_campaigns")}
               />
             )}
 

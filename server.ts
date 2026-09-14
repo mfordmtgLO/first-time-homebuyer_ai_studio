@@ -3929,10 +3929,32 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
             isFavorite: false,
             isPubliclyPublished: true,
             syncedAt: new Date().toISOString(),
-            mlsNumber: item.mlsNumber,
-            mlsName: item.mlsName,
-            listingAgent: item.listingAgent,
-            listingOffice: item.listingOffice,
+            isLiveGeoSphere: true,
+            sourceDataset: "GeoSphere Oregon GIS",
+            mlsNumber: item.mlsNumber || item.mlsId,
+            mlsName: item.mlsName || "RMLS",
+            listingAgent: item.listingAgent || (item.agent ? {
+              name: typeof item.agent === "string" ? item.agent : (item.agent.name || item.agentName || "Listing Agent"),
+              phone: typeof item.agent === "object" ? (item.agent.phone || item.agentPhone || "") : (item.agentPhone || ""),
+              email: typeof item.agent === "object" ? (item.agent.email || item.agentEmail || "") : (item.agentEmail || ""),
+              website: typeof item.agent === "object" ? (item.agent.website || item.agentWebsite || "") : (item.agentWebsite || "")
+            } : (item.agentName ? {
+              name: item.agentName,
+              phone: item.agentPhone || "",
+              email: item.agentEmail || "",
+              website: item.agentWebsite || ""
+            } : undefined)),
+            listingOffice: item.listingOffice || (item.office ? {
+              name: typeof item.office === "string" ? item.office : (item.office.name || item.officeName || item.brokerage || "Listing Brokerage"),
+              phone: typeof item.office === "object" ? (item.office.phone || item.officePhone || "") : (item.officePhone || ""),
+              email: typeof item.office === "object" ? (item.office.email || item.officeEmail || "") : (item.officeEmail || ""),
+              website: typeof item.office === "object" ? (item.office.website || item.officeWebsite || "") : (item.officeWebsite || "")
+            } : (item.brokerage || item.officeName ? {
+              name: item.brokerage || item.officeName,
+              phone: item.officePhone || "",
+              email: item.officeEmail || "",
+              website: item.officeWebsite || ""
+            } : undefined)),
             overlayEligibility: {
               usda,
               usdaEligible: usda,
@@ -4017,6 +4039,7 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
         count: processedListings.length,
         pullsCount: data.pulls?.length || 1,
         generatedAt: data.generatedAt || new Date().toISOString(),
+        cities: Array.from(new Set(processedListings.map((l: any) => l.city).filter(Boolean))),
         listings: processedListings,
       });
     } catch (error: any) {

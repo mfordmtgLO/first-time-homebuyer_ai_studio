@@ -425,7 +425,7 @@ export const MobileDashboardOverview: React.FC<MobileDashboardOverviewProps> = (
                   <div className="text-right">
                     <span className="text-[10px] text-[#9A9488] font-bold block uppercase">Monthly Est</span>
                     <span className="text-lg font-bold text-[#4A5D4E] dark:text-emerald-400">
-                      {formatUSD(breakdown.totalMonthlyPayment)}/mo
+                      {formatUSD(breakdown.totalMonthly)}/mo
                     </span>
                   </div>
                 </div>
@@ -499,25 +499,25 @@ export const MobileDashboardOverview: React.FC<MobileDashboardOverviewProps> = (
                     <div className="p-2.5 bg-[#FAF9F5] dark:bg-slate-800 rounded-xl border border-[#EAE7E0] dark:border-slate-700">
                       <span className="text-[10px] text-[#9A9488] block">Principal & Interest</span>
                       <span className="font-bold text-[#2D362E] dark:text-slate-200">
-                        {formatUSD(breakdown.monthlyPI)}
+                        {formatUSD(breakdown.principalAndInterest)}
                       </span>
                     </div>
                     <div className="p-2.5 bg-[#FAF9F5] dark:bg-slate-800 rounded-xl border border-[#EAE7E0] dark:border-slate-700">
                       <span className="text-[10px] text-[#9A9488] block">Property Taxes</span>
                       <span className="font-bold text-[#2D362E] dark:text-slate-200">
-                        {formatUSD(breakdown.monthlyTaxes)}
+                        {formatUSD(breakdown.propertyTax)}
                       </span>
                     </div>
                     <div className="p-2.5 bg-[#FAF9F5] dark:bg-slate-800 rounded-xl border border-[#EAE7E0] dark:border-slate-700">
                       <span className="text-[10px] text-[#9A9488] block">Homeowners Ins.</span>
                       <span className="font-bold text-[#2D362E] dark:text-slate-200">
-                        {formatUSD(breakdown.monthlyInsurance)}
+                        {formatUSD(breakdown.homeInsurance)}
                       </span>
                     </div>
                     <div className="p-2.5 bg-[#FAF9F5] dark:bg-slate-800 rounded-xl border border-[#EAE7E0] dark:border-slate-700">
                       <span className="text-[10px] text-[#9A9488] block">Mortgage Ins. (PMI)</span>
                       <span className="font-bold text-[#2D362E] dark:text-slate-200">
-                        {formatUSD(breakdown.monthlyPMI)}
+                        {formatUSD(breakdown.pmi)}
                       </span>
                     </div>
                   </div>

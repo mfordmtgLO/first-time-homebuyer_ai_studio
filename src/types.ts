@@ -96,7 +96,7 @@ export interface PropertyListing {
   sqft: number;
   yearBuilt: number;
   propertyType: 'Single Family' | 'Townhouse' | 'Condo' | 'Multi-Family' | 'Manufactured' | 'Mobile' | 'Land' | 'Other';
-  imageUrl: string;
+  imageUrl?: string;
   galleryUrls?: string[];
   images?: string[];
   status: 'saved' | 'touring' | 'offered' | 'under_contract' | 'passed';
@@ -133,6 +133,8 @@ export interface PropertyListing {
   isPubliclyPublished?: boolean;
   overlayEligibility?: OverlayEligibility;
   sourceGeoSphereId?: string;
+  isLiveGeoSphere?: boolean;
+  sourceDataset?: string;
   syncedAt?: string;
   mlsNumber?: string;
   mlsName?: string;
@@ -153,6 +155,91 @@ export interface PropertyListing {
     website?: string;
   };
   priceHistory?: { date: string; price: number; event: string }[];
+  matchedRosterAgent?: {
+    id: string;
+    name: string;
+    brokerage: string;
+    headshotUrl?: string;
+    email?: string;
+    phone?: string;
+    licenseNumber?: string;
+    matchMethod?: 'name' | 'email' | 'phone' | 'fuzzy';
+  };
+  isRosterAgentMatched?: boolean;
+  isLoAgentPair?: boolean;
+  loPairing?: {
+    id: string;
+    title: string;
+    loId: string;
+    loName: string;
+    agentId: string;
+    agentName: string;
+    customSlug: string;
+    campaignTag?: string;
+  };
+  vantageAdsEngineStatus?: 'idle' | 'queued' | 'in_creation' | 'ready_for_review' | 'synced_to_ads_portal';
+  vantageAdsEngineBatchId?: string;
+  vantageAdsEngineLastSynced?: string;
+}
+
+export interface VantageCoBrandedAdKit {
+  id: string;
+  propertyId: string;
+  propertyAddress: string;
+  propertyCity: string;
+  propertyPrice: number;
+  beds?: number;
+  baths?: number;
+  sqft?: number;
+  imageUrl?: string;
+  loId: string;
+  loName: string;
+  loNmls: string;
+  loPhone: string;
+  loHeadshotUrl: string;
+  agentId: string;
+  agentName: string;
+  agentBrokerage: string;
+  agentLicense: string;
+  agentPhone: string;
+  agentHeadshotUrl: string;
+  pairingId: string;
+  coBrandSlug: string;
+  coBrandUrl: string;
+  metaAd: {
+    headline: string;
+    hook: string;
+    primaryText: string;
+    description: string;
+    cta: string;
+    targetUrl: string;
+  };
+  googleAd: {
+    headlines: string[];
+    descriptions: string[];
+    sitelinks: { title: string; url: string }[];
+    finalUrl: string;
+  };
+  videoScript: {
+    hook: string;
+    estimatedSeconds: number;
+    scenes: {
+      sceneNumber: number;
+      durationSec: number;
+      visual: string;
+      narration: string;
+      onScreenText: string;
+    }[];
+    videoUrl?: string;
+    captionText: string;
+    hashtags: string[];
+  };
+  queueStatus: 'queued_for_mktg' | 'in_creation' | 'ready_for_review' | 'synced_to_ads_portal';
+  assignedRole: 'mktg_ads_creator' | 'loa' | 'loan_officer';
+  createdByRole: string;
+  completedBy?: string;
+  completedAt?: string;
+  timestamp: string;
 }
 
 export interface GrantProgram {

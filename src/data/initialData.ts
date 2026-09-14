@@ -1407,6 +1407,48 @@ export const INITIAL_TEAM_LOAN_OFFICERS: LoanOfficerProfile[] = [
 
 export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
   {
+    id: "agent-jake-zach",
+    name: "Jake Zach",
+    title: "Principal Broker, REALTOR®",
+    brokerage: "Hybrid Real Estate",
+    licenseNumber: "OR Lic #201239842",
+    email: "bigjakerealestate@gmail.com",
+    phone: "(541) 216-0695",
+    headshotUrl: "",
+    agentType: "listing_agent",
+    experienceYears: 9,
+    production12MoVolume: 19800000,
+    production12MoUnits: 34,
+    buysideVolume12Mo: 8400000,
+    buysideUnits12Mo: 14,
+    listingVolume12Mo: 11400000,
+    listingUnits12Mo: 20,
+    buysideSharePct: 41,
+    activeListingsCount: 6,
+    rating: 4.93,
+    bio: "Jake specializes in Lane County, Junction City, and Eugene properties with deep expertise in rural and suburban homes, USDA zero-down financing, and aggressive co-marketing partnerships.",
+    specialties: [
+      "Junction City & Lane County",
+      "USDA Zero-Down Eligibility",
+      "Listing Marketing",
+      "First-Time Buyer Tours"
+    ],
+    marketAreas: ["Junction City", "Eugene", "Springfield", "Veneta", "Lane County"],
+    mlsAffiliation: "RMLS",
+    mlsAreas: ["Lane"],
+    licensedCounties: ["Lane"],
+    websiteUrl: "https://jakezach.bhhsrep.com",
+    assignedLoIds: ["lo-mike-ford", "lo-lonn-kilstrom"],
+    customSlug: "jake-zach",
+    realTrendsVerified: true,
+    realTrendsRank: "America's Best - Lane County Specialist",
+    realTrendsSides: 34,
+    realTrendsVolume: 19800000,
+    realTrendsYear: 2025,
+    realTrendsCategory: "Individual Agent - Volume",
+    recruitmentStatus: "Partner Active"
+  },
+  {
     id: "agent-kanndice-mclean",
     name: "Kanndice McLean",
     title: "Senior Home Specialist, REALTOR®",
@@ -1957,6 +1999,19 @@ export const INITIAL_AGENT_ROSTER: RealEstateAgentProfile[] = [
 ];
 
 export const INITIAL_PAIRINGS: import("../types").LOPairing[] = [
+  {
+    id: "pair-mike-jake",
+    loId: "lo-mike-ford",
+    agentId: "agent-jake-zach",
+    title: "Mike Ford + Jake Zach (Junction City & Lane County Co-Branded Team)",
+    customSlug: "mike-and-jake",
+    campaignTag: "lane-county-first-time-buyers",
+    notes: "Flagship co-branded pairing for Junction City & Lane County USDA Zero-Down financing and active listing tours.",
+    createdAt: "2026-08-01",
+    active: true,
+    totalViews: 486,
+    totalLeads: 42
+  },
   {
     id: "pair-mike-kanndice",
     loId: "lo-mike-ford",

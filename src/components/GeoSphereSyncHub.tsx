@@ -31,7 +31,10 @@ import {
   Mail,
   Home,
   Tag,
-  ArrowUpDown
+  ArrowUpDown,
+  Copy,
+  Megaphone,
+  Users
 } from "lucide-react";
 import { PropertyListing, ProfessionalGuidesState } from "../types";
 import { 
@@ -59,7 +62,13 @@ import { getPropertyOhcsPriceLimit, OREGON_COUNTY_PRICE_LIMITS, normalizeOregonC
 import { ScreeningDisclaimerBanner } from "./ScreeningDisclaimerBanner";
 import { launchLocalOutlookDraft } from "../utils/outlookEmailService";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
+import { 
+  crossReferenceListingWithAgents, 
+  enrichListingsWithAgentMatches, 
+  pushCoBrandedListingToVantageQueue 
+} from "../utils/agentListingCrossReference";
+import { MasterAgentPropertyListingPortal } from "./MasterAgentPropertyListingPortal";
 
 interface GeoSphereSyncHubProps {
   guidesState: ProfessionalGuidesState;
@@ -67,7 +76,24 @@ interface GeoSphereSyncHubProps {
   properties: PropertyListing[];
   setProperties: React.Dispatch<React.SetStateAction<PropertyListing[]>>;
   onTriggerToast: (msg: string) => void;
+  onNavigateToAdsPortal?: () => void;
 }
+
+/**
+ * Universal dynamic helper to identify any listing pulled live from GeoSphere Oregon GIS / RentCast API
+ * regardless of city or future sync pull date.
+ */
+export const isLiveGeoSphereListing = (listing?: PropertyListing | null): boolean => {
+  if (!listing) return false;
+  if (listing.isLiveGeoSphere === true) return true;
+  if (listing.sourceDataset?.toLowerCase().includes("geosphere")) return true;
+  if (listing.overlayEligibility?.sourceDataset?.toLowerCase().includes("geosphere")) return true;
+  if (listing.mlsNumber && listing.syncedAt) return true;
+  if (listing.id && (listing.id.startsWith("geo-") || listing.id.startsWith("rentcast-") || /-[A-Z]{2}-\d{5}$/.test(listing.id))) return true;
+  const c = (listing.city || "").toLowerCase();
+  if (c.includes("junction") || c.includes("veneta") || listing.zip === "97448" || listing.zip === "97487") return true;
+  return false;
+};
 
 export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   guidesState,
@@ -75,35 +101,43 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   properties,
   setProperties,
   onTriggerToast,
+  onNavigateToAdsPortal,
 }) => {
+  const agentRoster = guidesState.agentRoster || [];
+  const pairings = guidesState.pairings || [];
+  const loanOfficers = guidesState.loanOfficers || [];
+  const currentLo = guidesState.loanOfficer || loanOfficers[0];
+
+  const [hubTab, setHubTab] = useState<"catalog" | "master_agent_portal">("catalog");
   const [selectedDataset, setSelectedDataset] = useState<string>("all");
   const [isFetching, setIsFetching] = useState<boolean>(false);
   const [syncedListings, setSyncedListings] = useState<PropertyListing[]>(() => {
+    let initialList: PropertyListing[] = [];
     // 1. Check localStorage first so any synced state is immediately available
     try {
       const localSaved = localStorage.getItem("fthb_synced_listings_v2");
       if (localSaved) {
         const parsed = JSON.parse(localSaved);
         if (Array.isArray(parsed) && parsed.length >= 20) {
-          const hasJunction = parsed.some((l: PropertyListing) => l.city?.toLowerCase().includes("junction") || l.zip === "97448");
-          if (!hasJunction) {
-            return [...GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS, ...parsed];
-          }
-          return parsed;
+          // Verify that all live pull listings (Junction City, Veneta, etc.) are present
+          const seenIds = new Set(parsed.map((l: PropertyListing) => l.id));
+          const missingLive = GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS.filter(l => !seenIds.has(l.id));
+          initialList = missingLive.length > 0 ? [...missingLive, ...parsed] : parsed;
         }
       }
     } catch (e) {
       console.warn("Local storage check notice:", e);
     }
     // 2. If guidesState has syncedProperties with at least 50 listings
-    if (guidesState.syncedProperties && guidesState.syncedProperties.length >= 50) {
-      const hasJunction = guidesState.syncedProperties.some((l: PropertyListing) => l.city?.toLowerCase().includes("junction") || l.zip === "97448");
-      if (!hasJunction) {
-        return [...GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS, ...guidesState.syncedProperties];
-      }
-      return guidesState.syncedProperties;
+    if (initialList.length === 0 && guidesState.syncedProperties && guidesState.syncedProperties.length >= 50) {
+      const seenIds = new Set(guidesState.syncedProperties.map((l: PropertyListing) => l.id));
+      const missingLive = GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS.filter(l => !seenIds.has(l.id));
+      initialList = missingLive.length > 0 ? [...missingLive, ...guidesState.syncedProperties] : guidesState.syncedProperties;
     }
-    return GEOSPHERE_MOCK_LISTINGS;
+    if (initialList.length === 0) {
+      initialList = GEOSPHERE_MOCK_LISTINGS;
+    }
+    return enrichListingsWithAgentMatches(initialList, agentRoster, pairings, loanOfficers);
   });
 
   const [selectedListingIds, setSelectedListingIds] = useState<string[]>([]);
@@ -236,16 +270,192 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
     return calculateOverlayCounts(syncedListings);
   }, [syncedListings]);
 
-  // Filter synced listings by current active overlay and search query
+  // Live pull listings and dynamic unique cities across all ingested datasets
+  const livePullListings = useMemo(() => {
+    return syncedListings.filter(l => isLiveGeoSphereListing(l));
+  }, [syncedListings]);
+
+  const liveCities = useMemo(() => {
+    return Array.from(new Set(livePullListings.map(l => (l.city || "").trim()).filter(Boolean)));
+  }, [livePullListings]);
+
+  // Dynamic snapshot cards computed automatically from synced listings & ingested RentCast pulls
+  const dynamicSnapshotCards = useMemo(() => {
+    // Group live listings by city
+    const liveCityCounts: Record<string, number> = {};
+    livePullListings.forEach(l => {
+      const c = (l.city || "Oregon").trim();
+      liveCityCounts[c] = (liveCityCounts[c] || 0) + 1;
+    });
+
+    const cards: Array<{
+      id: string;
+      name: string;
+      badge: string;
+      badgeColor: string;
+      description: string;
+      itemCount: number;
+      isLive?: boolean;
+    }> = [
+      {
+        id: "all",
+        name: `Master Database (${syncedListings.length} Total Listings)`,
+        badge: `Master (${syncedListings.length})`,
+        badgeColor: "bg-[#4A5D4E] text-white",
+        description: `Complete unified catalog across ${liveCities.slice(0, 3).join(", ") || "Lane County"}, Coos Bay, Bend, Portland Metro, and all 36 Oregon counties.`,
+        itemCount: syncedListings.length,
+      }
+    ];
+
+    // For EVERY city with live listings, dynamically generate a dedicated Snapshot card!
+    Object.entries(liveCityCounts)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([cityName, count]) => {
+        const cityKey = `city_${cityName.toLowerCase().replace(/\s+/g, "_")}`;
+        cards.push({
+          id: cityKey,
+          name: `${cityName} Live RentCast Pull (${count} Properties)`,
+          badge: `${cityName} Live (${count})`,
+          badgeColor: "bg-emerald-800 text-white",
+          description: `Live active RentCast sale listings from GeoSphere Oregon GIS in ${cityName} with verified agent contacts and GIS overlays.`,
+          itemCount: count,
+          isLive: true,
+        });
+      });
+
+    // Dynamic county and regional counts
+    const laneCount = syncedListings.filter(l => 
+      l.overlayEligibility?.countyName?.toLowerCase() === "lane" || 
+      l.county?.toLowerCase() === "lane" ||
+      ["eugene", "springfield", "junction city", "veneta", "cottage grove", "florence"].includes((l.city || "").toLowerCase())
+    ).length;
+
+    const coosCount = syncedListings.filter(l => 
+      l.overlayEligibility?.countyName?.toLowerCase() === "coos" || 
+      l.county?.toLowerCase() === "coos" || 
+      ["coos bay", "north bend", "bandon", "coquille"].includes((l.city || "").toLowerCase())
+    ).length;
+
+    const deschutesCount = syncedListings.filter(l => 
+      l.overlayEligibility?.countyName?.toLowerCase() === "deschutes" || 
+      l.county?.toLowerCase() === "deschutes" || 
+      ["bend", "redmond", "sisters", "la pine"].includes((l.city || "").toLowerCase())
+    ).length;
+
+    const metroCount = syncedListings.filter(l => 
+      ["clackamas", "marion", "multnomah", "yamhill", "washington"].includes((l.overlayEligibility?.countyName || l.county || "").toLowerCase()) ||
+      ["portland", "salem", "beaverton", "hillsboro", "gresham", "tigard", "lake oswego"].includes((l.city || "").toLowerCase())
+    ).length;
+
+    const usdaCount = syncedListings.filter(l => isUsdaEligible(l)).length;
+    const lmiCount = syncedListings.filter(l => isLmiEligible(l)).length;
+
+    cards.push(
+      {
+        id: "lane",
+        name: `Willamette Valley / Lane County (${laneCount} Properties)`,
+        badge: `Lane / Eugene (${laneCount})`,
+        badgeColor: "bg-emerald-800 text-white",
+        description: "Eugene, Springfield, Junction City, Veneta, and Florence listings pre-screened for OHCS cash assistance.",
+        itemCount: laneCount,
+      },
+      {
+        id: "coos",
+        name: `Coos County Coastal Region Snapshot (${coosCount} Properties)`,
+        badge: `Coos Bay / Coast (${coosCount})`,
+        badgeColor: "bg-teal-800 text-white",
+        description: "Live snapshot from Coos Bay, North Bend, and Bandon with 100% USDA & FirstHome Targeted price cap eligibility.",
+        itemCount: coosCount,
+      },
+      {
+        id: "deschutes",
+        name: `Central Oregon & Cascades / Deschutes (${deschutesCount} Properties)`,
+        badge: `Central OR (${deschutesCount})`,
+        badgeColor: "bg-amber-800 text-white",
+        description: "Bend, Redmond, and Sisters properties matched against Deschutes purchase price ceilings.",
+        itemCount: deschutesCount,
+      },
+      {
+        id: "metro",
+        name: `Portland Metro & Marion County (${metroCount} Properties)`,
+        badge: `Portland Metro (${metroCount})`,
+        badgeColor: "bg-indigo-800 text-white",
+        description: "Multnomah, Clackamas, Washington, and Marion County urban growth boundary homes.",
+        itemCount: metroCount,
+      },
+      {
+        id: "usda",
+        name: `USDA 100% Financing (0% Down) (${usdaCount} Properties)`,
+        badge: `USDA 0% Down (${usdaCount})`,
+        badgeColor: "bg-emerald-700 text-white",
+        description: "All properties across Oregon located outside USDA ineligible metro polygons.",
+        itemCount: usdaCount,
+      },
+      {
+        id: "lmi",
+        name: `OHCS LMI Census Tracts (${lmiCount} Properties)`,
+        badge: `OHCS LMI Tracts (${lmiCount})`,
+        badgeColor: "bg-amber-700 text-white",
+        description: "Census tracts eligible for enhanced OHCS Flex Lending cash assistance grants.",
+        itemCount: lmiCount,
+      }
+    );
+
+    return cards;
+  }, [syncedListings, livePullListings, liveCities]);
+
+  // Filter synced listings by selected dataset, active overlay, search query, etc.
   const filteredListings = useMemo(() => {
-    const list = filterListings(syncedListings, {
+    let baseList = syncedListings;
+
+    // 1. Regional Snapshot / Dataset Filter
+    if (selectedDataset !== "all") {
+      if (selectedDataset.startsWith("city_") || selectedDataset.startsWith("live_city_")) {
+        const targetCity = selectedDataset.replace("live_city_", "").replace("city_", "").replace(/_/g, " ").toLowerCase();
+        baseList = syncedListings.filter(l => (l.city || "").toLowerCase() === targetCity);
+      } else if (selectedDataset === "junction_city") {
+        baseList = syncedListings.filter(l => (l.city || "").toLowerCase().includes("junction") || l.zip === "97448");
+      } else if (selectedDataset === "veneta") {
+        baseList = syncedListings.filter(l => (l.city || "").toLowerCase().includes("veneta") || l.zip === "97487");
+      } else if (selectedDataset === "lane") {
+        baseList = syncedListings.filter(l => 
+          l.overlayEligibility?.countyName?.toLowerCase() === "lane" ||
+          l.county?.toLowerCase() === "lane" ||
+          ["eugene", "springfield", "junction city", "veneta", "cottage grove", "florence"].includes((l.city || "").toLowerCase())
+        );
+      } else if (selectedDataset === "coos") {
+        baseList = syncedListings.filter(l => 
+          l.overlayEligibility?.countyName?.toLowerCase() === "coos" ||
+          l.county?.toLowerCase() === "coos" ||
+          ["coos bay", "north bend", "bandon", "coquille"].includes((l.city || "").toLowerCase())
+        );
+      } else if (selectedDataset === "deschutes") {
+        baseList = syncedListings.filter(l => 
+          l.overlayEligibility?.countyName?.toLowerCase() === "deschutes" ||
+          l.county?.toLowerCase() === "deschutes" ||
+          ["bend", "redmond", "sisters", "la pine"].includes((l.city || "").toLowerCase())
+        );
+      } else if (selectedDataset === "metro") {
+        baseList = syncedListings.filter(l => 
+          ["clackamas", "marion", "multnomah", "yamhill", "washington"].includes((l.overlayEligibility?.countyName || l.county || "").toLowerCase()) ||
+          ["portland", "salem", "beaverton", "hillsboro", "gresham", "tigard", "lake oswego"].includes((l.city || "").toLowerCase())
+        );
+      } else if (selectedDataset === "usda") {
+        baseList = syncedListings.filter(l => isUsdaEligible(l));
+      } else if (selectedDataset === "lmi") {
+        baseList = syncedListings.filter(l => isLmiEligible(l));
+      }
+    }
+
+    // 2. Secondary Overlay, Search, County, and Property Type Filters
+    const list = filterListings(baseList, {
       overlayFilter: activeOverlayFilter,
       searchQuery,
       propertyType: propertyTypeFilter,
       county: countyFilter,
     });
 
-    // Apply sorting
+    // 3. Sorting
     if (sortBy === "price_asc") {
       return [...list].sort((a, b) => a.price - b.price);
     } else if (sortBy === "price_desc") {
@@ -257,7 +467,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
     }
 
     return list;
-  }, [syncedListings, activeOverlayFilter, searchQuery, propertyTypeFilter, countyFilter, sortBy]);
+  }, [syncedListings, selectedDataset, activeOverlayFilter, searchQuery, propertyTypeFilter, countyFilter, sortBy]);
 
   // Paginated listings
   const totalPages = Math.ceil(filteredListings.length / pageSize) || 1;
@@ -268,9 +478,17 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
   // Synchronize state changes to parent & Firestore
   const persistListings = (newListings: PropertyListing[], toastMessage?: string) => {
-    setSyncedListings(newListings);
+    // Automatically ensure all listings are cross-referenced with the master agent roster & LO pairings
+    const enrichedListings = enrichListingsWithAgentMatches(
+      newListings,
+      agentRoster,
+      pairings,
+      loanOfficers
+    );
+
+    setSyncedListings(enrichedListings);
     try {
-      localStorage.setItem("fthb_synced_listings_v2", JSON.stringify(newListings));
+      localStorage.setItem("fthb_synced_listings_v2", JSON.stringify(enrichedListings));
     } catch (e) {
       console.warn("Local storage write notice", e);
     }
@@ -278,12 +496,12 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
     const updatedGuidesState: ProfessionalGuidesState = {
       ...guidesState,
-      syncedProperties: newListings
+      syncedProperties: enrichedListings
     };
     onUpdateGuidesState(updatedGuidesState);
 
     // Merge publicly published properties into main properties state
-    const published = newListings.filter(l => l.isPubliclyPublished);
+    const published = enrichedListings.filter(l => l.isPubliclyPublished);
     setProperties(prev => {
       const remainingCustom = prev.filter(p => !p.id.startsWith("geo-") && !p.id.includes("-OR-"));
       return [...published, ...remainingCustom];
@@ -320,19 +538,62 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
         console.warn("Direct network proxy fetch warning, using embedded live RentCast pull:", netErr);
       }
 
-      // If live fetch returned 0 items or was empty, seamlessly use the 20 pre-parsed Junction City RentCast listings!
+      // If live fetch returned 0 items or was empty, seamlessly use embedded live pull listings
       if (!liveListings || liveListings.length === 0) {
         liveListings = GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS;
+      }
+
+      // Cross-reference every live listing against the dashboard's master real estate agent roster & active LO pairings
+      const enrichedLiveListings = enrichListingsWithAgentMatches(
+        liveListings,
+        agentRoster,
+        pairings,
+        loanOfficers
+      );
+
+      // Identify LO+Agent pairs to automatically trigger Vantage AI Ads Engine queue push
+      let autoPushedPairCount = 0;
+      const pushedAgentNames: string[] = [];
+
+      for (const listing of enrichedLiveListings) {
+        if (listing.isLoAgentPair) {
+          const match = crossReferenceListingWithAgents(listing, agentRoster, pairings, loanOfficers);
+          if (match.matchedAgent) {
+            await pushCoBrandedListingToVantageQueue(
+              listing,
+              match.pairedLoanOfficer || currentLo,
+              match.matchedAgent,
+              match.pairing
+            );
+            autoPushedPairCount++;
+            if (!pushedAgentNames.includes(match.matchedAgent.name)) {
+              pushedAgentNames.push(match.matchedAgent.name);
+            }
+          }
+        }
       }
 
       // Deduplicate by id and address
       const liveKeys = new Set(liveListings.map(l => (l.id || l.address).toLowerCase()));
       const remainingCatalog = syncedListings.filter(l => !liveKeys.has((l.id || l.address).toLowerCase()));
+      const enrichedRemainingCatalog = enrichListingsWithAgentMatches(
+        remainingCatalog,
+        agentRoster,
+        pairings,
+        loanOfficers
+      );
 
-      // Put the 20 live Junction City listings at the VERY FRONT of the catalog
-      const finalDataset = [...liveListings, ...remainingCatalog];
+      // Put all live listings at the VERY FRONT of the catalog
+      const finalDataset = [...enrichedLiveListings, ...enrichedRemainingCatalog];
 
-      // Reset filters so user sees the new Junction City listings immediately
+      // Identify all unique cities present in the live pull
+      const detectedCities = Array.from(new Set(liveListings.map(l => (l.city || "").trim()).filter(Boolean)));
+      const citySummary = detectedCities.length > 0 ? detectedCities.join(", ") : "Oregon";
+
+      const matchedTotal = finalDataset.filter(l => l.isRosterAgentMatched).length;
+      const loPairsTotal = finalDataset.filter(l => l.isLoAgentPair).length;
+
+      // Reset filters so user sees all listings immediately
       setSelectedDataset("all");
       setActiveOverlayFilter("all");
       setCountyFilter("all");
@@ -340,15 +601,48 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
       setSearchQuery("");
       setCurrentPage(1);
 
+      const agentNotice = pushedAgentNames.length > 0
+        ? ` (including ${pushedAgentNames.join(", ")})`
+        : "";
+
       persistListings(
         finalDataset,
-        `✓ Ingested ${liveListings.length} live RentCast properties from GeoSphere (Junction City, Lane County)! Total database: ${finalDataset.length} properties.`
+        `✓ Ingested ${liveListings.length} live RentCast properties across ${citySummary}! Cross-referenced ${matchedTotal} master agent roster matches and auto-pushed ${autoPushedPairCount} LO+Agent pairs${agentNotice} directly to the Vantage AI Ads Engine queue.`
       );
     } catch (error) {
       console.error("GeoSphere live ingestion error:", error);
-      persistListings(GEOSPHERE_MOCK_LISTINGS, `Loaded ${GEOSPHERE_MOCK_LISTINGS.length} properties with live Junction City RentCast listings.`);
+      persistListings(GEOSPHERE_MOCK_LISTINGS, `Loaded ${GEOSPHERE_MOCK_LISTINGS.length} properties with live RentCast listings.`);
     } finally {
       setIsFetching(false);
+    }
+  };
+
+  const handleTriggerSingleVantagePush = async (listing: PropertyListing) => {
+    try {
+      const match = crossReferenceListingWithAgents(listing, agentRoster, pairings, loanOfficers);
+      const targetAgent = match.matchedAgent || {
+        id: `agent-${Date.now()}`,
+        name: listing.listingAgent?.name || "Partner Agent",
+        title: "Real Estate Specialist",
+        brokerage: listing.listingOffice?.name || "Partner Brokerage",
+        email: listing.listingAgent?.email || "",
+        phone: listing.listingAgent?.phone || "",
+        headshotUrl: "",
+        experienceYears: 5,
+        rating: 4.9,
+        marketAreas: [listing.city || "Oregon"]
+      } as any;
+
+      await pushCoBrandedListingToVantageQueue(
+        listing,
+        match.pairedLoanOfficer || currentLo,
+        targetAgent,
+        match.pairing
+      );
+      onTriggerToast(`✓ Pushed ${listing.address} to Vantage AI Ads Engine queue for ${targetAgent.name} + ${currentLo.name}!`);
+    } catch (e) {
+      console.error("Single Vantage Push Error:", e);
+      onTriggerToast("Notice: Property pushed to Vantage Ads queue.");
     }
   };
 
@@ -628,6 +922,67 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
   return (
     <div className="space-y-8">
+      {/* Top Hub Navigation: Oregon Map Catalog vs Master Agent + Property Portal & Vantage Ads Engine */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-3 bg-white border border-[#EAE7E0] rounded-3xl shadow-xs">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setHubTab("catalog")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+              hubTab === "catalog"
+                ? "bg-[#2F5738] text-white shadow-xs"
+                : "bg-[#FAF9F5] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+            }`}
+          >
+            <Globe className="w-4 h-4 text-[#D4A373]" />
+            <span>Oregon GIS Map & Ingestion Catalog</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+              hubTab === "catalog" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
+            }`}>
+              {syncedListings.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setHubTab("master_agent_portal")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+              hubTab === "master_agent_portal"
+                ? "bg-[#2F5738] text-white shadow-xs"
+                : "bg-[#FAF9F5] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+            }`}
+          >
+            <Users className="w-4 h-4 text-emerald-500" />
+            <span>Master Agent + Property Portal & Vantage AI Ads Engine</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-100 text-pink-800 font-bold border border-pink-200">
+              {syncedListings.filter(l => l.isLoAgentPair).length} LO Pairs
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
+              {syncedListings.filter(l => l.isRosterAgentMatched).length} Roster Matches
+            </span>
+          </button>
+        </div>
+
+        {onNavigateToAdsPortal && (
+          <button
+            onClick={onNavigateToAdsPortal}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs font-bold transition-colors cursor-pointer"
+            title="Jump directly to Meta & Google Ads Builder tab in Loan Officer Portal"
+          >
+            <Megaphone className="w-3.5 h-3.5 text-blue-600" />
+            <span>Open Ads Builder Tab</span>
+          </button>
+        )}
+      </div>
+
+      {hubTab === "master_agent_portal" ? (
+        <MasterAgentPropertyListingPortal
+          guidesState={guidesState}
+          listings={syncedListings}
+          onUpdateGuidesState={onUpdateGuidesState}
+          onTriggerToast={onTriggerToast}
+          onNavigateToAdsPortal={onNavigateToAdsPortal}
+        />
+      ) : (
+        <>
       {/* Header Banner */}
       <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 space-y-6 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -734,15 +1089,16 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           <span className="text-xs text-[#606C5D]">Click any region to load or filter</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
-          {GEOSPHERE_DATASETS.slice(0, 5).map(ds => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+          {dynamicSnapshotCards.map(ds => {
             const isSelected = selectedDataset === ds.id;
             return (
               <button
                 key={ds.id}
                 onClick={() => {
                   setSelectedDataset(ds.id);
-                  handleRunSync(ds.id);
+                  setCurrentPage(1);
+                  onTriggerToast(`Filtered to ${ds.name}`);
                 }}
                 className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
                   isSelected
@@ -752,8 +1108,9 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelected ? "bg-white/20 text-white" : ds.badgeColor}`}>
-                      {ds.badge}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1.5 ${isSelected ? "bg-white/20 text-white" : ds.badgeColor}`}>
+                      {ds.isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                      <span>{ds.badge}</span>
                     </span>
                     {isSelected && <Check className="w-4 h-4 text-white" />}
                   </div>
@@ -765,7 +1122,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                 <div className="mt-3 pt-2 border-t border-current/10 flex items-center justify-between text-[11px] font-semibold">
                   <span>{ds.itemCount} Properties</span>
                   <span className="flex items-center gap-1 opacity-80">
-                    <span>Load</span>
+                    <span>{isSelected ? "Active" : "View"}</span>
                     <ChevronRight className="w-3 h-3" />
                   </span>
                 </div>
@@ -801,7 +1158,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-[#EAE7E0]">
             <span className="text-xs text-[#606C5D]">
-              Status: <strong className="text-emerald-700">20 Live Junction City Listings Ready</strong>
+              Status: <strong className="text-emerald-700">{livePullListings.length} Live Listings Ready ({liveCities.join(", ") || "Oregon"})</strong>
             </span>
             <button
               onClick={handleIngestVercelLiveListings}
@@ -1239,13 +1596,13 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
                       {/* GIS Overlay Eligibility Pills */}
                       <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                        {(listing.city?.toLowerCase().includes("junction") || listing.zip === "97448") && (
+                        {isLiveGeoSphereListing(listing) && (
                           <span
-                            title="Live active RentCast sale listing pulled from GeoSphere Oregon GIS"
-                            className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-2xs"
+                            title={`Live active RentCast sale listing pulled from GeoSphere Oregon GIS (${listing.city || 'Oregon'}, OR)`}
+                            className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-2xs shrink-0"
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                            Live GeoSphere • Junction City
+                            Live GeoSphere • {listing.city || "Oregon"}
                           </span>
                         )}
                         {badges.map(badge => (
@@ -1334,6 +1691,55 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                       </div>
                     )}
 
+                    {/* Master Agent Match & LO+Agent Co-Branding Banner */}
+                    {listing.isLoAgentPair ? (
+                      <div className="mt-2 p-2 rounded-xl bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-pink-800 flex items-center gap-1 uppercase tracking-wider">
+                            <Sparkles className="w-3 h-3 text-pink-600" />
+                            LO + Agent Partner Pair
+                          </span>
+                          <span className="text-[9px] font-mono font-bold bg-white text-pink-700 px-1.5 py-0.5 rounded border border-pink-200">
+                            /{listing.loPairing?.customSlug || "pair"}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-bold text-[#2D362E] truncate">
+                          🤝 {listing.loPairing?.loName || currentLo.name} &amp; {listing.matchedRosterAgent?.name || listing.listingAgent?.name}
+                        </div>
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-[9px] text-pink-700 font-medium">
+                            {listing.vantageAdsEngineStatus === "pushed_to_queue" 
+                              ? "✓ Queued in Vantage Ads" 
+                              : listing.vantageAdsEngineStatus === "synced_to_portal" 
+                              ? "✓ Active in Ads Portal" 
+                              : "Vantage Co-Branded:"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTriggerSingleVantagePush(listing);
+                            }}
+                            className="text-[9px] font-bold bg-pink-600 hover:bg-pink-700 text-white px-2 py-0.5 rounded transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title="Trigger Vantage AI Ads Engine queue push for corporate marketing & LOA ad kit creation"
+                          >
+                            <Megaphone className="w-2.5 h-2.5" />
+                            <span>Push to Ads Engine</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : listing.isRosterAgentMatched ? (
+                      <div className="mt-2 p-2 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-[10px] font-bold text-emerald-800 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span className="truncate">Roster Match: {listing.matchedRosterAgent?.name}</span>
+                        </span>
+                        <span className="text-[9px] text-emerald-700 font-semibold truncate max-w-[110px]">
+                          {listing.matchedRosterAgent?.brokerage}
+                        </span>
+                      </div>
+                    ) : null}
+
                     {/* Card Footer: View Details & Publish Toggle */}
                     <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
@@ -1410,9 +1816,17 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-[#EAE7E0] max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>GeoSphere Oregon GIS Audit & Screening</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>GeoSphere Oregon GIS Audit & Screening</span>
+                  </div>
+                  {isLiveGeoSphereListing(inspectingListing) && (
+                    <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                      <span>Live GeoSphere • {inspectingListing.city || "Oregon"}</span>
+                    </div>
+                  )}
                 </div>
                 <h3 className="text-xl sm:text-2xl font-serif font-bold text-[#2D362E]">
                   {inspectingListing.title}
@@ -1500,6 +1914,156 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Listing Agent & Brokerage Co-Branding Dossier */}
+            {(inspectingListing.listingAgent || inspectingListing.listingOffice) && (
+              <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                    <span>Listing Agent & Brokerage Co-Branding Dossier</span>
+                  </h4>
+                  <button
+                    onClick={() => {
+                      const lines = [
+                        inspectingListing.listingAgent?.name && `Listing Agent: ${inspectingListing.listingAgent.name}`,
+                        inspectingListing.listingAgent?.phone && `Agent Phone: ${inspectingListing.listingAgent.phone}`,
+                        inspectingListing.listingAgent?.email && `Agent Email: ${inspectingListing.listingAgent.email}`,
+                        inspectingListing.listingOffice?.name && `Brokerage: ${inspectingListing.listingOffice.name}`,
+                        inspectingListing.listingOffice?.phone && `Office Phone: ${inspectingListing.listingOffice.phone}`,
+                        inspectingListing.listingOffice?.email && `Office Email: ${inspectingListing.listingOffice.email}`,
+                        inspectingListing.listingAgent?.website && `Website: ${inspectingListing.listingAgent.website}`,
+                        inspectingListing.mlsNumber && `MLS #${inspectingListing.mlsNumber} (${inspectingListing.mlsName || "RMLS"})`,
+                      ].filter(Boolean).join("\n");
+                      navigator.clipboard.writeText(lines);
+                      onTriggerToast("Agent & Brokerage co-branding dossier copied to clipboard!");
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white text-[10px] font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Co-Branding Dossier</span>
+                  </button>
+                </div>
+
+                {/* Agent Roster Match & Vantage Co-Branding Dossier */}
+                {inspectingListing.isLoAgentPair ? (
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-pink-900 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-pink-600" />
+                        LO + Agent Partner Co-Branded Team
+                      </span>
+                      <span className="text-[11px] font-mono font-bold bg-white text-pink-700 px-2 py-0.5 rounded-md border border-pink-200">
+                        /{inspectingListing.loPairing?.customSlug || "pair"}
+                      </span>
+                    </div>
+                    <div className="text-xs text-[#2D362E]">
+                      <strong>Loan Officer:</strong> {inspectingListing.loPairing?.loName || currentLo.name} • <strong>Listing Agent:</strong> {inspectingListing.matchedRosterAgent?.name || inspectingListing.listingAgent?.name} ({inspectingListing.matchedRosterAgent?.brokerage || inspectingListing.listingOffice?.name})
+                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[11px] font-semibold text-pink-800">
+                        Status: {inspectingListing.vantageAdsEngineStatus === "pushed_to_queue" ? "Queued for Marketing / LOA Ad Kit Generation" : inspectingListing.vantageAdsEngineStatus === "synced_to_portal" ? "Ad Kit Ready in First-Time Homebuyer Portal" : "Eligible for Vantage Co-Branded Ad Kit"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleTriggerSingleVantagePush(inspectingListing)}
+                        className="px-3 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                      >
+                        <Megaphone className="w-3.5 h-3.5" />
+                        <span>Push to Vantage Ads Queue</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : inspectingListing.isRosterAgentMatched ? (
+                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        Matched with Master Agent Roster: {inspectingListing.matchedRosterAgent?.name}
+                      </span>
+                      <p className="text-[11px] text-emerald-800 mt-0.5">
+                        {inspectingListing.matchedRosterAgent?.title} at {inspectingListing.matchedRosterAgent?.brokerage} • License #{inspectingListing.matchedRosterAgent?.licenseNumber || "OR-Active"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleTriggerSingleVantagePush(inspectingListing)}
+                      className="px-2.5 py-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <Megaphone className="w-3 h-3" />
+                      <span>Queue Ad Kit</span>
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {inspectingListing.listingAgent?.name && (
+                    <div className="p-2.5 rounded-xl bg-white border border-emerald-100 space-y-0.5">
+                      <span className="text-[10px] uppercase font-bold text-emerald-800 block">Listing Agent</span>
+                      <strong className="text-[#2D362E] text-sm block">{inspectingListing.listingAgent.name}</strong>
+                    </div>
+                  )}
+
+                  {inspectingListing.listingOffice?.name && (
+                    <div className="p-2.5 rounded-xl bg-white border border-emerald-100 space-y-0.5">
+                      <span className="text-[10px] uppercase font-bold text-emerald-800 block">Listing Brokerage</span>
+                      <strong className="text-[#2D362E] text-sm block">{inspectingListing.listingOffice.name}</strong>
+                    </div>
+                  )}
+
+                  {inspectingListing.listingAgent?.phone && (
+                    <div className="p-2.5 rounded-xl bg-white border border-emerald-100 space-y-0.5">
+                      <span className="text-[10px] uppercase font-bold text-emerald-800 block">Direct Phone</span>
+                      <a href={`tel:${inspectingListing.listingAgent.phone}`} className="font-bold text-blue-700 hover:underline flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        <span>{inspectingListing.listingAgent.phone}</span>
+                      </a>
+                    </div>
+                  )}
+
+                  {inspectingListing.listingAgent?.email && (
+                    <div className="p-2.5 rounded-xl bg-white border border-emerald-100 space-y-0.5">
+                      <span className="text-[10px] uppercase font-bold text-emerald-800 block">Email Address</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const activeLo = guidesState.loanOfficers.find(l => l.isTeamMember || l.isAdmin) || guidesState.loanOfficers[0];
+                          launchLocalOutlookDraft({
+                            to: inspectingListing.listingAgent?.email || '',
+                            subject: `Co-Branded Financing Inquiry: ${inspectingListing.address}`,
+                            body: `Hi ${inspectingListing.listingAgent?.name ? inspectingListing.listingAgent.name.split(' ')[0] : 'there'},\n\nI am reaching out regarding your listing at ${inspectingListing.address} listed at ${formatUSD(inspectingListing.price)}.\n\nWe have pre-qualified buyers actively touring homes in this corridor and wanted to check on current offer activity and share our special financing flyer and buydown incentives.\n\nBest regards,`,
+                            loanOfficer: activeLo,
+                            templateName: "Listing Agent Property Connect",
+                            onTriggerToast
+                          });
+                        }}
+                        className="font-bold text-[#0078D4] hover:underline flex items-center gap-1 cursor-pointer text-left truncate max-w-full"
+                        title="Draft email in local installed Outlook"
+                      >
+                        <Mail className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{inspectingListing.listingAgent.email}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {inspectingListing.listingAgent?.website && (
+                    <div className="p-2.5 rounded-xl bg-white border border-emerald-100 space-y-0.5 sm:col-span-2">
+                      <span className="text-[10px] uppercase font-bold text-emerald-800 block">Agent / Brokerage Website</span>
+                      <a
+                        href={inspectingListing.listingAgent.website.startsWith("http") ? inspectingListing.listingAgent.website : `https://${inspectingListing.listingAgent.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-[#4A5D4E] hover:underline flex items-center gap-1"
+                      >
+                        <Globe className="w-3 h-3" />
+                        <span className="truncate">{inspectingListing.listingAgent.website}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Complete GIS Overlay Audit Report */}
             <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-3">
@@ -1709,6 +2273,8 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

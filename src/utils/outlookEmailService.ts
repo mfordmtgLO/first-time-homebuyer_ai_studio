@@ -253,7 +253,7 @@ export function launchLocalOutlookDraft(options: LaunchOutlookOptions): void {
 
   // 5. Create audit history log item for CRM tracking
   const timestamp = new Date().toISOString();
-  // const loName = loanOfficer?.name || "Mike Ford";
+  const loName = loanOfficer?.name || "Mike Ford";
   const recipientName = lead?.fullName || agent?.name || to;
 
   const historyItem: EmailHistoryItem = {

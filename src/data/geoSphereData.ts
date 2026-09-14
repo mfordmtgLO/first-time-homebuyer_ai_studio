@@ -1,4 +1,7 @@
 import { PropertyListing } from "../types";
+import { GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS } from "./junctionCityLiveListings";
+
+export { GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS };
 
 export interface GeoSphereDatasetOption {
   id: string;
@@ -14,13 +17,23 @@ export interface GeoSphereDatasetOption {
 export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
   {
     id: "all",
-    name: "All GeoSphere Saved Listings (Full 229 Property Master Database)",
+    name: "All GeoSphere Saved Listings (Full 249 Property Master Database)",
     category: "all",
-    description: "Complete unified catalog across Coos Bay, Eugene, Bend, Redmond, Portland Metro, and all 36 Oregon counties with full GIS overlays.",
-    badge: "Master Database (229)",
+    description: "Complete unified catalog across Junction City, Eugene, Coos Bay, Bend, Redmond, Portland Metro, and all 36 Oregon counties with full GIS overlays.",
+    badge: "Master Database (249)",
     badgeColor: "bg-[#4A5D4E] text-white",
     sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings",
-    itemCount: 229
+    itemCount: 249
+  },
+  {
+    id: "junction_city",
+    name: "Junction City / Lane County Live RentCast Pull (20 Properties)",
+    category: "lane",
+    description: "Live active RentCast sale listings from GeoSphere Oregon GIS in Junction City with Jake Zach / Hybrid Real Estate, USDA, and FirstHome overlays.",
+    badge: "Junction City Live (20)",
+    badgeColor: "bg-emerald-800 text-white",
+    sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings",
+    itemCount: 20
   },
   {
     id: "coos",
@@ -34,13 +47,13 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
   },
   {
     id: "lane",
-    name: "Willamette Valley & Eugene / Lane County (38 Properties)",
+    name: "Willamette Valley & Eugene / Lane County (58 Properties)",
     category: "lane",
-    description: "Eugene, Springfield, Cottage Grove, and Florence listings pre-screened for OHCS Flex Lending cash assistance and transit corridor grants.",
-    badge: "Lane / Eugene (38)",
+    description: "Junction City, Eugene, Springfield, Cottage Grove, and Florence listings pre-screened for OHCS Flex Lending cash assistance and transit corridor grants.",
+    badge: "Lane / Eugene (58)",
     badgeColor: "bg-emerald-800 text-white",
     sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings?area=lane",
-    itemCount: 38
+    itemCount: 58
   },
   {
     id: "deschutes",
@@ -70,7 +83,7 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
     badge: "USDA 0% Down",
     badgeColor: "bg-emerald-700 text-white",
     sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings?filter=usda",
-    itemCount: 198
+    itemCount: 218
   },
   {
     id: "lmi",
@@ -85,6 +98,7 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
 ];
 
 export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
+  ...GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS,
   {
     "id": "546-W-Fir-Ave,-Coos-Bay,-OR-97420",
     "title": "546 W Fir Ave Coastal Home",

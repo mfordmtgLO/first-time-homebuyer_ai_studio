@@ -142,6 +142,7 @@ import { BatchLeadRecommendations } from "./BatchLeadRecommendations";
 import { DailyMorningBriefing } from "./DailyMorningBriefing";
 import { TaskManagementPanel } from "./TaskManagementPanel";
 import { AgenticOrchestratorDiagnostics } from "./AgenticOrchestratorDiagnostics";
+import { subscribeToIncomingAds, SyncedAdAsset } from "../services/adAssetSync";
 import { subscribeToAllPropertyActionItems } from "../services/propertyConversationService";
 import { SmsTemplateLibrary } from "./SmsTemplateLibrary";
 import { LeadPropertyConversationSync } from "./LeadPropertyConversationSync";
@@ -273,6 +274,41 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     const unsub = subscribeToAllPropertyActionItems(setPropertyActionItems);
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (!authenticatedLoId) return;
+    const unsub = subscribeToIncomingAds(authenticatedLoId, (ads) => {
+      // Map the SyncedAdAsset to AdCampaignDraft schema used by guidesState
+      const mappedDrafts = ads.map(ad => ({
+        id: ad.id,
+        targetAudience: ad.platformTarget,
+        coreMessage: ad.adCopy,
+        assets: [ad.videoUrl].filter(Boolean),
+        status: ad.status === "Approved" ? "approved" : "draft",
+        metrics: undefined,
+        complianceStatus: "pending",
+        dateCreated: ad.timestamp?.toDate ? ad.timestamp.toDate().toISOString() : new Date().toISOString()
+      }));
+      
+      setGuidesState(prev => {
+        // If we have more mapped drafts than what's currently in state, it means a new one arrived!
+        const currentCount = prev.adCampaignDrafts?.length || 0;
+        if (mappedDrafts.length > currentCount && currentCount > 0) {
+          // Play a sound or show a generic alert since we can't easily trigger the toast context from here without adding more complexity
+          console.log("New Ad Campaign received from Vantage AI Ads Engine!");
+          if (typeof window !== "undefined") {
+            // we'll just let the state update
+          }
+        }
+        return {
+          ...prev,
+          adCampaignDrafts: mappedDrafts
+        };
+      });
+    });
+    return () => unsub();
+  }, [authenticatedLoId]);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {

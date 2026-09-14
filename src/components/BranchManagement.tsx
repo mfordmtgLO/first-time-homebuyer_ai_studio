@@ -287,6 +287,19 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
     }
   };
 
+  
+  const handleToggleLock = async (email: string, currentLockState: boolean) => {
+    try {
+      await updateDoc(doc(db, "whitelisted_emails", email), {
+        isLockedOut: !currentLockState
+      });
+      setUsers(prev => prev.map(u => u.email === email ? { ...u, isLockedOut: !currentLockState } : u));
+      showFeedback(!currentLockState ? `Locked out ${email}` : `Restored access for ${email}`);
+    } catch (err) {
+      console.warn("Error toggling lock state:", err);
+    }
+  };
+
   const handleRemoveUser = async (email: string) => {
     if (!confirm(`Are you sure you want to revoke access and delete permissions for ${email}?`)) return;
     
@@ -821,6 +834,8 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
                         <option value="senior_lo">Senior Loan Officer</option>
                         <option value="team_lo">Team Loan Officer</option>
                         <option value="processor">Loan Processor</option>
+                        <option value="mktg_ads_creator">MKTG & Ads Creator</option>
+                        <option value="loa">Loan Officer Assistant</option>
                       </select>
                     </div>
 

@@ -57,6 +57,9 @@ export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admi
     
     if (whitelistSnap.exists()) {
       const whitelistData = whitelistSnap.data();
+      if (whitelistData.isLockedOut === true) {
+        throw new Error("LOCKED_OUT");
+      }
       const assignedRole = normalizeRole(whitelistData.role || "team_lo");
 
       // 3. Provision User with Granular RBAC Role (non-blocking update)

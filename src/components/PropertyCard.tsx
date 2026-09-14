@@ -22,7 +22,8 @@ import {
   ShoppingCart,
   Bus,
   TreePine,
-  Calculator
+  Calculator,
+  Megaphone
 } from "lucide-react";
 import { PropertyListing, FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -37,6 +38,7 @@ import {
 import { getPropertyOhcsPriceLimit } from "../utils/ohcsPurchaseLimits";
 import { calculateEstimatedMarketValue } from "../utils/marketValueUtils";
 import { PropertyNotesThread } from "./PropertyNotesThread";
+import { PropertyLinkedAds } from "./ai/PropertyLinkedAds";
 
 /**
  * Curated high-resolution local architectural fallback photo suites.
@@ -677,7 +679,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
           )}
 
-          {/* Bidirectional Property Notes Thread, Gamified Q&A & Co-Branded Schema */}
+                    {/* Injected Vantage Ads Engine Asset Viewer */}
+          <PropertyLinkedAds 
+            propertyId={property.id} 
+            propertyAddress={property.address} 
+            loanOfficerId={loanOfficer?.id}
+          />\n          {/* Bidirectional Property Notes Thread, Gamified Q&A & Co-Branded Schema */}
           <PropertyNotesThread
             property={property}
             loanOfficer={loanOfficer}
@@ -790,6 +797,54 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           >
             Live on Zillow ↗
           </a>
+        </div>
+
+        <div className="flex items-center gap-1 sm:gap-2 mt-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const payload = {
+                targetLoUid: loanOfficer?.id || "lo_default",
+                source: "First-Time Homebuyer GeoSphere",
+                batchId: "batch_" + Date.now(),
+                properties: [{
+                  propertyId: property.id,
+                  address: property.address,
+                  city: property.city,
+                  price: property.price,
+                  beds: property.bedrooms || 0,
+                  baths: property.bathrooms || 0,
+                  squareFeet: property.sqft || 0,
+                  daysOnMarket: property.daysOnMarket || 0,
+                  rentcastEstRent: property.estimatedRent || 0,
+                  agentName: agent?.name || "Unknown",
+                  agentPhone: agent?.phone || "",
+                  agentEmail: agent?.email || "",
+                  tags: [
+                    ...(property.isUsdaEligible ? ["USDA", "Zero Down"] : []),
+                    ...(property.isOhcsEligible ? ["OHCS Eligible"] : [])
+                  ]
+                }]
+              };
+              
+              fetch("https://ais-pre-tnbidd2z2dclvambkyz3vi-427099073161.us-east5.run.app/api/webhooks/property-sync", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+              }).then(() => {
+                alert("Property data successfully sent to Vantage AI Ads Engine!");
+              }).catch(err => {
+                console.error("Ads Engine Sync Error:", err);
+                alert("Error sending to Ads Engine. See console.");
+              });
+            }}
+            className="flex-1 py-2 px-1 sm:px-2.5 rounded-xl bg-pink-50 dark:bg-pink-900/30 hover:bg-pink-100 text-pink-700 dark:text-pink-400 hover:text-pink-900 text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-colors border border-pink-200 shadow-sm"
+            title="Send property data to Vantage AI Ads Engine to generate targeted video ads"
+          >
+            <Megaphone className="w-3 sm:w-3.5 h-3 sm:h-3.5 shrink-0" />
+            <span className="truncate">Send to Ads Engine</span>
+          </button>
         </div>
       </div>
     </div>

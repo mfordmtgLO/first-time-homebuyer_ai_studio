@@ -80,13 +80,16 @@ export const AdDeploymentModal: React.FC<AdDeploymentModalProps> = ({
 
   useEffect(() => {
     if (variation) {
-      setCampaignName(`[${isMeta ? 'FB/IG' : 'Google Video'}] ${variation.title} - Q3 Commercial`);
-      setHeadline(variation.adDeploymentSpec?.headline || variation.title);
-      setPrimaryText(variation.adDeploymentSpec?.primaryText || `${variation.hook}\n\n${variation.fullVoiceoverScript}`);
-      setCtaButton(variation.adDeploymentSpec?.ctaButton || "Learn More");
-      setDestinationUrl(pairingUrl || `https://vantage-mortgage.web.app/portal?lo=${loanOfficer.id}`);
-      setDailyBudget(initialSettings.dailyBudgetUSD || 25);
-      setDeployedSuccess(null);
+      const timer = setTimeout(() => {
+        setCampaignName(`[${isMeta ? 'FB/IG' : 'Google Video'}] ${variation.title} - Q3 Commercial`);
+        setHeadline(variation.adDeploymentSpec?.headline || variation.title);
+        setPrimaryText(variation.adDeploymentSpec?.primaryText || `${variation.hook}\n\n${variation.fullVoiceoverScript}`);
+        setCtaButton(variation.adDeploymentSpec?.ctaButton || "Learn More");
+        setDestinationUrl(pairingUrl || `https://vantage-mortgage.web.app/portal?lo=${loanOfficer.id}`);
+        setDailyBudget(initialSettings.dailyBudgetUSD || 25);
+        setDeployedSuccess(null);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [variation, isMeta, pairingUrl, loanOfficer.id, initialSettings.dailyBudgetUSD]);
 

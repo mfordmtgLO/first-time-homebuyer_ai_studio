@@ -122,7 +122,6 @@ import {
 } from "../types";
 import { SocialPushHub } from "./SocialPushHub";
 import { AdsCampaignHub } from "./AdsCampaignHub";
-import { AICommercialAdGenerator } from "./ai/AICommercialAdGenerator";
 import { LoanOfficerLoginView } from "./LoanOfficerLoginView";
 import { StateLicensingSelector } from "./StateLicensingSelector";
 import { processLocalImageFile } from "../utils/imageUtils";
@@ -278,31 +277,46 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   useEffect(() => {
     if (!authenticatedLoId) return;
     const unsub = subscribeToIncomingAds(authenticatedLoId, (ads) => {
+      if (!ads || ads.length === 0) return;
       // Map the SyncedAdAsset to AdCampaignDraft schema used by guidesState
-      const mappedDrafts = ads.map(ad => ({
+      const mappedDrafts: AdCampaignDraft[] = ads.map(ad => ({
         id: ad.id,
-        targetAudience: ad.platformTarget,
-        coreMessage: ad.adCopy,
+        platform: (ad.platformTarget?.toLowerCase().includes("google") ? "google" : "meta") as 'meta' | 'google',
+        loId: authenticatedLoId,
+        agentId: "agent-jake-zach",
+        campaignName: ad.title || `Vantage Curated Ad - ${ad.id.slice(0, 8)}`,
+        headline: ad.title || "First-Time Homebuyer 0% Down Program",
+        secondaryHeadlines: ["0% Down USDA & Grant Options", "Stop Renting in Oregon", "Pre-Qualify in 60 Seconds"],
+        primaryText: ad.adCopy || "Turnkey co-branded campaign asset from Vantage AI Ads Engine.",
+        descriptionText: ad.campaignGoal || "Co-Branded Lead Generation",
+        targetUrl: `/pair-mike-jake`,
+        dailyBudget: 25,
+        targetLocations: ["Oregon", "Lane County", "Junction City", "Eugene", "Portland Metro"],
+        specialHousingCategory: true,
+        adObjective: "LEAD_GENERATION",
+        status: (ad.status === "Approved" || ad.status === "Ready for LO Deployment") ? "ready_to_launch" : "draft",
+        lastSaved: ad.timestamp?.toDate ? ad.timestamp.toDate().toISOString() : new Date().toISOString(),
+        propertyId: ad.propertyId,
+        isVantageCurated: true,
+        isNewAwaitingPublication: true,
+        videoUrl: ad.videoUrl,
         assets: [ad.videoUrl].filter(Boolean),
-        status: ad.status === "Approved" ? "approved" : "draft",
-        metrics: undefined,
-        complianceStatus: "pending",
-        dateCreated: ad.timestamp?.toDate ? ad.timestamp.toDate().toISOString() : new Date().toISOString()
+        coreMessage: ad.adCopy,
+        targetAudience: ad.platformTarget,
+        publishedChannels: []
       }));
       
       setGuidesState(prev => {
-        // If we have more mapped drafts than what's currently in state, it means a new one arrived!
-        const currentCount = prev.adCampaignDrafts?.length || 0;
-        if (mappedDrafts.length > currentCount && currentCount > 0) {
-          // Play a sound or show a generic alert since we can't easily trigger the toast context from here without adding more complexity
-          console.log("New Ad Campaign received from Vantage AI Ads Engine!");
-          if (typeof window !== "undefined") {
-            // we'll just let the state update
-          }
-        }
+        const currentDrafts = prev.adCampaignDrafts || [];
+        const existingIds = new Set(currentDrafts.map(d => d.id));
+        const newItems = mappedDrafts.filter(d => !existingIds.has(d.id));
+        const updatedItems = currentDrafts.map(curr => {
+          const match = mappedDrafts.find(m => m.id === curr.id);
+          return match ? { ...curr, ...match } : curr;
+        });
         return {
           ...prev,
-          adCampaignDrafts: mappedDrafts
+          adCampaignDrafts: [...newItems, ...updatedItems]
         };
       });
     });
@@ -7531,6 +7545,7 @@ Mike Ford`;
                 loanOfficer={currentLo}
                 activeAgent={activeAgent}
                 adCampaignDrafts={guidesState.adCampaignDrafts || []}
+                properties={guidesState.syncedProperties || []}
                 onSaveAdDraft={(draft) => {
                   onUpdateGuidesState({
                     ...guidesState,
@@ -7539,6 +7554,12 @@ Mike Ford`;
                 }}
                 onUpdateCampaign={(campaign) => {
                   const updatedDrafts = (guidesState.adCampaignDrafts || []).map(d => d.id === campaign.id ? campaign : d);
+                  onUpdateGuidesState({
+                    ...guidesState,
+                    adCampaignDrafts: updatedDrafts
+                  });
+                }}
+                onBulkUpdateCampaigns={(updatedDrafts) => {
                   onUpdateGuidesState({
                     ...guidesState,
                     adCampaignDrafts: updatedDrafts
@@ -7565,32 +7586,7 @@ Mike Ford`;
               />
             )}
 
-            {/* Tab: AI Commercial & Ads Generator */}
-            {activeTab === "ai_ad_generator" && (
-              <AICommercialAdGenerator
-                loanOfficer={currentLo}
-                activeAgent={activeAgent}
-                adCampaignDrafts={guidesState.adCampaignDrafts || []}
-                onSaveAdDraft={(draft) => {
-                  onUpdateGuidesState({
-                    ...guidesState,
-                    adCampaignDrafts: [draft, ...(guidesState.adCampaignDrafts || [])],
-                  });
-                }}
-                onUpdateAdSettings={(adSettings) => {
-                  const updatedLo = { ...currentLo, adSettings };
-                  const updatedLos = guidesState.loanOfficers.map((l) =>
-                    l.id === currentLo.id ? updatedLo : l
-                  );
-                  onUpdateGuidesState({
-                    ...guidesState,
-                    loanOfficer: updatedLo,
-                    loanOfficers: updatedLos,
-                  });
-                }}
-                pairingUrl={activePairingUrl}
-              />
-            )}
+            {/* AI Commercial Generator Removed - Now handled exclusively in Vantage AI Ads Engine */}
 
             {/* Tab: SMS Compliance & Opt-in Management Dashboard */}
             {activeTab === "sms_compliance" && (

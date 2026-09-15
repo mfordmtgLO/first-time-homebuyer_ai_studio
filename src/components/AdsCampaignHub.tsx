@@ -15,21 +15,31 @@ import {
   Save, 
   Eye,
   ShieldCheck,
-  Zap
+  Zap,
+  Home,
+  Plus
 } from "lucide-react";
 import { 
   LoanOfficerProfile, 
   RealEstateAgentProfile, 
   AdCampaignDraft, 
-  LoanOfficerAdSettings 
+  LoanOfficerAdSettings,
+  PropertyListing
 } from "../types";
+import { 
+  pushCoBrandedListingToVantageQueue,
+  createDraftAdFromCoBrandedKit
+} from "../utils/agentListingCrossReference";
+import { AdQueueManager } from "./AdQueueManager";
 
 interface AdsCampaignHubProps {
   loanOfficer: LoanOfficerProfile;
   activeAgent: RealEstateAgentProfile;
   adCampaignDrafts: AdCampaignDraft[];
+  properties?: PropertyListing[];
   onSaveAdDraft: (draft: AdCampaignDraft) => void;
   onUpdateCampaign?: (campaign: AdCampaignDraft) => void;
+  onBulkUpdateCampaigns?: (campaigns: AdCampaignDraft[]) => void;
   onUpdateAdSettings: (settings: LoanOfficerAdSettings) => void;
   pairingUrl: string;
   onToggleCampaignState?: (id: string, newStatus: string) => void;
@@ -40,9 +50,14 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
   loanOfficer,
   activeAgent,
   adCampaignDrafts,
+  properties = [],
   onSaveAdDraft,
+  onUpdateCampaign,
+  onBulkUpdateCampaigns,
   onUpdateAdSettings,
-  pairingUrl
+  pairingUrl,
+  onToggleCampaignState,
+  onCaptureLead
 }) => {
   const [activePlatformTab, setActivePlatformTab] = useState<"meta" | "google">("meta");
   const [viewAuditHistoryId, setViewAuditHistoryId] = useState<string | null>(null);
@@ -57,39 +72,34 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiMetaSpec, setAiMetaSpec] = useState<any>(null);
   const [aiGoogleSpec, setAiGoogleSpec] = useState<any>(null);
+  const [isGeneratingForProperty, setIsGeneratingForProperty] = useState<string | null>(null);
 
-  const handleGenerateCampaigns = async () => {
-    setIsGenerating(true);
+  const pairedPropertiesQueue = properties.filter(p => p.isLoAgentPair);
+
+
+  const handlePushToVantage = async (property: PropertyListing) => {
+    setIsGeneratingForProperty(property.id);
     try {
-      const { auth } = await import("../firebase");
-      const user = auth.currentUser;
-      if (!user) throw new Error("Must be logged in to generate campaigns");
+      const kit = await pushCoBrandedListingToVantageQueue(
+        property,
+        loanOfficer,
+        activeAgent,
+        pairingUrl
+      );
       
-      const idToken = await user.getIdToken();
-      const res = await fetch("/api/ai/meta-ads-campaign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
-        body: JSON.stringify({
-          loanOfficer,
-          activeAgent,
-          adSettings
-        })
-      });
+      const draft = createDraftAdFromCoBrandedKit(kit, "draft");
+      onSaveAdDraft(draft);
       
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to generate");
-      
-      setAiMetaSpec(data.metaAdSpec);
-      setAiGoogleSpec(data.googleAdSpec);
-      setSaveMessage("Campaigns generated successfully via AI!");
-      setTimeout(() => setSaveMessage(null), 3000);
+      setSaveMessage(`✓ Sent ${property.address} to Vantage AI Ads Engine queue.`);
+      setTimeout(() => setSaveMessage(null), 4000);
     } catch (e: any) {
       console.error(e);
-      alert("Error generating campaign: " + e.message);
+      alert("Error pushing to Vantage: " + e.message);
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingForProperty(null);
     }
   };
+
 
   // Editable credentials state
   const [adSettings, setAdSettings] = useState<LoanOfficerAdSettings>(() => {
@@ -284,6 +294,19 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
         </div>
       )}
 
+      {/* Unified Ad Queue & Curated Vantage AI Ads Engine Manager */}
+      <AdQueueManager
+        loanOfficer={loanOfficer}
+        activeAgent={activeAgent}
+        adCampaignDrafts={adCampaignDrafts}
+        properties={properties}
+        pairingUrl={pairingUrl}
+        adSettings={adSettings}
+        onSaveAdDraft={onSaveAdDraft}
+        onUpdateCampaign={onUpdateCampaign}
+        onBulkUpdateCampaigns={onBulkUpdateCampaigns}
+      />
+
       {/* Platform Switcher */}
       <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-2">
         <div className="flex items-center gap-3">
@@ -419,7 +442,7 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
             <Sliders className="w-3.5 h-3.5 text-[#4A5D4E]" />
             <span>Ad Account Credentials & Target Geographies</span>
           </h4>
-          <span className="text-[10px] text-[#9A9488]">Settings apply to all auto-generated templates</span>
+          <span className="text-[10px] text-[#9A9488]">Settings apply to all ad assets</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -490,7 +513,7 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5">
-              <span>Auto-Generated Meta Ad Specification</span>
+              <span>Target Meta Ad Specification</span>
               <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">
                 Facebook + Instagram Feed
               </span>
@@ -578,7 +601,7 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5">
-              <span>Auto-Generated Google Responsive Search Ad Spec</span>
+              <span>Target Google Responsive Search Ad Spec</span>
               <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded font-mono">
                 Google Search Network
               </span>

@@ -1,6 +1,7 @@
 import { PropertyListing, RealEstateAgentProfile, LOPairing, LoanOfficerProfile, VantageCoBrandedAdKit, AdCampaignDraft } from "../types";
 import { db } from "../firebase";
 import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { sanitizeSSN } from "./ssnProtection";
 
 /**
  * Normalizes an agent's name for robust cross-referencing
@@ -418,28 +419,7 @@ export async function syncCompletedAdKitToFthbPortal(
   }
 
   // Create an AdCampaignDraft object ready for Loan Officer to launch
-  const draft: AdCampaignDraft = {
-    id: `draft-${kit.propertyId}-${Date.now()}`,
-    platform: 'meta',
-    loId: kit.loId,
-    agentId: kit.agentId,
-    campaignName: `[Co-Branded] ${kit.agentName} + ${kit.loName}: ${kit.propertyAddress}`,
-    headline: kit.metaAd.headline,
-    secondaryHeadlines: kit.googleAd.headlines,
-    primaryText: kit.metaAd.primaryText,
-    descriptionText: kit.metaAd.description,
-    targetUrl: kit.coBrandUrl,
-    dailyBudget: 25,
-    targetLocations: [kit.propertyCity, "Oregon"],
-    isCompliancePaused: false,
-    leadCap: 50,
-    currentLeads: 0,
-    keywords: [`${kit.propertyCity} real estate`, "USDA loan Oregon", "first time homebuyer grants"],
-    specialHousingCategory: true,
-    adObjective: 'LEAD_GENERATION',
-    status: 'ready_to_launch',
-    lastSaved: new Date().toISOString()
-  };
+  const draft = createDraftAdFromCoBrandedKit(updatedKit, 'ready_to_launch');
 
   // Store in synced campaigns
   try {
@@ -467,4 +447,43 @@ export async function syncCompletedAdKitToFthbPortal(
   }
 
   return draft;
+}
+
+/**
+ * Builds a pre-filled AdCampaignDraft from a VantageCoBrandedAdKit
+ * Pre-populating headlines, multi-platform copy, targeting, keywords, and co-branded landing page
+ */
+export function createDraftAdFromCoBrandedKit(
+  kit: VantageCoBrandedAdKit,
+  status: 'draft' | 'ready_to_launch' = 'draft'
+): AdCampaignDraft {
+  return {
+    id: `draft-${kit.propertyId}`,
+    platform: 'meta',
+    loId: kit.loId,
+    agentId: kit.agentId,
+    campaignName: sanitizeSSN(`[Co-Branded] ${kit.agentName} + ${kit.loName}: ${kit.propertyAddress}`),
+    headline: sanitizeSSN(kit.metaAd.headline),
+    secondaryHeadlines: kit.googleAd.headlines.map(sanitizeSSN),
+    primaryText: sanitizeSSN(kit.metaAd.primaryText),
+    descriptionText: sanitizeSSN(kit.metaAd.description),
+    targetUrl: kit.coBrandUrl,
+    dailyBudget: 25,
+    targetLocations: [sanitizeSSN(kit.propertyCity), "Oregon"],
+    isCompliancePaused: false,
+    leadCap: 50,
+    currentLeads: 0,
+    keywords: [`${sanitizeSSN(kit.propertyCity)} real estate`, "USDA loan Oregon", "first time homebuyer grants"],
+    specialHousingCategory: true,
+    adObjective: 'LEAD_GENERATION',
+    status,
+    lastSaved: new Date().toISOString(),
+    propertyId: kit.propertyId,
+    propertyAddress: sanitizeSSN(kit.propertyAddress),
+    propertyCity: sanitizeSSN(kit.propertyCity),
+    propertyPrice: kit.propertyPrice,
+    isVantageCurated: true,
+    isNewAwaitingPublication: true,
+    publishedChannels: []
+  };
 }

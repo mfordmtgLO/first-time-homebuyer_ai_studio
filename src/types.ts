@@ -611,8 +611,20 @@ export interface AdCampaignDraft {
   keywords?: string[];
   specialHousingCategory: boolean;
   adObjective: 'LEAD_GENERATION' | 'TRAFFIC' | 'CONVERSIONS';
-  status: 'ready_to_launch' | 'draft' | 'live';
+  status: 'ready_to_launch' | 'draft' | 'live' | 'published' | 'approved' | 'active' | 'paused';
   lastSaved: string;
+  propertyId?: string;
+  propertyAddress?: string;
+  propertyCity?: string;
+  propertyPrice?: number;
+  isVantageCurated?: boolean;
+  isNewAwaitingPublication?: boolean;
+  publishedChannels?: ('facebook' | 'google' | 'social_media')[];
+  publishedAt?: string;
+  videoUrl?: string;
+  assets?: string[];
+  coreMessage?: string;
+  targetAudience?: string;
 }
 
 export interface SavedScenario {

@@ -1,3 +1,5 @@
+import { RentCastUsageCounter } from "./RentCastUsageCounter";
+import { incrementRentCastUsage } from "../utils/rentcastUsageService";
 import { PropertyMapOverlay } from "./PropertyMapOverlay";
 import React, { useState, useMemo, useRef } from "react";
 import { 
@@ -36,7 +38,7 @@ import {
   Megaphone,
   Users
 } from "lucide-react";
-import { PropertyListing, ProfessionalGuidesState } from "../types";
+import { PropertyListing, ProfessionalGuidesState, AdCampaignDraft } from "../types";
 import { 
   GEOSPHERE_DATASETS, 
   GEOSPHERE_MOCK_LISTINGS, 
@@ -66,7 +68,8 @@ import { db, auth } from "../firebase";
 import { 
   crossReferenceListingWithAgents, 
   enrichListingsWithAgentMatches, 
-  pushCoBrandedListingToVantageQueue 
+  pushCoBrandedListingToVantageQueue,
+  createDraftAdFromCoBrandedKit
 } from "../utils/agentListingCrossReference";
 import { MasterAgentPropertyListingPortal } from "./MasterAgentPropertyListingPortal";
 
@@ -477,7 +480,11 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   }, [filteredListings, currentPage, pageSize]);
 
   // Synchronize state changes to parent & Firestore
-  const persistListings = (newListings: PropertyListing[], toastMessage?: string) => {
+  const persistListings = (
+    newListings: PropertyListing[], 
+    toastMessage?: string,
+    additionalAdDrafts?: AdCampaignDraft[]
+  ) => {
     // Automatically ensure all listings are cross-referenced with the master agent roster & LO pairings
     const enrichedListings = enrichListingsWithAgentMatches(
       newListings,
@@ -494,9 +501,24 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
     }
     setLastSyncedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 
+    // Automatically merge any newly generated draft ads directly into adCampaignDrafts state
+    let updatedAdDrafts = guidesState.adCampaignDrafts || [];
+    if (additionalAdDrafts && additionalAdDrafts.length > 0) {
+      const existingIds = new Set(updatedAdDrafts.map(d => d.id));
+      const filteredNew = additionalAdDrafts.filter(d => !existingIds.has(d.id));
+      updatedAdDrafts = [...filteredNew, ...updatedAdDrafts];
+
+      try {
+        localStorage.setItem("fthb_synced_portal_ads_v1", JSON.stringify(updatedAdDrafts));
+      } catch (e) {
+        console.warn("Local storage ad draft sync warning", e);
+      }
+    }
+
     const updatedGuidesState: ProfessionalGuidesState = {
       ...guidesState,
-      syncedProperties: enrichedListings
+      syncedProperties: enrichedListings,
+      adCampaignDrafts: updatedAdDrafts
     };
     onUpdateGuidesState(updatedGuidesState);
 
@@ -516,6 +538,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   const handleIngestVercelLiveListings = async () => {
     setIsFetching(true);
     try {
+      await incrementRentCastUsage(1);
       let liveListings: PropertyListing[] = [];
 
       try {
@@ -552,14 +575,16 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
       );
 
       // Identify LO+Agent pairs to automatically trigger Vantage AI Ads Engine queue push
+      // AND automatically add a draft ad entry for that property to the adCampaignDrafts state
       let autoPushedPairCount = 0;
       const pushedAgentNames: string[] = [];
+      const generatedDraftAds: AdCampaignDraft[] = [];
 
       for (const listing of enrichedLiveListings) {
         if (listing.isLoAgentPair) {
           const match = crossReferenceListingWithAgents(listing, agentRoster, pairings, loanOfficers);
           if (match.matchedAgent) {
-            await pushCoBrandedListingToVantageQueue(
+            const kit = await pushCoBrandedListingToVantageQueue(
               listing,
               match.pairedLoanOfficer || currentLo,
               match.matchedAgent,
@@ -569,6 +594,10 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
             if (!pushedAgentNames.includes(match.matchedAgent.name)) {
               pushedAgentNames.push(match.matchedAgent.name);
             }
+
+            // Automated trigger: Pre-fill ad generation request and add directly to adCampaignDrafts state
+            const prefilledDraft = createDraftAdFromCoBrandedKit(kit, 'draft');
+            generatedDraftAds.push(prefilledDraft);
           }
         }
       }
@@ -607,7 +636,8 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
       persistListings(
         finalDataset,
-        `✓ Ingested ${liveListings.length} live RentCast properties across ${citySummary}! Cross-referenced ${matchedTotal} master agent roster matches and auto-pushed ${autoPushedPairCount} LO+Agent pairs${agentNotice} directly to the Vantage AI Ads Engine queue.`
+        `✓ Ingested ${liveListings.length} live RentCast properties across ${citySummary}! Cross-referenced ${matchedTotal} master agent roster matches, auto-pushed ${autoPushedPairCount} LO+Agent pairs${agentNotice} to Vantage AI Ads queue, and auto-generated ${generatedDraftAds.length} pre-filled campaign drafts into adCampaignDrafts state.`,
+        generatedDraftAds
       );
     } catch (error) {
       console.error("GeoSphere live ingestion error:", error);
@@ -633,13 +663,29 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
         marketAreas: [listing.city || "Oregon"]
       } as any;
 
-      await pushCoBrandedListingToVantageQueue(
+      const kit = await pushCoBrandedListingToVantageQueue(
         listing,
         match.pairedLoanOfficer || currentLo,
         targetAgent,
         match.pairing
       );
-      onTriggerToast(`✓ Pushed ${listing.address} to Vantage AI Ads Engine queue for ${targetAgent.name} + ${currentLo.name}!`);
+
+      // Automated trigger: Pre-fill ad generation request and add directly to adCampaignDrafts state
+      const prefilledDraft = createDraftAdFromCoBrandedKit(kit, 'draft');
+      const currentDrafts = guidesState.adCampaignDrafts || [];
+      const updatedDrafts = [prefilledDraft, ...currentDrafts.filter(d => d.id !== prefilledDraft.id)];
+      onUpdateGuidesState({
+        ...guidesState,
+        adCampaignDrafts: updatedDrafts
+      });
+
+      try {
+        localStorage.setItem("fthb_synced_portal_ads_v1", JSON.stringify(updatedDrafts));
+      } catch (e) {
+        console.warn("Storage warning", e);
+      }
+
+      onTriggerToast(`✓ Pushed ${listing.address} to Vantage AI Ads Engine queue & generated pre-filled draft in adCampaignDrafts for ${targetAgent.name} + ${currentLo.name}!`);
     } catch (e) {
       console.error("Single Vantage Push Error:", e);
       onTriggerToast("Notice: Property pushed to Vantage Ads queue.");
@@ -1211,6 +1257,9 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* RentCast API Usage Tracking */}
+      <RentCastUsageCounter />
 
       {/* Bulk Import / Single Link Importer */}
       <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 shadow-xs flex flex-col gap-4">

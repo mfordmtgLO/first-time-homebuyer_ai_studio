@@ -196,7 +196,7 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
         window.clearTimeout(timerId);
       };
     }
-  }, [cacheKey]);
+  }, [cacheKey, rosterMap, handleExecuteSweep]);
 
   // Extract unique cities & companies for dropdowns
   const uniqueCities = useMemo(() => {

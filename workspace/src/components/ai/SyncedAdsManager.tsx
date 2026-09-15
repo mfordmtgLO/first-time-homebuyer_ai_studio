@@ -34,7 +34,23 @@ export const SyncedAdsManager: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchAds();
+    let isMounted = true;
+    const loadAds = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/ads/synced?loId=lo_1");
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          setAds(data.ads || []);
+        }
+      } catch (e) {
+        if (isMounted) console.error("Failed to fetch synced ads", e);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    loadAds();
+    return () => { isMounted = false; };
   }, []);
 
   const handlePublish = (id: string) => {

@@ -54,7 +54,28 @@ export const AdAssetsLibrary: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchAds();
+    let isMounted = true;
+    const loadAds = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/ads/synced?loId=lo_1");
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          const decoratedAds = (data.ads || []).map((ad: any) => ({
+            ...ad,
+            tags: ad.tags || (ad.title.includes("USDA") ? ["USDA", "Zero Down"] : ad.title.includes("DPA") ? ["DPA", "First-Time Buyer"] : ["General"]),
+            propertyAddress: ad.propertyAddress || (ad.title.includes("USDA") ? "123 Umatilla Dr, Umatilla, OR" : "")
+          }));
+          setAds(decoratedAds);
+        }
+      } catch (e) {
+        if (isMounted) console.error("Failed to fetch synced ads", e);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    loadAds();
+    return () => { isMounted = false; };
   }, []);
 
   const handlePublish = (id: string) => {

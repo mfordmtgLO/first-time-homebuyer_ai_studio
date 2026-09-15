@@ -78,11 +78,17 @@ export const SocialMediaPushModal: React.FC<SocialMediaPushModalProps> = ({
   React.useEffect(() => {
     if (variation) {
       const defaultUrl = pairingUrl || `https://vantage-mortgage.web.app/portal?lo=${loanOfficer.id}`;
-      setCustomCaption(`🏡 ${variation.title}\n\n${variation.hook}\n\n✨ Calculate your buying power & check $30K DPA grants:\n${defaultUrl}\n\n#Homebuyer2026 #${loanOfficer.company.replace(/\s+/g, '')} #MortgageTips`);
-      setPushSuccess(null);
-      setDownloadComplete(false);
+      // Initialize states but don't re-run this effect when state changes
+      const caption = `🏡 ${variation.title}\n\n${variation.hook}\n\n✨ Calculate your buying power & check $30K DPA grants:\n${defaultUrl}\n\n#Homebuyer2026 #${loanOfficer.company.replace(/\s+/g, '')} #MortgageTips`;
+      
+      const timer = setTimeout(() => {
+        setCustomCaption(caption);
+        setPushSuccess(null);
+        setDownloadComplete(false);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [variation, pairingUrl, loanOfficer]);
+  }, [variation, pairingUrl, loanOfficer.id, loanOfficer.company]);
 
   if (!isOpen || !variation) return null;
 

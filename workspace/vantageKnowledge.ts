@@ -39,7 +39,7 @@ export function loadKnowledgeBase() {
 export async function addDocumentToKnowledge(text: string, metadata: any, aiClient: any) {
   try {
     const response = await aiClient.models.embedContent({
-      model: 'text-embedding-004',
+      model: 'gemini-embedding-001',
       contents: text,
     });
     const embedding = response.embeddings[0].values;
@@ -72,7 +72,7 @@ export async function searchKnowledge(query: string, aiClient: any, topK: number
   
   try {
     const response = await aiClient.models.embedContent({
-      model: 'text-embedding-004',
+      model: 'gemini-embedding-001',
       contents: query,
     });
     const queryEmbedding = response.embeddings[0].values;

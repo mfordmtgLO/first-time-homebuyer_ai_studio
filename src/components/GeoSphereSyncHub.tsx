@@ -679,6 +679,10 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
         adCampaignDrafts: updatedDrafts
       });
 
+      // Update state reactively so the listing card immediately displays "✓ Queued in Vantage Ads"
+      setSyncedListings(prev => prev.map(l => l.id === listing.id ? { ...l, vantageAdsEngineStatus: "pushed_to_queue" as const } : l));
+      setInspectingListing(prev => prev && prev.id === listing.id ? { ...prev, vantageAdsEngineStatus: "pushed_to_queue" as const } : prev);
+
       try {
         localStorage.setItem("fthb_synced_portal_ads_v1", JSON.stringify(updatedDrafts));
       } catch (e) {
@@ -1740,54 +1744,53 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                       </div>
                     )}
 
-                    {/* Master Agent Match & LO+Agent Co-Branding Banner */}
-                    {listing.isLoAgentPair ? (
-                      <div className="mt-2 p-2 rounded-xl bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-pink-800 flex items-center gap-1 uppercase tracking-wider">
-                            <Sparkles className="w-3 h-3 text-pink-600" />
-                            LO + Agent Partner Pair
-                          </span>
-                          <span className="text-[9px] font-mono font-bold bg-white text-pink-700 px-1.5 py-0.5 rounded border border-pink-200">
-                            /{listing.loPairing?.customSlug || "pair"}
-                          </span>
-                        </div>
-                        <div className="text-[11px] font-bold text-[#2D362E] truncate">
-                          🤝 {listing.loPairing?.loName || currentLo.name} &amp; {listing.matchedRosterAgent?.name || listing.listingAgent?.name}
-                        </div>
-                        <div className="flex items-center justify-between pt-1">
-                          <span className="text-[9px] text-pink-700 font-medium">
-                            {listing.vantageAdsEngineStatus === "pushed_to_queue" 
-                              ? "✓ Queued in Vantage Ads" 
-                              : listing.vantageAdsEngineStatus === "synced_to_portal" 
-                              ? "✓ Active in Ads Portal" 
-                              : "Vantage Co-Branded:"}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleTriggerSingleVantagePush(listing);
-                            }}
-                            className="text-[9px] font-bold bg-pink-600 hover:bg-pink-700 text-white px-2 py-0.5 rounded transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                            title="Trigger Vantage AI Ads Engine queue push for corporate marketing & LOA ad kit creation"
-                          >
-                            <Megaphone className="w-2.5 h-2.5" />
-                            <span>Push to Ads Engine</span>
-                          </button>
-                        </div>
-                      </div>
-                    ) : listing.isRosterAgentMatched ? (
-                      <div className="mt-2 p-2 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-                        <span className="text-[10px] font-bold text-emerald-800 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                          <span className="truncate">Roster Match: {listing.matchedRosterAgent?.name}</span>
+                    {/* Master Agent Match & LO+Agent Co-Branding Banner (Available on ALL Synced Listings) */}
+                    <div className="mt-2 p-2 rounded-xl bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-pink-800 flex items-center gap-1 uppercase tracking-wider">
+                          <Sparkles className="w-3 h-3 text-pink-600" />
+                          {listing.isLoAgentPair 
+                            ? "LO + Agent Partner Pair" 
+                            : listing.isRosterAgentMatched 
+                            ? "LO + Roster Partner Pair" 
+                            : "LO + Agent Partner Pair"}
                         </span>
-                        <span className="text-[9px] text-emerald-700 font-semibold truncate max-w-[110px]">
-                          {listing.matchedRosterAgent?.brokerage}
+                        <span className="text-[9px] font-mono font-bold bg-white text-pink-700 px-1.5 py-0.5 rounded border border-pink-200">
+                          {listing.loPairing?.customSlug 
+                            ? `/${listing.loPairing.customSlug}` 
+                            : listing.listingAgent?.name 
+                            ? `/${currentLo.name.toLowerCase().split(" ")[0]}-and-${listing.listingAgent.name.toLowerCase().split(" ")[0].replace(/[^a-z0-9]/g, "")}`
+                            : "/mike-and-partner"}
                         </span>
                       </div>
-                    ) : null}
+                      <div className="text-[11px] font-bold text-[#2D362E] truncate">
+                        🤝 {listing.loPairing?.loName || currentLo.name} &amp; {listing.matchedRosterAgent?.name || listing.listingAgent?.name || "Listing Partner"}
+                        {listing.listingOffice?.name && !listing.matchedRosterAgent?.name && (
+                          <span className="font-normal text-gray-500 text-[10px] ml-1">({listing.listingOffice.name})</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[9px] text-pink-700 font-medium">
+                          {listing.vantageAdsEngineStatus === "pushed_to_queue" 
+                            ? "✓ Queued in Vantage Ads" 
+                            : listing.vantageAdsEngineStatus === "synced_to_portal" 
+                            ? "✓ Active in Ads Portal" 
+                            : "Vantage Co-Branded:"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTriggerSingleVantagePush(listing);
+                          }}
+                          className="text-[9px] font-bold bg-pink-600 hover:bg-pink-700 text-white px-2 py-0.5 rounded transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                          title="Trigger Vantage AI Ads Engine queue push for corporate marketing & LOA ad kit creation"
+                        >
+                          <Megaphone className="w-2.5 h-2.5" />
+                          <span>Push to Ads Engine</span>
+                        </button>
+                      </div>
+                    </div>
 
                     {/* Card Footer: View Details & Publish Toggle */}
                     <div className="pt-3 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
@@ -1994,56 +1997,42 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                   </button>
                 </div>
 
-                {/* Agent Roster Match & Vantage Co-Branding Dossier */}
-                {inspectingListing.isLoAgentPair ? (
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-pink-900 flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-pink-600" />
-                        LO + Agent Partner Co-Branded Team
-                      </span>
-                      <span className="text-[11px] font-mono font-bold bg-white text-pink-700 px-2 py-0.5 rounded-md border border-pink-200">
-                        /{inspectingListing.loPairing?.customSlug || "pair"}
-                      </span>
-                    </div>
-                    <div className="text-xs text-[#2D362E]">
-                      <strong>Loan Officer:</strong> {inspectingListing.loPairing?.loName || currentLo.name} • <strong>Listing Agent:</strong> {inspectingListing.matchedRosterAgent?.name || inspectingListing.listingAgent?.name} ({inspectingListing.matchedRosterAgent?.brokerage || inspectingListing.listingOffice?.name})
-                    </div>
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[11px] font-semibold text-pink-800">
-                        Status: {inspectingListing.vantageAdsEngineStatus === "pushed_to_queue" ? "Queued for Marketing / LOA Ad Kit Generation" : inspectingListing.vantageAdsEngineStatus === "synced_to_portal" ? "Ad Kit Ready in First-Time Homebuyer Portal" : "Eligible for Vantage Co-Branded Ad Kit"}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleTriggerSingleVantagePush(inspectingListing)}
-                        className="px-3 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-                      >
-                        <Megaphone className="w-3.5 h-3.5" />
-                        <span>Push to Vantage Ads Queue</span>
-                      </button>
-                    </div>
+                {/* Agent Roster Match & Vantage Co-Branding Dossier (Available on ALL Synced Listings) */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-pink-900 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-pink-600" />
+                      {inspectingListing.isLoAgentPair
+                        ? "LO + Agent Partner Co-Branded Team"
+                        : inspectingListing.isRosterAgentMatched
+                        ? "LO + Roster Partner Co-Branded Team"
+                        : "LO + Listing Agent Co-Branded Team"}
+                    </span>
+                    <span className="text-[11px] font-mono font-bold bg-white text-pink-700 px-2 py-0.5 rounded-md border border-pink-200">
+                      {inspectingListing.loPairing?.customSlug 
+                        ? `/${inspectingListing.loPairing.customSlug}` 
+                        : inspectingListing.listingAgent?.name 
+                        ? `/${currentLo.name.toLowerCase().split(" ")[0]}-and-${inspectingListing.listingAgent.name.toLowerCase().split(" ")[0].replace(/[^a-z0-9]/g, "")}`
+                        : "/mike-and-partner"}
+                    </span>
                   </div>
-                ) : inspectingListing.isRosterAgentMatched ? (
-                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        Matched with Master Agent Roster: {inspectingListing.matchedRosterAgent?.name}
-                      </span>
-                      <p className="text-[11px] text-emerald-800 mt-0.5">
-                        {inspectingListing.matchedRosterAgent?.title} at {inspectingListing.matchedRosterAgent?.brokerage} • License #{inspectingListing.matchedRosterAgent?.licenseNumber || "OR-Active"}
-                      </p>
-                    </div>
+                  <div className="text-xs text-[#2D362E]">
+                    <strong>Loan Officer:</strong> {inspectingListing.loPairing?.loName || currentLo.name} • <strong>Listing Agent:</strong> {inspectingListing.matchedRosterAgent?.name || inspectingListing.listingAgent?.name || "Partner Agent"} ({inspectingListing.matchedRosterAgent?.brokerage || inspectingListing.listingOffice?.name || "Brokerage"})
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] font-semibold text-pink-800">
+                      Status: {inspectingListing.vantageAdsEngineStatus === "pushed_to_queue" ? "Queued for Marketing / LOA Ad Kit Generation" : inspectingListing.vantageAdsEngineStatus === "synced_to_portal" ? "Ad Kit Ready in First-Time Homebuyer Portal" : "Eligible for Vantage Co-Branded Ad Kit"}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleTriggerSingleVantagePush(inspectingListing)}
-                      className="px-2.5 py-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                     >
-                      <Megaphone className="w-3 h-3" />
-                      <span>Queue Ad Kit</span>
+                      <Megaphone className="w-3.5 h-3.5" />
+                      <span>Push to Vantage Ads Queue</span>
                     </button>
                   </div>
-                ) : null}
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   {inspectingListing.listingAgent?.name && (

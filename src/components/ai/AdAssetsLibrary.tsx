@@ -127,7 +127,17 @@ export const AdAssetsLibrary: React.FC<AdAssetsLibraryProps> = ({
   }, []);
 
   useEffect(() => {
-    fetchAds();
+    let active = true;
+    const run = async () => {
+      await Promise.resolve();
+      if (active) {
+        await fetchAds();
+      }
+    };
+    run();
+    return () => {
+      active = false;
+    };
   }, [fetchAds]);
 
   const handlePublish = (id: string) => {

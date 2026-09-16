@@ -37,6 +37,7 @@ interface AdsCampaignHubProps {
   activeAgent: RealEstateAgentProfile;
   adCampaignDrafts: AdCampaignDraft[];
   properties?: PropertyListing[];
+  leads?: CapturedLead[];
   onSaveAdDraft: (draft: AdCampaignDraft) => void;
   onUpdateCampaign?: (campaign: AdCampaignDraft) => void;
   onBulkUpdateCampaigns?: (campaigns: AdCampaignDraft[]) => void;
@@ -300,6 +301,7 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
         activeAgent={activeAgent}
         adCampaignDrafts={adCampaignDrafts}
         properties={properties}
+        leads={leads}
         pairingUrl={pairingUrl}
         adSettings={adSettings}
         onSaveAdDraft={onSaveAdDraft}

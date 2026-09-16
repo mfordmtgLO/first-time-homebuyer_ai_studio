@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { MediaAssetLeadTrackerModal } from "./MediaAssetLeadTrackerModal";
 import { 
   Home, 
   Sparkles, 
@@ -27,7 +28,8 @@ import {
   AlertCircle
 } from "lucide-react";
 import { 
-  LoanOfficerProfile, 
+  LoanOfficerProfile,
+  CapturedLead, 
   RealEstateAgentProfile, 
   AdCampaignDraft, 
   LoanOfficerAdSettings,
@@ -74,6 +76,7 @@ interface AdQueueManagerProps {
   activeAgent: RealEstateAgentProfile;
   adCampaignDrafts: AdCampaignDraft[];
   properties: PropertyListing[];
+  leads?: CapturedLead[];
   pairingUrl: string;
   adSettings: LoanOfficerAdSettings;
   onSaveAdDraft: (draft: AdCampaignDraft) => void;
@@ -86,6 +89,7 @@ export const AdQueueManager: React.FC<AdQueueManagerProps> = ({
   activeAgent,
   adCampaignDrafts,
   properties,
+  leads = [],
   pairingUrl,
   adSettings,
   onSaveAdDraft,
@@ -106,6 +110,7 @@ export const AdQueueManager: React.FC<AdQueueManagerProps> = ({
 
   // Review Modal State
   const [previewItem, setPreviewItem] = useState<AdQueueItem | null>(null);
+  const [trackingAsset, setTrackingAsset] = useState<AdQueueItem | null>(null);
   const [feedbackBanner, setFeedbackBanner] = useState<{ type: 'success' | 'info' | 'error', text: string } | null>(null);
   const [isPublishingBatch, setIsPublishingBatch] = useState(false);
 
@@ -206,7 +211,8 @@ export const AdQueueManager: React.FC<AdQueueManagerProps> = ({
     });
 
     return items;
-  }, [adCampaignDrafts, properties, activeAgent, loanOfficer, pairingUrl]);
+  }, [adCampaignDrafts, properties,
+  leads = [], activeAgent, loanOfficer, pairingUrl]);
 
   // Filter & Search computation
   const filteredItems = useMemo(() => {
@@ -1004,7 +1010,20 @@ export const AdQueueManager: React.FC<AdQueueManagerProps> = ({
                                   Google Ads
                                 </span>
                               )}
-                              {item.publishedChannels.includes('social_media') && (
+                              
+                        {item.publishedChannels.length > 0 && (
+                          <div className="mt-2">
+                            <button 
+                              onClick={() => setTrackingAsset(item)}
+                              className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase tracking-wider rounded-full border border-emerald-200 transition-colors"
+                              title="View full ad results tracking"
+                            >
+                              <Users className="w-3 h-3" />
+                              {getLeadCount(item)} Leads
+                            </button>
+                          </div>
+                        )}
+                            {item.publishedChannels.includes('social_media') && (
                                 <span className="text-[10px] font-bold bg-purple-100 text-purple-900 px-1.5 py-0.5 rounded border border-purple-200">
                                   Social Media
                                 </span>
@@ -1235,6 +1254,15 @@ export const AdQueueManager: React.FC<AdQueueManagerProps> = ({
       )}
 
       {/* AI STUDIO / REVIEW MODAL */}
+      {trackingAsset && (
+        <MediaAssetLeadTrackerModal
+          assetId={trackingAsset.id}
+          assetName={trackingAsset.campaignName}
+          allLeads={leads}
+          onClose={() => setTrackingAsset(null)}
+        />
+      )}
+
       {previewItem && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E] max-h-[90vh] overflow-y-auto">

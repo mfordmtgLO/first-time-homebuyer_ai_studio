@@ -1,45 +1,56 @@
 const fs = require('fs');
-let c = fs.readFileSync('src/components/PropertyCard.tsx', 'utf8');
+let code = fs.readFileSync('src/components/PropertyCard.tsx', 'utf8');
 
-const target = `<div className="flex flex-col items-end gap-2">
-              <span className="text-xs font-semibold text-white bg-[#4A5D4E]/90 px-2.5 py-0.5 rounded-md shadow-2xs backdrop-blur-xs">
-                Est. {formatUSD(estMonthly)}/mo
-              </span>`;
+if (!code.includes('onToggleRateAlert?: (id: string, e: React.MouseEvent) => void;')) {
+  code = code.replace(
+    '  onTogglePriceAlert: (id: string, e: React.MouseEvent) => void;\n',
+    '  onTogglePriceAlert: (id: string, e: React.MouseEvent) => void;\n  onToggleRateAlert?: (id: string, e: React.MouseEvent) => void;\n'
+  );
+  code = code.replace(
+    '  onTogglePriceAlert,\n',
+    '  onTogglePriceAlert,\n  onToggleRateAlert,\n'
+  );
+  
+  // Add the button
+  const priceAlertButton = `<button
+            onClick={(e) => onTogglePriceAlert(property.id, e)}
+            className="w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow hover:bg-white flex items-center justify-center transition-colors"
+            title="Toggle Price Drop Alert"
+          >
+            <Bell className={\`w-4 h-4 \${property.priceAlertsEnabled ? 'text-[#C18C5D] fill-[#C18C5D]' : 'text-gray-500'}\`} />
+          </button>`;
+          
+  const rateAlertButton = `<button
+            onClick={(e) => {
+              if (onToggleRateAlert) {
+                onToggleRateAlert(property.id, e);
+              }
+            }}
+            className="w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow hover:bg-white flex items-center justify-center transition-colors"
+            title="Toggle Mortgage Rate Shift Alert"
+          >
+            <TrendingDown className={\`w-4 h-4 \${property.rateAlertEnabled ? 'text-emerald-600' : 'text-gray-500'}\`} />
+          </button>`;
+          
+  if (code.includes(priceAlertButton)) {
+     code = code.replace(priceAlertButton, priceAlertButton + '\n          ' + rateAlertButton);
+  } else {
+     // alternative search
+     const btnRegex = /<button[^>]*onClick={\(e\) => onTogglePriceAlert\(property.id, e\)}[^>]*>[\s\S]*?<\/button>/;
+     const match = code.match(btnRegex);
+     if (match) {
+        code = code.replace(match[0], match[0] + '\n          ' + rateAlertButton);
+     }
+  }
 
-const injection = `<div className="flex flex-col items-end gap-2">
-              {property.priceDropAmount ? (
-                <span className="text-xs font-bold text-white bg-red-600/90 px-2.5 py-0.5 rounded-md shadow-2xs backdrop-blur-xs flex items-center gap-1 animate-pulse">
-                  <Flame className="w-3 h-3" />
-                  Price Drop: -{formatUSD(property.priceDropAmount)}
-                </span>
-              ) : (
-                <span className="text-xs font-semibold text-white bg-[#4A5D4E]/90 px-2.5 py-0.5 rounded-md shadow-2xs backdrop-blur-xs">
-                  Est. {formatUSD(estMonthly)}/mo
-                </span>
-              )}`;
+  // Ensure TrendingDown is imported from lucide-react
+  if (!code.includes('TrendingDown') && code.includes('lucide-react')) {
+      code = code.replace(
+          'import {',
+          'import { TrendingDown,'
+      );
+  }
 
-c = c.replace(target, injection);
-
-if (!c.includes('Flame,')) {
-    c = c.replace('import {\\n  Navigation,', 'import {\\n  Navigation,\\n  Flame,');
+  fs.writeFileSync('src/components/PropertyCard.tsx', code);
+  console.log("Patched PropertyCard.tsx with Rate Alert toggle");
 }
-
-// Add original price strikethrough next to current price
-const priceTarget = `<span className="text-xl font-bold text-white tracking-tight drop-shadow-md">
-                {formatUSD(property.price)}
-              </span>
-              <span className="text-[11px] text-white/90 ml-1.5">(\${Math.round(property.price / property.sqft)}/sqft)</span>`;
-
-const priceInjection = `<span className="text-xl font-bold text-white tracking-tight drop-shadow-md">
-                {formatUSD(property.price)}
-              </span>
-              {property.originalPrice && (
-                <span className="text-[11px] text-white/70 ml-1.5 line-through decoration-red-400">
-                  {formatUSD(property.originalPrice)}
-                </span>
-              )}
-              <span className="text-[11px] text-white/90 ml-1.5">(\${Math.round(property.price / property.sqft)}/sqft)</span>`;
-
-c = c.replace(priceTarget, priceInjection);
-
-fs.writeFileSync('src/components/PropertyCard.tsx', c);

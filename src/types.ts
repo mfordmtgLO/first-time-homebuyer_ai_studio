@@ -107,6 +107,7 @@ export interface PropertyListing {
   propertyTaxAnnual: number;
   scorecard?: TourScorecard;
   isFavorite: boolean;
+  rateAlertEnabled?: boolean;
   walkScore?: number;
   lat?: number;
   lng?: number;
@@ -391,7 +392,8 @@ export interface LoanOfficerProfile {
   production12MoUnits?: number;
   licenseVerificationYear?: number;
   licenseLastVerifiedDate?: string;
-  isAdmin?: boolean; // Mike Ford = true
+  isAdmin?: boolean;
+  role?: string;
   parentManagerId?: string;
   customSlug?: string;
   leadGenFormUrl?: string;
@@ -772,6 +774,7 @@ export interface ProfessionalGuidesState {
   smsTemplates?: SmsTemplate[];
   bigPurpleDotConfig?: BigPurpleDotConfig;
   bigPurpleDotEvents?: BigPurpleDotWebhookEvent[];
+  respaExpenses?: RespaCostSharingExpense[];
 }
 
 export interface ChatMessage {
@@ -1130,4 +1133,20 @@ export interface CampaignAuditEntry {
   actor: string;
   action: string;
   details?: string;
+}
+
+
+export interface RespaCostSharingExpense {
+  id: string;
+  ventureName: string;
+  category: 'facebook_ad' | 'google_ad' | 'open_house' | 'event' | 'print_media' | 'radio' | 'tech_stack' | 'other';
+  date: string;
+  totalAmount: number;
+  loPaidAmount: number;
+  agentPaidAmount: number;
+  loSharePercentage: number;
+  agentSharePercentage: number;
+  isCompliant: boolean; // Agent share <= 50% (or exact proportional split)
+  agentName: string;
+  notes?: string;
 }

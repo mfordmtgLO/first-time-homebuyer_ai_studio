@@ -344,6 +344,11 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
           requiresAdmin: true,
         },
         {
+          id: "respa_cost_sharing",
+          label: "LO+Agent RESPA Cost-Sharing",
+          icon: <ShieldCheck className="w-4 h-4 text-emerald-600" />,
+        },
+        {
           id: "growth_dashboard",
           label: "Growth & Production Metrics",
           icon: <TrendingUp className="w-4 h-4" />,

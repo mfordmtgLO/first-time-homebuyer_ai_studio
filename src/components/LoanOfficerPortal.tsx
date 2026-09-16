@@ -161,6 +161,8 @@ import { TopBusinessPartnersCard } from "./TopBusinessPartnersCard";
 import { SystemPitchDeck } from "./SystemPitchDeck";
 import { BranchManagerDashboard } from "./BranchManagerDashboard";
 import { GrowthDashboard } from "./GrowthDashboard";
+import { AdsRoiPerformanceTab } from "./AdsRoiPerformanceTab";
+import { RespaCostSharingHub } from "./RespaCostSharingHub";
 import { BranchManagement } from "./BranchManagement";
 import { MetadataConfiguration } from "./MetadataConfiguration";
 import { RecruitmentPipeline } from "./RecruitmentPipeline";
@@ -7545,6 +7547,7 @@ Mike Ford`;
                 loanOfficer={currentLo}
                 activeAgent={activeAgent}
                 adCampaignDrafts={guidesState.adCampaignDrafts || []}
+                leads={guidesState.leads || []}
                 properties={guidesState.syncedProperties || []}
                 onSaveAdDraft={(draft) => {
                   onUpdateGuidesState({

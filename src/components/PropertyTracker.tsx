@@ -596,17 +596,30 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     );
   };
 
+  
   const togglePriceAlert = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setProperties(prev =>
       prev.map(p => {
         if (p.id === id) {
           const isEnabled = !p.priceAlertEnabled;
-          if (isEnabled) {
-            // Optional: You could show a quick toast saying "Alerts enabled for this property" here
-            console.log("Price alerts enabled for", p.id);
-          }
           return { ...p, priceAlertEnabled: isEnabled, previousPrice: p.price };
+        }
+        return p;
+      })
+    );
+  };
+
+  const toggleRateAlert = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProperties(prev =>
+      prev.map(p => {
+        if (p.id === id) {
+          const isEnabled = !p.rateAlertEnabled;
+          if (isEnabled && onTriggerToast) {
+            onTriggerToast("Mortgage Rate Shift alerts enabled for " + p.address + "!");
+          }
+          return { ...p, rateAlertEnabled: isEnabled };
         }
         return p;
       })
@@ -1689,6 +1702,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                 }}
                 onToggleFavorite={toggleFavorite}
                 onTogglePriceAlert={togglePriceAlert}
+                onToggleRateAlert={toggleRateAlert}
                 onDeleteProperty={deleteProperty}
                 onOpenScorecard={onOpenScorecard}
                 onAskAiAboutProperty={onAskAiAboutProperty}

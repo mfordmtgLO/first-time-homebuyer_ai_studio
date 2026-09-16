@@ -151,6 +151,7 @@ export interface PropertyCardProps {
   onToggleSelect: (id: string, selected: boolean) => void;
   onToggleFavorite: (id: string, e: React.MouseEvent) => void;
   onTogglePriceAlert: (id: string, e: React.MouseEvent) => void;
+  onToggleRateAlert?: (id: string, e: React.MouseEvent) => void;
   onDeleteProperty: (id: string, e: React.MouseEvent) => void;
   onOpenScorecard: (property: PropertyListing) => void;
   onAskAiAboutProperty: (property: PropertyListing) => void;
@@ -170,6 +171,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   onToggleSelect,
   onToggleFavorite,
   onTogglePriceAlert,
+  onToggleRateAlert,
   onDeleteProperty,
   onOpenScorecard,
   onAskAiAboutProperty,
@@ -385,6 +387,26 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 <Bell className="w-4 h-4" />
               )}
             </button>
+            {onToggleRateAlert && (
+              <button
+                type="button"
+                onClick={(e) => onToggleRateAlert(property.id, e)}
+                className={`p-2 rounded-xl backdrop-blur-md border transition-colors shadow-xs ${
+                  property.rateAlertEnabled
+                    ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border-blue-500"
+                    : "bg-white dark:bg-slate-900/90 text-[#606C5D] border-white/60 hover:text-[#2D362E]"
+                }`}
+                title={property.rateAlertEnabled ? "Mortgage rate shift alerts active" : "Alert me if mortgage rates drop"}
+                aria-label="Toggle rate alert"
+              >
+                {property.rateAlertEnabled ? (
+                  <TrendingDown className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                ) : (
+                  <TrendingDown className="w-4 h-4" />
+                )}
+              </button>
+            )}
+          
             <button
               type="button"
               onClick={(e) => onToggleFavorite(property.id, e)}

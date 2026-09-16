@@ -122,6 +122,7 @@ import {
 } from "../types";
 import { SocialPushHub } from "./SocialPushHub";
 import { AdsCampaignHub } from "./AdsCampaignHub";
+import { AdAssetsLibrary } from "./ai/AdAssetsLibrary";
 import { LoanOfficerLoginView } from "./LoanOfficerLoginView";
 import { StateLicensingSelector } from "./StateLicensingSelector";
 import { processLocalImageFile } from "../utils/imageUtils";
@@ -7589,7 +7590,12 @@ Mike Ford`;
               />
             )}
 
-            {/* AI Commercial Generator Removed - Now handled exclusively in Vantage AI Ads Engine */}
+            {/* Tab: AI Commercial & Video Ads Studio */}
+            {activeTab === "ai_ad_generator" && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <AdAssetsLibrary onNavigateToCampaignBuilder={() => setActiveTab("ad_campaigns")} />
+              </div>
+            )}
 
             {/* Tab: SMS Compliance & Opt-in Management Dashboard */}
             {activeTab === "sms_compliance" && (

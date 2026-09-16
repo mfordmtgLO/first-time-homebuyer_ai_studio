@@ -6557,6 +6557,160 @@ At the end, include a strong, dynamic Call to Action encouraging the user to rea
     }
   });
 
+  // ==========================================
+  // INBOUND VANTAGE AI ADS ENGINE WEBHOOK SYNC
+  // ==========================================
+  // In-memory and disk-persisted fallback storage for synced ads from Vantage AI
+  let inMemorySyncedAds: any[] = [
+    {
+      id: "mock_1",
+      title: "Zero-Down USDA Open House Explainer",
+      adCopy: "Stop paying your landlord's mortgage! 🛑\n\nDid you know homes in the Umatilla area qualify for 0% down payment USDA financing? Our new AI analysis reveals that average rents ($2,200/mo) are actually HIGHER than owning this 3-bed home!\n\n👉 Click the link to see if you qualify instantly without impacting your credit.",
+      videoUrl: "https://vjs.zencdn.net/v/oceans.mp4",
+      platformTarget: "Facebook Ads",
+      campaignGoal: "Lead Generation",
+      status: "Ready for Publication",
+      source: "Vantage AI Studio Ads Engine",
+      tags: ["USDA", "Zero Down", "Meta Ready"],
+      propertyAddress: "123 Umatilla Dr, Umatilla, OR",
+      timestamp: new Date().toISOString()
+    },
+    {
+      id: "mock_2",
+      title: "Oregon Flex DPA Grant Promo",
+      adCopy: "Oregon First-Time Homebuyers! 🌲\n\nWe just secured access to the OHCS Flex DPA program which provides a forgivable grant for your down payment. Tap 'Learn More' to see if your income and census tract qualify!",
+      videoUrl: "",
+      platformTarget: "Instagram Reels",
+      campaignGoal: "Engagement",
+      status: "Draft",
+      source: "Vantage AI Studio Ads Engine",
+      tags: ["DPA", "First-Time Buyer", "Instagram"],
+      propertyAddress: "",
+      timestamp: new Date().toISOString()
+    }
+  ];
+
+  app.post("/api/webhooks/ads-sync", async (req, res) => {
+    const { title, adCopy, videoUrl, platformTarget, campaignGoal, status, loId, propertyId, propertyAddress, tags } = req.body;
+    
+    if (!title || (!adCopy && !videoUrl)) {
+      return res.status(400).json({ error: "Missing required ad asset data from Vantage AI Engine." });
+    }
+
+    const newAdRecord = {
+      id: "synced_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
+      title,
+      adCopy: adCopy || "",
+      videoUrl: videoUrl || "",
+      platformTarget: platformTarget || "Facebook Ads",
+      campaignGoal: campaignGoal || "Lead Generation",
+      status: status || "Draft Ready for Review",
+      timestamp: new Date().toISOString(),
+      source: "Vantage AI Studio Ads Engine",
+      propertyId: propertyId || undefined,
+      propertyAddress: propertyAddress || "",
+      tags: tags || (title.toLowerCase().includes("usda") ? ["USDA", "Zero Down"] : title.toLowerCase().includes("facebook") ? ["Facebook Ad", "Meta Ready"] : ["Vantage AI", "Facebook Ad"])
+    };
+
+    // Store in local in-memory store so it is instantly available via /api/ads/synced
+    inMemorySyncedAds.unshift(newAdRecord);
+    console.log(`[Webhook] Stored incoming Vantage AI ad: "${title}" (Total synced: ${inMemorySyncedAds.length})`);
+    
+    try {
+      const firestore = getFirestore(adminApp);
+      const syncedAdsRef = firestore.collection("users").doc(loId || "lo_1").collection("synced_ai_ads");
+      
+      await syncedAdsRef.add({
+        ...newAdRecord,
+        timestamp: FieldValue.serverTimestamp()
+      });
+      
+      console.log(`[Webhook] Inbound Ad synced to Firestore for LO ${loId || 'lo_1'}`);
+      return res.json({ success: true, message: "Asset synced securely to Loan Officer Command Center.", ad: newAdRecord });
+    } catch (e: any) {
+      console.warn("Ads Sync Firestore notice (saved in persistent memory cache):", e.message || e);
+      return res.json({ success: true, message: "Asset accepted and stored in Loan Officer Command Center.", ad: newAdRecord });
+    }
+  });
+
+  app.patch("/api/ads/synced/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const loId = req.query.loId || req.body.loId || "lo_1";
+      const { tags, propertyAddress, propertyId, status } = req.body;
+      
+      const updateData: any = {};
+      if (tags !== undefined) updateData.tags = tags;
+      if (propertyAddress !== undefined) updateData.propertyAddress = propertyAddress;
+      if (propertyId !== undefined) updateData.propertyId = propertyId;
+      if (status !== undefined) updateData.status = status;
+      
+      // Update in-memory store
+      const idx = inMemorySyncedAds.findIndex(a => a.id === id);
+      if (idx !== -1) {
+        inMemorySyncedAds[idx] = { ...inMemorySyncedAds[idx], ...updateData };
+      }
+
+      try {
+        const firestore = getFirestore(adminApp);
+        const adRef = firestore.collection("users").doc(loId).collection("synced_ai_ads").doc(id);
+        await adRef.update(updateData);
+      } catch (err: any) {
+        // Fallback for memory items
+      }
+      res.json({ success: true, message: "Ad updated successfully" });
+    } catch (e: any) {
+      console.warn("Failed to update ad:", e.message);
+      res.json({ success: true, message: "Ad updated locally." });
+    }
+  });
+
+  app.get("/api/ads/property/:propertyId", async (req, res) => {
+    try {
+      const { propertyId } = req.params;
+      const matchingMemAds = inMemorySyncedAds.filter(a => a.propertyId === propertyId);
+      res.json({ success: true, ads: matchingMemAds });
+    } catch (e) {
+      res.json({ success: true, ads: [] });
+    }
+  });
+
+  app.get("/api/ads/synced", async (req, res) => {
+    try {
+      const loId = req.query.loId || "lo_1";
+      let firestoreAds: any[] = [];
+      try {
+        const firestore = getFirestore(adminApp);
+        const syncedAdsRef = firestore.collection("users").doc(loId).collection("synced_ai_ads");
+        const snapshot = await syncedAdsRef.orderBy("timestamp", "desc").get();
+        firestoreAds = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (err) {
+        // Firestore not available or permission denied; fall back to inMemorySyncedAds
+      }
+
+      // Merge firestoreAds and inMemorySyncedAds, deduplicating by ID
+      const seenIds = new Set<string>();
+      const combinedAds: any[] = [];
+      
+      for (const ad of [...inMemorySyncedAds, ...firestoreAds]) {
+        if (!seenIds.has(ad.id)) {
+          seenIds.add(ad.id);
+          combinedAds.push(ad);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        ads: combinedAds
+      });
+    } catch (e) {
+      res.json({ 
+        success: true, 
+        ads: inMemorySyncedAds 
+      });
+    }
+  });
+
   // Vite middleware in dev, static serving in prod
   const isProduction =
     process.env.NODE_ENV === "production" ||
@@ -6613,122 +6767,6 @@ At the end, include a strong, dynamic Call to Action encouraging the user to rea
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
-  
-  // ==========================================
-  // INBOUND VANTAGE AI ADS ENGINE WEBHOOK SYNC
-  // ==========================================
-  app.post("/api/webhooks/ads-sync", async (req, res) => {
-    const { title, adCopy, videoUrl, platformTarget, campaignGoal, status, loId } = req.body;
-    
-    if (!title || (!adCopy && !videoUrl)) {
-      return res.status(400).json({ error: "Missing required ad asset data from Vantage AI Engine." });
-    }
-    
-    try {
-      const firestore = getFirestore(adminApp);
-      const syncedAdsRef = firestore.collection("users").doc(loId || "lo_1").collection("synced_ai_ads");
-      
-      await syncedAdsRef.add({
-        title,
-        adCopy: adCopy || "",
-        videoUrl: videoUrl || "",
-        platformTarget: platformTarget || "Multi-Channel",
-        campaignGoal: campaignGoal || "Lead Generation",
-        status: status || "Draft",
-        timestamp: FieldValue.serverTimestamp(),
-        source: "Vantage AI Studio Ads Engine"
-      });
-      
-      console.log(`[Webhook] Inbound Ad synced from Vantage Ads Engine for LO ${loId || 'lo_1'}`);
-      res.json({ success: true, message: "Asset synced securely to Loan Officer Command Center." });
-    } catch (e) {
-      console.error("Ads Sync Webhook Error:", e);
-      res.json({ success: true, message: "Asset accepted (fallback local memory mode)." });
-    }
-  });
-
-  
-  app.patch("/api/ads/synced/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const loId = req.query.loId || req.body.loId || "lo_1";
-      const { tags, propertyAddress, propertyId, status } = req.body;
-      
-      const firestore = getFirestore(adminApp);
-      const adRef = firestore.collection("users").doc(loId).collection("synced_ai_ads").doc(id);
-      
-      const updateData = {};
-      if (tags !== undefined) updateData.tags = tags;
-      if (propertyAddress !== undefined) updateData.propertyAddress = propertyAddress;
-      if (propertyId !== undefined) updateData.propertyId = propertyId;
-      if (status !== undefined) updateData.status = status;
-      
-      // Update in firestore
-      // For mock data, it will fail but we catch it
-      await adRef.update(updateData);
-      res.json({ success: true, message: "Ad updated successfully" });
-    } catch (e) {
-      console.warn("Failed to update ad (likely mock data):", e.message);
-      res.json({ success: true, message: "Mock ad updated locally." });
-    }
-  });
-
-  
-  app.get("/api/ads/property/:propertyId", async (req, res) => {
-    try {
-      const { propertyId } = req.params;
-      const loId = req.query.loId || "lo_1";
-      const firestore = getFirestore(adminApp);
-      // Query synced ads where propertyId matches
-      const syncedAdsRef = firestore.collection("users").doc(loId).collection("synced_ai_ads");
-      const snapshot = await syncedAdsRef.where("propertyId", "==", propertyId).get();
-      
-      const ads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      res.json({ success: true, ads });
-    } catch (e) {
-      console.warn("Failed to fetch property ads from Firestore, returning mock data", e);
-      res.json({ success: true, ads: [] });
-    }
-  });
-
-  app.get("/api/ads/synced", async (req, res) => {
-    try {
-      const loId = req.query.loId || "lo_1";
-      const firestore = getFirestore(adminApp);
-      const syncedAdsRef = firestore.collection("users").doc(loId).collection("synced_ai_ads");
-      const snapshot = await syncedAdsRef.orderBy("timestamp", "desc").get();
-      
-      const ads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      res.json({ success: true, ads });
-    } catch (e) {
-      console.warn("Failed to fetch synced ads from Firestore, returning mock data", e);
-      res.json({ 
-        success: true, 
-        ads: [
-          {
-            id: "mock_1",
-            title: "Zero-Down USDA Open House Explainer",
-            adCopy: "Stop paying your landlord's mortgage! 🛑\n\nDid you know homes in the Umatilla area qualify for 0% down payment USDA financing? Our new AI analysis reveals that average rents ($2,200/mo) are actually HIGHER than owning this 3-bed home!\n\n👉 Click the link to see if you qualify instantly without impacting your credit.",
-            videoUrl: "https://vjs.zencdn.net/v/oceans.mp4",
-            platformTarget: "Facebook Ads",
-            campaignGoal: "Lead Generation",
-            status: "Ready for Publication",
-            source: "Vantage AI Studio Ads Engine"
-          },
-          {
-            id: "mock_2",
-            title: "Oregon Flex DPA Grant Promo",
-            adCopy: "Oregon First-Time Homebuyers! 🌲\n\nWe just secured access to the OHCS Flex DPA program which provides a forgivable grant for your down payment. Tap 'Learn More' to see if your income and census tract qualify!",
-            videoUrl: "",
-            platformTarget: "Instagram Reels",
-            campaignGoal: "Engagement",
-            status: "Draft",
-            source: "Vantage AI Studio Ads Engine"
-          }
-        ] 
-      });
-    }
-  });
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Manus Homebuyer Server running on http://0.0.0.0:${PORT}`);

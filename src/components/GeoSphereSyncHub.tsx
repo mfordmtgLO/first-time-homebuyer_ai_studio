@@ -859,6 +859,33 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
     }
   };
 
+  // Handle JSON File Export
+  const handleExportJson = () => {
+    try {
+      const dataToExport = {
+        listings: syncedListings,
+        exportedAt: new Date().toISOString(),
+        source: "GeoSphere Sync Hub",
+        count: syncedListings.length
+      };
+      
+      const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `geosphere_rentcast_listings_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      onTriggerToast(`Successfully exported ${syncedListings.length} listings to JSON.`);
+    } catch (e: any) {
+      console.error("Export error:", e);
+      onTriggerToast(`Export failed: ${e.message}`);
+    }
+  };
+
   // Handle JSON File Upload & Manual JSON Paste
   const handleImportJson = () => {
     if (!jsonPasteContent.trim()) {
@@ -1052,6 +1079,13 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={handleExportJson}
+              className="px-4 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-[#C18C5D]" />
+              <span>Export Backup JSON</span>
+            </button>
             <button
               onClick={() => setShowImportModal(true)}
               className="px-4 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"

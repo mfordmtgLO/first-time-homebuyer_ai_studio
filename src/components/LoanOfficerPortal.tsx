@@ -1006,17 +1006,17 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       return lo;
     });
 
-    let updatedCurrentLo = activeLo;
-    if (activeLo && activeLo.id === loId) {
+    let updatedCurrentLo = currentLo;
+    if (currentLo && currentLo.id === loId) {
       updatedCurrentLo = {
-        ...activeLo,
+        ...currentLo,
         twilioAccountSid: twilioConfig.accountSid,
         twilioAuthToken: twilioConfig.authToken,
         twilioPhoneNumber: twilioConfig.phoneNumber,
         twilioEnabled: twilioConfig.enableLiveCarrierSms,
         twilioByokConfigured: Boolean(twilioConfig.accountSid && twilioConfig.phoneNumber),
         byokKeysStatus: {
-          ...(activeLo.byokKeysStatus || {}),
+          ...(currentLo.byokKeysStatus || {}),
           twilio: Boolean(twilioConfig.accountSid && twilioConfig.phoneNumber),
         },
       };
@@ -10488,7 +10488,7 @@ Don't forget to file your State Homestead Tax Exemption!`,
           setShowTwilioSettingsModal(false);
           setTwilioModalTargetLoId(undefined);
         }}
-        currentLo={activeLo}
+        currentLo={currentLo}
         allLoanOfficers={guidesState.loanOfficers || []}
         initialTargetLoId={twilioModalTargetLoId}
         onSaveLoTwilioConfig={handleSaveLoTwilioConfig}

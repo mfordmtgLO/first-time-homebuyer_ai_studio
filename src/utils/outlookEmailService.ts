@@ -175,80 +175,319 @@ export interface LaunchOutlookOptions {
   bcc?: string;
   subject: string;
   body: string;
+  htmlBody?: string;
   loanOfficer?: LoanOfficerProfile;
   lead?: CapturedLead;
   agent?: RealEstateAgentProfile;
   templateName?: string;
   flyerNames?: string[];
+  autoDownloadEml?: boolean;
   onLogOutreach?: (historyItem: EmailHistoryItem) => void;
   onTriggerToast?: (msg: string) => void;
 }
 
 /**
- * Launches the user's local installed Microsoft Outlook email client via mailto: protocol
- * with the full email draft and authentic work email signature pre-populated.
- * Also copies the message to the clipboard as a convenient fallback.
+ * Generates an RFC 822 MIME-compliant .eml message with the Microsoft Outlook 'X-Unsent: 1'
+ * draft header. When opened on Windows or macOS with Microsoft Outlook installed,
+ * Outlook immediately opens the native Compose / Draft window with all recipients,
+ * attachments, rich HTML styling, and the official work signature pre-populated.
  */
-export function launchLocalOutlookDraft(options: LaunchOutlookOptions): void {
+export function generateOutlookEmlContent(options: {
+  to: string;
+  cc?: string;
+  bcc?: string;
+  subject: string;
+  body: string;
+  htmlBody?: string;
+}): string {
+  const { to, cc, bcc, subject, body, htmlBody } = options;
+  const boundary = `----=_Part_OutlookDraft_${Date.now().toString(16)}_${Math.random().toString(36).substring(2, 8)}`;
+  
+  // Format recipients (Outlook accepts semicolons or commas; RFC 822 uses commas)
+  const formatRecipients = (raw?: string) => {
+    if (!raw) return "";
+    return raw.split(/[;,]/).map((s) => s.trim()).filter(Boolean).join(", ");
+  };
+
+  const toFormatted = formatRecipients(to);
+  const ccFormatted = formatRecipients(cc);
+  const bccFormatted = formatRecipients(bcc);
+
+  let eml = "X-Unsent: 1\r\n";
+  if (toFormatted) eml += `To: ${toFormatted}\r\n`;
+  if (ccFormatted) eml += `Cc: ${ccFormatted}\r\n`;
+  if (bccFormatted) eml += `Bcc: ${bccFormatted}\r\n`;
+  eml += `Subject: ${subject || "Loan Financing Update"}\r\n`;
+  eml += "MIME-Version: 1.0\r\n";
+
+  if (htmlBody) {
+    eml += `Content-Type: multipart/alternative; boundary="${boundary}"\r\n\r\n`;
+    
+    // Plain text part
+    eml += `--${boundary}\r\n`;
+    eml += "Content-Type: text/plain; charset=utf-8\r\n";
+    eml += "Content-Transfer-Encoding: 8bit\r\n\r\n";
+    eml += `${(body || "").replace(/\r\n/g, "\n").replace(/\n/g, "\r\n")}\r\n\r\n`;
+    
+    // Rich HTML part
+    eml += `--${boundary}\r\n`;
+    eml += "Content-Type: text/html; charset=utf-8\r\n";
+    eml += "Content-Transfer-Encoding: 8bit\r\n\r\n";
+    eml += `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: Arial, sans-serif; font-size: 13px; color: #333333; line-height: 1.5;">${htmlBody}</body></html>\r\n\r\n`;
+    
+    eml += `--${boundary}--\r\n`;
+  } else {
+    eml += "Content-Type: text/plain; charset=utf-8\r\n";
+    eml += "Content-Transfer-Encoding: 8bit\r\n\r\n";
+    eml += `${(body || "").replace(/\r\n/g, "\n").replace(/\n/g, "\r\n")}\r\n`;
+  }
+
+  return eml;
+}
+
+/**
+ * Downloads a ready-to-open .eml file that immediately invokes the user's native local
+ * Microsoft Outlook client in interactive compose draft mode with full rich styling,
+ * unlimited recipients in To/Cc, and complete loan officer branding.
+ */
+export function downloadOutlookEmlDraft(options: {
+  to: string;
+  cc?: string;
+  bcc?: string;
+  subject: string;
+  body: string;
+  htmlBody?: string;
+  fileName?: string;
+}): void {
+  const emlContent = generateOutlookEmlContent(options);
+  const blob = new Blob([emlContent], { type: "message/rfc822;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  
+  const rawTitle = options.fileName || options.subject || "Outlook-Draft";
+  const sanitized = rawTitle
+    .replace(/[^a-zA-Z0-9_-]/g, "_")
+    .replace(/_+/g, "_")
+    .substring(0, 45);
+  const filename = `${sanitized || "Outlook-Draft"}.eml`;
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+
+  setTimeout(() => {
+    if (document.body.contains(link)) {
+      document.body.removeChild(link);
+    }
+    URL.revokeObjectURL(url);
+  }, 1200);
+}
+
+/**
+ * Triggers the OS mailto: protocol safely without crashing Windows URL buffer limits
+ * (capped at 1,800 chars) and without illegal top-level navigation in sandboxed iframes.
+ */
+export function triggerLocalMailto(options: {
+  to: string;
+  cc?: string;
+  bcc?: string;
+  subject: string;
+  body: string;
+}): void {
+  const { to, cc, bcc, subject, body } = options;
+  if (!to || !to.trim()) return;
+
+  const baseTo = to.trim().replace(/;/g, ",");
+  const params: string[] = [];
+  if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+
+  // Calculate budget to keep mailtoUri strictly under 1,800 chars
+  const baseUri = `mailto:${encodeURIComponent(baseTo)}?${params.join("&")}`;
+  let budget = 1800 - baseUri.length;
+
+  if (cc && cc.trim()) {
+    const formattedCc = cc.trim().replace(/;/g, ",");
+    const encodedCc = encodeURIComponent(formattedCc);
+    if (encodedCc.length < 450) {
+      params.push(`cc=${encodedCc}`);
+      budget -= encodedCc.length + 4;
+    } else {
+      // If CC list is massive (e.g. 40 agents), keep only what fits safely
+      const list = formattedCc.split(",").map((s) => s.trim()).filter(Boolean);
+      const safeList: string[] = [];
+      let currentLen = 0;
+      for (const em of list) {
+        if (currentLen + em.length + 3 > 300) break;
+        safeList.push(em);
+        currentLen += em.length + 3;
+      }
+      if (safeList.length > 0) {
+        params.push(`cc=${encodeURIComponent(safeList.join(","))}`);
+        budget -= 320;
+      }
+    }
+  }
+
+  if (bcc && bcc.trim() && budget > 100) {
+    params.push(`bcc=${encodeURIComponent(bcc.trim().replace(/;/g, ","))}`);
+    budget -= 100;
+  }
+
+  // Budget remaining length for body excerpt
+  if (body && budget > 120) {
+    let bodyText = body;
+    const maxChars = Math.max(200, Math.floor((budget - 120) / 2.5));
+    if (bodyText.length > maxChars) {
+      bodyText =
+        bodyText.slice(0, maxChars) +
+        "\n\n[Note: Complete message, property links, and official work signature are copied to your clipboard & loaded in the downloaded Outlook Draft file. Paste with Ctrl+V if needed.]";
+    }
+    params.push(`body=${encodeURIComponent(bodyText)}`);
+  }
+
+  const mailtoUri = `mailto:${encodeURIComponent(baseTo)}${params.length > 0 ? `?${params.join("&")}` : ""}`;
+
+  // Safe invocation without _top navigation (which is blocked by sandboxed iframes)
+  try {
+    const hiddenIframe = document.createElement("iframe");
+    hiddenIframe.style.display = "none";
+    hiddenIframe.src = mailtoUri;
+    document.body.appendChild(hiddenIframe);
+    setTimeout(() => {
+      if (document.body.contains(hiddenIframe)) {
+        document.body.removeChild(hiddenIframe);
+      }
+    }, 2500);
+  } catch {
+    try {
+      const a = document.createElement("a");
+      a.href = mailtoUri;
+      a.target = "_self";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        if (document.body.contains(a)) document.body.removeChild(a);
+      }, 500);
+    } catch {
+      window.location.href = mailtoUri;
+    }
+  }
+}
+
+/**
+ * Opens Microsoft 365 / Outlook on the Web deeplink as a convenient cloud fallback.
+ */
+export function openOutlookWebDraft(options: {
+  to: string;
+  cc?: string;
+  subject: string;
+  body: string;
+}): void {
+  const { to, cc, subject, body } = options;
+  const webTo = encodeURIComponent(to.replace(/;/g, ","));
+  const webCc = cc ? encodeURIComponent(cc.replace(/;/g, ",")) : "";
+  const webSubject = encodeURIComponent(subject || "");
+  const webBody = encodeURIComponent(body || "");
+  const url = `https://outlook.office.com/mail/deeplink/compose?to=${webTo}${webCc ? `&cc=${webCc}` : ""}&subject=${webSubject}&body=${webBody}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/**
+ * Launches the user's local installed Microsoft Outlook email client.
+ * 1. Generates and triggers an RFC 822 .eml draft file with 'X-Unsent: 1'
+ *    (opens directly in installed desktop Outlook with unlimited CC recipients and rich HTML).
+ * 2. Signals the local OS mailto: protocol handler with safe URL length.
+ * 3. Copies rich formatted text and plain text to the clipboard.
+ * 4. Logs to CRM outreach tracking.
+ */
+export function launchLocalOutlookDraft(options: LaunchOutlookOptions): { emlDownloaded: boolean; mailtoTriggered: boolean } {
   const {
     to,
     cc,
     bcc,
     subject,
     body,
+    htmlBody,
     loanOfficer,
     lead,
     agent,
     templateName = "Outlook Outreach",
+    autoDownloadEml = true,
     onLogOutreach,
     onTriggerToast
   } = options;
 
   if (!to || !to.trim()) {
     alert("Please provide a valid recipient email address.");
-    return;
+    return { emlDownloaded: false, mailtoTriggered: false };
   }
 
   // 1. Ensure authentic work email signature is appended
   const fullBody = appendWorkEmailSignature(body, loanOfficer);
+  
+  let fullHtml = htmlBody;
+  if (!fullHtml) {
+    fullHtml = `<div>${fullBody.replace(/\n/g, "<br/>")}</div>`;
+  }
 
-  // 2. Pre-copy formatted body to clipboard so user can effortlessly paste if Outlook rich formatting is desired
+  // 2. Pre-copy formatted body to clipboard (both rich HTML and plain text)
   try {
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(fullBody).catch(() => {});
+    if (navigator?.clipboard) {
+      if ((window as any).ClipboardItem && fullHtml) {
+        const textBlob = new Blob([fullBody], { type: "text/plain" });
+        const htmlBlob = new Blob([fullHtml], { type: "text/html" });
+        navigator.clipboard.write([
+          new ClipboardItem({
+            "text/plain": textBlob,
+            "text/html": htmlBlob,
+          })
+        ]).catch(() => {
+          navigator.clipboard?.writeText?.(fullBody).catch(() => {});
+        });
+      } else if (navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(fullBody).catch(() => {});
+      }
     }
   } catch {
     // non-fatal
   }
 
-  // 3. Build RFC-compliant mailto URI with encoded subject and body
-  const params: string[] = [];
-  if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
-  if (fullBody) params.push(`body=${encodeURIComponent(fullBody)}`);
-  if (cc) params.push(`cc=${encodeURIComponent(cc)}`);
-  if (bcc) params.push(`bcc=${encodeURIComponent(bcc)}`);
-
-  const mailtoUri = `mailto:${encodeURIComponent(to.trim())}${params.length > 0 ? `?${params.join("&")}` : ""}`;
-
-  // 4. Trigger local install Outlook using top-level anchor navigation (safe in sandboxed iframes)
-  try {
-    const a = document.createElement("a");
-    a.href = mailtoUri;
-    a.target = "_top";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      if (document.body.contains(a)) {
-        document.body.removeChild(a);
-      }
-    }, 500);
-  } catch {
-    // Fallback direct location assignment
+  // 3. Trigger Local Outlook native EML Draft (bypasses all character limits & works with installed Outlook)
+  let emlSuccess = false;
+  if (autoDownloadEml !== false) {
     try {
-      window.location.href = mailtoUri;
-    } catch {
-      window.open(mailtoUri, "_top");
+      const draftName = `Outlook-Draft-${(lead?.fullName || agent?.name || subject || "Outreach").replace(/[^a-zA-Z0-9]/g, "-")}`;
+      downloadOutlookEmlDraft({
+        to,
+        cc,
+        bcc,
+        subject,
+        body: fullBody,
+        htmlBody: fullHtml,
+        fileName: draftName
+      });
+      emlSuccess = true;
+    } catch (err) {
+      console.warn("Failed to generate .eml draft:", err);
     }
+  }
+
+  // 4. Trigger local install Outlook mailto: protocol handler (safely length-capped)
+  let mailtoSuccess = false;
+  try {
+    triggerLocalMailto({
+      to,
+      cc,
+      bcc,
+      subject,
+      body: fullBody
+    });
+    mailtoSuccess = true;
+  } catch (err) {
+    console.warn("Failed to invoke mailto handler:", err);
   }
 
   // 5. Create audit history log item for CRM tracking
@@ -274,8 +513,10 @@ export function launchLocalOutlookDraft(options: LaunchOutlookOptions): void {
   }
 
   // 6. User feedback confirmation toast
-  const toastMsg = `📧 Draft email opened in your local Outlook with your work email signature for ${recipientName}!`;
+  const toastMsg = `Draft email launched for your local Outlook client with your work signature for ${recipientName}!`;
   if (onTriggerToast) {
     onTriggerToast(toastMsg);
   }
+
+  return { emlDownloaded: emlSuccess, mailtoTriggered: mailtoSuccess };
 }

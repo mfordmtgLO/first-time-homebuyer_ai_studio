@@ -55,7 +55,16 @@ import {
   launchLocalOutlookDraft,
   appendWorkEmailSignature,
   getWorkEmailSignature,
+  downloadOutlookEmlDraft,
+  openOutlookWebDraft,
+  triggerLocalMailto,
 } from "../utils/outlookEmailService";
+import {
+  downloadFlyerPDF,
+  downloadMultipleFlyersPDF,
+  downloadDatasheetPDF,
+  downloadEmailDraftPDF,
+} from "../utils/flyerPdfGenerator";
 
 interface EmailOutreachModalProps {
   isOpen: boolean;
@@ -464,6 +473,16 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
   const [hasRestoredDraft, setHasRestoredDraft] = useState<boolean>(false);
+
+  // Local Outlook Draft Launch Modal State
+  const [outlookLaunchModal, setOutlookLaunchModal] = useState<{
+    isOpen: boolean;
+    to: string;
+    cc: string;
+    subject: string;
+    plainBody: string;
+    htmlBody: string;
+  } | null>(null);
 
   // Persist templates list to browser local state
   useEffect(() => {
@@ -995,37 +1014,55 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
   };
 
   const handleDownloadSelectedFlyers = () => {
-    const selectedFlyers = flyers.filter((f) => selectedFlyerIds.includes(f.id));
-    if (selectedFlyers.length === 0) {
-      alert("Please select at least one marketing flyer to download.");
-      return;
+    let targetFlyers = flyers.filter((f) => selectedFlyerIds.includes(f.id));
+    if (targetFlyers.length === 0) {
+      // Auto-fallback to top 2 program flyers
+      targetFlyers = flyers.slice(0, 2);
+      setSelectedFlyerIds(targetFlyers.map((f) => f.id));
     }
 
-    selectedFlyers.forEach((flyer) => {
-      let content = `========================================================================\n`;
-      content += `GEOSPHERE MORTGAGE MARKETING FLYER: ${flyer.name.toUpperCase()}\n`;
-      content += `Filename : ${flyer.filename}\n`;
-      content += `Category : ${flyer.category} | File Format: ${flyer.fileType.toUpperCase()} | Size: ${flyer.size}\n`;
-      content += `========================================================================\n\n`;
-      content += `PROGRAM HIGHLIGHTS & AGENT MARKETING SHEET:\n`;
-      content += `${flyer.description}\n\n`;
-      content += `LOAN OFFICER CONTACT & BRANDING:\n`;
-      content += `Mike Ford, Senior Loan Officer\n`;
-      content += `GeoSphere Mortgage & Zone Financing Solutions\n`;
-      content += `Direct Phone: (555) 234-5678 | Email: m.ford@geospheremortgage.com\n`;
-      content += `NMLS License ID: #987654\n`;
-      content += `========================================================================\n`;
+    const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
+    const targetAgent =
+      agentRoster?.find((a) => selectedAgentEmails.includes(a.email)) || agentRoster?.[0];
+    const lead = leads?.find((l) => l.id === selectedLeadId);
 
-      const blob = new Blob([content], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = flyer.filename.replace(/\.(pdf|jpg|png)$/i, "") + "_Flyer.txt";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    downloadMultipleFlyersPDF(targetFlyers, {
+      loanOfficer: activeLo,
+      agent: targetAgent,
+      leadName: lead?.name,
+      properties,
+      targetCity: properties?.[0]?.city || "Bend & Redmond, OR",
     });
+
+    if (onTriggerToast) {
+      onTriggerToast(
+        targetFlyers.length === 1
+          ? `Downloaded PDF marketing flyer: ${targetFlyers[0].name}`
+          : `Saved ${targetFlyers.length} PDF marketing flyer(s) packet!`
+      );
+    }
+  };
+
+  const handleSaveEmailDraftPdf = () => {
+    const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
+    const targetAgent =
+      agentRoster?.find((a) => selectedAgentEmails.includes(a.email)) || agentRoster?.[0];
+    const lead = leads?.find((l) => l.id === selectedLeadId);
+
+    const bodyText = generateBodyContent(false);
+    downloadEmailDraftPDF({
+      subject,
+      bodyText,
+      leadName: lead?.name,
+      agent: targetAgent,
+      loanOfficer: activeLo,
+      properties: selectedLeadPropertyMatches.length > 0 ? selectedLeadPropertyMatches : properties.slice(0, 4),
+      targetCity: properties?.[0]?.city || "Bend & Redmond, OR",
+    });
+
+    if (onTriggerToast) {
+      onTriggerToast("Saved PDF Pre-Approval Blueprint Proposal!");
+    }
   };
 
   const handleCustomFlyerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1096,6 +1133,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
     }
 
     const plainBody = generateBodyContent(false);
+    const htmlBody = generateBodyContent(true);
 
     const encodedSubject = encodeURIComponent(subjectText);
     const encodedBody = encodeURIComponent(plainBody);
@@ -1191,6 +1229,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
       cc,
       subject: subjectText,
       body: plainBody,
+      htmlBody,
       loanOfficer: activeLo,
       lead:
         recipientTab === "website_leads" && selectedLeadId
@@ -1202,6 +1241,73 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
         .filter(Boolean) as string[],
       onTriggerToast,
     });
+
+    // Provide immediate interactive confirmation and direct local opening modal
+    setOutlookLaunchModal({
+      isOpen: true,
+      to,
+      cc,
+      subject: subjectText,
+      plainBody,
+      htmlBody,
+    });
+  };
+
+  const handleDownloadEmlDraft = () => {
+    let to = "";
+    let cc = "";
+    let subjectText = editSubject;
+
+    if (recipientTab === "website_leads") {
+      if (!selectedLeadId) {
+        alert("Please select a website lead first.");
+        return;
+      }
+      const lead = leads.find((l) => l.id === selectedLeadId);
+      if (!lead || !lead.email) {
+        alert("Selected lead does not have a valid email address.");
+        return;
+      }
+      to = lead.email;
+      if (selectedAgentEmails.length > 0) {
+        cc = selectedAgentEmails.join(";");
+      }
+    } else {
+      if (selectedAgentEmails.length === 0) {
+        alert("Please select at least one agent first.");
+        return;
+      }
+      to = selectedAgentEmails.join(";");
+
+      if (selectedAgentEmails.length === 1) {
+        const agent = agentProperties.find((a) => a.email === selectedAgentEmails[0]);
+        if (agent && agent.properties.length > 0) {
+          subjectText = subjectText.replace(/\[Address\]/g, agent.properties[0].address);
+          subjectText = subjectText.replace(/\[City\]/g, agent.properties[0].city);
+          subjectText = subjectText.replace(/\[AgentName\]/g, agent.agentName);
+        }
+      } else {
+        subjectText = subjectText.replace(/\[Address\]/g, "Featured Listings");
+        subjectText = subjectText.replace(/\[City\]/g, "Target Area");
+        subjectText = subjectText.replace(/\[AgentName\]/g, "Agent Partners");
+      }
+    }
+
+    const plainBody = generateBodyContent(false);
+    const htmlBody = generateBodyContent(true);
+    const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
+    const fullBody = appendWorkEmailSignature(plainBody, activeLo);
+
+    downloadOutlookEmlDraft({
+      to,
+      cc,
+      subject: subjectText,
+      body: fullBody,
+      htmlBody,
+      fileName: `Outlook-Draft-${(subjectText || "Outreach").replace(/[^a-zA-Z0-9]/g, "-")}`,
+    });
+
+    onTriggerToast?.("Outlook Draft (.eml) downloaded. Open it to compose in local Outlook!");
   };
 
   const handleDownloadAttachment = () => {
@@ -1258,16 +1364,24 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
     fileContent += `Direct Email: fordmj@gmail.com\n`;
     fileContent += `========================================================================\n`;
 
-    const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Outlook_Property_Flyer_Attachment_${new Date().toISOString().slice(0, 10)}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
+    const targetAgent =
+      agentRoster?.find((a) => selectedAgentEmails.includes(a.email)) || agentRoster?.[0];
+    const lead = leads?.find((l) => l.id === selectedLeadId);
+
+    // Generate genuine PDF Property & Financing Datasheet
+    downloadDatasheetPDF({
+      properties: targetProperties,
+      flyers: selectedFlyers,
+      loanOfficer: activeLo,
+      agent: targetAgent,
+      leadName: lead?.name || (targetAgent ? targetAgent.name : undefined),
+    });
+
     setDownloadedAttachment(true);
+    if (onTriggerToast) {
+      onTriggerToast("Generated official Property & Financing PDF Datasheet!");
+    }
   };
 
   const handleCopyHtml = () => {
@@ -2158,17 +2272,50 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                                               >
                                                 {flyer.filename}
                                               </span>
-                                              <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  setPreviewingFlyer(flyer);
-                                                }}
-                                                className="text-[11px] font-semibold text-[#C18C5D] hover:text-[#A87447] inline-flex items-center gap-0.5"
-                                              >
-                                                <Eye className="w-3 h-3" />
-                                                <span>Preview</span>
-                                              </button>
+                                              <div className="flex items-center gap-2">
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const activeLo =
+                                                      loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
+                                                    const targetAgent =
+                                                      agentRoster?.find((a) =>
+                                                        selectedAgentEmails.includes(a.email)
+                                                      ) || agentRoster?.[0];
+                                                    const lead = leads?.find(
+                                                      (l) => l.id === selectedLeadId
+                                                    );
+                                                    downloadFlyerPDF(flyer, {
+                                                      loanOfficer: activeLo,
+                                                      agent: targetAgent,
+                                                      leadName: lead?.name,
+                                                      properties,
+                                                      targetCity:
+                                                        properties?.[0]?.city || "Bend & Redmond, OR",
+                                                    });
+                                                    if (onTriggerToast) {
+                                                      onTriggerToast(`Downloaded PDF: ${flyer.name}`);
+                                                    }
+                                                  }}
+                                                  title="Directly download authentic PDF flyer"
+                                                  className="text-[11px] font-semibold text-[#4A5D4E] hover:text-[#2D362E] inline-flex items-center gap-1 hover:underline cursor-pointer"
+                                                >
+                                                  <Download className="w-3 h-3" />
+                                                  <span>PDF</span>
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setPreviewingFlyer(flyer);
+                                                  }}
+                                                  className="text-[11px] font-semibold text-[#C18C5D] hover:text-[#A87447] inline-flex items-center gap-0.5 cursor-pointer"
+                                                >
+                                                  <Eye className="w-3 h-3" />
+                                                  <span>Preview</span>
+                                                </button>
+                                              </div>
                                             </div>
                                           </div>
                                         );
@@ -2331,28 +2478,40 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                 )}
               </div>
 
-              <div className="flex items-center gap-2.5 flex-wrap">
-                {/* Download Attachment Sheet */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Save Email Draft Proposal as PDF */}
                 <button
-                  onClick={handleDownloadAttachment}
-                  title="Download formatted property datasheet file to attach in Outlook"
-                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#EAE7E0] bg-white text-[#2D362E] font-semibold text-xs hover:bg-[#F1EFE9] transition-all shadow-xs"
+                  onClick={handleSaveEmailDraftPdf}
+                  title="Save formatted homebuyer pre-approval blueprint and email proposal as an official letterhead PDF"
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#4A5D4E]/40 bg-white text-[#2D362E] font-semibold text-xs hover:bg-[#F9F8F4] transition-all shadow-xs cursor-pointer"
                 >
-                  <Paperclip className="w-3.5 h-3.5 text-[#C18C5D]" />
-                  <span>Download Datasheet (.txt)</span>
+                  <Download className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                  <span>Save PDF Proposal</span>
                 </button>
 
-                {/* Download Selected Flyers Button */}
-                {selectedFlyerIds.length > 0 && (
-                  <button
-                    onClick={handleDownloadSelectedFlyers}
-                    title="Download selected loan program flyers for email attachment"
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#4A5D4E]/30 bg-[#4A5D4E]/10 text-[#4A5D4E] font-semibold text-xs hover:bg-[#4A5D4E]/20 transition-all shadow-xs"
-                  >
-                    <Download className="w-3.5 h-3.5 text-[#4A5D4E]" />
-                    <span>Download Flyers ({selectedFlyerIds.length})</span>
-                  </button>
-                )}
+                {/* Save Selected PDF Flyers Button */}
+                <button
+                  onClick={handleDownloadSelectedFlyers}
+                  title="Download and save official PDF loan program marketing flyer(s) for client attachment"
+                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border font-semibold text-xs transition-all shadow-xs cursor-pointer ${
+                    selectedFlyerIds.length > 0
+                      ? "border-[#4A5D4E]/40 bg-[#4A5D4E]/10 text-[#4A5D4E] hover:bg-[#4A5D4E]/20"
+                      : "border-[#EAE7E0] bg-white text-[#4A5D4E] hover:bg-[#F9F8F4]"
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                  <span>Save PDF Flyers ({selectedFlyerIds.length > 0 ? selectedFlyerIds.length : 2})</span>
+                </button>
+
+                {/* Download Datasheet as PDF */}
+                <button
+                  onClick={handleDownloadAttachment}
+                  title="Download formatted property & financing PDF datasheet to attach in Outlook"
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#EAE7E0] bg-white text-[#2D362E] font-semibold text-xs hover:bg-[#F1EFE9] transition-all shadow-xs cursor-pointer"
+                >
+                  <Paperclip className="w-3.5 h-3.5 text-[#C18C5D]" />
+                  <span>Save PDF Datasheet</span>
+                </button>
 
                 {/* Copy HTML for Outlook */}
                 <button
@@ -2362,6 +2521,16 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                 >
                   <Copy className="w-3.5 h-3.5" />
                   <span>Copy HTML Body</span>
+                </button>
+
+                {/* Direct Native Outlook Draft (.eml) Button */}
+                <button
+                  onClick={handleDownloadEmlDraft}
+                  title="Generate and download .eml file to open directly in desktop Microsoft Outlook"
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#0078D4]/30 bg-[#0078D4]/10 text-[#0078D4] font-semibold text-xs hover:bg-[#0078D4]/20 transition-all shadow-xs"
+                >
+                  <FileCheck className="w-3.5 h-3.5 text-[#0078D4]" />
+                  <span>Draft File (.eml)</span>
                 </button>
 
                 {/* Launch in Outlook Primary Action Button */}
@@ -2378,6 +2547,174 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Outlook Launch Feedback & Options Modal */}
+      {outlookLaunchModal && outlookLaunchModal.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[#EAE7E0] relative flex flex-col gap-4">
+            <button
+              onClick={() => setOutlookLaunchModal(null)}
+              className="absolute right-4 top-4 p-1.5 text-[#9A9488] hover:bg-[#F1EFE9] rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-start gap-3.5 pr-8">
+              <div className="p-3 bg-blue-100 text-[#0078D4] rounded-xl shrink-0">
+                <Mail className="w-6 h-6" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#0078D4] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                  Native Local Outlook Integration
+                </span>
+                <h3 className="font-serif font-bold text-xl text-[#2D362E] mt-1">
+                  Outlook Draft Ready
+                </h3>
+                <p className="text-xs text-[#606C5D] mt-0.5">
+                  Your message has been formatted with full Cornerstone First Mortgage branding &amp; property links.
+                </p>
+              </div>
+            </div>
+
+            {/* Recipient summary banner */}
+            <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl p-3.5 text-xs text-[#2D362E] space-y-1.5 font-mono">
+              <div className="truncate">
+                <span className="font-bold text-[#606C5D]">To:</span> {outlookLaunchModal.to}
+              </div>
+              {outlookLaunchModal.cc && (
+                <div className="truncate">
+                  <span className="font-bold text-[#606C5D]">CC:</span>{" "}
+                  <span className="text-[#0078D4] font-semibold">
+                    {outlookLaunchModal.cc.split(";").length} agent recipient(s)
+                  </span>{" "}
+                  <span className="text-[#9A9488] text-[11px]">({outlookLaunchModal.cc})</span>
+                </div>
+              )}
+              <div className="truncate">
+                <span className="font-bold text-[#606C5D]">Subject:</span> {outlookLaunchModal.subject}
+              </div>
+            </div>
+
+            {/* Methods options */}
+            <div className="space-y-2.5">
+              <p className="text-xs font-semibold text-[#2D362E]">
+                Select how you'd like to open or edit in Microsoft Outlook:
+              </p>
+
+              {/* Option 1: Native EML Draft */}
+              <div className="flex items-center justify-between p-3 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-50 transition-colors">
+                <div className="flex items-start gap-2.5 pr-2">
+                  <FileCheck className="w-4 h-4 text-[#0078D4] shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-bold text-[#0078D4]">
+                      Open Local Outlook Draft (.eml)
+                    </h4>
+                    <p className="text-[11px] text-[#606C5D] leading-snug">
+                      Opens natively in your installed desktop Outlook compose window with all {outlookLaunchModal.cc ? outlookLaunchModal.cc.split(";").length : 0} CC recipients &amp; rich HTML formatting.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
+                    const fullBody = appendWorkEmailSignature(outlookLaunchModal.plainBody, activeLo);
+                    downloadOutlookEmlDraft({
+                      to: outlookLaunchModal.to,
+                      cc: outlookLaunchModal.cc,
+                      subject: outlookLaunchModal.subject,
+                      body: fullBody,
+                      htmlBody: outlookLaunchModal.htmlBody,
+                      fileName: `Outlook-Draft-${outlookLaunchModal.subject || "Outreach"}`,
+                    });
+                    onTriggerToast?.("Opening Outlook Draft (.eml)...");
+                  }}
+                  className="shrink-0 px-3.5 py-2 bg-[#0078D4] hover:bg-[#005A9E] text-white text-xs font-bold rounded-lg shadow-sm transition-all"
+                >
+                  Open Draft (.eml)
+                </button>
+              </div>
+
+              {/* Option 2: System Protocol mailto */}
+              <div className="flex items-center justify-between p-3 rounded-xl border border-[#EAE7E0] bg-white hover:bg-[#FAF9F5] transition-colors">
+                <div className="flex items-start gap-2.5 pr-2">
+                  <Mail className="w-4 h-4 text-[#4A5D4E] shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-bold text-[#2D362E]">
+                      Signal System Handler (mailto:)
+                    </h4>
+                    <p className="text-[11px] text-[#606C5D] leading-snug">
+                      Invokes Windows/macOS default registered email application.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
+                    const fullBody = appendWorkEmailSignature(outlookLaunchModal.plainBody, activeLo);
+                    triggerLocalMailto({
+                      to: outlookLaunchModal.to,
+                      cc: outlookLaunchModal.cc,
+                      subject: outlookLaunchModal.subject,
+                      body: fullBody,
+                    });
+                    onTriggerToast?.("Triggering local mailto: handler...");
+                  }}
+                  className="shrink-0 px-3.5 py-2 border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#2D362E] text-xs font-bold rounded-lg transition-all"
+                >
+                  Signal Handler
+                </button>
+              </div>
+
+              {/* Option 3: Outlook 365 Web */}
+              <div className="flex items-center justify-between p-3 rounded-xl border border-[#EAE7E0] bg-white hover:bg-[#FAF9F5] transition-colors">
+                <div className="flex items-start gap-2.5 pr-2">
+                  <ExternalLink className="w-4 h-4 text-[#C18C5D] shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-bold text-[#2D362E]">
+                      Outlook on the Web (Office 365)
+                    </h4>
+                    <p className="text-[11px] text-[#606C5D] leading-snug">
+                      Open in browser via Microsoft 365 Outlook compose window.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
+                    const fullBody = appendWorkEmailSignature(outlookLaunchModal.plainBody, activeLo);
+                    openOutlookWebDraft({
+                      to: outlookLaunchModal.to,
+                      cc: outlookLaunchModal.cc,
+                      subject: outlookLaunchModal.subject,
+                      body: fullBody,
+                    });
+                  }}
+                  className="shrink-0 px-3.5 py-2 border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#2D362E] text-xs font-bold rounded-lg transition-all"
+                >
+                  Open Web 365
+                </button>
+              </div>
+            </div>
+
+            {/* Footer action */}
+            <div className="flex items-center justify-between pt-2 border-t border-[#EAE7E0]">
+              <button
+                onClick={handleCopyHtml}
+                className="flex items-center gap-1.5 text-xs text-[#4A5D4E] hover:underline font-semibold"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copy Rich HTML</span>
+              </button>
+              <button
+                onClick={() => setOutlookLaunchModal(null)}
+                className="px-5 py-2 bg-[#2D362E] hover:bg-[#1f2520] text-white text-xs font-bold rounded-xl transition-all"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Marketing Flyer Preview Modal */}
       {previewingFlyer && (
@@ -2434,8 +2771,8 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
               </div>
 
               <div className="text-[11px] text-[#9A9488] pt-1 flex items-center justify-between">
-                <span>Format: {previewingFlyer.fileType.toUpperCase()} Datasheet</span>
-                <span>GeoSphere Mortgage License #987654</span>
+                <span>Format: Official PDF Marketing Sheet</span>
+                <span>Cornerstone First Mortgage • NMLS #288455</span>
               </div>
             </div>
 
@@ -2472,34 +2809,28 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
                 type="button"
                 onClick={() => {
                   const flyer = previewingFlyer;
-                  let content = `========================================================================\n`;
-                  content += `GEOSPHERE MORTGAGE MARKETING FLYER: ${flyer.name.toUpperCase()}\n`;
-                  content += `Filename : ${flyer.filename}\n`;
-                  content += `Category : ${flyer.category} | File Format: ${flyer.fileType.toUpperCase()} | Size: ${flyer.size}\n`;
-                  content += `========================================================================\n\n`;
-                  content += `PROGRAM HIGHLIGHTS & AGENT MARKETING SHEET:\n`;
-                  content += `${flyer.description}\n\n`;
-                  content += `LOAN OFFICER CONTACT & BRANDING:\n`;
-                  content += `Mike Ford, Senior Loan Officer\n`;
-                  content += `GeoSphere Mortgage & Zone Financing Solutions\n`;
-                  content += `Direct Phone: (555) 234-5678 | Email: m.ford@geospheremortgage.com\n`;
-                  content += `NMLS License ID: #987654\n`;
-                  content += `========================================================================\n`;
+                  const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
+                  const targetAgent =
+                    agentRoster?.find((a) => selectedAgentEmails.includes(a.email)) ||
+                    agentRoster?.[0];
+                  const lead = leads?.find((l) => l.id === selectedLeadId);
 
-                  const blob = new Blob([content], { type: "text/plain" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = flyer.filename.replace(/\.(pdf|jpg|png)$/i, "") + "_Flyer.txt";
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
+                  downloadFlyerPDF(flyer, {
+                    loanOfficer: activeLo,
+                    agent: targetAgent,
+                    leadName: lead?.name,
+                    properties,
+                    targetCity: properties?.[0]?.city || "Bend & Redmond, OR",
+                  });
+
+                  if (onTriggerToast) {
+                    onTriggerToast(`Downloaded PDF flyer: ${flyer.name}`);
+                  }
                 }}
-                className="px-4 py-2 bg-[#2D362E] hover:bg-black text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+                className="px-4 py-2 bg-[#4A5D4E] hover:bg-[#3D4C40] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
               >
-                <Download className="w-4 h-4" />
-                <span>Download Sample Flyer</span>
+                <FileText className="w-4 h-4 text-white" />
+                <span>Save PDF Flyer</span>
               </button>
             </div>
           </div>

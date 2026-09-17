@@ -3831,30 +3831,58 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     }
   });
 
-  // API Route: GeoSphere Oregon GIS Proxy & Synchronization
+  // API Route: GeoSphere Oregon GIS Proxy & Synchronization (Google Cloud Run Primary)
   app.post("/api/geosphere/sync", async (req, res) => {
     try {
       const { endpointUrl, syncToken } = req.body || {};
-      const targetUrl =
-        endpointUrl || "https://geosphere-map-oregon.vercel.app/api/map-saved-listings";
+      const primaryUrl =
+        endpointUrl || "https://geosphere-map-oregon.ai.studio/api/map-saved-listings";
+      const fallbackUrl = "https://geosphere-map-oregon.vercel.app/api/map-saved-listings";
 
       const headers: Record<string, string> = {
-        "User-Agent": "Manus-Homebuyer-Sync-Agent/1.0",
+        "User-Agent": "Loan-Officer-Homebuyer-Sync-Agent/1.0",
         Accept: "application/json",
       };
       if (syncToken) {
         headers["x-geosphere-sync-token"] = syncToken;
       }
 
-      const response = await fetch(targetUrl, {
-        method: "GET",
-        headers,
-      });
+      let response: any = null;
+      let usedUrl = primaryUrl;
 
-      if (!response.ok) {
-        return res.status(response.status).json({
-          error: `GeoSphere endpoint responded with HTTP ${response.status}`,
-          status: response.status,
+      try {
+        response = await fetch(primaryUrl, {
+          method: "GET",
+          headers,
+        });
+      } catch (err: any) {
+        console.warn(`[GeoSphere Sync] Primary Cloud Run fetch failed (${primaryUrl}):`, err?.message);
+      }
+
+      // If primary failed or returned error and it wasn't a custom user override, attempt fallback
+      if ((!response || !response.ok) && !endpointUrl && primaryUrl !== fallbackUrl) {
+        console.info(`[GeoSphere Sync] Attempting fallback endpoint (${fallbackUrl})...`);
+        try {
+          const fbResponse = await fetch(fallbackUrl, {
+            method: "GET",
+            headers,
+          });
+          if (fbResponse.ok) {
+            response = fbResponse;
+            usedUrl = fallbackUrl;
+          }
+        } catch (fbErr: any) {
+          console.warn("[GeoSphere Sync] Fallback fetch failed:", fbErr?.message);
+        }
+      }
+
+      if (!response || !response.ok) {
+        const status = response ? response.status : 502;
+        return res.status(status).json({
+          error: `GeoSphere endpoint (${usedUrl}) responded with HTTP ${status}`,
+          status,
+          primaryUrl,
+          fallbackUrl,
         });
       }
 

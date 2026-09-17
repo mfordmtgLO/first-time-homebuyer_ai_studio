@@ -1301,7 +1301,14 @@ export const AdQueueManager: React.FC<AdQueueManagerProps> = ({
                   className="w-full h-48 object-cover"
                 />
                 <div className="p-2 bg-slate-900 text-white text-[10px] flex items-center justify-between">
-                  <span>🎬 Ready Walkthrough Video Asset</span>
+                  <span className="flex items-center gap-1.5">
+                    <span>🎬 Ready Walkthrough Video Asset</span>
+                    {adSettings?.videoAiApiKey && (
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-900/80 text-emerald-300 font-bold border border-emerald-700 text-[9px]">
+                        BYOK: {(adSettings.videoAiProvider || 'heygen').toUpperCase()}
+                      </span>
+                    )}
+                  </span>
                   <span className="font-mono text-[#D4A373]">1080x1920 9:16 Vertical Reel</span>
                 </div>
               </div>

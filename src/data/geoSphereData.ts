@@ -14,6 +14,9 @@ export interface GeoSphereDatasetOption {
   itemCount: number;
 }
 
+export const GEOSPHERE_CLOUD_RUN_URL = "https://geosphere-map-oregon.ai.studio";
+export const GEOSPHERE_VERCEL_FALLBACK_URL = "https://geosphere-map-oregon.vercel.app";
+
 export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
   {
     id: "all",
@@ -22,7 +25,7 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
     description: "Complete unified catalog across Junction City, Eugene, Coos Bay, Bend, Redmond, Portland Metro, and all 36 Oregon counties with full GIS overlays.",
     badge: "Master Database (249)",
     badgeColor: "bg-[#4A5D4E] text-white",
-    sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings",
+    sourceUrl: `${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings`,
     itemCount: 249
   },
   {
@@ -32,7 +35,7 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
     description: "Live active RentCast sale listings from GeoSphere Oregon GIS in Junction City with Jake Zach / Hybrid Real Estate, USDA, and FirstHome overlays.",
     badge: "Junction City Live (20)",
     badgeColor: "bg-emerald-800 text-white",
-    sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings",
+    sourceUrl: `${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings`,
     itemCount: 20
   },
   {
@@ -42,7 +45,7 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
     description: "Live snapshot from Coos Bay, North Bend, Bandon, and Coquille with 100% USDA Rural Housing & FirstHome Targeted price cap eligibility.",
     badge: "Coos Bay / Coast (116)",
     badgeColor: "bg-teal-800 text-white",
-    sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings?area=coos-bay",
+    sourceUrl: `${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings?area=coos-bay`,
     itemCount: 116
   },
   {
@@ -52,7 +55,7 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
     description: "Junction City, Eugene, Springfield, Cottage Grove, and Florence listings pre-screened for OHCS Flex Lending cash assistance and transit corridor grants.",
     badge: "Lane / Eugene (58)",
     badgeColor: "bg-emerald-800 text-white",
-    sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings?area=lane",
+    sourceUrl: `${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings?area=lane`,
     itemCount: 58
   },
   {
@@ -62,7 +65,7 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
     description: "Bend, Redmond, Sisters, and La Pine homes under county purchase price caps with USDA 0% Down rural loan boundaries.",
     badge: "Deschutes / Bend (35)",
     badgeColor: "bg-amber-800 text-white",
-    sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings?area=deschutes",
+    sourceUrl: `${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings?area=deschutes`,
     itemCount: 35
   },
   {
@@ -72,7 +75,7 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
     description: "Sandy, Oregon City, Gresham, Salem, Hillsboro, Canby, Silverton, Medford, and Grants Pass grant-eligible selections.",
     badge: "Metro & Statewide (40)",
     badgeColor: "bg-[#C18C5D] text-white",
-    sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings?area=metro",
+    sourceUrl: `${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings?area=metro`,
     itemCount: 40
   },
   {
@@ -82,7 +85,7 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
     description: "Properties situated in designated USDA Rural Development zones offering zero down payment financing.",
     badge: "USDA 0% Down",
     badgeColor: "bg-emerald-700 text-white",
-    sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings?filter=usda",
+    sourceUrl: `${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings?filter=usda`,
     itemCount: 218
   },
   {
@@ -92,7 +95,7 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
     description: "Low-to-Moderate Income census tracts qualifying for enhanced 3% or 5% cash assistance grants.",
     badge: "OHCS LMI Qualified",
     badgeColor: "bg-[#C18C5D] text-white",
-    sourceUrl: "https://geosphere-map-oregon.vercel.app/api/map-saved-listings?filter=lmi",
+    sourceUrl: `${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings?filter=lmi`,
     itemCount: 114
   }
 ];

@@ -43,6 +43,8 @@ import {
   GEOSPHERE_DATASETS, 
   GEOSPHERE_MOCK_LISTINGS, 
   GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS,
+  GEOSPHERE_CLOUD_RUN_URL,
+  GEOSPHERE_VERCEL_FALLBACK_URL,
   GeoSphereDatasetOption, 
   parseGeoSpherePayload 
 } from "../data/geoSphereData";
@@ -146,7 +148,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   const [selectedListingIds, setSelectedListingIds] = useState<string[]>([]);
   const [activeOverlayFilter, setActiveOverlayFilter] = useState<string>("all");
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"cards" | "map">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "map" | "cloud_run_live">("cards");
   const [countyFilter, setCountyFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "dom" | "sqft">("default");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -252,7 +254,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   
   // Custom API endpoint & token drawer state
   const [showAdvancedEndpoint, setShowAdvancedEndpoint] = useState<boolean>(false);
-  const [customEndpointUrl, setCustomEndpointUrl] = useState<string>("https://geosphere-map-oregon.vercel.app/api/map-saved-listings");
+  const [customEndpointUrl, setCustomEndpointUrl] = useState<string>(`${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings`);
   const [customSyncToken, setCustomSyncToken] = useState<string>("");
 
   // Import JSON Modal State
@@ -1102,7 +1104,41 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
         {/* Advanced Endpoint Drawer */}
         {showAdvancedEndpoint && (
           <div className="mt-4 p-4 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-3">
-            <h4 className="text-xs font-bold text-[#2D362E] uppercase tracking-wider">GeoSphere Vercel / Cloud Sync Connection</h4>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h4 className="text-xs font-bold text-[#2D362E] uppercase tracking-wider">
+                GeoSphere Cloud Run / GIS Connection Settings
+              </h4>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomEndpointUrl(`${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings`);
+                    onTriggerToast("Switched to Google Cloud Run microservice endpoint");
+                  }}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                    customEndpointUrl.includes("geosphere-map-oregon.ai.studio")
+                      ? "bg-emerald-800 text-white border-emerald-800 shadow-2xs"
+                      : "bg-white text-[#2D362E] border-[#EAE7E0] hover:bg-stone-50"
+                  }`}
+                >
+                  Cloud Run (ai.studio)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomEndpointUrl(`${GEOSPHERE_VERCEL_FALLBACK_URL}/api/map-saved-listings`);
+                    onTriggerToast("Switched to Vercel deployment endpoint");
+                  }}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                    customEndpointUrl.includes("vercel.app")
+                      ? "bg-emerald-800 text-white border-emerald-800 shadow-2xs"
+                      : "bg-white text-[#2D362E] border-[#EAE7E0] hover:bg-stone-50"
+                  }`}
+                >
+                  Vercel Fallback
+                </button>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] font-bold text-[#606C5D] block mb-1">Target Endpoint URL</label>
@@ -1110,8 +1146,8 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                   type="text"
                   value={customEndpointUrl}
                   onChange={(e) => setCustomEndpointUrl(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-[#EAE7E0] focus:ring-1 focus:ring-[#4A5D4E] outline-none"
-                  placeholder="https://geosphere-map-oregon.vercel.app/api/map-saved-listings"
+                  className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-[#EAE7E0] focus:ring-1 focus:ring-[#4A5D4E] outline-none font-mono"
+                  placeholder="https://geosphere-map-oregon.ai.studio/api/map-saved-listings"
                 />
               </div>
               <div>
@@ -1183,41 +1219,52 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
       </div>
 
 
-      {/* Dual Integration Cards: GeoSphere Vercel Ingestion & Public Consumer Guide Sync */}
+      {/* Dual Integration Cards: GeoSphere Cloud Run Ingestion & Public Consumer Guide Sync */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Card 1: GeoSphere Vercel GIS Ingestion */}
+        {/* Card 1: GeoSphere Cloud Run GIS Ingestion */}
         <div className="bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-6 shadow-xs flex flex-col justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
               <Globe className="w-6 h-6 text-emerald-800" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-[#2D362E]">GeoSphere Vercel Ingestion</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-[#2D362E]">GeoSphere Cloud Run Ingestion</h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  Live API Connected
+                  Google Cloud Run (Live)
                 </span>
               </div>
               <p className="text-xs text-[#606C5D] mt-1 font-mono truncate max-w-xs sm:max-w-sm" title={customEndpointUrl}>
                 {customEndpointUrl}
               </p>
               <p className="text-[11px] text-[#2D362E] mt-1 font-semibold">
-                Pulls active RentCast sale listings & GIS overlays from your Oregon map website.
+                Direct GCP microservice connection to https://geosphere-map-oregon.ai.studio.
               </p>
             </div>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-[#EAE7E0]">
+          <div className="flex items-center justify-between pt-2 border-t border-[#EAE7E0] flex-wrap gap-2">
             <span className="text-xs text-[#606C5D]">
               Status: <strong className="text-emerald-700">{livePullListings.length} Live Listings Ready ({liveCities.join(", ") || "Oregon"})</strong>
             </span>
-            <button
-              onClick={handleIngestVercelLiveListings}
-              disabled={isFetching}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 disabled:bg-stone-300 disabled:text-stone-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
-              {isFetching ? "Ingesting Live Pull..." : "Ingest Live GeoSphere Listings"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode("cloud_run_live")}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-stone-100 border border-[#EAE7E0] text-[#2D362E] text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                title="View embedded live map"
+              >
+                <Eye className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                <span>Live Map</span>
+              </button>
+              <button
+                onClick={handleIngestVercelLiveListings}
+                disabled={isFetching}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 disabled:bg-stone-300 disabled:text-stone-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              >
+                <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+                {isFetching ? "Ingesting Live Pull..." : "Ingest Live GeoSphere Listings"}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1433,31 +1480,42 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           </div>
         </div>
 
-        {/* Map / Cards Toggle */}
+        {/* Map / Cards / Cloud Run Live Toggle */}
         <div className="flex items-center gap-1.5 p-1 bg-[#F9F8F4] rounded-xl border border-[#EAE7E0] overflow-x-auto hide-scrollbar self-start sm:self-auto mb-3 sm:mb-0">
-            <button
-              onClick={() => setViewMode("map")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                viewMode === "map"
-                  ? "bg-[#4A5D4E] text-white shadow-2xs font-bold"
-                  : "text-[#606C5D] hover:text-[#2D362E]"
-              }`}
-            >
-              <Globe className="w-4 h-4 text-emerald-300" />
-              <span>Interactive Map View</span>
-            </button>
-            <button
-              onClick={() => setViewMode("cards")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                viewMode === "cards"
-                  ? "bg-[#4A5D4E] text-white shadow-2xs font-bold"
-                  : "text-[#606C5D] hover:text-[#2D362E]"
-              }`}
-            >
-              <Building className="w-4 h-4" />
-              <span>Curated List</span>
-            </button>
-          </div>
+          <button
+            onClick={() => setViewMode("cards")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap cursor-pointer ${
+              viewMode === "cards"
+                ? "bg-[#4A5D4E] text-white shadow-2xs font-bold"
+                : "text-[#606C5D] hover:text-[#2D362E]"
+            }`}
+          >
+            <Building className="w-4 h-4" />
+            <span>Curated List</span>
+          </button>
+          <button
+            onClick={() => setViewMode("map")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap cursor-pointer ${
+              viewMode === "map"
+                ? "bg-[#4A5D4E] text-white shadow-2xs font-bold"
+                : "text-[#606C5D] hover:text-[#2D362E]"
+            }`}
+          >
+            <Globe className="w-4 h-4 text-emerald-300" />
+            <span>Interactive Overlay Map</span>
+          </button>
+          <button
+            onClick={() => setViewMode("cloud_run_live")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap cursor-pointer ${
+              viewMode === "cloud_run_live"
+                ? "bg-emerald-800 text-white shadow-2xs font-bold ring-2 ring-emerald-500/30"
+                : "text-emerald-800 hover:bg-emerald-50 font-semibold"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Live Cloud Run Map (ai.studio)</span>
+          </button>
+        </div>
 
         {/* Batch Action Bar */}
         <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1515,8 +1573,62 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           </div>
         </div>
 
-        {/* Listings Grid */}
-        {viewMode === "map" ? (
+        {/* Listings Grid or Map View */}
+        {viewMode === "cloud_run_live" ? (
+          <div className="mb-6 space-y-3">
+            <div className="p-4 rounded-2xl bg-[#2D362E] text-white flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-bold text-sm">GeoSphere Oregon GIS (Cloud Run Microservice)</h4>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      GCP us-west2 Live
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-300 font-mono mt-0.5">
+                    Endpoint: <span className="text-emerald-400">https://geosphere-map-oregon.ai.studio</span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={handleIngestVercelLiveListings}
+                  disabled={isFetching}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-stone-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
+                  <span>{isFetching ? "Syncing..." : "Sync Listings to Portal"}</span>
+                </button>
+                <a
+                  href="https://geosphere-map-oregon.ai.studio"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>Open Full Window</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <button
+                  onClick={() => setViewMode("cards")}
+                  className="px-3 py-2 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-200 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Back to Curated Cards
+                </button>
+              </div>
+            </div>
+            <div className="relative w-full h-[720px] rounded-3xl overflow-hidden border border-[#EAE7E0] bg-[#FAF9F5] shadow-sm">
+              <iframe
+                src="https://geosphere-map-oregon.ai.studio"
+                title="GeoSphere Oregon Map - Google Cloud Run Microservice"
+                className="w-full h-full border-0"
+                allow="geolocation; camera"
+              />
+            </div>
+          </div>
+        ) : viewMode === "map" ? (
           <div className="mb-6">
             <PropertyMapOverlay
               properties={filteredListings}

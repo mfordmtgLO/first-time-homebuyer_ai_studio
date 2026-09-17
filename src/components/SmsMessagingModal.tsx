@@ -262,24 +262,35 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
         attachmentUrl: attachedItem.attachmentUrl
       };
 
+      // 1. Resolve Loan Officer's Individual Twilio BYOK credentials
+      const loTwilioCfg = loanOfficer?.id ? getSavedTwilioConfig(loanOfficer.id) : getSavedTwilioConfig();
+      const sid = loanOfficer?.twilioAccountSid || loTwilioCfg.accountSid;
+      const authToken = loanOfficer?.twilioAuthToken || loTwilioCfg.authToken;
+      const fromNumber = loanOfficer?.twilioPhoneNumber || loTwilioCfg.phoneNumber;
+
       if (auth.currentUser) {
-        // Attempt to fetch vault and pass cipher string to server
-        const docRef = doc(db, "twilio_vault", auth.currentUser.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().encryptedVault) {
-          reqBody.encryptedVault = docSnap.data().encryptedVault;
+        // Attempt to fetch vault for this specific LO or current user
+        const targetVaultId = loanOfficer?.id || auth.currentUser.uid;
+        try {
+          const docRef = doc(db, "twilio_vault", targetVaultId);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists() && docSnap.data().encryptedVault) {
+            reqBody.encryptedVault = docSnap.data().encryptedVault;
+          }
+        } catch (vErr) {
+          console.warn("Vault lookup notice:", vErr);
         }
       }
 
-      // Fallback if they haven't saved to vault but are trying to test raw inputs
+      // Fallback if they haven't saved to vault: use LO's BYOK credentials
       if (!reqBody.encryptedVault) {
-        const twilioCfg = getSavedTwilioConfig();
-        if (!twilioCfg.accountSid || !twilioCfg.authToken || !twilioCfg.phoneNumber) {
-          return; // No config available
+        if (!sid || !authToken || !fromNumber) {
+          console.warn("Twilio BYOK credentials not configured for LO:", loanOfficer?.name);
+          return;
         }
-        reqBody.accountSid = twilioCfg.accountSid;
-        reqBody.authToken = twilioCfg.authToken;
-        reqBody.fromNumber = twilioCfg.phoneNumber;
+        reqBody.accountSid = sid;
+        reqBody.authToken = authToken;
+        reqBody.fromNumber = fromNumber;
       }
 
       const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
@@ -304,21 +315,20 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
       }
       
       if (data && data.success) {
-        setTwilioDispatchStatus(`📡 Live Twilio SMS sent to ${lead.phone} (SID: ${data.messageSid.slice(0, 8)}...)`);
+        setTwilioDispatchStatus(`📡 Live Twilio SMS sent from ${fromNumber || "Twilio"} to ${lead.phone} (SID: ${data.messageSid?.slice(0, 8)}...)`);
       } else if (data && data.error) {
         setTwilioDispatchStatus(`⚠️ Twilio notice: ${data.error}`);
       } else {
         // Fallback directly to Twilio REST API if serverless/static environment doesn't proxy
-        const twilioCfg = getSavedTwilioConfig();
-        if (twilioCfg.accountSid && twilioCfg.authToken && twilioCfg.phoneNumber) {
+        if (sid && authToken && fromNumber) {
           try {
             const cleanTo = lead.phone.replace(/[^0-9+]/g, "");
             const formattedTo = cleanTo.startsWith("+") ? cleanTo : cleanTo.length === 10 ? `+1${cleanTo}` : `+${cleanTo}`;
-            const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(twilioCfg.accountSid)}/Messages.json`;
-            const authHeader = "Basic " + btoa(`${twilioCfg.accountSid}:${twilioCfg.authToken}`);
+            const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(sid)}/Messages.json`;
+            const authHeader = "Basic " + btoa(`${sid}:${authToken}`);
             const formParams = new URLSearchParams();
             formParams.append("To", formattedTo);
-            formParams.append("From", twilioCfg.phoneNumber);
+            formParams.append("From", fromNumber);
             formParams.append("Body", currentMsgText);
 
             const directRes = await fetch(twilioEndpoint, {
@@ -332,7 +342,7 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
 
             const directData = await directRes.json().catch(() => ({}));
             if (directRes.ok) {
-              setTwilioDispatchStatus(`📡 Live Twilio SMS sent directly to ${formattedTo} (SID: ${(directData.sid || '').slice(0, 8)}...)`);
+              setTwilioDispatchStatus(`📡 Direct Twilio SMS dispatched from ${fromNumber} to ${formattedTo}! (SID: ${(directData.sid || '').slice(0, 8)}...)`);
             } else {
               setTwilioDispatchStatus(`⚠️ Twilio error: ${directData.message || directData.detail || 'Dispatch failed'}`);
             }
@@ -513,9 +523,21 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
             </button>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-[11px] text-[#606C5D]">
-            <Phone className="w-3.5 h-3.5 text-[#C18C5D]" />
-            <span>LO: {loanOfficer.name}</span>
+          <div className="hidden sm:flex items-center gap-2.5 text-[11px]">
+            <span className="text-[#606C5D]">
+              LO: <strong className="text-[#2D362E]">{loanOfficer.name}</strong>
+            </span>
+            {loanOfficer.twilioPhoneNumber ? (
+              <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                Twilio BYOK: {loanOfficer.twilioPhoneNumber}
+              </span>
+            ) : (
+              <span className="bg-stone-100 text-stone-600 border border-stone-200 px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center gap-1">
+                <Phone className="w-3 h-3 text-stone-400" />
+                Default Twilio Pool
+              </span>
+            )}
           </div>
         </div>
 

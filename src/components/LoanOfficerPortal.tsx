@@ -981,10 +981,55 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const [viewingJourneyLead, setViewingJourneyLead] = useState<CapturedLead | null>(null);
   const [smsModalLead, setSmsModalLead] = useState<CapturedLead | null>(null);
   const [showTwilioSettingsModal, setShowTwilioSettingsModal] = useState<boolean>(false);
+  const [twilioModalTargetLoId, setTwilioModalTargetLoId] = useState<string | undefined>(undefined);
   const [showSalesforceSettings, setShowSalesforceSettings] = useState<boolean>(false);
   const [showTotalExpertSettings, setShowTotalExpertSettings] = useState<boolean>(false);
   const [showSourceReportModal, setShowSourceReportModal] = useState<boolean>(false);
   const [selectedLeadIdsInCrm, setSelectedLeadIdsInCrm] = useState<string[]>([]);
+
+  const handleSaveLoTwilioConfig = (loId: string, twilioConfig: any) => {
+    const updatedOfficers = (guidesState.loanOfficers || []).map((lo) => {
+      if (lo.id === loId) {
+        return {
+          ...lo,
+          twilioAccountSid: twilioConfig.accountSid,
+          twilioAuthToken: twilioConfig.authToken,
+          twilioPhoneNumber: twilioConfig.phoneNumber,
+          twilioEnabled: twilioConfig.enableLiveCarrierSms,
+          twilioByokConfigured: Boolean(twilioConfig.accountSid && twilioConfig.phoneNumber),
+          byokKeysStatus: {
+            ...(lo.byokKeysStatus || {}),
+            twilio: Boolean(twilioConfig.accountSid && twilioConfig.phoneNumber),
+          },
+        };
+      }
+      return lo;
+    });
+
+    let updatedCurrentLo = activeLo;
+    if (activeLo && activeLo.id === loId) {
+      updatedCurrentLo = {
+        ...activeLo,
+        twilioAccountSid: twilioConfig.accountSid,
+        twilioAuthToken: twilioConfig.authToken,
+        twilioPhoneNumber: twilioConfig.phoneNumber,
+        twilioEnabled: twilioConfig.enableLiveCarrierSms,
+        twilioByokConfigured: Boolean(twilioConfig.accountSid && twilioConfig.phoneNumber),
+        byokKeysStatus: {
+          ...(activeLo.byokKeysStatus || {}),
+          twilio: Boolean(twilioConfig.accountSid && twilioConfig.phoneNumber),
+        },
+      };
+    }
+
+    onUpdateGuidesState({
+      ...guidesState,
+      loanOfficers: updatedOfficers,
+      currentLoanOfficer: updatedCurrentLo,
+    });
+
+    triggerToast(`Twilio BYOK credentials updated for ${updatedCurrentLo?.name || "Loan Officer"}!`);
+  };
 
   const handleUpdateLeadFromSmsModal = (updatedLead: CapturedLead) => {
     const currentLeads = guidesState.leads || [];
@@ -1225,6 +1270,10 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     nmlsId: "NMLS #",
     company: "Pacific Coast Lending Partners",
     branch: "Pacific Northwest Branch",
+    branchId: "BRANCH-001-OR",
+    branchManagerName: "Mike Ford",
+    branchCity: "Lake Oswego",
+    branchState: "Oregon",
     email: "",
     phone: "",
     headshotUrl: "",
@@ -1710,7 +1759,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         title: newLoForm.title || "Mortgage Advisor",
         nmlsId: newLoForm.nmlsId || "NMLS #000000",
         company: newLoForm.company || "Cornerstone First Mortgage",
-        branch: newLoForm.branch || "Team Lonn Kilstrom Branch",
+        branch: newLoForm.branch || "Pacific Northwest HQ - Lake Oswego",
+        branchId: newLoForm.branchId || "BRANCH-001-OR",
+        branchManagerName: newLoForm.branchManagerName || "Mike Ford",
+        branchCity: newLoForm.branchCity || "Lake Oswego",
+        branchState: newLoForm.branchState || "Oregon",
         email: newLoForm.email || "",
         phone: newLoForm.phone || "",
         headshotUrl: newLoForm.headshotUrl || "",
@@ -1719,6 +1772,19 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         specialties: newLoForm.specialties || ["First-Time Homebuyers"],
         bookingUrl: newLoForm.bookingUrl || "https://calendly.com",
         licenseStates: newLoForm.licenseStates || ["Oregon"],
+        production12MoVolume: newLoForm.production12MoVolume || 18500000,
+        production12MoUnits: newLoForm.production12MoUnits || 36,
+        production6MoVolume: newLoForm.production6MoVolume || 9200000,
+        production6MoUnits: newLoForm.production6MoUnits || 18,
+        production3MoVolume: newLoForm.production3MoVolume || 4600000,
+        production3MoUnits: newLoForm.production3MoUnits || 9,
+        production30DaysVolume: newLoForm.production30DaysVolume || 1500000,
+        production30DaysUnits: newLoForm.production30DaysUnits || 3,
+        adExpensesTotal: newLoForm.adExpensesTotal || 450,
+        adExpensesBreakdown: newLoForm.adExpensesBreakdown || [
+          { source: "Facebook Ads", amount: 250, campaignName: "Meta Feed - Local FTHB Assistance", assetType: "facebook_ad" },
+          { source: "Google Ads", amount: 200, campaignName: "Google Search - First Time Home Loans", assetType: "google_ad" }
+        ],
         isAdmin: false,
         parentManagerId: guidesState.adminLoanOfficerId,
         password: newLoForm.password || "pass123",
@@ -6216,6 +6282,8 @@ Here is your private Cornerstone First Mortgage dashboard login details:
 🔗 Dashboard Login: ${loginLink}
 📧 Login Email: ${lo.email}
 🔑 Temporary Password: ${lo.password || "pass123"}
+📱 Individual Twilio BYOK Carrier Number: ${lo.twilioPhoneNumber || "Pending setup in your profile"}
+🔐 Twilio Status: ${lo.twilioPhoneNumber ? "Active & Dedicated Carrier Number Assigned" : "Available in your dashboard under Twilio Settings"}
 
 Once logged in, you can manage your Realtor partnerships, download co-branded QR codes, and review incoming borrower pre-approval leads.
 
@@ -6232,6 +6300,34 @@ Mike Ford`;
                                       ) : (
                                         <span>📋 Copy Login Info to Send LO</span>
                                       )}
+                                    </button>
+                                  </div>
+
+                                  {/* Individual Twilio BYOK Status Bar */}
+                                  <div className="flex items-center justify-between pt-1.5 border-t border-[#E1E8E2] text-[10px]">
+                                    <div className="flex items-center gap-1.5 truncate">
+                                      <Phone className="w-3 h-3 text-emerald-700 shrink-0" />
+                                      <span className="text-[#606C5D]">Twilio BYOK:</span>
+                                      {lo.twilioPhoneNumber ? (
+                                        <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 truncate">
+                                          {lo.twilioPhoneNumber}
+                                        </span>
+                                      ) : (
+                                        <span className="text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 font-medium">
+                                          Setup Pending
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setTwilioModalTargetLoId(lo.id);
+                                        setShowTwilioSettingsModal(true);
+                                      }}
+                                      className="px-2 py-0.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 hover:border-emerald-400 font-bold rounded-md flex items-center gap-1 shrink-0 transition-colors shadow-2xs"
+                                    >
+                                      <span>⚙️ Config</span>
                                     </button>
                                   </div>
                                 </div>
@@ -7182,14 +7278,172 @@ Mike Ford`;
                       </p>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-[#2D362E]">Branch Location</label>
-                      <input
-                        type="text"
-                        value={currentLo.branch || ""}
-                        onChange={(e) => updateCurrentLoField("branch", e.target.value)}
-                        className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
-                      />
+                    {/* Branch Manager Employee Profile Card - Branch Organization & ROLI Tracking */}
+                    <div className="md:col-span-2 bg-[#F9F8F4] p-4 rounded-2xl border border-[#EAE7E0] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5">
+                          <Building className="w-3.5 h-3.5 text-[#4A5D4E]" />
+                          <span>Branch Office, Unique Branch ID &amp; ROLI Tracking</span>
+                        </label>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#4A5D4E]/10 text-[#4A5D4E] font-bold">
+                          Multi-Branch Roster Key
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#606C5D]">
+                        Configure branch assignment, designated branch manager, and unique Branch ID used for financial rollups, tracking advertising expenses, team growth, and Return on Lead Investment (ROLI) metrics.
+                      </p>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-[#2D362E] flex items-center gap-1">
+                            <span>Unique Branch ID</span>
+                            <span className="text-amber-700 text-[10px]">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. BRANCH-001-OR"
+                            value={currentLo.branchId || ""}
+                            onChange={(e) => updateCurrentLoField("branchId", e.target.value.toUpperCase())}
+                            className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
+                          />
+                          <p className="text-[10px] text-[#9A9488]">Used to group LO expenses &amp; ROI</p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-[#2D362E]">Branch Manager Name</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Mike Ford"
+                            value={currentLo.branchManagerName || ""}
+                            onChange={(e) => updateCurrentLoField("branchManagerName", e.target.value)}
+                            className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs font-medium text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
+                          />
+                          <p className="text-[10px] text-[#9A9488]">Direct supervisor / admin</p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-[#2D362E]">Branch Office City</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Lake Oswego"
+                            value={currentLo.branchCity || ""}
+                            onChange={(e) => updateCurrentLoField("branchCity", e.target.value)}
+                            className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
+                          />
+                          <p className="text-[10px] text-[#9A9488]">Physical office location</p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-[#2D362E]">Branch State</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Oregon"
+                            value={currentLo.branchState || ""}
+                            onChange={(e) => updateCurrentLoField("branchState", e.target.value)}
+                            className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
+                          />
+                          <p className="text-[10px] text-[#9A9488]">Primary state jurisdiction</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 pt-1">
+                        <label className="text-xs font-semibold text-[#2D362E]">Branch Display Title / Division</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Pacific Northwest HQ - Lake Oswego"
+                          value={currentLo.branch || ""}
+                          onChange={(e) => updateCurrentLoField("branch", e.target.value)}
+                          className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Individual Twilio BYOK Carrier Configuration */}
+                    <div className="space-y-3 bg-[#F0FDF4] p-4.5 rounded-2xl border border-emerald-200 shadow-2xs md:col-span-2">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-xs font-bold text-emerald-950 flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-emerald-700" />
+                          <span>Individual Twilio BYOK Carrier Integration</span>
+                          {currentLo.twilioPhoneNumber ? (
+                            <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                              Active: {currentLo.twilioPhoneNumber}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-300">
+                              Setup Required
+                            </span>
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTwilioModalTargetLoId(currentLo.id);
+                            setShowTwilioSettingsModal(true);
+                          }}
+                          className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>Open Full Twilio Console &amp; Test</span>
+                        </button>
+                      </div>
+
+                      <p className="text-[11px] text-emerald-900/80 leading-relaxed">
+                        Each loan officer origins SMS from their own dedicated Twilio 10DLC number and personal Twilio account. Inbound borrower replies automatically route directly into this loan officer&apos;s property inquiry thread.
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-emerald-950">Dedicated Twilio Phone Number</label>
+                          <input
+                            type="text"
+                            placeholder="+15038493478"
+                            value={currentLo.twilioPhoneNumber || ""}
+                            onChange={(e) => updateCurrentLoField("twilioPhoneNumber", e.target.value.trim())}
+                            className="w-full bg-white border border-emerald-200 focus:border-emerald-600 rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#2D362E] focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-emerald-950">Twilio Account SID</label>
+                          <input
+                            type="text"
+                            placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                            value={currentLo.twilioAccountSid || ""}
+                            onChange={(e) => updateCurrentLoField("twilioAccountSid", e.target.value.trim())}
+                            className="w-full bg-white border border-emerald-200 focus:border-emerald-600 rounded-xl px-3 py-2 text-xs font-mono text-[#2D362E] focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-emerald-950">Twilio Auth Token</label>
+                          <input
+                            type="password"
+                            placeholder="••••••••••••••••••••••••••••••••"
+                            value={currentLo.twilioAuthToken || ""}
+                            onChange={(e) => updateCurrentLoField("twilioAuthToken", e.target.value.trim())}
+                            className="w-full bg-white border border-emerald-200 focus:border-emerald-600 rounded-xl px-3 py-2 text-xs font-mono text-[#2D362E] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-emerald-200/60">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="lo-twilio-live-sms"
+                            checked={Boolean(currentLo.twilioEnabled ?? true)}
+                            onChange={(e) => updateCurrentLoField("twilioEnabled", e.target.checked)}
+                            className="w-4 h-4 text-emerald-600 rounded border-emerald-300 focus:ring-emerald-500 cursor-pointer"
+                          />
+                          <label htmlFor="lo-twilio-live-sms" className="text-xs font-semibold text-emerald-950 cursor-pointer">
+                            Enable Live Carrier SMS for this Loan Officer
+                          </label>
+                        </div>
+                        <span className="text-[11px] text-emerald-800">
+                          {currentLo.twilioPhoneNumber ? "Ready for live borrower dispatch" : "Enter credentials above or open modal"}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Headshot Photo with Local Upload & URL */}
@@ -7623,7 +7877,18 @@ Mike Ford`;
                   });
                 }}
                 onUpdateAdSettings={(adSettings) => {
-                  const updatedLo = { ...currentLo, adSettings };
+                  const updatedLo = { 
+                    ...currentLo, 
+                    adSettings,
+                    byokKeysStatus: {
+                      ...(currentLo.byokKeysStatus || {}),
+                      videoAi: Boolean(adSettings.videoAiApiKey),
+                      copyAi: Boolean(adSettings.copyAiApiKey),
+                      metaAds: Boolean(adSettings.metaAccessToken || adSettings.metaAdAccountId),
+                      rentcast: Boolean(currentLo.rentcastApiKey || currentLo.byokKeysStatus?.rentcast),
+                      twilio: Boolean(currentLo.twilioPhoneNumber && currentLo.twilioAccountSid),
+                    }
+                  };
                   const updatedLos = guidesState.loanOfficers.map((l) =>
                     l.id === currentLo.id ? updatedLo : l
                   );
@@ -7865,19 +8130,81 @@ Mike Ford`;
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#606C5D]">Branch / Metro</label>
+                  <label className="text-xs font-semibold text-[#606C5D]">Unique Branch ID</label>
                   <input
                     type="text"
-                    placeholder="Portland East Branch"
-                    value={editingLo ? editingLo.branch || "" : newLoForm.branch}
+                    placeholder="e.g. BRANCH-001-OR"
+                    value={editingLo ? editingLo.branchId || "" : newLoForm.branchId || ""}
                     onChange={(e) =>
                       editingLo
-                        ? setEditingLo({ ...editingLo, branch: e.target.value })
-                        : setNewLoForm((p) => ({ ...p, branch: e.target.value }))
+                        ? setEditingLo({ ...editingLo, branchId: e.target.value.toUpperCase() })
+                        : setNewLoForm((p) => ({ ...p, branchId: e.target.value.toUpperCase() }))
+                    }
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs font-mono font-bold focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Branch Manager</label>
+                  <input
+                    type="text"
+                    placeholder="Mike Ford"
+                    value={editingLo ? editingLo.branchManagerName || "" : newLoForm.branchManagerName || ""}
+                    onChange={(e) =>
+                      editingLo
+                        ? setEditingLo({ ...editingLo, branchManagerName: e.target.value })
+                        : setNewLoForm((p) => ({ ...p, branchManagerName: e.target.value }))
                     }
                     className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
                   />
                 </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Branch City</label>
+                  <input
+                    type="text"
+                    placeholder="Lake Oswego"
+                    value={editingLo ? editingLo.branchCity || "" : newLoForm.branchCity || ""}
+                    onChange={(e) =>
+                      editingLo
+                        ? setEditingLo({ ...editingLo, branchCity: e.target.value })
+                        : setNewLoForm((p) => ({ ...p, branchCity: e.target.value }))
+                    }
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#606C5D]">Branch State</label>
+                  <input
+                    type="text"
+                    placeholder="Oregon"
+                    value={editingLo ? editingLo.branchState || "" : newLoForm.branchState || ""}
+                    onChange={(e) =>
+                      editingLo
+                        ? setEditingLo({ ...editingLo, branchState: e.target.value })
+                        : setNewLoForm((p) => ({ ...p, branchState: e.target.value }))
+                    }
+                    className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#606C5D]">Branch Title / Division</label>
+                <input
+                  type="text"
+                  placeholder="Pacific Northwest HQ - Lake Oswego"
+                  value={editingLo ? editingLo.branch || "" : newLoForm.branch || ""}
+                  onChange={(e) =>
+                    editingLo
+                      ? setEditingLo({ ...editingLo, branch: e.target.value })
+                      : setNewLoForm((p) => ({ ...p, branch: e.target.value }))
+                  }
+                  className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#4A5D4E]"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -8180,6 +8507,96 @@ Mike Ford`;
                 </div>
               </div>
 
+              {/* Individual Twilio BYOK Carrier Integration */}
+              <div className="pt-2 border-t border-[#EAE7E0] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Individual Twilio BYOK Carrier Configuration</span>
+                  </label>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
+                    Per-LO 10DLC
+                  </span>
+                </div>
+
+                <div className="bg-[#F0FDF4] p-3.5 rounded-2xl border border-emerald-200 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-emerald-950">Twilio Phone Number</label>
+                      <input
+                        type="text"
+                        placeholder="+15038493478"
+                        value={editingLo ? editingLo.twilioPhoneNumber || "" : newLoForm.twilioPhoneNumber || ""}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (editingLo) {
+                            setEditingLo({ ...editingLo, twilioPhoneNumber: val, twilioByokConfigured: Boolean(val) });
+                          } else {
+                            setNewLoForm((p) => ({ ...p, twilioPhoneNumber: val, twilioByokConfigured: Boolean(val) }));
+                          }
+                        }}
+                        className="w-full bg-white border border-emerald-200 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-[#2D362E] focus:outline-none focus:border-emerald-600"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-emerald-950">Twilio Account SID</label>
+                      <input
+                        type="text"
+                        placeholder="ACXXXXXXXXXXXXXXXX"
+                        value={editingLo ? editingLo.twilioAccountSid || "" : newLoForm.twilioAccountSid || ""}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (editingLo) {
+                            setEditingLo({ ...editingLo, twilioAccountSid: val });
+                          } else {
+                            setNewLoForm((p) => ({ ...p, twilioAccountSid: val }));
+                          }
+                        }}
+                        className="w-full bg-white border border-emerald-200 rounded-xl px-2.5 py-1.5 text-xs font-mono text-[#2D362E] focus:outline-none focus:border-emerald-600"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-emerald-950">Twilio Auth Token</label>
+                      <input
+                        type="password"
+                        placeholder="••••••••••••••••"
+                        value={editingLo ? editingLo.twilioAuthToken || "" : newLoForm.twilioAuthToken || ""}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (editingLo) {
+                            setEditingLo({ ...editingLo, twilioAuthToken: val });
+                          } else {
+                            setNewLoForm((p) => ({ ...p, twilioAuthToken: val }));
+                          }
+                        }}
+                        className="w-full bg-white border border-emerald-200 rounded-xl px-2.5 py-1.5 text-xs font-mono text-[#2D362E] focus:outline-none focus:border-emerald-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1 border-t border-emerald-200/60">
+                    <input
+                      type="checkbox"
+                      id="modal-lo-twilio-live"
+                      checked={editingLo ? Boolean(editingLo.twilioEnabled ?? true) : Boolean(newLoForm.twilioEnabled ?? true)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        if (editingLo) {
+                          setEditingLo({ ...editingLo, twilioEnabled: checked });
+                        } else {
+                          setNewLoForm((p) => ({ ...p, twilioEnabled: checked }));
+                        }
+                      }}
+                      className="w-4 h-4 text-emerald-600 rounded border-emerald-300 focus:ring-emerald-500 cursor-pointer"
+                    />
+                    <label htmlFor="modal-lo-twilio-live" className="text-xs font-medium text-emerald-950 cursor-pointer">
+                      Enable Live Carrier SMS for this loan officer
+                    </label>
+                  </div>
+                </div>
+              </div>
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-[#606C5D] flex items-center gap-2">
@@ -10067,7 +10484,14 @@ Don't forget to file your State Homestead Tax Exemption!`,
       {/* Twilio Carrier Credentials & Settings Modal */}
       <TwilioSettingsModal
         isOpen={showTwilioSettingsModal}
-        onClose={() => setShowTwilioSettingsModal(false)}
+        onClose={() => {
+          setShowTwilioSettingsModal(false);
+          setTwilioModalTargetLoId(undefined);
+        }}
+        currentLo={activeLo}
+        allLoanOfficers={guidesState.loanOfficers || []}
+        initialTargetLoId={twilioModalTargetLoId}
+        onSaveLoTwilioConfig={handleSaveLoTwilioConfig}
       />
 
       {/* Salesforce Settings Modal */}

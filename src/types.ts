@@ -342,6 +342,14 @@ export interface LoanOfficerAdSettings {
   dailyBudgetUSD?: number;
   adSpendMonthlyCap?: number;
   creditCardConfigured?: boolean;
+  // Vantage AI BYOK Configuration
+  videoAiApiKey?: string;
+  videoAiProvider?: 'heygen' | 'runway' | 'pika' | 'elevenlabs' | 'generic';
+  videoAiCustomEndpoint?: string;
+  copyAiApiKey?: string;
+  copyAiProvider?: 'gemini' | 'openai' | 'anthropic' | 'default';
+  byokConfigured?: boolean;
+  byokLastSaved?: string;
 }
 
 export interface CoClosedBusinessPartner {
@@ -372,6 +380,10 @@ export interface LoanOfficerProfile {
   nmlsId: string;
   company: string;
   branch?: string;
+  branchId?: string;
+  branchManagerName?: string;
+  branchCity?: string;
+  branchState?: string;
   city?: string;
   county?: string;
   state?: string;
@@ -390,6 +402,23 @@ export interface LoanOfficerProfile {
   yearsExperience?: number;
   production12MoVolume?: number;
   production12MoUnits?: number;
+  production6MoVolume?: number;
+  production6MoUnits?: number;
+  production3MoVolume?: number;
+  production3MoUnits?: number;
+  production30DaysVolume?: number;
+  production30DaysUnits?: number;
+  adExpensesTotal?: number;
+  adExpensesBreakdown?: { source: string; amount: number; campaignName?: string; assetType?: string }[];
+  geosphereAccessGranted?: boolean;
+  vantageAdsAccessGranted?: boolean;
+  rentcastApiKey?: string;
+  twilioAccountSid?: string;
+  twilioAuthToken?: string;
+  twilioPhoneNumber?: string;
+  twilioEnabled?: boolean;
+  twilioByokConfigured?: boolean;
+  byokKeysStatus?: { rentcast?: boolean; videoAi?: boolean; metaAds?: boolean; twilio?: boolean; copyAi?: boolean };
   licenseVerificationYear?: number;
   licenseLastVerifiedDate?: string;
   isAdmin?: boolean;

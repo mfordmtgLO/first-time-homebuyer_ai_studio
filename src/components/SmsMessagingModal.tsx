@@ -185,12 +185,18 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
   const [smsHistory, setSmsHistory] = useState(initialSmsList);
 
   const handleApplyTemplate = (tplText: string) => {
+    const tract = lead.spatialProfile?.censusTract || "Local Area";
+    const coBrand = "https://homebuyer.oregon.gov/" + (loanOfficer.id?.replace("lo-", "") || "guide");
     const replaced = tplText
       .replace(/{{firstName}}/g, firstName)
       .replace(/{{loName}}/g, loName)
+      .replace(/{{agentName}}/g, agent?.name || "Your Real Estate Partner")
       .replace(/{{company}}/g, loanOfficer.company || "Guild Mortgage")
-      .replace(/{{location}}/g, lead.preferredLocations || "Oregon")
-      .replace(/{{targetPrice}}/g, lead.targetPriceRange || "425,000");
+      .replace(/{{location}}/g, lead.preferredLocations || lead.spatialProfile?.county || "Oregon")
+      .replace(/{{targetPrice}}/g, lead.targetPriceRange || "425,000")
+      .replace(/{{tract}}/g, tract)
+      .replace(/\[Tract\]/g, tract)
+      .replace(/{{coBrandUrl}}/g, coBrand);
 
     setMessageText(replaced);
   };
@@ -746,15 +752,21 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
                       <button
                         key={template.id}
                         onClick={() => {
+                          const tract = lead.spatialProfile?.censusTract || "Local Area";
+                          const coBrand = "https://homebuyer.oregon.gov/" + (loanOfficer.id?.replace("lo-", "") || "guide");
                           const filledText = template.content
                             .replace(/{{firstName}}/g, firstName)
                             .replace(/\[Name\]/g, firstName)
                             .replace(/{{loName}}/g, loName)
+                            .replace(/{{agentName}}/g, agent?.name || "Your Real Estate Partner")
                             .replace(/\[AgentName\]/g, agent?.name?.split(" ")[0] || "Your Agent")
-                            .replace(/{{location}}/g, lead.preferredLocations || "Oregon")
-                            .replace(/\[City\]/g, lead.preferredLocations || "Oregon")
+                            .replace(/{{location}}/g, lead.preferredLocations || lead.spatialProfile?.county || "Oregon")
+                            .replace(/\[City\]/g, lead.preferredLocations || lead.spatialProfile?.county || "Oregon")
                             .replace(/{{targetPrice}}/g, lead.targetPriceRange || "$450,000")
-                            .replace(/\[TargetBudget\]/g, lead.targetPriceRange || "$450,000");
+                            .replace(/\[TargetBudget\]/g, lead.targetPriceRange || "$450,000")
+                            .replace(/{{tract}}/g, tract)
+                            .replace(/\[Tract\]/g, tract)
+                            .replace(/{{coBrandUrl}}/g, coBrand);
                           setMessageText(filledText);
                           setShowTemplateMenu(false);
                         }}

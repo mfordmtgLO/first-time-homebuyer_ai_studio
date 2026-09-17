@@ -487,3 +487,113 @@ export function createDraftAdFromCoBrandedKit(
     publishedChannels: []
   };
 }
+
+/**
+ * Generates a co-branded Vantage AI Ad Kit triggered directly from a GeoSphere physical map touch or Census tract touch
+ */
+export function generateSpatialVantageAdKit(
+  spatialData: {
+    censusTract: string;
+    city: string;
+    isUsda: boolean;
+    isLmi: boolean;
+    listing?: PropertyListing;
+  },
+  loanOfficer: LoanOfficerProfile,
+  agent: RealEstateAgentProfile,
+  pairing?: LOPairing | null
+): VantageCoBrandedAdKit {
+  const city = sanitizeSSN(spatialData.city || "Oregon");
+  const tract = sanitizeSSN(spatialData.censusTract);
+  const address = sanitizeSSN(spatialData.listing?.address || `${city} Targeted Area`);
+  const price = spatialData.listing?.price ? `$${spatialData.listing.price.toLocaleString()}` : "Market Price";
+  
+  const angle = spatialData.isUsda
+    ? "100% USDA Zero-Down Eligible"
+    : spatialData.isLmi
+    ? "Up to $15K Down Payment Assistance Eligible"
+    : "3% Down Conventional or FHA with Seller Credits";
+
+  const slug = pairing?.customSlug || `${loanOfficer.id.replace("lo-", "")}-and-${agent.name.toLowerCase().replace(/\s+/g, "-")}`;
+  const coBrandUrl = `https://homebuyer.oregon.gov/${slug}?tract=${encodeURIComponent(tract)}`;
+
+  const kit: VantageCoBrandedAdKit = {
+    id: `vantage-spatial-${Date.now()}`,
+    propertyId: spatialData.listing?.id || `tract-${tract}`,
+    propertyAddress: address,
+    propertyCity: city,
+    propertyPrice: spatialData.listing?.price || 425000,
+    agentId: agent.id,
+    agentName: agent.name,
+    agentBrokerage: agent.brokerage,
+    loId: loanOfficer.id,
+    loName: loanOfficer.name,
+    coBrandSlug: slug,
+    coBrandUrl: coBrandUrl,
+    generatedAt: new Date().toISOString(),
+    queueStatus: "pending_review",
+    status: "Draft Ready for Review",
+    metaAd: {
+      headline: sanitizeSSN(`🌲 Stop Renting in ${city}! ${angle} (${price}, Tract ${tract})`),
+      primaryText: sanitizeSSN(`Did you know homes in ${city} (Census Tract ${tract}) qualify for ${angle}? Partnered with ${agent.name} (${agent.brokerage}) and ${loanOfficer.name} (NMLS #${loanOfficer.nmlsNumber || '288455'}). Tap below to see active listings and calculate your exact monthly payment!`),
+      callToAction: "Learn More",
+      destinationUrl: coBrandUrl,
+      description: sanitizeSSN(`Verified First-Time Buyer Program • ${agent.name} & ${loanOfficer.name}`)
+    },
+    googleAd: {
+      headlines: [
+        sanitizeSSN(`Homes in ${city} with ${angle.slice(0, 15)}`).slice(0, 30),
+        sanitizeSSN(`0% Down & Grants in ${city}`).slice(0, 30),
+        sanitizeSSN(`${agent.name.split(" ")[0]} & ${loanOfficer.name.split(" ")[0]} Team`).slice(0, 30)
+      ],
+      descriptions: [
+        sanitizeSSN(`Tract ${tract} qualifying homes. Instant pre-qualification check and private tour booking.`).slice(0, 90),
+        sanitizeSSN(`Stop renting and buy in ${city} with special first-time homebuyer assistance programs.`).slice(0, 90)
+      ],
+      finalUrl: coBrandUrl,
+      sitelinks: [
+        { title: "Check Grant Eligibility", url: `${coBrandUrl}#grants` },
+        { title: "Browse Map Listings", url: `${coBrandUrl}#map` }
+      ]
+    },
+    videoScript: {
+      hook: sanitizeSSN(`If you're paying rent anywhere in ${city}, you need to see this map overlay right now.`),
+      estimatedSeconds: 30,
+      scenes: [
+        {
+          sceneNumber: 1,
+          durationSec: 8,
+          visual: `Aerial map zoom into Census Tract ${tract} in ${city} with glowing badge: "${angle}"`,
+          narration: `Did you know this specific pocket of ${city} qualifies for ${angle}?`,
+          onScreenText: `📍 ${city} • Tract ${tract}\n${angle}`
+        },
+        {
+          sceneNumber: 2,
+          durationSec: 12,
+          visual: `Split screen showing local rent costs ($2,200/mo) vs owning ($1,950/mo with DPA grants).`,
+          narration: `While rents continue rising, local agent ${agent.name} and lender ${loanOfficer.name} can show you how to buy with little to no money down.`,
+          onScreenText: `Owning vs Renting in ${city}\nCo-Branded Portal: ${agent.name} & ${loanOfficer.name}`
+        },
+        {
+          sceneNumber: 3,
+          durationSec: 10,
+          visual: `Call to action end card with agent/LO headshots, NMLS disclosure, and button.`,
+          narration: `Tap the link to explore our interactive map and see every eligible home today!`,
+          onScreenText: `🔗 ${slug}\nCheck Your Eligibility in 60 Seconds!`
+        }
+      ]
+    }
+  };
+
+  // Push directly to localStorage and trigger queue update
+  try {
+    const raw = localStorage.getItem("vantage_ai_ads_queue_v1");
+    const queue = raw ? JSON.parse(raw) : [];
+    localStorage.setItem("vantage_ai_ads_queue_v1", JSON.stringify([kit, ...queue]));
+    window.dispatchEvent(new CustomEvent("vantage_ads_queue_updated", { detail: kit }));
+  } catch (err) {
+    console.warn("Could not save to local ads queue:", err);
+  }
+
+  return kit;
+}

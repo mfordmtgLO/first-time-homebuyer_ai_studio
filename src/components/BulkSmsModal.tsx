@@ -97,16 +97,22 @@ export const BulkSmsModal: React.FC<BulkSmsModalProps> = ({
     const targetPrice = (sampleLead as any)?.targetPrice 
       ? `$${Number((sampleLead as any).targetPrice).toLocaleString()}` 
       : (sampleLead?.targetPriceRange || "$450,000");
+    const tract = (sampleLead as any)?.spatialProfile?.censusTract || "41039002747";
+    const coBrand = "https://homebuyer.oregon.gov/" + (loanOfficer?.id ? loanOfficer.id.replace("lo-", "") : "guide");
 
     return rawText
       .replace(/{{firstName}}/g, firstName)
       .replace(/\[Name\]/g, firstName)
       .replace(/{{loName}}/g, loName)
       .replace(/\[AgentName\]/g, agentName)
+      .replace(/{{agentName}}/g, agentName)
       .replace(/{{location}}/g, location)
       .replace(/\[City\]/g, location)
       .replace(/{{targetPrice}}/g, targetPrice)
-      .replace(/\[TargetBudget\]/g, targetPrice);
+      .replace(/\[TargetBudget\]/g, targetPrice)
+      .replace(/{{tract}}/g, tract)
+      .replace(/\[Tract\]/g, tract)
+      .replace(/{{coBrandUrl}}/g, coBrand);
   };
 
   // Generate new template using Mortgage AI 2nd Brain
@@ -202,6 +208,7 @@ export const BulkSmsModal: React.FC<BulkSmsModalProps> = ({
   // Group templates by category for clean dropdown rendering
   const categorizedTemplates = useMemo(() => {
     const groups: { [key: string]: SmsTemplate[] } = {
+      "📍 GeoSphere / Map Touch Demographics": [],
       "⚡ Speed to Lead & Intros": [],
       "💰 Down Payment Grants & Assistance": [],
       "📉 Rates & 2-1 Buydown Relief": [],
@@ -214,7 +221,9 @@ export const BulkSmsModal: React.FC<BulkSmsModalProps> = ({
     allTemplates.forEach(tpl => {
       const cat = tpl.category;
       const titleLower = tpl.title.toLowerCase();
-      if (cat === "new_lead" || titleLower.includes("intro") || titleLower.includes("discovery")) {
+      if (cat === "geomap_touch" || titleLower.includes("geosphere") || titleLower.includes("tract")) {
+        groups["📍 GeoSphere / Map Touch Demographics"].push(tpl);
+      } else if (cat === "new_lead" || titleLower.includes("intro") || titleLower.includes("discovery")) {
         groups["⚡ Speed to Lead & Intros"].push(tpl);
       } else if (titleLower.includes("grant") || titleLower.includes("down payment") || titleLower.includes("usda") || titleLower.includes("fha")) {
         groups["💰 Down Payment Grants & Assistance"].push(tpl);
@@ -425,7 +434,9 @@ export const BulkSmsModal: React.FC<BulkSmsModalProps> = ({
                   { token: "{{loName}}", label: "My Name" },
                   { token: "{{location}}", label: "City/Area" },
                   { token: "[AgentName]", label: "Realtor" },
-                  { token: "{{targetPrice}}", label: "Target Budget" }
+                  { token: "{{targetPrice}}", label: "Target Budget" },
+                  { token: "{{tract}}", label: "📍 Census Tract" },
+                  { token: "{{coBrandUrl}}", label: "🔗 Portal Link" }
                 ].map(v => (
                   <button
                     key={v.token}

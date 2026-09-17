@@ -1,6 +1,38 @@
 import { SmsTemplate } from "../types";
 
 export const DEFAULT_SMS_TEMPLATES: SmsTemplate[] = [
+  // GeoSphere Dynamic Map Touch & Demographic Synergies
+  {
+    id: "sms-tpl-spatial-lmi-dpa",
+    title: "📍 GeoSphere Map: LMI Tract Down Payment Assistance Alert",
+    content: "Hi {{firstName}}, {{loName}} here! The area you explored near {{location}} (Census Tract {{tract}}) qualifies for special down payment assistance grants up to $15K. Let's see your actual numbers: {{coBrandUrl}} Reply STOP to opt out.",
+    category: "geomap_touch",
+    tags: ["GeoSphere", "LMI Tract", "DPA Grants", "Down Payment Assistance"],
+    createdAt: "2026-09-17T12:00:00.000Z",
+    updatedAt: "2026-09-17T12:00:00.000Z",
+    ownerId: "system"
+  },
+  {
+    id: "sms-tpl-spatial-usda-zero-down",
+    title: "🌾 GeoSphere Map: USDA 100% Zero-Down Notification",
+    content: "Great news {{firstName}}! Your home search in {{location}} is inside a 100% USDA Zero-Down zone. Buy with $0 out-of-pocket cash: {{coBrandUrl}}#usda Reply STOP to opt out.",
+    category: "geomap_touch",
+    tags: ["GeoSphere", "USDA Rural", "Zero Down", "No Down Payment"],
+    createdAt: "2026-09-17T12:00:00.000Z",
+    updatedAt: "2026-09-17T12:00:00.000Z",
+    ownerId: "system"
+  },
+  {
+    id: "sms-tpl-spatial-rent-vs-own",
+    title: "🏠 GeoSphere Map: Neighborhood Rent vs Own Monthly Savings",
+    content: "Hi {{firstName}}, median rent in your targeted zip is ~$2,250/mo. But in Tract {{tract}}, first-time buyer financing runs ~$1,910/mo! Want the breakdown with {{agentName}} and me? Reply STOP to opt out.",
+    category: "geomap_touch",
+    tags: ["GeoSphere", "Rent vs Own", "Savings", "Tract Analysis"],
+    createdAt: "2026-09-17T12:00:00.000Z",
+    updatedAt: "2026-09-17T12:00:00.000Z",
+    ownerId: "system"
+  },
+
   // Market Trends & Local Guides Hooks (New)
   {
     id: "sms-tpl-market-trends-solo",

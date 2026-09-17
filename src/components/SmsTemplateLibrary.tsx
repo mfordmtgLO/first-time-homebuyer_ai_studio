@@ -10,6 +10,7 @@ interface SmsTemplateLibraryProps {
 
 const CATEGORIES = [
   { value: 'new_lead', label: 'New Lead Intro' },
+  { value: 'geomap_touch', label: '📍 GeoSphere / Map Touch' },
   { value: 'follow_up', label: 'Follow Up / Nurture' },
   { value: 'pre_approved', label: 'Pre-Approved / Home Hunt' },
   { value: 'in_escrow', label: 'In Escrow' },
@@ -212,7 +213,7 @@ export const SmsTemplateLibrary: React.FC<SmsTemplateLibraryProps> = ({
                   className="w-full text-xs p-3 bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#4A5D4E] text-[#2D362E]"
                 />
                 <p className="text-[10px] text-[#5C6F60]">
-                  Available dynamic variables: <code className="bg-gray-100 px-1 rounded">[Name]</code>, <code className="bg-gray-100 px-1 rounded">[AgentName]</code>, <code className="bg-gray-100 px-1 rounded">[City]</code>
+                  Available dynamic variables: <code className="bg-gray-100 px-1 rounded">[Name]</code>, <code className="bg-gray-100 px-1 rounded">[AgentName]</code>, <code className="bg-gray-100 px-1 rounded">[City]</code>, <code className="bg-gray-100 px-1 rounded">[Tract]</code>, <code className="bg-gray-100 px-1 rounded">[Program]</code>
                 </p>
               </div>
             </div>

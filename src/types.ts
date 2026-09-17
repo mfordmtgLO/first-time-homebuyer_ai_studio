@@ -663,12 +663,35 @@ export interface SavedScenario {
   draftRealtorEmailBody: string;
 }
 
+// =================================================================
+// SPATIAL PROFILING & MAP-TOUCH CRM INTEGRATION
+// =================================================================
+export interface LeadSpatialContext {
+  latitude: number;
+  longitude: number;
+  censusTract: string;                     // 11-digit Federal FIPS
+  county: string;                          // e.g., "Lane"
+  state: string;                           // "OR", "WA", "CA", "ID"
+  lmiStatus?: 'Low' | 'Moderate' | 'Middle' | 'Upper';
+  isLmiEligible: boolean;
+  isUsdaEligible: boolean;
+  stateGrantProgram?: string;              // "OHCS FirstHome" | "CalHFA MyHome" | "Idaho MRB"
+  applicablePriceCap?: number;             // e.g., 524627
+  selectedListingId?: string;
+  selectedListingPrice?: number;
+  selectedAddress?: string;
+  timestamp: string;
+}
+
 export interface CapturedLead {
   // Conversational Ask Maps / Google Maps Sync
   savedGoogleMapsToken?: string;
   curatedPropertyIds?: string[];
   lastAskMapsQuery?: string;
   hasOptedInToGoogleMapsSync?: boolean;
+
+  // Attached GeoSphere Physical Map Touch Context
+  spatialProfile?: LeadSpatialContext;
 
   id: string;
   fullName: string;
@@ -819,7 +842,7 @@ export interface SmsTemplate {
   id: string;
   title: string;
   content: string;
-  category: 'new_lead' | 'follow_up' | 'pre_approved' | 'in_escrow' | 'post_close' | 'custom';
+  category: 'new_lead' | 'follow_up' | 'pre_approved' | 'in_escrow' | 'post_close' | 'custom' | 'geomap_touch';
   tags?: string[];
   createdAt: string;
   updatedAt: string;

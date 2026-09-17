@@ -355,13 +355,60 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       }
     };
 
+    const handleGeoSpatialSync = (e: any) => {
+      const spatial = e.detail;
+      if (!spatial || !spatial.censusTract) return;
+
+      const targetLeadId = spatial.targetLeadId || (guidesState.leads && guidesState.leads[0]?.id);
+      if (targetLeadId && guidesState.leads) {
+        const updatedLeads = guidesState.leads.map((l: any) => {
+          if (l.id === targetLeadId) {
+            return {
+              ...l,
+              spatialProfile: {
+                latitude: spatial.latitude,
+                longitude: spatial.longitude,
+                censusTract: spatial.censusTract,
+                county: spatial.county || "Lane",
+                state: spatial.state || "OR",
+                lmiStatus: spatial.lmiStatus || (spatial.isLmiEligible ? "Moderate" : "Middle"),
+                isLmiEligible: !!spatial.isLmiEligible,
+                isUsdaEligible: !!spatial.isUsdaEligible,
+                stateGrantProgram: spatial.stateGrantProgram || "OHCS FirstHome Grant",
+                applicablePriceCap: spatial.applicablePriceCap || 524627,
+                selectedListingId: spatial.selectedListingId,
+                selectedListingPrice: spatial.selectedListingPrice,
+                selectedAddress: spatial.selectedAddress,
+                timestamp: new Date().toISOString()
+              }
+            };
+          }
+          return l;
+        });
+
+        const targetLead = updatedLeads.find((l: any) => l.id === targetLeadId);
+        onUpdateGuidesState({
+          ...guidesState,
+          leads: updatedLeads,
+          capturedLeads: guidesState.capturedLeads ? guidesState.capturedLeads.map((l: any) => l.id === targetLeadId ? { ...l, spatialProfile: targetLead?.spatialProfile } : l) : undefined
+        });
+
+        setSuccessToast(`📍 Connected GeoSphere Tract ${spatial.censusTract} to Lead ${targetLead?.fullName || ""}!`);
+        setTimeout(() => setSuccessToast(null), 6000);
+      }
+    };
+
     window.addEventListener("DEEP_LINK_NAV", handleDeepLink);
     window.addEventListener("APP_TOAST", handleAppToast);
+    window.addEventListener("GEOSPHERE_SPATIAL_SYNC", handleGeoSpatialSync);
+    window.addEventListener("geosphere_map_touch", handleGeoSpatialSync);
     return () => {
       window.removeEventListener("DEEP_LINK_NAV", handleDeepLink);
       window.removeEventListener("APP_TOAST", handleAppToast);
+      window.removeEventListener("GEOSPHERE_SPATIAL_SYNC", handleGeoSpatialSync);
+      window.removeEventListener("geosphere_map_touch", handleGeoSpatialSync);
     };
-  }, [guidesState.capturedLeads]);
+  }, [guidesState.capturedLeads, guidesState.leads]);
   const pendingPropertyQuestions = propertyActionItems.filter(item => item.status === 'pending');
 
   const [successToast, setSuccessToast] = useState<string | null>(null);

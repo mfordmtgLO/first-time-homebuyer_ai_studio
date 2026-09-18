@@ -126,7 +126,7 @@ export const AdDeploymentModal: React.FC<AdDeploymentModalProps> = ({
           timestamp: new Date().toISOString(),
           actor: loanOfficer.name,
           action: status === 'live' ? 'Launched Live Campaign' : 'Published Ready-to-Launch Commercial',
-          notes: `Created from AI Commercial Generator variation: "${variation.title}". Audio track included: ${hasAudioSynthesized ? 'Yes (ElevenLabs)' : 'Standard audio'}. Linked Ad Account: ${accountId}`
+          notes: `Created from AI Commercial Generator variation: "${variation.title}". Audio track included: ${hasAudioSynthesized ? 'Yes (Vantage AI Ad Studio)' : 'Standard audio'}. Linked Ad Account: ${accountId}`
         }
       ]
     };
@@ -217,7 +217,7 @@ export const AdDeploymentModal: React.FC<AdDeploymentModalProps> = ({
                 <div className="flex justify-between py-1">
                   <span className="text-[#606C5D]">Audio Track:</span>
                   <span className="text-[#2D362E] font-medium">
-                    {hasAudioSynthesized ? "ElevenLabs Multilingual v2 Voiceover" : "Standard Audio Track"}
+                    {hasAudioSynthesized ? "Vantage AI Ad Studio Studio Voiceover" : "Standard Audio Track"}
                   </span>
                 </div>
               </div>
@@ -349,7 +349,7 @@ export const AdDeploymentModal: React.FC<AdDeploymentModalProps> = ({
                         ? "bg-emerald-100 text-emerald-800" 
                         : "bg-amber-100 text-amber-900"
                     }`}>
-                      {hasAudioSynthesized ? "ElevenLabs Audio Track Attached" : "TTS Ready to Render"}
+                      {hasAudioSynthesized ? "Vantage AI Ad Studio Audio Attached" : "Studio Audio Ready"}
                     </span>
                   </div>
                   <p className="text-[11px] text-[#606C5D] line-clamp-2 italic">

@@ -34,7 +34,7 @@ export interface CommercialScriptVariation {
   adDeploymentSpec: AdDeploymentSpec;
 }
 
-export interface ElevenLabsVoice {
+export interface VantageStudioVoice {
   id: string;
   name: string;
   accent: string;
@@ -42,6 +42,8 @@ export interface ElevenLabsVoice {
   description: string;
   previewSample?: string;
 }
+
+export type ElevenLabsVoice = VantageStudioVoice;
 
 export interface AdDeploymentModalData {
   variation: CommercialScriptVariation;

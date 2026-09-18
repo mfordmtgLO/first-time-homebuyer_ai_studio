@@ -12,7 +12,8 @@ import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 import { CandidateSearchModal } from "./CandidateSearchModal";
 import { TopBusinessPartnersCard } from "./TopBusinessPartnersCard";
 import { Top50RecruitLeaderboard } from "./Top50RecruitLeaderboard";
-import { canAccessLoRecruiting } from "../utils/rbac";
+import { canAccessLoRecruiting, canAccessBpdRecruit } from "../utils/rbac";
+import { auth } from "../firebase";
 import { 
   syncAgentWithRealTrends, 
   syncLoanOfficerWithRealTrends,
@@ -107,6 +108,7 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
   const bpdConfig = guidesState.bigPurpleDotConfig;
   const isBpdConnected = Boolean(bpdConfig?.apiKey || bpdConfig?.connectionStatus === "connected");
   const bpdEnv = bpdConfig?.environment || "sandbox";
+  const canAccessBpdRecruitPlatform = canAccessBpdRecruit(userRole, auth.currentUser?.email);
 
   // Filtered lists
   const filteredLos = recruitmentLos.filter(lo => {
@@ -721,7 +723,7 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
                 </div>
               </div>
 
-              {/* Big Purple Dot Quick Status Pill & Export */}
+              {/* BPD Recruit Quick Status Pill & Export (Strictly Mike Ford Admin & Branch Managers) */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => window.print()}
@@ -731,18 +733,20 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
                   <Printer className="w-3.5 h-3.5" />
                   <span>Export PDF</span>
                 </button>
-                <button
-                  onClick={() => setShowBpdModal(true)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 border shadow-xs cursor-pointer ${
-                    isBpdConnected 
-                      ? "bg-purple-950/80 text-purple-200 border-purple-400/50 hover:bg-purple-900" 
-                      : "bg-purple-600 hover:bg-purple-500 text-white border-purple-400"
-                  }`}
-                >
-                  <Zap className="w-3.5 h-3.5 text-purple-300 fill-purple-300" />
-                  <span>Big Purple Dot: {isBpdConnected ? (bpdEnv === "production" ? "Live Connected" : "Sandbox Ready") : "Setup Required"}</span>
-                  <Settings className="w-3 h-3 text-purple-300 opacity-70" />
-                </button>
+                {canAccessBpdRecruitPlatform && (
+                  <button
+                    onClick={() => setShowBpdModal(true)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 border shadow-xs cursor-pointer ${
+                      isBpdConnected 
+                        ? "bg-purple-950/80 text-purple-200 border-purple-400/50 hover:bg-purple-900" 
+                        : "bg-purple-600 hover:bg-purple-500 text-white border-purple-400"
+                    }`}
+                  >
+                    <Zap className="w-3.5 h-3.5 text-purple-300 fill-purple-300" />
+                    <span>BPD Recruit: {isBpdConnected ? (bpdEnv === "production" ? "Live Connected (BYOK)" : "Sandbox Ready") : "Setup Required (BYOK)"}</span>
+                    <Settings className="w-3 h-3 text-purple-300 opacity-70" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -835,23 +839,25 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
                 {isSyncingBpdAll ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-200" />
-                    Syncing with Big Purple Dot CRM...
+                    Syncing with BPD Recruit...
                   </>
                 ) : (
                   <>
                     <Zap className="w-3.5 h-3.5 text-purple-300" />
-                    Push Pipeline to Big Purple Dot CRM
+                    Push Pipeline to BPD Recruit
                   </>
                 )}
               </button>
 
-              <button
-                onClick={() => setShowBpdModal(true)}
-                className="bg-black/30 hover:bg-black/40 text-purple-200 border border-purple-400/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Radio className="w-3.5 h-3.5" />
-                API & Webhook Framework
-              </button>
+              {canAccessBpdRecruitPlatform && (
+                <button
+                  onClick={() => setShowBpdModal(true)}
+                  className="bg-black/30 hover:bg-black/40 text-purple-200 border border-purple-400/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Radio className="w-3.5 h-3.5" />
+                  BPD Recruit BYOK & Webhook Setup
+                </button>
+              )}
 
               <button
                 onClick={() => setViewMode("top50")}
@@ -896,17 +902,19 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
                       <Mail className="w-3.5 h-3.5 text-[#C18C5D] opacity-40 group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" />
                     </button>
                   ))}
-                  <button 
-                    onClick={() => setShowBpdModal(true)}
-                    className="w-full text-left flex items-start gap-2 text-xs p-2 rounded-xl hover:bg-white border border-transparent hover:border-[#EAE7E0] transition-colors cursor-pointer group shadow-none hover:shadow-xs"
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
-                    <div className="flex-1">
-                      <p className="font-semibold text-[#2D362E] group-hover:text-purple-700 transition-colors">Review Integration</p>
-                      <p className="text-[10px] text-[#606C5D]">Big Purple Dot Sync Settings</p>
-                    </div>
-                    <Settings className="w-3.5 h-3.5 text-purple-500 opacity-40 group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" />
-                  </button>
+                  {canAccessBpdRecruitPlatform && (
+                    <button 
+                      onClick={() => setShowBpdModal(true)}
+                      className="w-full text-left flex items-start gap-2 text-xs p-2 rounded-xl hover:bg-white border border-transparent hover:border-[#EAE7E0] transition-colors cursor-pointer group shadow-none hover:shadow-xs"
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-semibold text-[#2D362E] group-hover:text-purple-700 transition-colors">BPD Recruit Platform</p>
+                        <p className="text-[10px] text-[#606C5D]">BYOK Credentials & Webhook Setup</p>
+                      </div>
+                      <Settings className="w-3.5 h-3.5 text-purple-500 opacity-40 group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" />
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -924,17 +932,19 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
                       <Mail className="w-3.5 h-3.5 text-[#4A5D4E] opacity-40 group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" />
                     </button>
                   ))}
-                  <button 
-                    onClick={() => setShowBpdModal(true)}
-                    className="w-full text-left flex items-start gap-2 text-xs p-2 rounded-xl hover:bg-white border border-transparent hover:border-[#EAE7E0] transition-colors cursor-pointer group shadow-none hover:shadow-xs"
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
-                    <div className="flex-1">
-                      <p className="font-semibold text-[#2D362E] group-hover:text-purple-700 transition-colors">Review Integration</p>
-                      <p className="text-[10px] text-[#606C5D]">Auto-syncs new Realtor recruits</p>
-                    </div>
-                    <Settings className="w-3.5 h-3.5 text-purple-500 opacity-40 group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" />
-                  </button>
+                  {canAccessBpdRecruitPlatform && (
+                    <button 
+                      onClick={() => setShowBpdModal(true)}
+                      className="w-full text-left flex items-start gap-2 text-xs p-2 rounded-xl hover:bg-white border border-transparent hover:border-[#EAE7E0] transition-colors cursor-pointer group shadow-none hover:shadow-xs"
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-semibold text-[#2D362E] group-hover:text-purple-700 transition-colors">BPD Recruit Platform</p>
+                        <p className="text-[10px] text-[#606C5D]">Auto-syncs Realtor recruits & stats</p>
+                      </div>
+                      <Settings className="w-3.5 h-3.5 text-purple-500 opacity-40 group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" />
+                    </button>
+                  )}
                 </div>
               )}
             </div>

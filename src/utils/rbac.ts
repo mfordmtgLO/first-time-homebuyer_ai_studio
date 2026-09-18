@@ -284,6 +284,22 @@ export function canAccessAgentRecruiting(rawRole?: string | null, userEmail?: st
   return true;
 }
 
+/**
+ * Access control for "BPD Recruit" platform:
+ * ONLY visible to Mike Ford Admin and branch manager user roles.
+ * Downstream team LOs, processors, LOAs, and other non-manager roles cannot access or view BPD Recruit.
+ */
+export function canAccessBpdRecruit(rawRole?: string | null, userEmail?: string | null): boolean {
+  if (userEmail) {
+    const emailLower = userEmail.toLowerCase().trim();
+    if (emailLower === 'fordmj@gmail.com' || emailLower === 'mford@cfmtg.com') return true;
+  }
+  const clean = (rawRole || '').toLowerCase().trim();
+  if (clean === 'admin' || clean === 'superadmin') return true;
+  const role = normalizeRole(rawRole);
+  return role === 'branch_manager';
+}
+
 export function canAccessMemberData(
   userRole: string | null | undefined,
   currentLoId: string,

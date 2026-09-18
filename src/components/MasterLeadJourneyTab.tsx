@@ -1,18 +1,61 @@
 import React, { useState } from "react";
 import { CapturedLead, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
-import { Database, Layers, Inbox, Phone, CheckCircle2, ShieldCheck, Flag, Tag, Users, User, Settings2, QrCode, Link as LinkIcon, Sparkles, Mail, MapPin, Search, DollarSign, Target, ChevronDown, Download, Trophy, PartyPopper } from "lucide-react";
+import { 
+  Database, 
+  Layers, 
+  Inbox, 
+  Phone, 
+  CheckCircle2, 
+  ShieldCheck, 
+  Flag, 
+  Tag, 
+  Users, 
+  User, 
+  Settings2, 
+  QrCode, 
+  Link as LinkIcon, 
+  Sparkles, 
+  Mail, 
+  MapPin, 
+  Search, 
+  DollarSign, 
+  Target, 
+  ChevronDown, 
+  Download, 
+  Trophy, 
+  PartyPopper,
+  Share2,
+  Calendar,
+  Clock,
+  TrendingUp,
+  FileCheck2,
+  ArrowRight,
+  Send
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { LeadFundingClosingModal } from "./fthb/LeadFundingClosingModal";
 
 interface MasterLeadJourneyTabProps {
   leads: CapturedLead[];
   onUpdateLead: (updatedLead: CapturedLead) => void;
   loanOfficer: LoanOfficerProfile;
   agentRoster?: RealEstateAgentProfile[];
+  properties?: any[];
+  setProperties?: (props: any[]) => void;
 }
 
-export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ properties, setProperties, leads, onUpdateLead, loanOfficer, agentRoster = [] }) => {
+export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ 
+  properties, 
+  setProperties, 
+  leads, 
+  onUpdateLead, 
+  loanOfficer, 
+  agentRoster = [] 
+}) => {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
+  const [selectedFundingLead, setSelectedFundingLead] = useState<CapturedLead | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   
   // New Open House / Lead Magnet State
   const [showKioskGenerator, setShowKioskGenerator] = useState(false);
@@ -23,11 +66,16 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ prop
   
   const [celebratingCol, setCelebratingCol] = useState<string | null>(null);
 
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   const columns = [
     { id: "new", title: "New (Uncontacted)", icon: <Inbox className="w-4 h-4 text-blue-500" />, bg: "bg-blue-50" },
     { id: "contacted", title: "Contacted", icon: <Phone className="w-4 h-4 text-yellow-500" />, bg: "bg-yellow-50" },
     { id: "pre_approved", title: "Qualified (Pre-Approved)", icon: <ShieldCheck className="w-4 h-4 text-emerald-500" />, bg: "bg-emerald-50" },
-    { id: "closed", title: "Closed", icon: <Flag className="w-4 h-4 text-gray-500" />, bg: "bg-gray-50" }
+    { id: "closed", title: "Funded & Closed (ROLI)", icon: <Trophy className="w-4 h-4 text-amber-500" />, bg: "bg-amber-50" }
   ];
 
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
@@ -46,13 +94,18 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ prop
     const leadId = e.dataTransfer.getData("text/plain");
     if (leadId) {
       const leadToMove = leads.find(l => l.id === leadId);
-      if (leadToMove && leadToMove.status !== newStatus) {
-        onUpdateLead({ ...leadToMove, status: newStatus as any });
-        
-        // Positive visual reinforcement when moving a lead forward
-        if (newStatus === "pre_approved" || newStatus === "closed") {
-          setCelebratingCol(newStatus);
+      if (leadToMove) {
+        if (newStatus === "closed") {
+          // Open the funding & closing user input ledger
+          setSelectedFundingLead(leadToMove);
+          setCelebratingCol("closed");
           setTimeout(() => setCelebratingCol(null), 2500);
+        } else if (leadToMove.status !== newStatus) {
+          onUpdateLead({ ...leadToMove, status: newStatus as any });
+          if (newStatus === "pre_approved") {
+            setCelebratingCol(newStatus);
+            setTimeout(() => setCelebratingCol(null), 2500);
+          }
         }
       }
     }
@@ -72,30 +125,98 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ prop
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-serif font-bold text-2xl text-[#2D362E]">Master Lead Journey</h3>
-            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-300">
-              Interactive Pipeline
-            </span>
-          </div>
-          <p className="text-xs text-[#606C5D] mt-1 max-w-2xl">
-            Drag and drop leads to seamlessly move them through the master journey pipeline. View and edit complete lead capture details including origin, cobrand agent, and tags.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setShowKioskGenerator(!showKioskGenerator)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-2 ${
-              showKioskGenerator 
-                ? 'bg-[#2D362E] text-white border-[#2D362E]' 
-                : 'bg-white text-[#2D362E] border-[#EAE7E0] hover:bg-[#F9F8F4]'
-            }`}
+      {/* Toast Alert Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 bg-emerald-900 text-white rounded-2xl flex items-center justify-between text-xs font-bold shadow-lg border border-emerald-700"
           >
-            <QrCode className="w-4 h-4" />
-            Lead Capture Kiosk Builder
-          </button>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-300" />
+              <span>{toastMessage}</span>
+            </div>
+            <button
+              onClick={() => setToastMessage(null)}
+              className="text-emerald-200 hover:text-white"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Header with 3-System Microservices Ecosphere Suite Summary */}
+      <div className="bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-serif font-bold text-2xl text-[#2D362E]">Master Lead Journey</h3>
+              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-300">
+                True 3-System Microservices Ecosphere
+              </span>
+              <span className="bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-300">
+                Real-Time ROLI Engine
+              </span>
+            </div>
+            <p className="text-xs text-[#606C5D] mt-1 max-w-3xl leading-relaxed">
+              Full lifecycle lead-to-loan pipeline integrating <strong>GeoSphere Map GIS listings</strong>, <strong>FTHB Low/No Down Payment Qualifier</strong>, and <strong>Vantage AI Ad Studio</strong>. Record verified gross commission, funding date, loan amount, and journey days to power branch ROLI analytics.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowKioskGenerator(!showKioskGenerator)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-2 ${
+                showKioskGenerator 
+                  ? 'bg-[#2D362E] text-white border-[#2D362E]' 
+                  : 'bg-white text-[#2D362E] border-[#EAE7E0] hover:bg-[#F9F8F4]'
+              }`}
+            >
+              <QrCode className="w-4 h-4" />
+              Lead Capture Kiosk Builder
+            </button>
+          </div>
+        </div>
+
+        {/* 3 Microsystems Stacking Benefits Ribbon */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-[#EAE7E0]/60 text-xs">
+          <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0] flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">
+              1
+            </div>
+            <div>
+              <span className="font-bold text-[#2D362E] text-xs block">GeoSphere Map GIS Ingestion</span>
+              <p className="text-[11px] text-[#606C5D] mt-0.5">
+                Property listings synced with Rentcast valuation, USDA rural boundaries, and LMI census tracts.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0] flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-800 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">
+              2
+            </div>
+            <div>
+              <span className="font-bold text-[#2D362E] text-xs block">FTHB Qualifier &amp; LO-Agent Pairing</span>
+              <p className="text-[11px] text-[#606C5D] mt-0.5">
+                Evaluates USDA, OHCS FirstHome ($15k DPA), Lakeview 140% AMI, and assigns co-brand outreach.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0] flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-800 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">
+              3
+            </div>
+            <div>
+              <span className="font-bold text-[#2D362E] text-xs block">Vantage AI Ad Studio &amp; ROLI</span>
+              <p className="text-[11px] text-[#606C5D] mt-0.5">
+                Ad Brain copy &amp; video scripts, publish ready to Meta &amp; Google, tracking closing stats &amp; ROLI.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -255,7 +376,21 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ prop
                     </div>
                     <div className="text-xs text-[#606C5D] mb-1">{lead.targetPriceRange || "TBD"} • {lead.propertyType || "Home"}</div>
                     
-                    <div className="flex flex-wrap gap-1.5 mt-2 mb-3">
+                    {/* Location & Program Tags */}
+                    {(lead.desiredPurchaseLocation || lead.taggedCityArea || lead.preferredLocations) && (
+                      <div className="flex items-center gap-1 text-[11px] text-[#4A5D4E] font-medium mb-1">
+                        <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                        <span className="truncate">{lead.desiredPurchaseLocation || lead.taggedCityArea || lead.preferredLocations}</span>
+                      </div>
+                    )}
+                    {(lead.desiredLoanProgram || lead.loanProgramName) && (
+                      <div className="flex items-center gap-1 text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 mb-2 truncate">
+                        <Layers className="w-2.5 h-2.5 shrink-0" />
+                        <span className="truncate">{lead.loanProgramName || lead.desiredLoanProgram}</span>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-1.5 mt-1 mb-2">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
                         lead.intentScore === 'hot' ? 'bg-amber-100 text-amber-800 border-amber-200' :
                         lead.intentScore === 'warm' ? 'bg-blue-100 text-blue-800 border-blue-200' :
@@ -269,11 +404,75 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ prop
                         </span>
                       )}
                       {lead.leadSource && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md border bg-blue-50 text-blue-800 border-blue-200">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md border bg-blue-50 text-blue-800 border-blue-200 truncate max-w-[140px]">
                           {lead.leadSource}
                         </span>
                       )}
                     </div>
+
+                    {/* 🏆 User-Input Funding & Closing Stats Card for Closed Leads */}
+                    {lead.status === "closed" ? (
+                      <div className="mt-2.5 bg-gradient-to-br from-amber-50 to-emerald-50 p-2.5 rounded-xl border border-amber-200/80 space-y-1.5 text-[11px]">
+                        <div className="flex items-center justify-between font-bold text-amber-900">
+                          <span className="flex items-center gap-1 truncate">
+                            <Trophy className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span className="truncate">{lead.loanProgramName || "Closed Loan"}</span>
+                          </span>
+                          <span className="font-mono text-emerald-800 font-black shrink-0">
+                            ${(lead.grossCommissionPaid || 0).toLocaleString()} Comm.
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-1 text-[10px] text-[#606C5D] bg-white/70 p-2 rounded-lg border border-amber-100">
+                          <div>Loan: <strong className="text-[#2D362E] font-mono">${(lead.fundedLoanAmount || 0).toLocaleString()}</strong></div>
+                          <div>Speed: <strong className="text-[#2D362E] font-mono">{lead.totalJourneyDays || 45} Days</strong></div>
+                          <div>Agent: <strong className="text-[#2D362E] truncate">{lead.buyerAgentName || lead.assignedAgent || "Partner"}</strong></div>
+                          <div>ROLI: <strong className="text-emerald-700 font-mono font-bold">{lead.roliMultiplier ? lead.roliMultiplier + 'x' : '13.1x'}</strong></div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedFundingLead(lead);
+                            }}
+                            className="flex-1 bg-white hover:bg-amber-100/70 text-amber-900 border border-amber-300 py-1.5 rounded-lg text-[10px] font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs"
+                          >
+                            <FileCheck2 className="w-3 h-3 text-amber-700" />
+                            <span>Edit Funding Stats</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const shareText = `🤝 Closed Loan Milestone!\nBuyer: ${lead.fullName}\nLoan: $${(lead.fundedLoanAmount || 0).toLocaleString()} (${lead.loanProgramName || "USDA RD"})\nCommission: $${(lead.grossCommissionPaid || 0).toLocaleString()}\nJourney: ${lead.totalJourneyDays || 45} days\nAgent Partner: ${lead.buyerAgentName || lead.assignedAgent || "Partner"}`;
+                              if (navigator.clipboard) {
+                                navigator.clipboard.writeText(shareText);
+                              }
+                              showToast(`Copied closed loan package for ${lead.fullName} to share with ${lead.buyerAgentName || "partner agent"}!`);
+                            }}
+                            className="p-1.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold transition-colors shadow-2xs"
+                            title="Share with Agent"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFundingLead(lead);
+                        }}
+                        className="w-full mt-2 bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border border-emerald-200 py-1.5 rounded-lg text-[10px] font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs"
+                      >
+                        <Trophy className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Record Loan Funding / ROLI →</span>
+                      </button>
+                    )}
 
                     {expandedLeadId === lead.id && (
                       <div className="mt-3 pt-3 border-t border-[#EAE7E0] space-y-4">
@@ -500,13 +699,20 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ prop
                     <div className="mt-3 flex items-center gap-2 pt-2 border-t border-[#EAE7E0]/50">
                       <select 
                         value={lead.status === "in_escrow" ? "pre_approved" : lead.status === "archived" ? "closed" : lead.status}
-                        onChange={(e) => onUpdateLead({ ...lead, status: e.target.value as any })}
+                        onChange={(e) => {
+                          const newStatus = e.target.value;
+                          if (newStatus === "closed") {
+                            setSelectedFundingLead(lead);
+                          } else {
+                            onUpdateLead({ ...lead, status: newStatus as any });
+                          }
+                        }}
                         className="w-full bg-white border border-[#EAE7E0] rounded-lg px-2 py-1.5 text-xs font-semibold text-[#2D362E] hover:border-[#4A5D4E]/30"
                       >
                         <option value="new">Status: New</option>
                         <option value="contacted">Status: Contacted</option>
                         <option value="pre_approved">Status: Qualified</option>
-                        <option value="closed">Status: Closed</option>
+                        <option value="closed">Status: Closed (ROLI)</option>
                       </select>
                     </div>
                   </div>
@@ -516,6 +722,22 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({ prop
           );
         })}
       </div>
+
+      {/* Lead Funding, Commission & ROLI Ledger Modal */}
+      {selectedFundingLead && (
+        <LeadFundingClosingModal
+          isOpen={Boolean(selectedFundingLead)}
+          lead={selectedFundingLead}
+          agentRoster={agentRoster}
+          loanOfficer={loanOfficer}
+          onClose={() => setSelectedFundingLead(null)}
+          onSaveLead={(updated) => {
+            onUpdateLead(updated);
+            setSelectedFundingLead(null);
+          }}
+          onTriggerToast={showToast}
+        />
+      )}
     </div>
   );
 };

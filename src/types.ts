@@ -181,6 +181,11 @@ export interface PropertyListing {
   vantageAdsEngineStatus?: 'idle' | 'queued' | 'in_creation' | 'ready_for_review' | 'synced_to_ads_portal';
   vantageAdsEngineBatchId?: string;
   vantageAdsEngineLastSynced?: string;
+  bpdCrmSynced?: boolean;
+  bpdCrmSyncedAt?: string;
+  bpdCrmPropertyRecordId?: string;
+  bpdCrmSyncStatus?: 'idle' | 'syncing' | 'synced' | 'error';
+  bpdCrmLastLeadId?: string;
 }
 
 export interface VantageCoBrandedAdKit {
@@ -270,6 +275,9 @@ export interface RoadmapMilestone {
   tasks: { id: string; text: string; done: boolean }[];
   keyTips: string[];
   commonPitfalls: string[];
+  expectedDate?: string; // e.g. "2026-10-15"
+  proTip?: string;
+  notes?: string;
 }
 
 export interface MilestoneNotificationHistoryItem {
@@ -342,9 +350,9 @@ export interface LoanOfficerAdSettings {
   dailyBudgetUSD?: number;
   adSpendMonthlyCap?: number;
   creditCardConfigured?: boolean;
-  // Vantage AI BYOK Configuration
+  // Vantage AI Ad Studio Configuration
   videoAiApiKey?: string;
-  videoAiProvider?: 'heygen' | 'runway' | 'pika' | 'elevenlabs' | 'generic';
+  videoAiProvider?: 'vantage_ad_studio' | 'heygen' | 'runway' | 'pika' | 'elevenlabs' | 'generic';
   videoAiCustomEndpoint?: string;
   copyAiApiKey?: string;
   copyAiProvider?: 'gemini' | 'openai' | 'anthropic' | 'default';
@@ -577,6 +585,38 @@ export interface BigPurpleDotConfig {
   webhookEventsSubscribed?: string[];
 }
 
+export interface BigPurpleDotCrmConfig {
+  apiKey: string;
+  subdomain: string;
+  accountEmail: string;
+  webhookSecret: string;
+  environment: 'sandbox' | 'production';
+  autoUploadNewLeads: boolean;
+  connectionStatus: 'not_configured' | 'connected' | 'error' | 'testing';
+  lastStatusMessage?: string;
+  lastSyncedAt?: string;
+  totalLeadsUploaded?: number;
+}
+
+export interface BigPurpleDotRecruitConfig {
+  apiKey: string;
+  apiSecret: string;
+  subdomain: string;
+  accountEmail: string;
+  webhookSecret: string;
+  environment: 'sandbox' | 'production';
+  autoSyncRecruits: boolean;
+  syncLoanOfficers: boolean;
+  syncRealEstateAgents: boolean;
+  syncDirection: 'bi_directional' | 'push_only' | 'pull_only';
+  lastSyncedAt?: string;
+  connectionStatus: 'not_configured' | 'connected' | 'error' | 'testing';
+  lastStatusMessage?: string;
+  loStageMapping?: Record<string, string>;
+  agentStageMapping?: Record<string, string>;
+  webhookEventsSubscribed?: string[];
+}
+
 export interface BigPurpleDotWebhookEvent {
   id: string;
   timestamp: string;
@@ -768,6 +808,17 @@ export interface CapturedLead {
   // SMS Text Messaging & TCPA Consent Fields
   smsConsentAuthorized?: boolean;
   smsConsentTimestamp?: string;
+
+  // Real-Time Lead Engagement Scoring Fields
+  engagementScore?: number;
+  engagementTier?: 'high' | 'moderate' | 'low';
+  engagementMetrics?: {
+    savedPropertiesCount: number;
+    calculatorRunsCount: number;
+    documentDownloadsCount: number;
+    chatMessagesCount: number;
+    lastActivityMinutesAgo?: number;
+  };
   smsConsentSource?: string;
   smsConsentIp?: string;
   smsAuthRequestSentAt?: string;
@@ -782,6 +833,29 @@ export interface CapturedLead {
   textNurtureLogs?: { id: string; stepNumber: number; templateName: string; messageText: string; sentAt: string; status: 'delivered' | 'scheduled' | 'sent' }[];
   outreachLogs?: OutreachLog[];
   emailHistory?: EmailHistoryItem[];
+
+  // True 3-System Microservices Ecosphere & Funded Loan Stats
+  grossCommissionPaid?: number; // User input gross commission paid ($)
+  fundingClosingDate?: string; // User input funding + closing date (YYYY-MM-DD)
+  fundedLoanAmount?: number; // User input final loan amount ($)
+  loanProgramName?: string; // User input loan program name (e.g. USDA RD 0% Down, OHCS FirstHome $15k DPA, Lakeview 140% AMI, FHA 3.5%, Conv)
+  buyerAgentName?: string; // User input buyer agent partner name
+  totalJourneyDays?: number; // Total journey days from intake to funding+closing date
+  desiredPurchaseLocation?: string; // Lead desired purchase location city / area
+  desiredLoanProgram?: string; // Sourced loan program needs (USDA, OHCS, Lakeview, FHA)
+  adSpendAttributed?: number; // Attributed ad spend to calculate exact ROLI per lead/campaign
+  publishedAdPlatform?: 'meta' | 'google_pmax' | 'tiktok_reels' | 'social_push' | 'geosphere_flyer';
+  mediaAssetPushed?: boolean; // Pushed back to FTHB LO dashboard publish ready
+  publishReady?: boolean;
+  publishedAt?: string;
+  agentSharedAt?: string; // Tracked back from publishing source to share with agent
+  roliMultiplier?: number; // (grossCommissionPaid / adSpendAttributed)
+
+  // Big Purple Dot CRM Integration
+  bpdCrmUploaded?: boolean;
+  bpdCrmUploadedAt?: string;
+  bpdCrmLeadId?: string;
+  bpdCrmSyncStatus?: 'uploaded' | 'pending' | 'failed';
 }
 
 export interface RecruitingCampaignStep {
@@ -825,6 +899,8 @@ export interface ProfessionalGuidesState {
   syncedProperties?: PropertyListing[];
   smsTemplates?: SmsTemplate[];
   bigPurpleDotConfig?: BigPurpleDotConfig;
+  bigPurpleDotCrmConfig?: BigPurpleDotCrmConfig;
+  bpdRecruitConfig?: BigPurpleDotRecruitConfig;
   bigPurpleDotEvents?: BigPurpleDotWebhookEvent[];
   respaExpenses?: RespaCostSharingExpense[];
 }

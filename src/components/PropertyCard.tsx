@@ -577,6 +577,28 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
           </div>
 
+          {/* Market Context Indicator: Days on Market vs Neighborhood Average */}
+          {(() => {
+            const dom = property.daysOnMarket !== undefined ? property.daysOnMarket : 14;
+            const cityLower = (property.city || "").toLowerCase();
+            const neighborhoodAvgDom = cityLower.includes("portland") ? 32 : cityLower.includes("bend") ? 22 : cityLower.includes("eugene") ? 25 : 28;
+            const domDiff = neighborhoodAvgDom - dom;
+            const isFastMarket = dom <= neighborhoodAvgDom;
+            return (
+              <div className={`px-3 py-2 rounded-xl text-[11px] font-medium flex items-center justify-between border ${isFastMarket ? 'bg-amber-50/80 border-amber-200 text-amber-900 dark:bg-amber-950/30 dark:border-amber-800/40 dark:text-amber-200' : 'bg-emerald-50/80 border-emerald-200 text-emerald-900 dark:bg-emerald-950/30 dark:border-emerald-800/40 dark:text-emerald-200'}`}>
+                <div className="flex items-center gap-1.5">
+                  <Flame className={`w-3.5 h-3.5 ${isFastMarket ? 'text-amber-600 animate-pulse' : 'text-emerald-600'}`} />
+                  <span>
+                    <strong>Market Context:</strong> {dom}d DOM ({Math.abs(domDiff)}d {isFastMarket ? 'faster' : 'slower'} than {property.city || 'area'} avg {neighborhoodAvgDom}d)
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/80 dark:bg-slate-900/80 shadow-2xs">
+                  {isFastMarket ? 'High Urgency' : 'Good Negotiation'}
+                </span>
+              </div>
+            );
+          })()}
+
           {/* GeoSphere GIS Overlay Eligibility Badges */}
           <div className="space-y-2">
             <div className="flex items-center gap-1.5 flex-wrap">

@@ -512,7 +512,14 @@ export const HomebuyingPlanPrintModal: React.FC<HomebuyingPlanPrintModalProps> =
                             </span>
                             <div>
                               <h3 className="text-xs font-bold text-[#2D362E]">{m.title}</h3>
-                              <span className="text-[10px] font-semibold text-[#9A9488] uppercase tracking-wider">{m.stage}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-semibold text-[#9A9488] uppercase tracking-wider">{m.stage}</span>
+                                {m.expectedDate && (
+                                  <span className="text-[10px] text-[#4A5D4E] font-bold">
+                                    • Target: {m.expectedDate}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
@@ -542,6 +549,14 @@ export const HomebuyingPlanPrintModal: React.FC<HomebuyingPlanPrintModalProps> =
                         {m.proTip && (
                           <div className="text-[11px] text-[#4A5D4E] bg-[#F9F8F4] p-2 rounded-lg border border-[#EAE7E0] mt-2">
                             <strong>Pro Tip:</strong> {m.proTip}
+                          </div>
+                        )}
+
+                        {/* Milestone User Notes */}
+                        {m.notes && m.notes.trim().length > 0 && (
+                          <div className="text-[11px] text-[#2D362E] bg-[#FAF9F5] p-2.5 rounded-lg border border-[#EAE7E0] mt-2">
+                            <strong className="text-[#4A5D4E] uppercase text-[9px] block mb-0.5 tracking-wider">Your Notes & Reminders:</strong>
+                            <div className="whitespace-pre-wrap leading-relaxed">{m.notes}</div>
                           </div>
                         )}
                       </div>

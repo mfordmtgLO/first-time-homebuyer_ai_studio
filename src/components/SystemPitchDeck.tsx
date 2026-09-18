@@ -178,7 +178,7 @@ export const SystemPitchDeck: React.FC = () => {
             <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
               <div>
                 <span className="font-bold text-blue-900 block text-xs">Microservice 1: Consumer Portal</span>
-                <span className="text-[10px] text-blue-700 font-sans">Geosphere Spatial • Grant Search • 1003 Prequal Q&A</span>
+                <span className="text-[10px] text-blue-700 font-sans">Geosphere Spatial • Grant Search • Buyer Readiness Q&A</span>
               </div>
               <span className="px-2 py-0.5 rounded bg-blue-200 text-blue-900 text-[10px] font-bold">Public Web</span>
             </div>
@@ -337,7 +337,7 @@ export const SystemPitchDeck: React.FC = () => {
           highlight: "Targeted Search"
         }
       ],
-      roiTakeaway: "Increases lead engagement duration by 4.2x compared to traditional forms and provides loan officers with fully actionable 1003 preliminary dossiers.",
+      roiTakeaway: "Increases lead engagement duration by 4.2x compared to traditional forms and provides loan officers with fully actionable buyer preference dossiers and engagement analytics.",
       visualComponent: (
         <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3">
           <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
@@ -381,9 +381,9 @@ export const SystemPitchDeck: React.FC = () => {
       overview: "Allows individual loan officers to save their own enterprise API keys (BYOK) for generative video and AI copywriting tools. Pairs every property listing with co-branded ad kits (Facebook Feed, Instagram Reels, Google Search) with equal LO and Realtor attribution and compliant HEC parameters.",
       keyPillars: [
         {
-          heading: "BYOK Multi-Provider Video Engine",
-          description: "Supports individual LO keys for HeyGen (AI Avatars & Property Tours), Runway Gen-3 Alpha, Pika Labs, ElevenLabs, or private rendering clusters.",
-          highlight: "Custom LO Keys"
+          heading: "Vantage AI Ad Studio Media Pipeline",
+          description: "All listing walkthroughs, Reels, 30s video commercials, and voiceover audio are generated natively in Vantage AI Ad Studio without 3rd-party dependencies.",
+          highlight: "Native Studio"
         },
         {
           heading: "Automated Realtor Co-Branded Kits",
@@ -405,10 +405,10 @@ export const SystemPitchDeck: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 gap-2 text-[11px]">
             <div className="p-2 bg-white rounded-xl border border-[#EAE7E0] flex items-center gap-2">
-              <Video className="w-4 h-4 text-purple-600 shrink-0" />
+              <Video className="w-4 h-4 text-emerald-600 shrink-0" />
               <div>
-                <span className="font-bold text-[#2D362E] block">HeyGen / Runway</span>
-                <span className="text-[10px] text-emerald-700">✓ BYOK Active (112ms)</span>
+                <span className="font-bold text-[#2D362E] block">Vantage AI Ad Studio</span>
+                <span className="text-[10px] text-emerald-700">✓ Native Studio Active</span>
               </div>
             </div>
             <div className="p-2 bg-white rounded-xl border border-[#EAE7E0] flex items-center gap-2">

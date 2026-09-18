@@ -24,7 +24,12 @@ import {
   Compass, 
   Check, 
   FileText,
-  AlertCircle
+  AlertCircle,
+  Trophy,
+  Share2,
+  FileCheck2,
+  Layers,
+  Send
 } from "lucide-react";
 import { CapturedLead, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { HeadshotAvatar } from "./HeadshotAvatar";
@@ -35,6 +40,7 @@ interface LeadJourneyModalProps {
   onClose: () => void;
   lead: CapturedLead | null;
   onUpdateLeadStatus: (leadId: string, status: CapturedLead['status']) => void;
+  onUpdateLead?: (updatedLead: CapturedLead) => void;
   onToggleNurture: (leadId: string) => void;
   onSaveNotes: (leadId: string, notes: string) => void;
   onOpenOutreachModal: (leadId: string) => void;
@@ -48,6 +54,7 @@ export const LeadJourneyModal: React.FC<LeadJourneyModalProps> = ({
   onClose,
   lead,
   onUpdateLeadStatus,
+  onUpdateLead,
   onToggleNurture,
   onSaveNotes,
   onOpenOutreachModal,
@@ -57,6 +64,35 @@ export const LeadJourneyModal: React.FC<LeadJourneyModalProps> = ({
 }) => {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState("");
+
+  // Event 7 Funding & Closing Ledger State
+  const [grossCommission, setGrossCommission] = useState<number>(lead?.grossCommissionPaid || 11875);
+  const [fundingDate, setFundingDate] = useState<string>(lead?.fundingClosingDate || new Date().toISOString().split("T")[0]);
+  const [loanAmount, setLoanAmount] = useState<number>(lead?.fundedLoanAmount || 475000);
+  const [loanProgram, setLoanProgram] = useState<string>(lead?.loanProgramName || lead?.desiredLoanProgram || "USDA Rural Development (0% Down)");
+  const [buyerAgent, setBuyerAgent] = useState<string>(lead?.buyerAgentName || lead?.assignedAgent || "Sarah Jenkins");
+  const [journeyDays, setJourneyDays] = useState<number>(lead?.totalJourneyDays || 42);
+  const [adSpend, setAdSpend] = useState<number>(lead?.attributedAdSpend || 450);
+  const [desiredLocation, setDesiredLocation] = useState<string>(lead?.desiredPurchaseLocation || lead?.taggedCityArea || "Salem, OR");
+  const [desiredProgram, setDesiredProgram] = useState<string>(lead?.desiredLoanProgram || "USDA RD Zero Down");
+  const [isEditingFunding, setIsEditingFunding] = useState<boolean>(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [isCopiedMilestone, setIsCopiedMilestone] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (lead) {
+      setGrossCommission(lead.grossCommissionPaid || 11875);
+      setFundingDate(lead.fundingClosingDate || new Date().toISOString().split("T")[0]);
+      setLoanAmount(lead.fundedLoanAmount || 475000);
+      setLoanProgram(lead.loanProgramName || lead.desiredLoanProgram || "USDA Rural Development (0% Down)");
+      setBuyerAgent(lead.buyerAgentName || lead.assignedAgent || "Sarah Jenkins");
+      setJourneyDays(lead.totalJourneyDays || 42);
+      setAdSpend(lead.attributedAdSpend || 450);
+      setDesiredLocation(lead.desiredPurchaseLocation || lead.taggedCityArea || "Salem, OR");
+      setDesiredProgram(lead.desiredLoanProgram || "USDA RD Zero Down");
+      setIsEditingFunding(lead.status === "closed");
+    }
+  }, [lead?.id]);
 
   if (!isOpen || !lead) return null;
 
@@ -716,6 +752,265 @@ export const LeadJourneyModal: React.FC<LeadJourneyModalProps> = ({
                   <p className="text-xs text-emerald-900/80 leading-relaxed">
                     Lead is currently tracked in stage: <strong>{lead.status.toUpperCase()}</strong>. Target price capability evaluated up to <strong>{lead.targetPriceRange}</strong> with <strong>{lead.downPaymentSavings}</strong> down payment savings.
                   </p>
+                </div>
+              </div>
+
+              {/* Event 7: True 3-System Microservices Ecosphere & Funded Loan Closing Ledger */}
+              <div className="relative space-y-2">
+                <div className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
+                  7
+                </div>
+                <div className="bg-gradient-to-br from-amber-50/60 to-emerald-50/40 p-5 rounded-2xl border border-amber-300/80 space-y-4 shadow-xs">
+                  <div className="flex items-start justify-between flex-wrap gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-serif font-bold text-amber-950 text-sm flex items-center gap-1.5">
+                          <Trophy className="w-4 h-4 text-amber-600" />
+                          Funded Loan Closing Ledger &amp; Return On Lead Investment (ROLI)
+                        </span>
+                        <span className="bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-300">
+                          3-System Ecosphere
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#606C5D] mt-0.5">
+                        Track verified loan funding economics pushed through <strong>GeoSphere Map</strong> &rarr; <strong>FTHB Qualifier</strong> &rarr; <strong>Vantage AI Ad Studio</strong>.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => setIsEditingFunding(!isEditingFunding)}
+                      className="px-3 py-1 bg-white hover:bg-amber-100/60 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>{isEditingFunding ? "Minimize Form" : "Edit Funding Inputs"}</span>
+                    </button>
+                  </div>
+
+                  {/* Summary Metric Ribbon */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                      <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Gross Commission</span>
+                      <strong className="text-sm font-black text-emerald-800 font-mono">
+                        ${(grossCommission || 0).toLocaleString()}
+                      </strong>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                      <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Funded Loan</span>
+                      <strong className="text-sm font-black text-[#2D362E] font-mono">
+                        ${(loanAmount || 0).toLocaleString()}
+                      </strong>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                      <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Speed To Close</span>
+                      <strong className="text-sm font-black text-[#2D362E] font-mono">
+                        {journeyDays} Days
+                      </strong>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                      <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Campaign ROLI</span>
+                      <strong className="text-sm font-black text-amber-800 font-mono">
+                        {adSpend > 0 ? (grossCommission / adSpend).toFixed(1) + "x" : "12.5x"}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Edit Form */}
+                  {isEditingFunding && (
+                    <div className="bg-white p-4 rounded-xl border border-amber-300/80 space-y-4 animate-in fade-in duration-200">
+                      <h5 className="text-xs font-bold text-[#2D362E] uppercase tracking-wider flex items-center gap-1.5">
+                        <FileCheck2 className="w-4 h-4 text-emerald-700" />
+                        Verified Closing Inputs (Syncs to Branch Manager Dashboard)
+                      </h5>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase">Gross Commission Paid ($)</label>
+                          <div className="relative">
+                            <DollarSign className="w-3.5 h-3.5 text-[#9A9488] absolute left-2.5 top-2.5" />
+                            <input
+                              type="number"
+                              value={grossCommission}
+                              onChange={(e) => setGrossCommission(Number(e.target.value))}
+                              className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl pl-8 pr-3 py-1.5 text-xs font-bold text-[#2D362E]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase">Funding &amp; Closing Date</label>
+                          <div className="relative">
+                            <Calendar className="w-3.5 h-3.5 text-[#9A9488] absolute left-2.5 top-2.5" />
+                            <input
+                              type="date"
+                              value={fundingDate}
+                              onChange={(e) => setFundingDate(e.target.value)}
+                              className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl pl-8 pr-3 py-1.5 text-xs font-bold text-[#2D362E]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase">Funded Loan Amount ($)</label>
+                          <div className="relative">
+                            <DollarSign className="w-3.5 h-3.5 text-[#9A9488] absolute left-2.5 top-2.5" />
+                            <input
+                              type="number"
+                              value={loanAmount}
+                              onChange={(e) => setLoanAmount(Number(e.target.value))}
+                              className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl pl-8 pr-3 py-1.5 text-xs font-bold text-[#2D362E]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase">Loan Program Name</label>
+                          <input
+                            type="text"
+                            value={loanProgram}
+                            onChange={(e) => setLoanProgram(e.target.value)}
+                            placeholder="e.g. USDA Rural Development (0% Down)"
+                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs font-bold text-[#2D362E]"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase">Buyer Partner Agent</label>
+                          <input
+                            type="text"
+                            value={buyerAgent}
+                            onChange={(e) => setBuyerAgent(e.target.value)}
+                            placeholder="e.g. Sarah Jenkins (Cascade Realty)"
+                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs font-bold text-[#2D362E]"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase">Total Journey Days</label>
+                          <input
+                            type="number"
+                            value={journeyDays}
+                            onChange={(e) => setJourneyDays(Number(e.target.value))}
+                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs font-bold text-[#2D362E]"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase">Attributed Ad Spend ($)</label>
+                          <div className="relative">
+                            <DollarSign className="w-3.5 h-3.5 text-[#9A9488] absolute left-2.5 top-2.5" />
+                            <input
+                              type="number"
+                              value={adSpend}
+                              onChange={(e) => setAdSpend(Number(e.target.value))}
+                              className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl pl-8 pr-3 py-1.5 text-xs font-bold text-[#2D362E]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase">Desired Purchase City / Area</label>
+                          <input
+                            type="text"
+                            value={desiredLocation}
+                            onChange={(e) => setDesiredLocation(e.target.value)}
+                            placeholder="e.g. Salem, OR"
+                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs font-bold text-[#2D362E]"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-[#606C5D] uppercase">Desired Program Needs</label>
+                          <input
+                            type="text"
+                            value={desiredProgram}
+                            onChange={(e) => setDesiredProgram(e.target.value)}
+                            placeholder="e.g. USDA RD Zero Down"
+                            className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs font-bold text-[#2D362E]"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-[#EAE7E0]">
+                        <span className="text-[11px] text-emerald-800 font-bold">
+                          {saveSuccessMsg || "Ready to commit to ROLI records"}
+                        </span>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const shareText = `🤝 Closed Loan Milestone!\nBuyer: ${lead.fullName}\nLoan: $${loanAmount.toLocaleString()} (${loanProgram})\nCommission: $${grossCommission.toLocaleString()}\nFunding Date: ${fundingDate}\nJourney Speed: ${journeyDays} days\nCo-Brand Agent Partner: ${buyerAgent}`;
+                              if (navigator.clipboard) {
+                                navigator.clipboard.writeText(shareText);
+                              }
+                              setIsCopiedMilestone(true);
+                              setTimeout(() => setIsCopiedMilestone(false), 2500);
+                            }}
+                            className="px-3.5 py-1.5 bg-[#FAF9F5] hover:bg-[#EAE7E0] text-[#4A5D4E] border border-[#EAE7E0] rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                          >
+                            <Share2 className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>{isCopiedMilestone ? "Copied!" : "Share Milestone With Agent"}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const calcRoli = adSpend > 0 ? Number((grossCommission / adSpend).toFixed(2)) : 0;
+                              const updated: CapturedLead = {
+                                ...lead,
+                                status: "closed",
+                                grossCommissionPaid: grossCommission,
+                                fundingClosingDate: fundingDate,
+                                fundedLoanAmount: loanAmount,
+                                loanProgramName: loanProgram,
+                                buyerAgentName: buyerAgent,
+                                totalJourneyDays: journeyDays,
+                                attributedAdSpend: adSpend,
+                                roliMultiplier: calcRoli,
+                                desiredPurchaseLocation: desiredLocation,
+                                desiredLoanProgram: desiredProgram,
+                              };
+                              onUpdateLead?.(updated);
+                              onUpdateLeadStatus(lead.id, "closed");
+                              setSaveSuccessMsg("✓ Saved to Branch Manager ROLI ledger & status updated to Closed!");
+                              setTimeout(() => setSaveSuccessMsg(null), 3000);
+                            }}
+                            className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>Save &amp; Sync to ROLI Dashboard</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick Share Milestone Bar */}
+                  <div className="flex items-center justify-between text-xs text-[#606C5D] pt-1">
+                    <span className="flex items-center gap-1">
+                      <Tag className="w-3.5 h-3.5 text-[#C18C5D]" />
+                      <strong>Program:</strong> {loanProgram} • <strong>Agent:</strong> {buyerAgent}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const shareText = `🤝 Closed Loan Milestone!\nBuyer: ${lead.fullName}\nLoan: $${loanAmount.toLocaleString()} (${loanProgram})\nCommission: $${grossCommission.toLocaleString()}\nFunding Date: ${fundingDate}\nJourney Speed: ${journeyDays} days\nCo-Brand Agent Partner: ${buyerAgent}`;
+                        if (navigator.clipboard) {
+                          navigator.clipboard.writeText(shareText);
+                        }
+                        setIsCopiedMilestone(true);
+                        setTimeout(() => setIsCopiedMilestone(false), 2500);
+                      }}
+                      className="text-emerald-800 hover:text-emerald-950 font-bold flex items-center gap-1"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>{isCopiedMilestone ? "Milestone Copied to Clipboard!" : "Copy Agent Share Snippet"}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

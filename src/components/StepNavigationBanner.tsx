@@ -847,7 +847,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
                 </div>
 
                 <p className="text-[10px] text-amber-900 leading-tight">
-                  Commercials, 30s video scripts, ElevenLabs voiceovers, and Meta/Google ad campaigns.
+                  Commercials, 30s video scripts, Vantage AI Ad Studio voiceovers, and Meta/Google ad campaigns.
                 </p>
 
                 <div className="space-y-1.5 pt-0.5">

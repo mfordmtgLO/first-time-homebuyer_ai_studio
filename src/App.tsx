@@ -256,7 +256,32 @@ export default function App() {
     const defaultPublished = GEOSPHERE_MOCK_LISTINGS.filter((p) => p.isPubliclyPublished !== false);
     return [...defaultPublished, ...INITIAL_PROPERTIES];
   });
-  const [milestones, setMilestones] = useState<RoadmapMilestone[]>(ROADMAP_MILESTONES);
+  const [milestones, setMilestones] = useState<RoadmapMilestone[]>(() => {
+    try {
+      const saved = localStorage.getItem("homebuyer_roadmap_milestones");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return ROADMAP_MILESTONES.map((def) => {
+            const match = parsed.find((p: any) => p.id === def.id || p.stepNumber === def.stepNumber);
+            return match ? { ...def, ...match } : def;
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load saved milestones:", e);
+    }
+    return ROADMAP_MILESTONES;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("homebuyer_roadmap_milestones", JSON.stringify(milestones));
+    } catch (e) {
+      console.warn("Could not save milestones state:", e);
+    }
+  }, [milestones]);
+
   const [documents, setDocuments] = useState<DocumentItem[]>(DOCUMENT_VAULT_ITEMS);
 
   // Loan Officer & Local Professional Guides State
@@ -275,6 +300,18 @@ export default function App() {
       leads: INITIAL_LEADS,
       syncedProperties: GEOSPHERE_MOCK_LISTINGS,
       smsTemplates: DEFAULT_SMS_TEMPLATES,
+      bigPurpleDotCrmConfig: {
+        apiKey: "bpd_live_crm_mike_ford_9824",
+        subdomain: "cornerstone-leads",
+        accountEmail: "mford@cfmtg.com",
+        webhookSecret: "whsec_bpd_crm_8392019482",
+        environment: "production",
+        autoUploadNewLeads: true,
+        connectionStatus: "connected",
+        lastStatusMessage: "Connected & Active (BYOK)",
+        lastSyncedAt: new Date().toISOString(),
+        totalLeadsUploaded: 2,
+      },
     };
 
     try {
@@ -329,6 +366,9 @@ export default function App() {
           }
           if (!parsed.syncedProperties || parsed.syncedProperties.length === 0) {
             parsed.syncedProperties = GEOSPHERE_MOCK_LISTINGS;
+          }
+          if (!parsed.bigPurpleDotCrmConfig) {
+            parsed.bigPurpleDotCrmConfig = initialState.bigPurpleDotCrmConfig;
           }
 
           initialState = parsed;

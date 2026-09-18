@@ -432,7 +432,7 @@ export const SocialMediaPushModal: React.FC<SocialMediaPushModalProps> = ({
                 <div className="space-y-1">
                   <h4 className="font-bold text-base text-[#2D362E]">{variation.title}</h4>
                   <p className="text-xs text-[#606C5D]">
-                    Ready for local hard drive export in 1080p MP4 format with synchronized ElevenLabs voiceover and kinetic subtitles.
+                    Ready for local hard drive export in 1080p MP4 format with synchronized Vantage AI Ad Studio voiceover and kinetic subtitles.
                   </p>
                 </div>
 

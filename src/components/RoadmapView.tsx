@@ -18,7 +18,11 @@ import {
   Printer,
   Mail,
   Zap,
-  X
+  X,
+  Calendar,
+  Flag,
+  Check,
+  FileText
 } from "lucide-react";
 import { RoadmapMilestone, FinancialProfile, PropertyListing, DocumentItem, LoanOfficerProfile, RealEstateAgentProfile, MilestoneEmailAlertSettings } from "../types";
 import { HomebuyingPlanPrintModal } from "./HomebuyingPlanPrintModal";
@@ -93,6 +97,229 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
   const completedTasks = allTasks.filter(t => t.done).length;
   const totalTasks = allTasks.length;
   const progressPercent = Math.round((completedTasks / totalTasks) * 100);
+
+  // Helper to format date nicely
+  const formatDateDisplay = (dateStr?: string) => {
+    if (!dateStr) return "Set Date";
+    try {
+      const [year, month, day] = dateStr.split("-").map(Number);
+      if (!year || !month || !day) return dateStr;
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatDateDayMonth = (dateStr?: string) => {
+    if (!dateStr) return "TBD";
+    try {
+      const [year, month, day] = dateStr.split("-").map(Number);
+      if (!year || !month || !day) return dateStr;
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Calculate Overall Closing Timeline Estimate
+  const closingTimelineStats = React.useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find milestone 10 (Closing Day & Keys in Hand)
+    const step10 = milestones.find(m => m.stepNumber === 10);
+    let closingDateStr = step10?.expectedDate;
+
+    // Fallback: If step 10 has no date, find max expected date across all milestones
+    if (!closingDateStr) {
+      const dates = milestones.map(m => m.expectedDate).filter(Boolean) as string[];
+      if (dates.length > 0) {
+        dates.sort();
+        closingDateStr = dates[dates.length - 1];
+      }
+    }
+
+    let closingDate: Date;
+    if (closingDateStr) {
+      const [y, m, d] = closingDateStr.split("-").map(Number);
+      closingDate = new Date(y, m - 1, d);
+    } else {
+      closingDate = new Date(today);
+      closingDate.setDate(closingDate.getDate() + 60);
+      closingDateStr = closingDate.toISOString().split("T")[0];
+    }
+
+    const diffMs = closingDate.getTime() - today.getTime();
+    const daysToClose = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    const weeksToClose = (Math.max(0, daysToClose) / 7).toFixed(1);
+
+    // Determine Pace
+    let paceLabel = "Standard 45-60 Day Escrow Pace";
+    let paceBadge = "bg-emerald-50 text-emerald-800 border-emerald-200";
+    if (daysToClose <= 0) {
+      paceLabel = "Closing Day Reached / In Past";
+      paceBadge = "bg-purple-50 text-purple-800 border-purple-200";
+    } else if (daysToClose <= 30) {
+      paceLabel = "Fast-Track 30-Day Escrow Pace";
+      paceBadge = "bg-amber-50 text-amber-800 border-amber-200";
+    } else if (daysToClose > 60) {
+      paceLabel = "Strategic / Extended Pace (60+ Days)";
+      paceBadge = "bg-blue-50 text-blue-800 border-blue-200";
+    }
+
+    // Active step is first incomplete step
+    const activeStep = milestones.find(m => !m.completed) || milestones[milestones.length - 1];
+
+    // Overdue count (past expected date and not completed)
+    const overdueCount = milestones.filter(m => {
+      if (m.completed || !m.expectedDate) return false;
+      const [y, mth, d] = m.expectedDate.split("-").map(Number);
+      const mDate = new Date(y, mth - 1, d);
+      return mDate < today;
+    }).length;
+
+    return {
+      closingDateStr,
+      closingDate,
+      daysToClose,
+      weeksToClose,
+      paceLabel,
+      paceBadge,
+      activeStep,
+      overdueCount
+    };
+  }, [milestones]);
+
+  // Handle Date Changes
+  const handleDateChange = (milestoneId: string, newDate: string) => {
+    setMilestones(prev => prev.map(m => m.id === milestoneId ? { ...m, expectedDate: newDate } : m));
+  };
+
+  const handleQuickAdjustDate = (milestoneId: string, daysDelta: number) => {
+    setMilestones(prev => prev.map(m => {
+      if (m.id !== milestoneId) return m;
+      let baseDate = new Date();
+      if (m.expectedDate) {
+        const [y, mo, d] = m.expectedDate.split("-").map(Number);
+        baseDate = new Date(y, mo - 1, d);
+      }
+      baseDate.setDate(baseDate.getDate() + daysDelta);
+      return {
+        ...m,
+        expectedDate: baseDate.toISOString().split("T")[0]
+      };
+    }));
+  };
+
+  const handleQuickSetToday = (milestoneId: string) => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    handleDateChange(milestoneId, todayStr);
+  };
+
+  const handleCascadeForwardFromStep = (fromStepNumber: number) => {
+    setMilestones(prev => {
+      const currentStep = prev.find(m => m.stepNumber === fromStepNumber);
+      if (!currentStep || !currentStep.expectedDate) return prev;
+
+      const [curY, curM, curD] = currentStep.expectedDate.split("-").map(Number);
+      let runningDate = new Date(curY, curM - 1, curD);
+
+      const defaultGaps: Record<number, number> = {
+        1: 10,
+        2: 8,
+        3: 16,
+        4: 6,
+        5: 4,
+        6: 8,
+        7: 11,
+        8: 8,
+        9: 2,
+        10: 0
+      };
+
+      return prev.map(m => {
+        if (m.stepNumber <= fromStepNumber) return m;
+        const gap = defaultGaps[m.stepNumber - 1] || 7;
+        runningDate = new Date(runningDate.getTime() + gap * 24 * 60 * 60 * 1000);
+        return {
+          ...m,
+          expectedDate: runningDate.toISOString().split("T")[0]
+        };
+      });
+    });
+  };
+
+  const handleAutoSchedule = (paceDays: 30 | 45 | 60 = 45) => {
+    const today = new Date();
+    const fractions = [0, 0.12, 0.22, 0.42, 0.50, 0.56, 0.68, 0.82, 0.94, 1.0];
+    
+    setMilestones(prev => {
+      return prev.map((m, idx) => {
+        const frac = fractions[idx] !== undefined ? fractions[idx] : idx / (prev.length - 1);
+        const daysOffset = Math.round(frac * paceDays);
+        const d = new Date(today);
+        d.setDate(d.getDate() + daysOffset);
+        return {
+          ...m,
+          expectedDate: d.toISOString().split("T")[0]
+        };
+      });
+    });
+  };
+
+  const handleNotesChange = (milestoneId: string, newNotes: string) => {
+    setMilestones(prev => prev.map(m => m.id === milestoneId ? { ...m, notes: newNotes } : m));
+  };
+
+  const handleAppendNotePrompt = (milestoneId: string, promptText: string) => {
+    setMilestones(prev => prev.map(m => {
+      if (m.id !== milestoneId) return m;
+      const current = m.notes || "";
+      const separator = current && !current.endsWith("\n") ? "\n" : "";
+      return {
+        ...m,
+        notes: current + separator + promptText
+      };
+    }));
+  };
+
+  const getDateBadge = (step: RoadmapMilestone) => {
+    if (step.completed) {
+      return (
+        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-md shrink-0">
+          Done
+        </span>
+      );
+    }
+    if (!step.expectedDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [y, m, d] = step.expectedDate.split("-").map(Number);
+    const stepDate = new Date(y, m - 1, d);
+    const diffDays = Math.ceil((stepDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return (
+        <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md shrink-0">
+          {Math.abs(diffDays)}d past
+        </span>
+      );
+    } else if (diffDays === 0) {
+      return (
+        <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md shrink-0">
+          Today
+        </span>
+      );
+    } else {
+      return (
+        <span className="text-[10px] font-bold text-[#606C5D] bg-[#F1EFE9] px-1.5 py-0.5 rounded-md shrink-0">
+          In {diffDays}d
+        </span>
+      );
+    }
+  };
 
   const toggleMilestone = (milestoneId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -419,17 +646,151 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
         </div>
       </div>
 
+      {/* Overall Closing Timeline Estimate Interactive Widget */}
+      <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 sm:p-8 space-y-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[#EAE7E0]">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF9F5] text-[#4A5D4E] text-xs font-bold border border-[#EAE7E0]">
+              <Calendar className="w-3.5 h-3.5 text-[#C18C5D]" />
+              <span>Overall Closing Timeline Estimate</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-[#2D362E] flex flex-wrap items-center gap-2">
+              <span>Target Closing Date:</span>
+              <span className="text-[#4A5D4E] underline decoration-[#C18C5D] decoration-2 underline-offset-4">
+                {formatDateDisplay(closingTimelineStats.closingDateStr)}
+              </span>
+            </h3>
+            <p className="text-xs sm:text-sm text-[#606C5D] max-w-2xl">
+              Calculated dynamically from your milestone expected completion dates. Adjust any milestone date below to recalculate your projected closing velocity in real time.
+            </p>
+          </div>
+
+          {/* Quick Stat Blocks */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Days to Close Counter Card */}
+            <div className="bg-[#FAF9F5] p-3.5 sm:p-4 rounded-2xl border border-[#EAE7E0] text-center min-w-[140px] shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488] block">Projected Horizon</span>
+              <span className="text-2xl font-serif font-bold text-[#2D362E]">
+                {closingTimelineStats.daysToClose > 0 ? `${closingTimelineStats.daysToClose} Days` : "Target Met"}
+              </span>
+              <span className="text-[11px] text-[#606C5D] block font-medium">
+                (~{closingTimelineStats.weeksToClose} Wks to Closing)
+              </span>
+            </div>
+
+            {/* Escrow Pace Pill */}
+            <div className="bg-[#FAF9F5] p-3.5 sm:p-4 rounded-2xl border border-[#EAE7E0] space-y-1 min-w-[170px] shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488] block">Escrow Velocity</span>
+              <div className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-lg border ${closingTimelineStats.paceBadge}`}>
+                <Flag className="w-3 h-3 shrink-0" />
+                <span>{closingTimelineStats.paceLabel}</span>
+              </div>
+              <div className="text-[11px] text-[#606C5D]">
+                {closingTimelineStats.overdueCount > 0 ? (
+                  <span className="text-amber-700 font-semibold">⚠️ {closingTimelineStats.overdueCount} milestone(s) behind schedule</span>
+                ) : (
+                  <span className="text-emerald-700 font-semibold">✓ Active targets on schedule</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Visual Multi-Milestone Timeline Track */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between text-xs text-[#606C5D]">
+            <span className="font-bold text-[#2D362E] flex items-center gap-1.5">
+              <span>Milestone Schedule Progression</span>
+              <span className="text-[11px] font-normal text-[#9A9488]">(Click any step to inspect)</span>
+            </span>
+            <span className="text-[11px]">
+              Next Target: <strong className="text-[#4A5D4E]">Step {closingTimelineStats.activeStep.stepNumber}</strong> ({formatDateDisplay(closingTimelineStats.activeStep.expectedDate)})
+            </span>
+          </div>
+
+          {/* Stepper bar across all 10 milestones */}
+          <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 pt-1">
+            {milestones.map((m) => {
+              const isDone = m.completed;
+              const isActive = m.id === closingTimelineStats.activeStep.id && !isDone;
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => setExpandedStepId(m.id)}
+                  title={`Step ${m.stepNumber}: ${m.title} - Target: ${formatDateDisplay(m.expectedDate)}`}
+                  className={`p-2 rounded-xl border text-left cursor-pointer transition-all hover:scale-[1.03] select-none ${
+                    isDone
+                      ? "bg-emerald-50/70 border-emerald-300 text-emerald-900"
+                      : isActive
+                      ? "bg-[#4A5D4E] border-[#38463B] text-white shadow-sm ring-2 ring-[#C18C5D]/50"
+                      : "bg-[#FAF9F5] border-[#EAE7E0] text-[#606C5D] hover:border-[#4A5D4E]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className={`text-[10px] font-bold ${isActive ? "text-[#D4A373]" : ""}`}>
+                      0{m.stepNumber}
+                    </span>
+                    {isDone ? (
+                      <Check className="w-3 h-3 text-emerald-700" />
+                    ) : (
+                      <span className="text-[9px] opacity-75">{m.stage.slice(0, 4)}</span>
+                    )}
+                  </div>
+                  <div className={`text-[10px] font-semibold truncate ${isActive ? "text-white font-bold" : "text-[#2D362E]"}`}>
+                    {formatDateDayMonth(m.expectedDate)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Quick Schedule Pacing Presets */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#EAE7E0] text-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[#9A9488] font-bold uppercase text-[10px]">Smart Preset Pacing:</span>
+            <button
+              type="button"
+              onClick={() => handleAutoSchedule(30)}
+              className="px-2.5 py-1 rounded-lg bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[11px] font-bold text-[#2D362E] transition-colors shadow-2xs"
+            >
+              ⚡ Fast-Track 30 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAutoSchedule(45)}
+              className="px-2.5 py-1 rounded-lg bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[11px] font-bold text-[#4A5D4E] transition-colors shadow-2xs"
+            >
+              🎯 Standard 45 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAutoSchedule(60)}
+              className="px-2.5 py-1 rounded-lg bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[11px] font-bold text-[#2D362E] transition-colors shadow-2xs"
+            >
+              🗓️ Relaxed 60 Days
+            </button>
+          </div>
+
+          <div className="text-[11px] text-[#9A9488]">
+            💡 Select any milestone below to customize individual target dates or cascade deadlines
+          </div>
+        </div>
+      </div>
+
       {/* Step Cards List */}
       <div className="space-y-4">
         {filteredMilestones.map((step) => {
           const isExpanded = expandedStepId === step.id;
           const stepDone = step.tasks.every(t => t.done);
           const stepCompletedCount = step.tasks.filter(t => t.done).length;
+          const stepTotalTasks = step.tasks.length;
+          const stepProgressPercent = stepTotalTasks > 0 ? Math.round((stepCompletedCount / stepTotalTasks) * 100) : 0;
 
           return (
             <div
               key={step.id}
-              className={`rounded-2xl border transition-all shadow-sm ${
+              className={`rounded-2xl border transition-all shadow-sm overflow-hidden ${
                 stepDone
                   ? "bg-[#F1EFE9] border-[#4A5D4E]/40"
                   : "bg-white border-[#EAE7E0] hover:border-[#DEDAD2]"
@@ -467,17 +828,90 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                     <h3 className="text-base sm:text-lg font-bold text-[#2D362E]">
                       {step.title}
                     </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      {/* Mobile task progress label */}
+                      <div className="sm:hidden flex items-center gap-2">
+                        <span className="text-[11px] font-semibold text-[#606C5D]">
+                          {stepCompletedCount}/{stepTotalTasks} tasks ({stepProgressPercent}%)
+                        </span>
+                      </div>
+                      {step.notes && step.notes.trim().length > 0 && (
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold text-[#4A5D4E] bg-[#FAF9F5] border border-[#EAE7E0]"
+                          title={step.notes}
+                        >
+                          <FileText className="w-3 h-3 text-[#C18C5D]" />
+                          <span>Notes Saved</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-[#606C5D] hidden sm:block">
-                    {stepCompletedCount}/{step.tasks.length} tasks
-                  </span>
+                  {/* Visual Expected Completion Date Picker in Header */}
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] hover:bg-white hover:border-[#4A5D4E] transition-all cursor-pointer group shadow-2xs shrink-0"
+                    title="Click to change expected completion date"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-[#4A5D4E] group-hover:scale-110 transition-transform shrink-0" />
+                    <div className="flex flex-col text-left">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-[#9A9488] leading-none">
+                        Target
+                      </span>
+                      <span className="text-xs font-bold text-[#2D362E] leading-tight whitespace-nowrap">
+                        {formatDateDisplay(step.expectedDate)}
+                      </span>
+                    </div>
+                    {getDateBadge(step)}
+                    <input
+                      type="date"
+                      value={step.expectedDate || ""}
+                      onChange={(e) => handleDateChange(step.id, e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      aria-label={`Expected completion date for Step ${step.stepNumber}: ${step.title}`}
+                    />
+                  </div>
+
+                  {/* Header Visual Progress Bar Widget */}
+                  <div className="hidden sm:flex flex-col items-end gap-1.5 min-w-[130px] max-w-[150px]">
+                    <div className="flex items-center justify-between w-full text-xs">
+                      <span className="text-[11px] font-semibold text-[#606C5D]">
+                        {stepCompletedCount}/{stepTotalTasks} tasks
+                      </span>
+                      <span className={`text-[11px] font-bold ${stepDone ? "text-emerald-700" : "text-[#4A5D4E]"}`}>
+                        {stepProgressPercent}%
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-[#EAE7E0] rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ease-out ${
+                          stepDone
+                            ? "bg-emerald-600"
+                            : stepProgressPercent > 0
+                            ? "bg-[#4A5D4E]"
+                            : "bg-transparent"
+                        }`}
+                        style={{ width: `${stepProgressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+
                   <div className="p-2 rounded-lg bg-[#F1EFE9] text-[#606C5D] border border-[#EAE7E0]">
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </div>
                 </div>
+              </div>
+
+              {/* Card Level Full-Width Progress Track */}
+              <div className="w-full bg-[#EAE7E0]/60 h-1 overflow-hidden" title={`${stepProgressPercent}% of sub-tasks completed`}>
+                <div
+                  className={`h-full transition-all duration-500 ease-out ${
+                    stepDone ? "bg-emerald-600" : "bg-[#4A5D4E]"
+                  }`}
+                  style={{ width: `${stepProgressPercent}%` }}
+                />
               </div>
 
               {/* Collapsible Content */}
@@ -487,11 +921,99 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                     {step.summary}
                   </p>
 
+                  {/* Target Completion & Dynamic Timeline Alignment Box */}
+                  <div className="bg-[#FAF9F5] rounded-2xl p-4 sm:p-5 border border-[#EAE7E0] space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-[#4A5D4E]" />
+                        <span className="text-xs font-bold text-[#2D362E]">Expected Completion Schedule</span>
+                        <span className="text-[11px] text-[#9A9488]">• Phase Benchmark: {step.duration}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-semibold text-[#606C5D]">
+                          {step.completed ? "Status: Milestone Completed" : "Status: Active Projection"}
+                        </span>
+                        {getDateBadge(step)}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-[#EAE7E0] shadow-2xs">
+                        <span className="text-xs text-[#9A9488] font-medium">Target Date:</span>
+                        <input
+                          type="date"
+                          value={step.expectedDate || ""}
+                          onChange={(e) => handleDateChange(step.id, e.target.value)}
+                          className="text-xs font-bold text-[#2D362E] bg-transparent focus:outline-none cursor-pointer"
+                          aria-label={`Adjust target date for step ${step.stepNumber}`}
+                        />
+                      </div>
+
+                      {/* Quick Pacing Adjusters */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => handleQuickSetToday(step.id)}
+                          className="px-2.5 py-1.5 text-[11px] font-semibold text-[#606C5D] bg-white hover:bg-[#F1EFE9] rounded-lg border border-[#EAE7E0] transition-colors shadow-2xs"
+                        >
+                          Set to Today
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAdjustDate(step.id, 7)}
+                          className="px-2.5 py-1.5 text-[11px] font-semibold text-[#4A5D4E] bg-white hover:bg-[#F1EFE9] rounded-lg border border-[#EAE7E0] transition-colors shadow-2xs"
+                        >
+                          +1 Week
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAdjustDate(step.id, 14)}
+                          className="px-2.5 py-1.5 text-[11px] font-semibold text-[#4A5D4E] bg-white hover:bg-[#F1EFE9] rounded-lg border border-[#EAE7E0] transition-colors shadow-2xs"
+                        >
+                          +2 Weeks
+                        </button>
+                        {step.stepNumber < 10 && (
+                          <button
+                            type="button"
+                            onClick={() => handleCascadeForwardFromStep(step.stepNumber)}
+                            className="px-3 py-1.5 text-[11px] font-bold text-[#C18C5D] bg-white hover:bg-[#F1EFE9] rounded-lg border border-[#C18C5D]/40 transition-colors flex items-center gap-1 shadow-2xs"
+                            title="Push all remaining subsequent milestones forward proportionally"
+                          >
+                            <Sparkles className="w-3 h-3 text-[#C18C5D]" />
+                            <span>Cascade Downstream Dates</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Tasks Checklists */}
-                  <div className="space-y-2.5">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#9A9488]">
-                      Required Action Items
-                    </h4>
+                  <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#9A9488]">
+                        Required Action Items
+                      </h4>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-[#606C5D] font-medium">
+                          {stepCompletedCount} of {stepTotalTasks} completed
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                          stepDone ? "bg-emerald-100 text-emerald-800" : "bg-white text-[#4A5D4E] border border-[#EAE7E0]"
+                        }`}>
+                          {stepProgressPercent}% Done
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Visual Progress Bar inside Action Items */}
+                    <div className="w-full h-2.5 bg-[#FAF9F5] border border-[#EAE7E0] rounded-full overflow-hidden p-0.5 shadow-2xs">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ease-out ${
+                          stepDone ? "bg-emerald-600" : "bg-[#4A5D4E]"
+                        }`}
+                        style={{ width: `${stepProgressPercent}%` }}
+                      />
+                    </div>
                     <div className="grid grid-cols-1 gap-2">
                       {step.tasks.map(task => (
                         <div
@@ -515,6 +1037,77 @@ export const RoadmapView: React.FC<RoadmapViewProps> = ({
                           </span>
                         </div>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Step Notes & Reminders Textarea */}
+                  <div className="bg-[#FAF9F5] rounded-2xl p-4 sm:p-5 border border-[#EAE7E0] space-y-3 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#4A5D4E]" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-[#2D362E]">
+                          Step Notes & Reminders
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {step.notes && step.notes.trim().length > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-semibold">
+                            <Check className="w-3 h-3" /> Auto-saved
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-[#9A9488]">
+                            Personal notes for Step {step.stepNumber}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <textarea
+                        value={step.notes || ""}
+                        onChange={(e) => handleNotesChange(step.id, e.target.value)}
+                        placeholder={`Jot down important reminders, quotes, lender conversations, questions for your agent, or key dates for Step ${step.stepNumber}...`}
+                        rows={3}
+                        className="w-full bg-white border border-[#EAE7E0] rounded-xl p-3 sm:p-3.5 text-xs sm:text-sm text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:border-[#4A5D4E] focus:ring-2 focus:ring-[#4A5D4E]/10 transition-all resize-y min-h-[85px] leading-relaxed shadow-2xs"
+                        aria-label={`Personal notes and reminders for Step ${step.stepNumber}: ${step.title}`}
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[#EAE7E0] text-[11px]">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488]">Quick Prompts:</span>
+                        <button
+                          type="button"
+                          onClick={() => handleAppendNotePrompt(step.id, "• Questions for loan officer: ")}
+                          className="px-2 py-0.5 rounded-lg bg-white border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#4A5D4E] font-medium transition-colors cursor-pointer shadow-2xs"
+                        >
+                          + Questions for LO
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAppendNotePrompt(step.id, "• Follow-up with agent: ")}
+                          className="px-2 py-0.5 rounded-lg bg-white border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#4A5D4E] font-medium transition-colors cursor-pointer shadow-2xs"
+                        >
+                          + Agent Follow-up
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAppendNotePrompt(step.id, "• Key deadline/contingency: ")}
+                          className="px-2 py-0.5 rounded-lg bg-white border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#4A5D4E] font-medium transition-colors cursor-pointer shadow-2xs"
+                        >
+                          + Key Deadline
+                        </button>
+                      </div>
+
+                      {step.notes && step.notes.trim().length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleNotesChange(step.id, "")}
+                          className="text-rose-600 hover:text-rose-700 text-[11px] font-semibold transition-colors cursor-pointer"
+                        >
+                          Clear Notes
+                        </button>
+                      )}
                     </div>
                   </div>
 

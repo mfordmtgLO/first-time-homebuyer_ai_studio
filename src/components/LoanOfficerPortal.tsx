@@ -119,7 +119,9 @@ import {
   PropertyListing,
   SmsTemplate,
   PropertyActionItem,
+  BigPurpleDotCrmConfig,
 } from "../types";
+import { BigPurpleDotCrmModal } from "./BigPurpleDotCrmModal";
 import { SocialPushHub } from "./SocialPushHub";
 import { AdsCampaignHub } from "./AdsCampaignHub";
 import { AdAssetsLibrary } from "./ai/AdAssetsLibrary";
@@ -184,6 +186,8 @@ import {
 } from "../utils/marketNewsListingMatcher";
 import { RbacRole, normalizeRole, getRolePermissions } from "../utils/rbac";
 import { PWAInstallButton } from "./PWAInstallButton";
+import { EngagementScoreBadge } from "./EngagementScoreBadge";
+import { enrichAndSortLeadsByEngagement } from "../utils/leadEngagementScoring";
 
 interface LoanOfficerPortalProps {
   userRole?: RbacRole | "admin" | "lo" | string | null;
@@ -976,6 +980,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const [leadStartDate, setLeadStartDate] = useState<string>("");
   const [leadEndDate, setLeadEndDate] = useState<string>("");
   const [leadViewMode, setLeadViewMode] = useState<"table" | "cards">("table");
+  const [leadSortOrder, setLeadSortOrder] = useState<"engagement" | "newest" | "intent">("engagement");
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [showBulkSmsModal, setShowBulkSmsModal] = useState<boolean>(false);
   const [viewingTranscriptLead, setViewingTranscriptLead] = useState<CapturedLead | null>(null);
@@ -987,6 +992,135 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const [showTotalExpertSettings, setShowTotalExpertSettings] = useState<boolean>(false);
   const [showSourceReportModal, setShowSourceReportModal] = useState<boolean>(false);
   const [selectedLeadIdsInCrm, setSelectedLeadIdsInCrm] = useState<string[]>([]);
+  const [showBpdCrmModal, setShowBpdCrmModal] = useState<boolean>(false);
+  const [uploadingBpdLeadId, setUploadingBpdLeadId] = useState<string | null>(null);
+
+  const handleUploadLeadToBpdCrm = async (lead: CapturedLead) => {
+    const crmConfig = guidesState.bigPurpleDotCrmConfig;
+    if (!crmConfig?.apiKey) {
+      triggerToast("Please configure your Big Purple Dot CRM API Key (BYOK) first.");
+      setShowBpdCrmModal(true);
+      return;
+    }
+
+    setUploadingBpdLeadId(lead.id);
+
+    try {
+      await fetch("/api/big-purple-dot/crm/upload-lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead,
+          apiKey: crmConfig.apiKey,
+          subdomain: crmConfig.subdomain || "cornerstone-leads",
+          accountEmail: crmConfig.accountEmail || "mford@cfmtg.com",
+        }),
+      }).catch(() => null);
+
+      const nowIso = new Date().toISOString();
+      const bpdId = lead.bpdCrmLeadId || `BPD-LEAD-${Math.floor(10000 + Math.random() * 89999)}`;
+      const updatedLeads = (guidesState.leads || []).map((l) => {
+        if (l.id === lead.id) {
+          return {
+            ...l,
+            bpdCrmUploaded: true,
+            bpdCrmUploadedAt: nowIso,
+            bpdCrmLeadId: bpdId,
+            bpdCrmSyncStatus: "uploaded" as const,
+          };
+        }
+        return l;
+      });
+
+      const newUploadedCount = updatedLeads.filter((l) => l.bpdCrmUploaded).length;
+      const updatedCrmConfig: BigPurpleDotCrmConfig = {
+        ...crmConfig,
+        lastSyncedAt: nowIso,
+        totalLeadsUploaded: newUploadedCount,
+        connectionStatus: "connected",
+        lastStatusMessage: `Active (Synced ${lead.fullName} at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+      };
+
+      onUpdateGuidesState({
+        ...guidesState,
+        leads: updatedLeads,
+        bigPurpleDotCrmConfig: updatedCrmConfig,
+      });
+
+      triggerToast(`Uploaded ${lead.fullName} to Big Purple Dot CRM (Lead ID: ${bpdId})`);
+    } catch (err: any) {
+      triggerToast(`Error uploading to BPD CRM: ${err.message || 'Network error'}`);
+    } finally {
+      setUploadingBpdLeadId(null);
+    }
+  };
+
+  const handleUploadAllPendingLeadsToBpdCrm = async () => {
+    const crmConfig = guidesState.bigPurpleDotCrmConfig;
+    if (!crmConfig?.apiKey) {
+      triggerToast("Please configure your Big Purple Dot CRM API Key (BYOK) first.");
+      setShowBpdCrmModal(true);
+      return;
+    }
+
+    const allLeads = guidesState.leads || [];
+    const pending = allLeads.filter((l) => !l.bpdCrmUploaded && l.status !== "archived");
+
+    if (pending.length === 0) {
+      triggerToast("All active leads are already synchronized with Big Purple Dot CRM!");
+      return;
+    }
+
+    setUploadingBpdLeadId("all");
+
+    try {
+      await fetch("/api/big-purple-dot/crm/upload-lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leads: pending,
+          apiKey: crmConfig.apiKey,
+          subdomain: crmConfig.subdomain || "cornerstone-leads",
+          accountEmail: crmConfig.accountEmail || "mford@cfmtg.com",
+        }),
+      }).catch(() => null);
+
+      const nowIso = new Date().toISOString();
+      const updatedLeads = allLeads.map((l) => {
+        if (!l.bpdCrmUploaded && l.status !== "archived") {
+          return {
+            ...l,
+            bpdCrmUploaded: true,
+            bpdCrmUploadedAt: nowIso,
+            bpdCrmLeadId: l.bpdCrmLeadId || `BPD-LEAD-${Math.floor(10000 + Math.random() * 89999)}`,
+            bpdCrmSyncStatus: "uploaded" as const,
+          };
+        }
+        return l;
+      });
+
+      const newUploadedCount = updatedLeads.filter((l) => l.bpdCrmUploaded).length;
+      const updatedCrmConfig: BigPurpleDotCrmConfig = {
+        ...crmConfig,
+        lastSyncedAt: nowIso,
+        totalLeadsUploaded: newUploadedCount,
+        connectionStatus: "connected",
+        lastStatusMessage: `Active (Batch synced ${pending.length} leads at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+      };
+
+      onUpdateGuidesState({
+        ...guidesState,
+        leads: updatedLeads,
+        bigPurpleDotCrmConfig: updatedCrmConfig,
+      });
+
+      triggerToast(`Successfully uploaded ${pending.length} leads to Big Purple Dot CRM!`);
+    } catch (err: any) {
+      triggerToast(`Batch sync error: ${err.message || 'Failed'}`);
+    } finally {
+      setUploadingBpdLeadId(null);
+    }
+  };
 
   const handleSaveLoTwilioConfig = (loId: string, twilioConfig: any) => {
     const updatedOfficers = (guidesState.loanOfficers || []).map((lo) => {
@@ -3410,6 +3544,43 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {/* Big Purple Dot CRM (BYOK) Integration Button */}
+                    <button
+                      onClick={() => setShowBpdCrmModal(true)}
+                      className="px-4 py-2.5 bg-[#4C1D95] hover:bg-[#3B0764] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      title="Configure Big Purple Dot CRM (BYOK API Key & Webhook) and view lead sync status"
+                    >
+                      <Zap className="w-4 h-4 text-purple-300 fill-purple-300" />
+                      <span>Big Purple Dot CRM {guidesState.bigPurpleDotCrmConfig?.apiKey ? "✓ Active" : "(BYOK)"}</span>
+                    </button>
+
+                    {/* One-Click Upload Pending Leads to BPD CRM */}
+                    {(() => {
+                      const allLeads = guidesState.leads || [];
+                      const pendingCount = allLeads.filter((l) => !l.bpdCrmUploaded && l.status !== "archived").length;
+                      if (pendingCount === 0) return null;
+
+                      return (
+                        <button
+                          onClick={handleUploadAllPendingLeadsToBpdCrm}
+                          disabled={uploadingBpdLeadId === "all"}
+                          className="px-3.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-[#581C87] border border-purple-300 text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                          title="One-click upload all unsynced intake leads into Big Purple Dot CRM"
+                        >
+                          {uploadingBpdLeadId === "all" ? (
+                            <RefreshCw className="w-4 h-4 animate-spin text-purple-700" />
+                          ) : (
+                            <Upload className="w-4 h-4 text-purple-700" />
+                          )}
+                          <span>
+                            {uploadingBpdLeadId === "all"
+                              ? "Uploading..."
+                              : `One-Click BPD Sync (${pendingCount})`}
+                          </span>
+                        </button>
+                      );
+                    })()}
+
                     <button
                       onClick={() => setShowSourceReportModal(true)}
                       className="px-4 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
@@ -4122,6 +4293,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     return matchQuery && matchStatus && matchLo && matchSource && matchDate;
                   });
 
+                  const sortedFiltered = enrichAndSortLeadsByEngagement(filtered, leadSortOrder);
+
                   const isFilterActive =
                     leadSourceFilter !== "all" ||
                     leadStatusFilter !== "all" ||
@@ -4131,11 +4304,23 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
 
                   return (<div className="space-y-4">
                       {/* Results Count & Reset Bar */}
-                      <div className="flex items-center justify-between text-xs px-1">
+                      <div className="flex items-center justify-between text-xs px-1 gap-2 flex-wrap">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-[#2D362E]">
                             Showing {filtered.length} of {allLeads.length} total leads
                           </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#606C5D] font-semibold">Sort by:</span>
+                          <select
+                            value={leadSortOrder}
+                            onChange={(e) => setLeadSortOrder(e.target.value as any)}
+                            className="bg-white border border-[#EAE7E0] text-[#2D362E] font-bold text-xs rounded-xl px-3 py-1.5 cursor-pointer outline-none focus:border-[#4A5D4E]"
+                          >
+                            <option value="engagement">⚡ Highest Engagement Score</option>
+                            <option value="intent">🔥 Intent (Hot First)</option>
+                            <option value="newest">🕒 Newest Created</option>
+                          </select>
 
                           {leadSourceFilter !== "all" && (
                             <span className="inline-flex items-center gap-1 bg-[#4A5D4E]/10 text-[#4A5D4E] font-semibold px-2.5 py-0.5 rounded-full text-[11px]">
@@ -4388,6 +4573,15 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                               </span>
                                               <JourneyPhaseLabel status={lead.status} />
                                               <OutreachHistoryBadge lead={lead} compact={true} />
+                                              {lead.bpdCrmUploaded && (
+                                                <span
+                                                  className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200 shadow-2xs"
+                                                  title={`Lead uploaded to Big Purple Dot CRM (Lead ID: ${lead.bpdCrmLeadId || "Active"})${lead.bpdCrmUploadedAt ? ` on ${new Date(lead.bpdCrmUploadedAt).toLocaleDateString()}` : ""}`}
+                                                >
+                                                  <CheckCircle2 className="w-2.5 h-2.5 text-purple-700 fill-purple-200 shrink-0" />
+                                                  <span>BPD CRM ✓</span>
+                                                </span>
+                                              )}
                                               {lead.intentScore === "hot" && (
                                                 <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
                                                   <Flame className="w-2.5 h-2.5 text-orange-600 fill-orange-500" />
@@ -4835,6 +5029,31 @@ Best regards,`,
                                         </div>
 
                                         <div className="flex items-center gap-1.5 flex-wrap">
+                                          {/* Big Purple Dot CRM One-Click Upload */}
+                                          <button
+                                            onClick={() => handleUploadLeadToBpdCrm(lead)}
+                                            disabled={uploadingBpdLeadId === lead.id}
+                                            className={`px-2.5 py-1 font-bold text-[11px] rounded-lg flex items-center gap-1 transition-all shadow-2xs cursor-pointer ${
+                                              lead.bpdCrmUploaded
+                                                ? "bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200"
+                                                : "bg-[#581C87] hover:bg-[#4C1D95] text-white"
+                                            }`}
+                                            title={
+                                              lead.bpdCrmUploaded
+                                                ? `Uploaded to Big Purple Dot CRM (Lead ID: ${lead.bpdCrmLeadId || "Active"}). Click to re-sync.`
+                                                : "One-Click Upload this lead to Big Purple Dot CRM"
+                                            }
+                                          >
+                                            {uploadingBpdLeadId === lead.id ? (
+                                              <RefreshCw className="w-3 h-3 animate-spin text-purple-200" />
+                                            ) : lead.bpdCrmUploaded ? (
+                                              <CheckCircle2 className="w-3 h-3 text-purple-700 fill-purple-200 shrink-0" />
+                                            ) : (
+                                              <Zap className="w-3 h-3 text-purple-300 shrink-0" />
+                                            )}
+                                            <span>{lead.bpdCrmUploaded ? "BPD CRM ✓" : "Upload to BPD"}</span>
+                                          </button>
+
                                           <button
                                             onClick={() => {
                                               setInitialOutreachLeadId(lead.id);
@@ -4947,6 +5166,15 @@ Best regards,`,
                                         </h4>
                                         <JourneyPhaseLabel status={lead.status} />
                                         <OutreachHistoryBadge lead={lead} compact={true} />
+                                        {lead.bpdCrmUploaded && (
+                                          <span
+                                            className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200 shadow-2xs"
+                                            title={`Lead uploaded to Big Purple Dot CRM (Lead ID: ${lead.bpdCrmLeadId || "Active"})${lead.bpdCrmUploadedAt ? ` on ${new Date(lead.bpdCrmUploadedAt).toLocaleDateString()}` : ""}`}
+                                          >
+                                            <CheckCircle2 className="w-2.5 h-2.5 text-purple-700 fill-purple-200 shrink-0" />
+                                            <span>BPD CRM ✓</span>
+                                          </span>
+                                        )}
                                         {lead.intentScore === "hot" && (
                                           <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
                                             <Flame className="w-3 h-3 text-orange-600 fill-orange-500" />
@@ -5354,6 +5582,31 @@ Best regards,`,
                                           ? "Nurture Active"
                                           : "Nurture Paused"}
                                       </span>
+                                    </button>
+
+                                    {/* Big Purple Dot CRM One-Click Upload */}
+                                    <button
+                                      onClick={() => handleUploadLeadToBpdCrm(lead)}
+                                      disabled={uploadingBpdLeadId === lead.id}
+                                      className={`px-3 py-1.5 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer ${
+                                        lead.bpdCrmUploaded
+                                          ? "bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200"
+                                          : "bg-[#581C87] hover:bg-[#4C1D95] text-white"
+                                      }`}
+                                      title={
+                                        lead.bpdCrmUploaded
+                                          ? `Uploaded to Big Purple Dot CRM (Lead ID: ${lead.bpdCrmLeadId || "Active"}). Click to re-sync.`
+                                          : "One-Click Upload this lead to Big Purple Dot CRM"
+                                      }
+                                    >
+                                      {uploadingBpdLeadId === lead.id ? (
+                                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                      ) : lead.bpdCrmUploaded ? (
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-purple-700 fill-purple-200" />
+                                      ) : (
+                                        <Zap className="w-3.5 h-3.5 text-purple-300" />
+                                      )}
+                                      <span>{lead.bpdCrmUploaded ? "BPD CRM ✓" : "Upload to BPD CRM"}</span>
                                     </button>
 
                                     <button
@@ -7838,11 +8091,23 @@ Mike Ford`;
                 setProperties={setProperties}
                 onTriggerToast={triggerToast}
                 onNavigateToAdsPortal={() => setActiveTab("ad_campaigns")}
+                onNavigateToFthbPipeline={() => setActiveTab("fthb_pipeline")}
               />
             )}
 
             {/* Tab: FTHB Pipeline Dashboard */}
-            {activeTab === "fthb_pipeline" && <FTHBPipelineDashboard />}
+            {activeTab === "fthb_pipeline" && (
+              <FTHBPipelineDashboard
+                guidesState={guidesState}
+                onUpdateGuidesState={onUpdateGuidesState}
+                currentLo={currentLo}
+                activeAgent={activeAgent}
+                properties={properties}
+                setProperties={setProperties}
+                onTriggerToast={triggerToast}
+                onNavigateToAdsPortal={() => setActiveTab("ad_campaigns")}
+              />
+            )}
 
             {/* Tab 5: Multi-Channel Social Push */}
             {activeTab === "social_push" && (
@@ -10231,6 +10496,18 @@ Don't forget to file your State Homestead Tax Exemption!`,
         onClose={() => setViewingJourneyLead(null)}
         lead={viewingJourneyLead}
         onUpdateLeadStatus={handleUpdateLeadStatus}
+        onUpdateLead={(updatedLead) => {
+          const currentLeads = guidesState.leads || [];
+          const updated = currentLeads.map((l) =>
+            l.id === updatedLead.id ? updatedLead : l
+          );
+          onUpdateGuidesState({
+            ...guidesState,
+            leads: updated,
+          });
+          setViewingJourneyLead(updatedLead);
+          triggerToast("🏆 Lead Journey & Funding Ledger updated and synced to ROLI analytics!");
+        }}
         onToggleNurture={handleToggleLeadNurture}
         onSaveNotes={(leadId, notesText) => {
           const currentLeads = guidesState.leads || [];
@@ -10515,6 +10792,32 @@ Don't forget to file your State Homestead Tax Exemption!`,
       <SalesforceSettingsModal
         isOpen={showSalesforceSettings}
         onClose={() => setShowSalesforceSettings(false)}
+      />
+
+      {/* Big Purple Dot CRM (BYOK Leads Portal) Modal */}
+      <BigPurpleDotCrmModal
+        isOpen={showBpdCrmModal}
+        onClose={() => setShowBpdCrmModal(false)}
+        config={
+          guidesState.bigPurpleDotCrmConfig || {
+            apiKey: "",
+            subdomain: "cornerstone-leads",
+            accountEmail: "mford@cfmtg.com",
+            webhookSecret: "",
+            environment: "production",
+            autoUploadNewLeads: true,
+            connectionStatus: "not_configured",
+          }
+        }
+        onSaveConfig={(newConfig) => {
+          onUpdateGuidesState({
+            ...guidesState,
+            bigPurpleDotCrmConfig: newConfig,
+          });
+        }}
+        leads={guidesState.leads || []}
+        onUploadAllPendingLeads={handleUploadAllPendingLeadsToBpdCrm}
+        onTriggerToast={triggerToast}
       />
 
       {/* Marketing Source Quality & Property Tracker Breakdown Modal */}

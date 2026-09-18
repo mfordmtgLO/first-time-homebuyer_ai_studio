@@ -34,11 +34,13 @@ import {
   Home,
   Tag,
   ArrowUpDown,
+  ArrowRight,
   Copy,
   Megaphone,
   Users
 } from "lucide-react";
 import { PropertyListing, ProfessionalGuidesState, AdCampaignDraft } from "../types";
+import { SyncPropertyToBpdCrmModal } from "./SyncPropertyToBpdCrmModal";
 import { 
   GEOSPHERE_DATASETS, 
   GEOSPHERE_MOCK_LISTINGS, 
@@ -82,6 +84,7 @@ interface GeoSphereSyncHubProps {
   setProperties: React.Dispatch<React.SetStateAction<PropertyListing[]>>;
   onTriggerToast: (msg: string) => void;
   onNavigateToAdsPortal?: () => void;
+  onNavigateToFthbPipeline?: () => void;
 }
 
 /**
@@ -107,6 +110,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   setProperties,
   onTriggerToast,
   onNavigateToAdsPortal,
+  onNavigateToFthbPipeline,
 }) => {
   const agentRoster = guidesState.agentRoster || [];
   const pairings = guidesState.pairings || [];
@@ -265,6 +269,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
   // Property Detail Modal State
   const [inspectingListing, setInspectingListing] = useState<PropertyListing | null>(null);
+  const [bpdCrmSyncModalListing, setBpdCrmSyncModalListing] = useState<PropertyListing | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -999,6 +1004,44 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
     );
   };
 
+  // Dedicated 3-System Microservices Ecosphere Bridge:
+  // Push GeoSphere Map property listings directly to FTHB Property Listing Panel
+  const handlePushToFthbPipeline = (useSelectedOnly: boolean = false) => {
+    const targetListings = useSelectedOnly && selectedListingIds.length > 0
+      ? syncedListings.filter(l => selectedListingIds.includes(l.id))
+      : (filteredListings.length > 0 ? filteredListings : syncedListings);
+
+    if (targetListings.length === 0) {
+      onTriggerToast("No listings available to push to FTHB Listing Panel.");
+      return;
+    }
+
+    // Merge target listings into main properties array
+    const mergedMap = new Map<string, PropertyListing>();
+    properties.forEach(p => mergedMap.set(p.id, p));
+    targetListings.forEach(p => mergedMap.set(p.id, p));
+    const updatedProperties = Array.from(mergedMap.values());
+
+    setProperties(updatedProperties);
+
+    try {
+      localStorage.setItem("fthb_synced_listings_v2", JSON.stringify(updatedProperties));
+    } catch (e) {
+      console.warn("Storage write error", e);
+    }
+
+    onUpdateGuidesState({
+      ...guidesState,
+      syncedProperties: updatedProperties
+    });
+
+    onTriggerToast(`⚡ Synced ${targetListings.length} GeoSphere Map properties to FTHB Property Listing Panel!`);
+
+    if (onNavigateToFthbPipeline) {
+      onNavigateToFthbPipeline();
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Top Hub Navigation: Oregon Map Catalog vs Master Agent + Property Portal & Vantage Ads Engine */}
@@ -1253,8 +1296,8 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
       </div>
 
 
-      {/* Dual Integration Cards: GeoSphere Cloud Run Ingestion & Public Consumer Guide Sync */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Triple Integration Cards: GeoSphere Cloud Run Ingestion, FTHB Pipeline Listing Sync, & Public Consumer Guide Sync */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1: GeoSphere Cloud Run GIS Ingestion */}
         <div className="bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-6 shadow-xs flex flex-col justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -1263,22 +1306,22 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base font-bold text-[#2D362E]">GeoSphere Cloud Run Ingestion</h3>
+                <h3 className="text-base font-bold text-[#2D362E]">GeoSphere Cloud Run</h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  Google Cloud Run (Live)
+                  Live GIS Microservice
                 </span>
               </div>
               <p className="text-xs text-[#606C5D] mt-1 font-mono truncate max-w-xs sm:max-w-sm" title={customEndpointUrl}>
                 {customEndpointUrl}
               </p>
               <p className="text-[11px] text-[#2D362E] mt-1 font-semibold">
-                Direct GCP microservice connection to https://geosphere-map-oregon.ai.studio.
+                Direct GCP connection to Oregon GeoSphere Map microservice.
               </p>
             </div>
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-[#EAE7E0] flex-wrap gap-2">
             <span className="text-xs text-[#606C5D]">
-              Status: <strong className="text-emerald-700">{livePullListings.length} Live Listings Ready ({liveCities.join(", ") || "Oregon"})</strong>
+              Ready: <strong className="text-emerald-700">{livePullListings.length} Live Pulls ({liveCities.join(", ") || "Oregon"})</strong>
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -1288,56 +1331,91 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                 title="View embedded live map"
               >
                 <Eye className="w-3.5 h-3.5 text-[#4A5D4E]" />
-                <span>Live Map</span>
+                <span>Map</span>
               </button>
               <button
                 onClick={handleIngestVercelLiveListings}
                 disabled={isFetching}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 disabled:bg-stone-300 disabled:text-stone-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 disabled:bg-stone-300 disabled:text-stone-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
               >
-                <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
-                {isFetching ? "Ingesting Live Pull..." : "Ingest Live GeoSphere Listings"}
+                <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
+                {isFetching ? "Ingesting..." : "Ingest Live"}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Card 2: Public Borrower Guide Sync (Consumer Portal) */}
+        {/* Card 2: 3-System Bridge - FTHB Property Listing Panel Sync */}
         <div className="bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-6 shadow-xs flex flex-col justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#4A5D4E]/10 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-[#2D362E] text-amber-400 flex items-center justify-center shrink-0">
+              <Layers className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-[#2D362E]">FTHB Pipeline Sync</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                  3-System Suite Bridge
+                </span>
+              </div>
+              <p className="text-xs text-[#606C5D] mt-1">
+                Curated: <strong className="text-[#2D362E]">{syncedListings.length}</strong> | In Pipeline: <strong className="text-emerald-700">{properties.length}</strong>
+              </p>
+              <p className="text-[11px] text-[#2D362E] mt-1 font-semibold">
+                Syncs GIS listings to FTHB Property Panel for DPA & Vantage AI ads.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-[#EAE7E0] flex-wrap gap-2">
+            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              USDA / DPA Active
+            </span>
+            <button
+              onClick={() => handlePushToFthbPipeline(false)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#2D362E] hover:bg-[#1E241F] text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              title="Sync all curated listings into FTHB Pipeline"
+            >
+              <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+              <span>Sync to FTHB Panel</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Card 3: Public Borrower Guide Sync (Consumer Portal) */}
+        <div className="bg-[#FAF9F5] rounded-3xl border border-[#EAE7E0] p-6 shadow-xs flex flex-col justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-[#4A5D4E]/10 flex items-center justify-center shrink-0">
               <Upload className="w-6 h-6 text-[#4A5D4E]" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-[#2D362E]">Public Consumer Guide Sync</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-[#2D362E]">Consumer Guide Sync</h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
                   Consumer Portal
                 </span>
               </div>
               <p className="text-xs text-[#606C5D] mt-1">
-                Local curated properties: <strong className="text-[#2D362E]">{syncedListings.length}</strong> | 
-                Live on guide: <strong className="text-[#2D362E]">{firestoreSyncCount !== null ? firestoreSyncCount : syncedListings.length}</strong>
+                Local: <strong className="text-[#2D362E]">{syncedListings.length}</strong> | 
+                Live: <strong className="text-[#2D362E]">{firestoreSyncCount !== null ? firestoreSyncCount : syncedListings.length}</strong>
               </p>
               <p className="text-[11px] text-[#606C5D] mt-1">
-                Publishes your curated Oregon properties to the public homebuyer-facing portal.
+                Publishes your curated Oregon properties to the consumer portal.
               </p>
             </div>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-[#EAE7E0]">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                Active & Saved
-              </span>
-            </div>
+          <div className="flex items-center justify-between pt-2 border-t border-[#EAE7E0] flex-wrap gap-2">
+            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              Active & Saved
+            </span>
             <button
               onClick={handleForceReSync}
               disabled={isForceSyncing}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#2D362E] hover:bg-[#4A5D4E] disabled:bg-stone-300 disabled:text-stone-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] disabled:bg-stone-300 disabled:text-stone-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
             >
-              <RefreshCw className={`w-4 h-4 ${isForceSyncing ? "animate-spin" : ""}`} />
-              {isForceSyncing ? "Publishing..." : "Publish to Consumer Guide"}
+              <RefreshCw className={`w-3.5 h-3.5 ${isForceSyncing ? "animate-spin" : ""}`} />
+              {isForceSyncing ? "Publishing..." : "Publish Guide"}
             </button>
           </div>
         </div>
@@ -1576,6 +1654,14 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
             {selectedListingIds.length > 0 ? (
               <>
                 <button
+                  onClick={() => handlePushToFthbPipeline(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  title="Push selected listings directly to First-Time Homebuyer Pipeline Panel"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>Sync {selectedListingIds.length} to FTHB Panel</span>
+                </button>
+                <button
                   onClick={() => handleBatchPublish(true)}
                   className="px-3 py-1.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold transition-colors cursor-pointer"
                 >
@@ -1590,6 +1676,14 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
               </>
             ) : (
               <>
+                <button
+                  onClick={() => handlePushToFthbPipeline(false)}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  title="Push all filtered listings directly to First-Time Homebuyer Pipeline Panel"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>Sync All {filteredListings.length} to FTHB Panel</span>
+                </button>
                 <button
                   onClick={() => handlePublishAllFiltered(true)}
                   className="px-3.5 py-1.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold transition-colors shadow-2xs cursor-pointer"
@@ -1956,6 +2050,23 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                           <ExternalLink className="w-3 h-3" />
                           <span>Zillow</span>
                         </a>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBpdCrmSyncModalListing(listing);
+                          }}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${
+                            listing.bpdCrmSynced
+                              ? "bg-purple-100 text-purple-900 border-purple-300"
+                              : "bg-purple-50 text-purple-800 hover:bg-purple-100 border-purple-200"
+                          }`}
+                          title="Sync property details & lead interaction history to Big Purple Dot CRM"
+                        >
+                          <Zap className="w-3 h-3 text-purple-700 fill-purple-700" />
+                          <span>{listing.bpdCrmSynced ? "BPD CRM ✓" : "Sync to CRM"}</span>
+                        </button>
                       </div>
 
                       <button
@@ -2458,6 +2569,21 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           </div>
         </div>
       )}
+      {/* Sync Property to Big Purple Dot CRM Modal */}
+      <SyncPropertyToBpdCrmModal
+        property={bpdCrmSyncModalListing}
+        isOpen={Boolean(bpdCrmSyncModalListing)}
+        onClose={() => setBpdCrmSyncModalListing(null)}
+        guidesState={guidesState}
+        onUpdateProperty={(updatedListing) => {
+          setSyncedListings(prev => prev.map(l => l.id === updatedListing.id ? updatedListing : l));
+          setProperties(prev => prev.map(p => p.id === updatedListing.id ? updatedListing : p));
+          if (inspectingListing?.id === updatedListing.id) {
+            setInspectingListing(updatedListing);
+          }
+        }}
+        onTriggerToast={onTriggerToast}
+      />
         </>
       )}
     </div>

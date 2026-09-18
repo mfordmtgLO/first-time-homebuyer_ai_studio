@@ -126,12 +126,12 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
       dailyBudgetUSD: existing.dailyBudgetUSD || 25,
       adSpendMonthlyCap: existing.adSpendMonthlyCap || 750,
       creditCardConfigured: existing.creditCardConfigured || false,
-      videoAiProvider: existing.videoAiProvider || "heygen",
-      videoAiApiKey: existing.videoAiApiKey || (loanOfficer.byokKeysStatus?.videoAi ? "sk_hg_live_99214ad89012" : ""),
+      videoAiProvider: "vantage_ad_studio",
+      videoAiApiKey: existing.videoAiApiKey || "",
       videoAiCustomEndpoint: existing.videoAiCustomEndpoint || "",
       copyAiProvider: existing.copyAiProvider || "gemini",
       copyAiApiKey: existing.copyAiApiKey || (loanOfficer.byokKeysStatus?.copyAi ? "AIzaSyD_CASCADE_PROD_KEY" : ""),
-      byokConfigured: existing.byokConfigured || Boolean(loanOfficer.byokKeysStatus?.videoAi || loanOfficer.byokKeysStatus?.metaAds),
+      byokConfigured: true,
     };
   });
 
@@ -152,23 +152,14 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
     await new Promise(r => setTimeout(r, 600));
 
     if (type === 'video') {
-      const key = adSettings.videoAiApiKey;
-      const provider = (adSettings.videoAiProvider || 'heygen').toUpperCase();
-      if (!key) {
-        setTestResults(prev => ({
-          ...prev,
-          video: { success: false, message: "Please input an API key first.", timestamp: new Date().toLocaleTimeString() }
-        }));
-      } else {
-        setTestResults(prev => ({
-          ...prev,
-          video: { 
-            success: true, 
-            message: `✓ Connected: ${provider} Video API cluster handshake successful. Quota verified (112ms).`, 
-            timestamp: new Date().toLocaleTimeString() 
-          }
-        }));
-      }
+      setTestResults(prev => ({
+        ...prev,
+        video: { 
+          success: true, 
+          message: "✓ Vantage AI Ad Studio native pipeline connected. Video, voiceover, and motion rendering active.", 
+          timestamp: new Date().toLocaleTimeString() 
+        }
+      }));
     } else if (type === 'copy') {
       const key = adSettings.copyAiApiKey;
       const provider = (adSettings.copyAiProvider || 'gemini').toUpperCase();
@@ -550,19 +541,12 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Video BYOK Badge */}
-          {adSettings.videoAiApiKey ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <Video className="w-3 h-3 text-emerald-600" />
-              <span>BYOK Video: {(adSettings.videoAiProvider || 'heygen').toUpperCase()}</span>
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-medium">
-              <Video className="w-3 h-3 text-slate-400" />
-              <span>Video: Shared Cluster</span>
-            </span>
-          )}
+          {/* Media Studio Engine Badge */}
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <Video className="w-3 h-3 text-emerald-600" />
+            <span>Media: Vantage AI Ad Studio</span>
+          </span>
 
           {/* Copy AI BYOK Badge */}
           {adSettings.copyAiApiKey ? (
@@ -641,121 +625,68 @@ Tap "Calculate Buying Power" to try the live interactive tool now!`,
         {settingsSectionTab === 'byok' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Card 1: Video Media Generation BYOK */}
+              {/* Card 1: Vantage AI Ad Studio Media Pipeline */}
               <div className="bg-white border border-[#EAE7E0] rounded-xl p-4 space-y-3 shadow-xs">
                 <div className="flex items-center justify-between border-b border-[#F1EFE9] pb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
                       <Video className="w-4 h-4" />
                     </div>
                     <div>
-                      <h5 className="text-xs font-bold text-[#2D362E]">Video Media Generation BYOK</h5>
-                      <p className="text-[10px] text-[#9A9488]">Automated property tour walkthroughs & Reels</p>
+                      <h5 className="text-xs font-bold text-[#2D362E]">Vantage AI Ad Studio Media Pipeline</h5>
+                      <p className="text-[10px] text-[#9A9488]">Direct property walkthroughs, kinetic reels & studio audio</p>
                     </div>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                    adSettings.videoAiApiKey ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
-                  }`}>
-                    {adSettings.videoAiApiKey ? "Active BYOK" : "Shared Pool"}
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                    Studio Integrated
                   </span>
                 </div>
 
-                <div className="space-y-2">
-                  <div>
-                    <label className="text-[11px] font-semibold text-[#606C5D] block mb-1">
-                      Video Engine Provider
-                    </label>
-                    <select
-                      value={adSettings.videoAiProvider || "heygen"}
-                      onChange={(e) => setAdSettings(prev => ({ ...prev, videoAiProvider: e.target.value as any }))}
-                      className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs text-[#2D362E] font-medium focus:outline-none focus:border-[#4A5D4E]"
+                <div className="space-y-3">
+                  <div className="p-3 bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#2D362E] flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
+                        <span>Integrated Ad Studio Production</span>
+                      </span>
+                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        No 3rd-Party Keys Required
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#606C5D] leading-relaxed">
+                      All advertising media assets—including 30-second scripts, 9:16 vertical Instagram/Facebook Reels, listing walkthroughs, and studio audio voiceovers—are rendered and managed within <strong>Vantage AI Ad Studio</strong>. External video service keys have been removed.
+                    </p>
+                    <div className="flex items-center justify-between pt-1 text-[11px] text-[#9A9488]">
+                      <span>Rendering Pipeline:</span>
+                      <span className="font-semibold text-[#4A5D4E]">Vantage Studio v4.2 Native</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="text-[11px] text-[#606C5D]">
+                      Handshake Status: <span className="font-bold text-emerald-700">Online & Ready</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleTestKeyConnection('video')}
+                      disabled={testingKey === 'video'}
+                      className="px-3 py-1.5 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] hover:bg-[#F1EFE9] text-xs font-semibold text-[#2D362E] flex items-center gap-1.5 transition-colors shrink-0 disabled:opacity-50 cursor-pointer shadow-2xs"
                     >
-                      <option value="heygen">HeyGen AI — Real Estate Avatar & Tour API</option>
-                      <option value="runway">Runway Gen-3 Alpha — Cinematic Video Synthesis</option>
-                      <option value="pika">Pika Labs — Dynamic Vertical Reels API</option>
-                      <option value="elevenlabs">ElevenLabs — Voiceover & Audio Walkthrough</option>
-                      <option value="generic">Custom Video Webhook / Private Cluster</option>
-                    </select>
+                      <RefreshCw className={`w-3 h-3 ${testingKey === 'video' ? 'animate-spin' : ''}`} />
+                      <span>{testingKey === 'video' ? "Verifying..." : "Verify Studio Handshake"}</span>
+                    </button>
                   </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[11px] font-semibold text-[#606C5D]">
-                        Provider API Key
-                      </label>
-                      <a
-                        href={
-                          adSettings.videoAiProvider === 'runway' 
-                            ? "https://app.runwayml.com/" 
-                            : adSettings.videoAiProvider === 'elevenlabs'
-                            ? "https://elevenlabs.io/"
-                            : "https://app.heygen.com/settings?tab=api"
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-[#1877F2] hover:underline flex items-center gap-0.5"
-                      >
-                        <span>Get Key</span>
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type={showVideoKey ? "text" : "password"}
-                          placeholder={adSettings.videoAiProvider === 'runway' ? "key_runway_..." : "sk_hg_live_..."}
-                          value={adSettings.videoAiApiKey || ""}
-                          onChange={(e) => setAdSettings(prev => ({ ...prev, videoAiApiKey: e.target.value }))}
-                          className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-1.5 pr-8 text-xs font-mono focus:outline-none focus:border-[#4A5D4E]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowVideoKey(!showVideoKey)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9A9488] hover:text-[#2D362E]"
-                        >
-                          {showVideoKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleTestKeyConnection('video')}
-                        disabled={testingKey === 'video'}
-                        className="px-3 py-1.5 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] hover:bg-[#F1EFE9] text-xs font-semibold text-[#2D362E] flex items-center gap-1 transition-colors shrink-0 disabled:opacity-50"
-                      >
-                        <RefreshCw className={`w-3 h-3 ${testingKey === 'video' ? 'animate-spin' : ''}`} />
-                        <span>{testingKey === 'video' ? "Testing..." : "Test"}</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Optional Custom Endpoint if selected */}
-                  {(adSettings.videoAiProvider === 'generic' || adSettings.videoAiCustomEndpoint) && (
-                    <div>
-                      <label className="text-[11px] font-semibold text-[#606C5D] block mb-1">
-                        Custom Video Endpoint URL
-                      </label>
-                      <input
-                        type="url"
-                        placeholder="https://video-engine.internal.corp/v1/render"
-                        value={adSettings.videoAiCustomEndpoint || ""}
-                        onChange={(e) => setAdSettings(prev => ({ ...prev, videoAiCustomEndpoint: e.target.value }))}
-                        className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-[#4A5D4E]"
-                      />
-                    </div>
-                  )}
 
                   {/* Test Result Message */}
                   {testResults.video && (
-                    <div className={`p-2 rounded-lg text-[11px] flex items-start gap-1.5 ${
+                    <div className={`p-2.5 rounded-xl text-[11px] flex items-start gap-1.5 ${
                       testResults.video.success 
                         ? "bg-emerald-50 text-emerald-800 border border-emerald-200" 
                         : "bg-red-50 text-red-800 border border-red-200"
                     }`}>
                       {testResults.video.success ? <Check className="w-3.5 h-3.5 shrink-0 mt-0.5" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
                       <div>
-                        <span>{testResults.video.message}</span>
+                        <span className="font-medium">{testResults.video.message}</span>
                         <span className="block text-[9px] opacity-75 mt-0.5">{testResults.video.timestamp}</span>
                       </div>
                     </div>

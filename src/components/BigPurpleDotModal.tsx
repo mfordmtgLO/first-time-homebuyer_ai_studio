@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { BigPurpleDotConfig, BigPurpleDotWebhookEvent } from "../types";
 import { fetchIntegrationsVault, saveToIntegrationsVault } from "../utils/vault";
+import { canAccessBpdRecruit } from "../utils/rbac";
 
 interface BigPurpleDotModalProps {
   isOpen: boolean;
@@ -91,15 +92,34 @@ export const BigPurpleDotModal: React.FC<BigPurpleDotModalProps> = ({
     : "https://your-domain.com/api/big-purple-dot/webhook";
 
   // Fetch initial config and webhook events from server on open
+  const fetchWebhookEvents = useCallback(async () => {
+    setIsLoadingEvents(true);
+    try {
+      const user = auth.currentUser;
+      const token = user ? await user.getIdToken() : "";
+      const res = await fetch("/api/big-purple-dot/webhook/events", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (data.events) {
+        setWebhookEvents(data.events);
+      }
+    } catch (e) {
+      console.error("Error fetching webhook events", e);
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
 
     const loadConfigAndEvents = async () => {
       try {
-        
-        
-const user = auth.currentUser;
-const token = user ? await user.getIdToken() : "";
+        const user = auth.currentUser;
+        const token = user ? await user.getIdToken() : "";
         const res = await fetch("/api/big-purple-dot/config", {
           headers: {
             "Authorization": `Bearer ${token}`
@@ -128,30 +148,7 @@ const token = user ? await user.getIdToken() : "";
     };
 
     loadConfigAndEvents();
-  }, [isOpen]);
-
-  const fetchWebhookEvents = async () => {
-    setIsLoadingEvents(true);
-    try {
-        
-      
-const user = auth.currentUser;
-const token = user ? await user.getIdToken() : "";
-      const res = await fetch("/api/big-purple-dot/webhook/events", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
-      if (data.events) {
-        setWebhookEvents(data.events);
-      }
-    } catch (e) {
-      console.error("Error fetching webhook events", e);
-    } finally {
-      setIsLoadingEvents(false);
-    }
-  };
+  }, [isOpen, fetchWebhookEvents]);
 
   if (!isOpen) return null;
 
@@ -333,6 +330,33 @@ const token = user ? await user.getIdToken() : "";
   const isProd = environment === "production";
   const readinessCount = [hasSubdomain, hasApiKeySet, hasSecretSet, hasWebhookKey, isProd].filter(Boolean).length;
 
+  const isAuthorized = canAccessBpdRecruit(userRole, auth.currentUser?.email);
+
+  if (!isAuthorized) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+        <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#EAE7E0] text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center mx-auto text-amber-800">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="font-serif font-bold text-lg text-[#2D362E]">Access Restricted</h3>
+            <p className="text-xs text-[#606C5D] mt-1 leading-relaxed">
+              The <strong>BPD Recruit</strong> platform integration and API key credentials (BYOK) are 
+              exclusively visible and restricted to <strong>Mike Ford Admin</strong> and <strong>Branch Manager</strong> user roles.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 px-4 bg-[#2D362E] text-white text-xs font-bold rounded-xl hover:bg-[#1E241F] transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
       <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-[#EAE7E0] overflow-hidden">
@@ -347,13 +371,13 @@ const token = user ? await user.getIdToken() : "";
                 </div>
                 <div>
                   <h3 className="font-serif font-bold text-xl sm:text-2xl text-white flex items-center gap-2">
-                    Big Purple Dot Integration
+                    BPD Recruit
                     <span className="text-[10px] font-sans font-bold bg-purple-400/20 text-purple-200 px-2 py-0.5 rounded-full border border-purple-300/30 uppercase tracking-wide">
-                      Recruiting CRM & API
+                      Production Stats & Recruiting (BYOK)
                     </span>
                   </h3>
                   <p className="text-xs text-purple-200 opacity-90">
-                    Connect Loan Officer & Agent recruit pipelines with secure sign-in credentials, secret API keys, and real-time webhooks.
+                    Connect Loan Officer & Agent recruit pipelines with secure sign-in credentials, secret API keys, and production stats sync.
                   </p>
                 </div>
               </div>
@@ -361,7 +385,7 @@ const token = user ? await user.getIdToken() : "";
 
             <button 
               onClick={onClose}
-              className="p-2 text-purple-200 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+              className="p-2 text-purple-200 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>

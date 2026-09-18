@@ -6,6 +6,7 @@ import { Navbar } from "./components/Navbar";
 import { StepNavigationBanner } from "./components/StepNavigationBanner";
 import { MobileBottomNav } from "./components/MobileBottomNav";
 import { TelemetryDiagnosticsModal } from "./components/TelemetryDiagnosticsModal";
+import { ErrorWhispererWidget } from "./components/ErrorWhispererWidget";
 import { HeroWebsite } from "./components/HeroWebsite";
 import { MobileHeroWebsite } from "./components/mobile/MobileHeroWebsite";
 import { InstantAffordabilityCalculator } from "./components/InstantAffordabilityCalculator";
@@ -1447,6 +1448,9 @@ export default function App() {
         isOpen={showPrivacyModal}
         onClose={() => setShowPrivacyModal(false)}
       />
+
+      {/* AI Error Whisperer & IT Code Fix Widget */}
+      <ErrorWhispererWidget />
     </div>
     </>
   );

@@ -662,6 +662,56 @@ export const SystemPitchDeck: React.FC = () => {
           </div>
         </div>
       )
+    },
+    {
+      id: "slide-11",
+      slideNumber: 11,
+      category: "Workflow & Governance",
+      title: "Master User Roles, RBAC Access Matrix & Security Architecture",
+      subtitle: "Comprehensive Role Definitions, Section/Tab Restrictions, and IT Code Fixer Architecture",
+      badge: "RBAC & Security",
+      icon: <Users className="w-6 h-6 text-indigo-600" />,
+      overview: "Enforces granular Role-Based Access Control (RBAC) across branch portals, loan officer workspaces, and executive management tabs. Mike Ford Admin maintains absolute control to invite, suspend (revoke), or delete employee profiles, including specialized IT Manager/Tech and Peer Tester developer accounts.",
+      keyPillars: [
+        {
+          heading: "Mike Ford Admin & IT Manager Roles",
+          description: "Mike Ford holds master branch privileges and toggles the AI Error Whisperer & IT Code Fixer widget on/demand. IT Managers receive temporary full-admin access to inspect audit logs and deploy error patches.",
+          highlight: "Full System Access"
+        },
+        {
+          heading: "Peer Tester & Compliance Auditor Roles",
+          description: "Peer Testers gain developer-grade sandbox access for system QA. Compliance Auditors operate under a strict zero-trust view-only protocol across all audit ledgers and PII scrub vaults.",
+          highlight: "QA & Zero-Trust"
+        },
+        {
+          heading: "LOs, Processors & Marketing Creators",
+          description: "Loan officers manage assigned pipelines and co-branded Realtor portals. Processors access underwriting checkpoints, while Mktg Creators manage ad spend and social syndication.",
+          highlight: "Scoped Permissions"
+        }
+      ],
+      roiTakeaway: "Guarantees enterprise-grade separation of duties while allowing Mike Ford Admin to instantly provision and revoke technical debugging help with 1-click credential management.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>RBAC ACCESS MATRIX & SECURITY CODE ARCHITECTURE</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">Verified SEC-256</span>
+          </div>
+          <div className="space-y-2 text-[11px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+              <span className="font-bold text-[#2D362E] block">1. Role Normalization & Provisioning (`authUtils.ts`)</span>
+              <span className="text-[10px] text-slate-600 block mt-0.5">`checkAndProvisionUser(user)` auto-maps Firebase Auth claims to RbacRole, granting master bypass for <code className="bg-slate-100 px-1 text-indigo-700">fordmj@gmail.com</code>.</span>
+            </div>
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+              <span className="font-bold text-[#2D362E] block">2. IT Error Whisperer Control (`ErrorWhispererWidget.tsx`)</span>
+              <span className="text-[10px] text-slate-600 block mt-0.5">Hidden by default. Controlled exclusively via Mike Ford's Master Role Manager toggle (`localStorage.setItem('show_error_whisperer', 'true')`).</span>
+            </div>
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+              <span className="font-bold text-[#2D362E] block">3. Revocation & Profile Deletion (`MasterRoleManager.tsx`)</span>
+              <span className="text-[10px] text-slate-600 block mt-0.5">Instant session termination on Revoke; permanent record purging on Delete Profile.</span>
+            </div>
+          </div>
+        </div>
+      )
     }
   ];
 

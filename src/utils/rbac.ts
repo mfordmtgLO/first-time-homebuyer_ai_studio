@@ -1,4 +1,4 @@
-export type RbacRole = 'branch_manager' | 'sales_manager' | 'senior_lo' | 'team_lo' | 'processor' | 'mktg_ads_creator' | 'loa';
+export type RbacRole = 'branch_manager' | 'sales_manager' | 'senior_lo' | 'team_lo' | 'processor' | 'mktg_ads_creator' | 'loa' | 'it_manager' | 'peer_tester';
 
 export interface RbacPermissions {
   canManageBranchUsers: boolean;
@@ -198,6 +198,54 @@ export const RBAC_ROLE_CONFIGS: Record<RbacRole, RbacRoleDefinition> = {
       leadsAccess: 'Assigned Pipeline',
     },
   },
+  it_manager: {
+    role: 'it_manager',
+    displayName: 'IT Manager / Tech',
+    shortLabel: 'IT Tech',
+    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    badgeBg: 'bg-emerald-50',
+    badgeText: 'text-emerald-700',
+    badgeBorder: 'border-emerald-200',
+    description: 'Temporary admin-level role invited by Mike Ford to debug system errors, inspect audit logs, troubleshoot database telemetry, and operate the Error Whisperer.',
+    permissions: {
+      canManageBranchUsers: true,
+      canManageWebhooks: true,
+      canManageApiKeys: true,
+      canViewAllAuditLogs: true,
+      canViewAllLeads: true,
+      canEditBranchSettings: true,
+    },
+    privilegeHighlights: {
+      webhooks: 'Full / Branch',
+      apiKeys: 'Enterprise Vault',
+      auditLogs: 'Branch-Wide',
+      leadsAccess: 'All Branch Leads',
+    },
+  },
+  peer_tester: {
+    role: 'peer_tester',
+    displayName: 'Peer Tester (Developer)',
+    shortLabel: 'Tester',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
+    badgeBg: 'bg-blue-50',
+    badgeText: 'text-blue-700',
+    badgeBorder: 'border-blue-200',
+    description: 'Developer testing role invited by Mike Ford for peer testing and quality assurance across the entire system with full admin access.',
+    permissions: {
+      canManageBranchUsers: true,
+      canManageWebhooks: true,
+      canManageApiKeys: true,
+      canViewAllAuditLogs: true,
+      canViewAllLeads: true,
+      canEditBranchSettings: true,
+    },
+    privilegeHighlights: {
+      webhooks: 'Full / Branch',
+      apiKeys: 'Enterprise Vault',
+      auditLogs: 'Branch-Wide',
+      leadsAccess: 'All Branch Leads',
+    },
+  },
 };
 
 export interface WhitelistedUserRecord {
@@ -220,6 +268,8 @@ export function normalizeRole(rawRole?: string | null): RbacRole {
   if (clean === 'processor' || clean === 'assistant' || clean === 'loan processor') return 'processor';
   if (clean === 'mktg_ads_creator' || clean === 'marketing') return 'mktg_ads_creator';
   if (clean === 'loa' || clean === 'loan officer assistant') return 'loa';
+  if (clean === 'it_manager' || clean === 'it manager' || clean === 'it tech' || clean === 'it') return 'it_manager';
+  if (clean === 'peer_tester' || clean === 'peer tester' || clean === 'tester' || clean === 'developer') return 'peer_tester';
   if (clean === 'team_lo' || clean === 'lo' || clean === 'loan_officer' || clean === 'loan officer') return 'team_lo';
   return 'team_lo';
 }

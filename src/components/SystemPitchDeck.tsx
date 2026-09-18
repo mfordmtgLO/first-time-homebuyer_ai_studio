@@ -99,11 +99,11 @@ export const SystemPitchDeck: React.FC = () => {
       subtitle: "Top-of-Funnel Conversion Engine Sitting Directly Atop Existing Enterprise CRMs",
       badge: "Executive Thesis",
       icon: <Building className="w-6 h-6 text-emerald-600" />,
-      overview: "Legacy platforms like Salesforce, Total Expert, and Encompass function as systems of record, not active top-of-funnel conversion magnets. Over 68% of first-time homebuyers abandon static web forms. Our 3-point microservices ecosphere unifies consumer education, agent co-branding, and loan origination without a costly rip-and-replace overhaul.",
+      overview: "Legacy platforms like Salesforce, Total Expert, and Big Purple Dot CRM function as systems of record, not active top-of-funnel conversion magnets. Over 68% of first-time homebuyers abandon static web forms. Our 3-point microservices ecosphere unifies consumer education, agent co-branding, and loan origination without a costly rip-and-replace overhaul.",
       keyPillars: [
         {
           heading: "Seamless CRM Overlay",
-          description: "Mounts right on top of Salesforce, Encompass, or Total Expert via bidirectional REST APIs and webhooks, pulling contacts and pushing pre-qualified borrower files automatically.",
+          description: "Mounts right on top of Salesforce, Big Purple Dot CRM, or Total Expert via bidirectional REST APIs and webhooks, pulling contacts and pushing buyer preference files automatically.",
           highlight: "Zero Disruption"
         },
         {
@@ -497,55 +497,55 @@ export const SystemPitchDeck: React.FC = () => {
       id: "slide-8",
       slideNumber: 8,
       category: "Workflow & Governance",
-      title: "Loan Officer & Branch Manager Daily Briefings",
-      subtitle: "AI-Assisted Task Cadence Morning, Noon, and End-of-Day with Trend Tracking",
-      badge: "Cadence & Productivity",
+      title: "Loan Officer Portal, Engagement Scoring & CRM Overlay",
+      subtitle: "Deterministic Lead Scoring, Auto-Pinning Ready Prospects, and Bidirectional Salesforce/Total Expert Webhooks",
+      badge: "LO Cockpit & CRM Overlay",
       icon: <Clock className="w-6 h-6 text-indigo-600" />,
-      overview: "Replaces chaotic, reactive origination habits with structured, high-priority sales cadences. Delivers automated morning briefing cards, midday milestone check-ins, and evening reconciliation summaries for loan officers, alongside holistic branch velocity briefs for leadership.",
+      overview: "Provides loan officers with a high-velocity command center featuring automated lead engagement scoring, intelligent auto-pinning of ready prospects to the top of the queue, and seamless bidirectional CRM synchronization feeding legacy enterprise systems like Salesforce and Total Expert.",
       keyPillars: [
         {
-          heading: "Morning Kickoff (8:00 AM) — Top 5 Hot Tasks",
-          description: "Automatically analyzes pipeline events to serve the 5 most lucrative sales activities (urgent doc reviews, warm lead callbacks, new ad opt-ins) before opening email.",
-          highlight: "Zero Decision Fatigue"
+          heading: "Lead Engagement Scoring & Auto-Pinning",
+          description: "Continuously computes engagement scores based on saved listings, calculator runs, and document downloads, automatically pinning high-intent buyers to the top of the LO portal.",
+          highlight: "Instant Prioritization"
         },
         {
-          heading: "Midday Execution (1:00 PM) — Partner Check-In",
-          description: "Flags agent partner listings requiring co-marketing pushes and identifies buyers who recently favorited a property or recalculated their roadmap.",
-          highlight: "Partner Alignment"
+          heading: "Traditional CRM Overlay Feed",
+          description: "Sits on top of existing enterprise mortgage CRMs (Salesforce, Total Expert, Big Purple Dot CRM) via webhooks to sync interaction history without requiring a disruptive migration.",
+          highlight: "Zero Disruption"
         },
         {
-          heading: "Evening Wrap & Executive Pulse (5:00 PM)",
-          description: "Summarizes closed items, schedules tomorrow's priorities, and gives Branch Managers live macro trends across lead conversion rates and loan volume pacing.",
+          heading: "Daily Revenue-Producing Sales Cadence",
+          description: "Delivers morning kickoff top 5 priority tasks, midday agent co-marketing check-ins, and evening reconciliation summaries for absolute origination accountability.",
           highlight: "Daily Accountability"
         }
       ],
-      roiTakeaway: "Saves loan officers 45 minutes of administrative sorting every day, ensuring 100% follow-up consistency on high-intent purchase opportunities.",
+      roiTakeaway: "Eliminates administrative sorting, ensures hot leads are contacted within minutes, and bridges top-of-funnel discovery directly into legacy CRM systems of record.",
       visualComponent: (
         <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-2.5">
           <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
-            <span>DAILY REVENUE-PRODUCING SALES CADENCE</span>
-            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">Automated Protocol</span>
+            <span>LO PORTAL & CRM OVERLAY TELEMETRY</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">Salesforce / Total Expert Sync</span>
           </div>
           <div className="space-y-2 text-[11px]">
             <div className="flex items-start gap-2.5 p-2 bg-white rounded-xl border border-[#EAE7E0]">
-              <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px] shrink-0">8:00 AM</span>
+              <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px] shrink-0">Auto-Pin</span>
               <div>
-                <strong className="text-[#2D362E] block">Morning Strategic Brief:</strong>
-                <span className="text-[#606C5D] text-[10px]">Top 5 hot pre-qualification calls & urgent underwriter conditions.</span>
+                <strong className="text-[#2D362E] block">High Engagement Sorting:</strong>
+                <span className="text-[#606C5D] text-[10px]">Hot buyers with 3+ saved properties automatically pinned to top.</span>
               </div>
             </div>
             <div className="flex items-start gap-2.5 p-2 bg-white rounded-xl border border-[#EAE7E0]">
-              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-bold text-[10px] shrink-0">1:00 PM</span>
+              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-bold text-[10px] shrink-0">Webhook</span>
               <div>
-                <strong className="text-[#2D362E] block">Midday Agent & Lead Pulse:</strong>
-                <span className="text-[#606C5D] text-[10px]">SMS sequence follow-ups and real estate co-brand campaign reviews.</span>
+                <strong className="text-[#2D362E] block">CRM Sync Engine:</strong>
+                <span className="text-[#606C5D] text-[10px]">Real-time push of lead interaction history into BPD CRM & Salesforce.</span>
               </div>
             </div>
             <div className="flex items-start gap-2.5 p-2 bg-white rounded-xl border border-[#EAE7E0]">
-              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px] shrink-0">5:00 PM</span>
+              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px] shrink-0">Cadence</span>
               <div>
-                <strong className="text-[#2D362E] block">Executive Branch Pacing Wrap:</strong>
-                <span className="text-[#606C5D] text-[10px]">Weekly/monthly trend analysis, conversion velocity, and stage pacing.</span>
+                <strong className="text-[#2D362E] block">Daily Sales Briefing:</strong>
+                <span className="text-[#606C5D] text-[10px]">Structured morning/noon/evening action items for loan officer teams.</span>
               </div>
             </div>
           </div>
@@ -617,7 +617,7 @@ export const SystemPitchDeck: React.FC = () => {
       keyPillars: [
         {
           heading: "Phase 1: Zero-Trust CRM Overlay (Weeks 1-2)",
-          description: "Establish GCP Cloud Run containers, configure AES-256 vaults, and link Salesforce/Encompass webhook listeners for automated contact sync.",
+          description: "Establish GCP Cloud Run containers, configure AES-256 vaults, and link Salesforce/Big Purple Dot CRM webhook listeners for automated contact sync.",
           highlight: "Weeks 1-2"
         },
         {

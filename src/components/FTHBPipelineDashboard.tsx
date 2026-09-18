@@ -733,7 +733,7 @@ export const FTHBPipelineDashboard: React.FC<FTHBPipelineDashboardProps> = ({
           </div>
           <div className="flex items-center gap-2 text-xs font-mono bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-emerald-300">Feeds Salesforce, Total Expert & Encompass Seamlessly</span>
+            <span className="text-emerald-300">Feeds Salesforce, Total Expert & Big Purple Dot CRM Seamlessly</span>
           </div>
         </div>
 
@@ -767,7 +767,7 @@ export const FTHBPipelineDashboard: React.FC<FTHBPipelineDashboardProps> = ({
             </div>
             <h3 className="font-bold text-white text-sm">Traditional CRM Overlay Feed</h3>
             <p className="text-slate-300 text-[11px] leading-relaxed">
-              Sits on top of existing enterprise mortgage CRMs (Salesforce, Total Expert, Encompass) via bidirectional webhooks with SHA-256 zero-trust audit ledgers.
+              Sits on top of existing enterprise mortgage CRMs (Salesforce, Total Expert, Big Purple Dot CRM) via bidirectional webhooks with SHA-256 zero-trust audit ledgers.
             </p>
           </div>
         </div>

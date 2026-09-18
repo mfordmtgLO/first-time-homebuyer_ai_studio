@@ -65,15 +65,16 @@ interface PitchSlide {
 }
 
 export const SystemPitchDeck: React.FC = () => {
-  const [activeDeck, setActiveDeck] = useState<"sales" | "security">("sales");
+  const [activeDeck, setActiveDeck] = useState<"sales" | "security" | "vantage_brain">("sales");
+  const [vantageSubDeck, setVantageSubDeck] = useState<"assistant" | "guardrails">("assistant");
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [viewMode, setViewMode] = useState<"slides" | "grid">("slides");
   const [copiedSlideId, setCopiedSlideId] = useState<string | null>(null);
 
-  // Reset index when switching decks
+  // Reset index when switching decks or vantage sub-decks
   useEffect(() => {
     setCurrentSlideIndex(0);
-  }, [activeDeck]);
+  }, [activeDeck, vantageSubDeck]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -773,7 +774,420 @@ export const SystemPitchDeck: React.FC = () => {
     }
   ];
 
-  const currentSlides = activeDeck === "sales" ? salesSlides : securitySlides;
+  const vantageAssistantSlides: PitchSlide[] = [
+    {
+      id: "vantage-asst-1",
+      slideNumber: 1,
+      category: "Vantage AI Brain • Sales & BD",
+      title: "24/7 Conversational FTHB Intake & Pre-Qual Agent",
+      subtitle: "Always-On First-Time Homebuyer Engagement and Instant Qualification Screening",
+      badge: "24/7 AI Intake",
+      icon: <Bot className="w-6 h-6 text-indigo-600" />,
+      overview: "Vantage AI Brain acts as an autonomous 24/7 conversion engine, engaging website visitors instantly, screening for USDA/DPA zero-down grant eligibility, and capturing complete buyer financial parameters before business hours.",
+      keyPillars: [
+        {
+          heading: "Instant Visitor Engagement",
+          description: "Answers mortgage questions, explains FHA/USDA guidelines, and guides buyers through interactive pre-qual calculators in real time.",
+          highlight: "Zero Wait Time"
+        },
+        {
+          heading: "Grant Matching & DPA Screening",
+          description: "Automatically cross-references buyer target locations with state HFA and down payment assistance programs.",
+          highlight: "Grant Discovery"
+        },
+        {
+          heading: "Automated Lead CRM Routing",
+          description: "Instantly captures contact details and pushes structured lead records directly into the Loan Officer's active pipeline.",
+          highlight: "Instant Hand-off"
+        }
+      ],
+      roiTakeaway: "Captures high-intent first-time homebuyers 60–90 days earlier in their property search cycle.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Vantage AI Assistant Intake Pipeline</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">24/7 Active</span>
+          </div>
+          <div className="space-y-2 text-[11px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>1. Visitor Chat Inquiry & Down Payment Question</span>
+              <span className="text-blue-600">User Input</span>
+            </div>
+            <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 flex items-center justify-between">
+              <span>2. AI Grant Match & FTHB Pre-Qual Check</span>
+              <span className="text-indigo-700 font-bold">Instant Computation</span>
+            </div>
+            <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+              <span>3. Lead Profile Synced to Loan Officer Dashboard</span>
+              <span className="text-emerald-700 font-bold">Hot Prospect Alert</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "vantage-asst-2",
+      slideNumber: 2,
+      category: "Vantage AI Brain • Sales & BD",
+      title: "Instant Property Tour & Google Maps List Sync",
+      subtitle: "AI Curated Property Recommendations Pushed Directly to Buyer Mobile Devices",
+      badge: "Tour Sync",
+      icon: <Search className="w-6 h-6 text-indigo-600" />,
+      overview: "When buyers explore properties on the GeoSphere map, Vantage AI Brain curates listings matching their exact pre-qualification budget and pushes interactive pins directly to their personal Google Maps saved lists via secure tokens.",
+      keyPillars: [
+        {
+          heading: "Automated Listing Curation",
+          description: "Filters live RentCast property feeds by price, school district, USDA eligibility, and buyer preferences.",
+          highlight: "Smart Curation"
+        },
+        {
+          heading: "Direct Google Maps Pin Push",
+          description: "Dispatches secure tokenized map links enabling buyers to view co-branded property tours instantly on their phones.",
+          highlight: "Frictionless Tours"
+        },
+        {
+          heading: "Realtor Partner Co-Branding",
+          description: "Every synced map list prominently features both the Loan Officer and the assigned Realtor partner.",
+          highlight: "50/50 Partnership"
+        }
+      ],
+      roiTakeaway: "Dramatically accelerates home tours and strengthens Realtor partner loyalty through seamless digital sync.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Map Sync Token Workflow</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">Secure Token</span>
+          </div>
+          <div className="space-y-2 text-[11px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>1. Buyer Selects Preferred Neighborhoods</span>
+              <span className="text-blue-600">Preferences</span>
+            </div>
+            <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 flex items-center justify-between">
+              <span>2. AI Curates Eligible Listings & Est. Payments</span>
+              <span className="text-indigo-700 font-bold">RentCast Feed</span>
+            </div>
+            <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+              <span>3. Tokenized Google Maps List Dispatched via Email</span>
+              <span className="text-emerald-700 font-bold">Instant Sync</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "vantage-asst-3",
+      slideNumber: 3,
+      category: "Vantage AI Brain • Sales & BD",
+      title: "Co-Branded Marketing & Social Ad Studio",
+      subtitle: "Automated 30-Second Video Scripts, Instagram Reels & Studio Voiceovers",
+      badge: "Ad Studio",
+      icon: <Video className="w-6 h-6 text-indigo-600" />,
+      overview: "Vantage AI Brain features a built-in commercial ad generator that instantly creates turnkey Instagram/Facebook Reels, video walkthrough scripts, and professional audio voiceovers for loan officers and real estate partners.",
+      keyPillars: [
+        {
+          heading: "Turnkey Social Ad Kits",
+          description: "Generates high-converting vertical 9:16 video copy and ad campaign assets tailored to local market listings.",
+          highlight: "Ready-to-Run"
+        },
+        {
+          heading: "Studio Voiceover Narration",
+          description: "Integrates professional text-to-speech audio narration for video walkthroughs without external editing software.",
+          highlight: "Audio Mastery"
+        },
+        {
+          heading: "RESPA-Compliant Co-Branding",
+          description: "Maintains transparent 50/50 cost-sharing ledgers between loan officers and Realtor partners for all ad campaigns.",
+          highlight: "Compliant Sharing"
+        }
+      ],
+      roiTakeaway: "Reduces marketing production time from days to seconds while eliminating external agency costs.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Vantage Ad Studio Pipeline</span>
+            <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">Studio v4.2</span>
+          </div>
+          <div className="space-y-2 text-[11px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>1. Select Property Listing & Realtor Partner</span>
+              <span className="text-blue-600">Co-Brand Pair</span>
+            </div>
+            <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between">
+              <span>2. AI Generates 9:16 Script & Voiceover Audio</span>
+              <span className="text-purple-700 font-bold">Turnkey Asset</span>
+            </div>
+            <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+              <span>3. Publish to Meta / YouTube Campaign Queue</span>
+              <span className="text-emerald-700 font-bold">Live Lead Gen</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "vantage-asst-4",
+      slideNumber: 4,
+      category: "Vantage AI Brain • Sales & BD",
+      title: "Mortgage Lab & 2-1 Buydown Calculation Copilot",
+      subtitle: "Instant Financial Modeling for Rate Buydowns, Monthly Savings & Rent vs. Buy",
+      badge: "Mortgage Lab",
+      icon: <BarChart3 className="w-6 h-6 text-indigo-600" />,
+      overview: "Equips loan officers with an instantaneous financial calculator during live borrower calls, modeling 2-1 interest rate buydowns, seller concessions, and long-term wealth accumulation compared to renting.",
+      keyPillars: [
+        {
+          heading: "2-1 Buydown Payment Relief",
+          description: "Instantly illustrates exact monthly mortgage reductions for Year 1 (-2%) and Year 2 (-1%) to overcome rate objections.",
+          highlight: "Payment Relief"
+        },
+        {
+          heading: "Rent vs. Buy Appreciation",
+          description: "Generates side-by-side financial comparisons demonstrating equity growth and tax benefits versus ongoing rent inflation.",
+          highlight: "Wealth Model"
+        },
+        {
+          heading: "Seller Concession Structuring",
+          description: "Calculates optimal seller subsidy amounts required to fully fund buydown escrows without closing cost friction.",
+          highlight: "Concession Math"
+        }
+      ],
+      roiTakeaway: "Closes hesitant buyers by proving affordability through transparent, real-time financial modeling.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>2-1 Buydown Savings Model</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">Instant Math</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
+            <div className="p-2 bg-white rounded-xl border border-slate-200">
+              <div className="text-gray-500">Year 1 (-2%)</div>
+              <div className="font-bold text-emerald-700 mt-0.5">-$485/mo</div>
+            </div>
+            <div className="p-2 bg-white rounded-xl border border-slate-200">
+              <div className="text-gray-500">Year 2 (-1%)</div>
+              <div className="font-bold text-indigo-700 mt-0.5">-$245/mo</div>
+            </div>
+            <div className="p-2 bg-white rounded-xl border border-slate-200">
+              <div className="text-gray-500">2-Yr Savings</div>
+              <div className="font-bold text-purple-700 mt-0.5">$8,760</div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+  ];
+
+  const vantageGuardrailSlides: PitchSlide[] = [
+    {
+      id: "vantage-guard-1",
+      slideNumber: 1,
+      category: "Vantage AI Brain • Security & Guardrails",
+      title: "Deterministic Prompt Engineering & Narrow Scoping",
+      subtitle: "Strict System Prompts Eliminating Wandering, Conversational Drift & Hallucination",
+      badge: "Narrow Scoping",
+      icon: <ShieldCheck className="w-6 h-6 text-indigo-600" />,
+      overview: "Vantage AI Brain is governed by hardcoded system directives and strict prompt boundary guardrails. Unlike open-ended consumer chatbots, Vantage is mathematically constrained to mortgage originations, first-time homebuyer grants, and property tours—completely eliminating conversational wandering or unverified financial commentary.",
+      keyPillars: [
+        {
+          heading: "Hardcoded System Prompts",
+          description: "All AI inference calls are preceded by immutable core directives enforcing professional mortgage advisory tone and factual adherence.",
+          highlight: "Immutable Directives"
+        },
+        {
+          heading: "Strict Topical Bounding",
+          description: "Out-of-scope inquiries (politics, general trivia, unrelated finance) are gracefully deflected back to mortgage pre-qualification.",
+          highlight: "No Drift"
+        },
+        {
+          heading: "Zero-Assumption Answers",
+          description: "If borrower financial data is incomplete, the AI prompts for verified inputs rather than guessing or hallucinating numbers.",
+          highlight: "Fact-Based Only"
+        }
+      ],
+      roiTakeaway: "Guarantees brand protection and regulatory compliance by ensuring every AI interaction remains professional and accurate.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Prompt Guardrail Enforcement</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">Deterministic</span>
+          </div>
+          <div className="space-y-2 text-[11px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>1. User Input Received by AI Gateway</span>
+              <span className="text-blue-600">Incoming Query</span>
+            </div>
+            <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 flex items-center justify-between">
+              <span>2. System Prompt Boundary Filter Check</span>
+              <span className="text-indigo-700 font-bold">Scope Verified</span>
+            </div>
+            <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+              <span>3. Grounded, Compliant Response Dispatched</span>
+              <span className="text-emerald-700 font-bold">Zero Hallucination</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "vantage-guard-2",
+      slideNumber: 2,
+      category: "Vantage AI Brain • Security & Guardrails",
+      title: "Zero-Hallucination Data Grounding",
+      subtitle: "All Calculations and Recommendations Tied Strictly to Live Fannie Mae & RentCast Feeds",
+      badge: "Data Grounding",
+      icon: <Lock className="w-6 h-6 text-indigo-600" />,
+      overview: "Vantage AI Brain does not generate numbers from thin air. Every interest rate calculation, grant parameter, and property listing recommendation is anchored directly to verified live database sources and institutional lending guidelines.",
+      keyPillars: [
+        {
+          heading: "Live API Data Anchoring",
+          description: "Property specs, tax rates, and school ratings pull directly from verified RentCast and GeoSphere GIS map feeds.",
+          highlight: "Verified Feeds"
+        },
+        {
+          heading: "Institutional Lending Guidelines",
+          description: "Debt-to-Income (DTI) and loan limit calculations cross-reference current Fannie Mae, Freddie Mac, USDA, and FHA matrices.",
+          highlight: "AUS Compliance"
+        },
+        {
+          heading: "Auditable Calculation Logs",
+          description: "Every numerical output generated by the AI includes underlying formula references for audit verification.",
+          highlight: "Full Transparency"
+        }
+      ],
+      roiTakeaway: "Eliminates liability from incorrect loan estimates by tethering all AI outputs to verified institutional databases.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Grounding Data Pipeline</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">100% Grounded</span>
+          </div>
+          <div className="space-y-2 text-[11px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>AI Computation Request</span>
+              <span className="text-blue-600">Query Trigger</span>
+            </div>
+            <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 flex items-center justify-between">
+              <span>Live Fannie Mae / RentCast Database Lookup</span>
+              <span className="text-indigo-700 font-bold">Authoritative Source</span>
+            </div>
+            <div className="p-2.5 bg-emerald-50 rounded-xl border border-indigo-200 flex items-center justify-between">
+              <span>Verified Output Rendered to User</span>
+              <span className="text-emerald-700 font-bold">Error-Free</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "vantage-guard-3",
+      slideNumber: 3,
+      category: "Vantage AI Brain • Security & Guardrails",
+      title: "Mandatory PII & SSN Destruction (Zero Retention)",
+      subtitle: "Real-Time Regex Intercepts and Shreds Social Security Numbers Before Vector Ingestion",
+      badge: "PII Shredder",
+      icon: <ShieldCheck className="w-6 h-6 text-indigo-600" />,
+      overview: "To ensure absolute compliance with Gramm-Leach-Bliley and consumer privacy standards, Vantage AI Brain incorporates an active PII & SSN shredder. Any accidental entry of Social Security Numbers, bank account digits, or sensitive personal data is intercepted by regex filters and destroyed instantly before reaching AI memory or logs.",
+      keyPillars: [
+        {
+          heading: "Active Regex Pattern Intercept",
+          description: "Scans all incoming chat messages and text inputs in real time for SSN format (XXX-XX-XXXX) and banking routing numbers.",
+          highlight: "Instant Detection"
+        },
+        {
+          heading: "Immediate Sanitization & Wipe",
+          description: "Instantly scrubs and replaces sensitive strings with [REDACTED_PII] prior to any API transmission or database storage.",
+          highlight: "Zero Storage"
+        },
+        {
+          heading: "Zero-Persistence AI Memory",
+          description: "AI conversation threads operate in ephemeral memory containers with no long-term plaintext logging of sensitive borrower data.",
+          highlight: "Ephemeral State"
+        }
+      ],
+      roiTakeaway: "Guarantees airtight consumer privacy protection and eliminates regulatory breach risks.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>PII & SSN Shredder Workflow</span>
+            <span className="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded font-bold">Active Shield</span>
+          </div>
+          <div className="space-y-2 text-[11px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>1. Raw User Chat Input</span>
+              <span className="text-blue-600">Incoming Data</span>
+            </div>
+            <div className="p-2.5 bg-rose-50 rounded-xl border border-rose-200 flex items-center justify-between">
+              <span>2. Regex Intercept & Immediate PII Shredding</span>
+              <span className="text-rose-700 font-bold">Scrubbed to [REDACTED]</span>
+            </div>
+            <div className="p-2.5 bg-emerald-50 rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>3. Clean, Safe Payload Sent to AI Model</span>
+              <span className="text-emerald-700 font-bold">100% Compliant</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "vantage-guard-4",
+      slideNumber: 4,
+      category: "Vantage AI Brain • Security & Guardrails",
+      title: "Zero-Trust Microservices & RBAC Architecture",
+      subtitle: "Operating Fully Within Our Walled-Off Container, Whitelist & Compliance Ecosystem",
+      badge: "Zero-Trust Integration",
+      icon: <Server className="w-6 h-6 text-indigo-600" />,
+      overview: "Vantage AI Brain is not an isolated plugin; it is fully integrated into our 3-point microservices container architecture. Every AI action is governed by strict RBAC role permissions, Firebase authentication, and database whitelisting.",
+      keyPillars: [
+        {
+          heading: "Cloud Run Container Isolation",
+          description: "AI processing microservices execute within ephemeral, walled-off Cloud Run containers with zero direct internet exposure.",
+          highlight: "Walled-Off"
+        },
+        {
+          heading: "RBAC Role Boundary Enforcement",
+          description: "AI tool execution is restricted based on user role (Mike Ford Admin vs. Loan Officer vs. Agent), preventing unauthorized privileged commands.",
+          highlight: "Role-Gated"
+        },
+        {
+          heading: "Encrypted Audit Logging",
+          description: "Every AI-assisted lead interaction and co-branded ad creation is recorded in an immutable compliance ledger.",
+          highlight: "Tamper-Evident"
+        }
+      ],
+      roiTakeaway: "Delivers the power of advanced AI while preserving enterprise-grade security and zero-trust compliance standards.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Enterprise Security Integration</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">Steel-Clad</span>
+          </div>
+          <div className="space-y-2 text-[11px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>Cloud Run Container Boundary</span>
+              <span className="text-blue-600">Isolated</span>
+            </div>
+            <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 flex items-center justify-between">
+              <span>RBAC & Whitelist Gate Enforcement</span>
+              <span className="text-indigo-700 font-bold">Verified Access</span>
+            </div>
+            <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+              <span>Encrypted Firebase Firestore State</span>
+              <span className="text-emerald-700 font-bold">Secure Storage</span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+  ];
+
+  const currentSlides = 
+    activeDeck === "sales" 
+      ? salesSlides 
+      : activeDeck === "security" 
+        ? securitySlides 
+        : vantageSubDeck === "assistant" 
+          ? vantageAssistantSlides 
+          : vantageGuardrailSlides;
   const currentSlide = currentSlides[currentSlideIndex] || currentSlides[0];
 
   const nextSlide = () => {
@@ -801,25 +1215,37 @@ export const SystemPitchDeck: React.FC = () => {
               Enterprise Executive Portals
             </span>
             <span className="text-xs font-mono text-[#606C5D]">
-              {activeDeck === "sales" ? "Executive Sales & Conversion Deck" : "Enterprise Security & Compliance Deck"}
+              {activeDeck === "sales" 
+                ? "Executive Sales & Conversion Deck" 
+                : activeDeck === "security" 
+                  ? "Enterprise Security & Compliance Deck" 
+                  : vantageSubDeck === "assistant" 
+                    ? "Vantage AI Brain • Sales & BD Deck" 
+                    : "Vantage AI Brain • Security & Guardrails Deck"}
             </span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black font-display text-[#2D362E]">
-            {activeDeck === "sales" ? "First-Time Homebuyer Executive Sales Pitch Deck" : "Enterprise Security, Zero-Trust & Compliance Architecture Deck"}
+            {activeDeck === "sales" 
+              ? "First-Time Homebuyer Executive Sales Pitch Deck" 
+              : activeDeck === "security" 
+                ? "Enterprise Security, Zero-Trust & Compliance Architecture Deck" 
+                : "Vantage AI Brain: 2-Layer Executive & Security Pitch Deck"}
           </h2>
           <p className="text-sm text-[#606C5D] max-w-3xl">
             {activeDeck === "sales" 
               ? "Comprehensive strategic overview for C-Suite executives, Sales Managers, and Loan Officers highlighting top-of-funnel conversion velocity, partner co-branding, and negligible SaaS costs."
-              : "Steel-clad architectural breakdown for Chief Information Security Officers (CISOs) and IT Directors detailing Cloud Run microservices, zero-trust PII vaults, RBAC governance, and IT error whisperer telemetry."}
+              : activeDeck === "security"
+                ? "Steel-clad architectural breakdown for Chief Information Security Officers (CISOs) and IT Directors detailing Cloud Run microservices, zero-trust PII vaults, RBAC governance, and IT error whisperer telemetry."
+                : "Dedicated dual-layer architecture: Layer 1 highlights 24/7 AI intake, tour sync, and ad studio velocity; Layer 2 details deterministic prompt boundaries, zero-hallucination grounding, and mandatory PII/SSN destruction."}
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0 flex-wrap">
           {/* Deck Switcher Tabs */}
-          <div className="bg-[#FAF9F5] border border-[#EAE7E0] p-1.5 rounded-2xl flex items-center gap-1.5">
+          <div className="bg-[#FAF9F5] border border-[#EAE7E0] p-1.5 rounded-2xl flex items-center gap-1.5 flex-wrap">
             <button
               onClick={() => setActiveDeck("sales")}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                 activeDeck === "sales"
                   ? "bg-[#2D362E] text-white shadow-sm"
                   : "text-[#606C5D] hover:text-[#2D362E]"
@@ -830,7 +1256,7 @@ export const SystemPitchDeck: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveDeck("security")}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                 activeDeck === "security"
                   ? "bg-indigo-900 text-white shadow-sm"
                   : "text-[#606C5D] hover:text-[#2D362E]"
@@ -839,7 +1265,49 @@ export const SystemPitchDeck: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
               <span>Security Deck</span>
             </button>
+            <button
+              onClick={() => {
+                setActiveDeck("vantage_brain");
+                setVantageSubDeck("assistant");
+              }}
+              className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                activeDeck === "vantage_brain"
+                  ? "bg-purple-900 text-white shadow-sm"
+                  : "text-[#606C5D] hover:text-[#2D362E]"
+              }`}
+            >
+              <Bot className="w-4 h-4" />
+              <span>Vantage AI Brain</span>
+            </button>
           </div>
+
+          {/* Vantage Sub-Layer Toggle (Only when Vantage AI Brain is active) */}
+          {activeDeck === "vantage_brain" && (
+            <div className="bg-purple-50 border border-purple-200 p-1.5 rounded-2xl flex items-center gap-1">
+              <button
+                onClick={() => setVantageSubDeck("assistant")}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  vantageSubDeck === "assistant"
+                    ? "bg-purple-900 text-white shadow-sm"
+                    : "text-purple-800 hover:bg-purple-100"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Layer 1: Sales & BD Assistant</span>
+              </button>
+              <button
+                onClick={() => setVantageSubDeck("guardrails")}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  vantageSubDeck === "guardrails"
+                    ? "bg-rose-900 text-white shadow-sm"
+                    : "text-rose-800 hover:bg-rose-100"
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Layer 2: Security & Guardrails</span>
+              </button>
+            </div>
+          )}
 
           <button
             onClick={() => window.print()}

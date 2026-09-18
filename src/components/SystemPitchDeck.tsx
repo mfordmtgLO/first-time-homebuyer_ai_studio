@@ -77,6 +77,85 @@ export const SystemPitchDeck: React.FC = () => {
     setCurrentSlideIndex(0);
   }, [activeDeck, vantageSubDeck]);
 
+  const handleExportDeckPdf = () => {
+    const currentSlides = activeDeck === "sales" ? salesSlides : securitySlides;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const slidesHtml = currentSlides.map((s) => `
+      <div class="slide">
+        <div class="header">
+          <div class="badge-num">${s.slideNumber}</div>
+          <div>
+            <div class="category">${s.category} • ${s.badge}</div>
+            <h2>${s.title}</h2>
+          </div>
+          <div class="slide-num">Slide ${s.slideNumber} of ${currentSlides.length}</div>
+        </div>
+        <div class="subtitle">${s.subtitle}</div>
+        <div class="overview">${s.overview}</div>
+        <div class="grid">
+          <div>
+            <h3>Key Pillars</h3>
+            ${s.keyPillars.map((p) => `
+              <div class="pillar">
+                <div class="pillar-title"><strong>${p.heading}</strong> ${p.highlight ? `<span>${p.highlight}</span>` : ""}</div>
+                <p>${p.description}</p>
+              </div>
+            `).join("")}
+          </div>
+          <div>
+            <h3>Strategic ROI Takeaway</h3>
+            <div class="roi">${s.roiTakeaway}</div>
+          </div>
+        </div>
+      </div>
+    `).join("");
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Executive Pitch Deck - ${activeDeck.toUpperCase()}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111; margin: 0; padding: 20px; background: #fff; }
+            .slide { page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; border: 1px solid #cbd5e1; border-radius: 16px; padding: 35px; margin-bottom: 40px; background: #fff; box-sizing: border-box; min-height: 90vh; display: flex; flex-direction: column; justify-content: space-between; }
+            .header { display: flex; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px; gap: 15px; }
+            .badge-num { width: 36px; height: 36px; background: #2D362E; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; }
+            .category { font-size: 11px; text-transform: uppercase; font-family: monospace; color: #4A5D4E; margin-bottom: 2px; }
+            h2 { font-size: 20px; color: #2D362E; margin: 0; }
+            .slide-num { margin-left: auto; font-size: 12px; color: #64748b; font-family: monospace; }
+            .subtitle { font-size: 15px; font-weight: bold; color: #1e293b; margin-bottom: 8px; }
+            .overview { font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 20px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: auto; }
+            h3 { font-size: 13px; text-transform: uppercase; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 10px; }
+            .pillar { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 12px; }
+            .pillar-title { display: flex; justify-content: space-between; margin-bottom: 4px; color: #0f172a; }
+            .pillar-title span { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-family: monospace; }
+            .pillar p { margin: 0; color: #475569; }
+            .roi { background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 15px; font-size: 13px; color: #065f46; font-weight: 500; margin-top: 15px; }
+            @page { size: letter portrait; margin: 12mm; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 40px; page-break-after: always;">
+            <h1 style="font-size: 26px; color: #2D362E; margin-bottom: 8px;">First-Time Homebuyer Enterprise Software Suite</h1>
+            <p style="font-size: 13px; color: #606C5D;">Executive Deck & Security Architecture Breakdown • Active Deck: ${activeDeck.toUpperCase()} • Total Slides: ${currentSlides.length}</p>
+          </div>
+          ${slidesHtml}
+          <script>
+            window.onload = () => {
+              setTimeout(() => {
+                window.print();
+              }, 600);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1311,7 +1390,7 @@ export const SystemPitchDeck: React.FC = () => {
           )}
 
           <button
-            onClick={() => window.print()}
+            onClick={handleExportDeckPdf}
             className="px-4 py-2.5 rounded-2xl bg-[#4A5D4E] hover:bg-[#3D4C40] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
             title="Export entire presentation deck to printable PDF"
           >

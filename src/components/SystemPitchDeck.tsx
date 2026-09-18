@@ -757,9 +757,9 @@ export const SystemPitchDeck: React.FC = () => {
 
       {/* VIEW 1: INTERACTIVE SLIDE PRESENTATION */}
       {viewMode === "slides" && (
-        <div className="bg-white rounded-3xl border border-[#EAE7E0] overflow-hidden shadow-xs flex flex-col min-h-[640px] relative">
+        <div className="bg-white rounded-3xl border border-[#EAE7E0] overflow-hidden shadow-xs flex flex-col h-[calc(100vh-160px)] min-h-[500px] max-h-[850px] relative">
           {/* Slide Top Bar */}
-          <div className="bg-[#2D362E] text-white px-6 py-4 flex items-center justify-between">
+          <div className="bg-[#2D362E] text-white px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <span className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center font-mono font-bold text-sm text-emerald-400">
                 {currentSlide.slideNumber}
@@ -790,12 +790,13 @@ export const SystemPitchDeck: React.FC = () => {
             </div>
           </div>
 
-          {/* Slide Body */}
-          <div className="p-6 sm:p-8 lg:p-10 flex-1 flex flex-col justify-between space-y-6">
-            <div className="space-y-6">
+          {/* Slide Body & Controls Container */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Scrollable Content Area */}
+            <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto flex-1 space-y-5">
               {/* Subtitle & Overview */}
               <div className="space-y-2 border-b border-[#EAE7E0] pb-4">
-                <h4 className="text-base sm:text-xl font-bold text-[#2D362E]">
+                <h4 className="text-base sm:text-lg font-bold text-[#2D362E]">
                   {currentSlide.subtitle}
                 </h4>
                 <p className="text-xs sm:text-sm text-[#4A5D4E] leading-relaxed">
@@ -804,9 +805,9 @@ export const SystemPitchDeck: React.FC = () => {
               </div>
 
               {/* Pillars & Visual Component Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start pb-4">
                 {/* Left: 3 Core Pillars */}
-                <div className="lg:col-span-7 space-y-3">
+                <div className="lg:col-span-7 space-y-2.5">
                   {currentSlide.keyPillars.map((pillar, idx) => (
                     <div 
                       key={idx} 
@@ -847,8 +848,8 @@ export const SystemPitchDeck: React.FC = () => {
               </div>
             </div>
 
-            {/* Slide Navigation Controls */}
-            <div className="pt-4 border-t border-[#EAE7E0] flex items-center justify-between">
+            {/* Pinned Navigation Footer */}
+            <div className="p-4 sm:px-6 bg-white border-t border-[#EAE7E0] flex items-center justify-between shrink-0">
               <button
                 onClick={prevSlide}
                 className="px-4 py-2 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] hover:bg-[#F1EFE9] text-xs font-bold text-[#2D362E] flex items-center gap-2 transition-colors cursor-pointer"

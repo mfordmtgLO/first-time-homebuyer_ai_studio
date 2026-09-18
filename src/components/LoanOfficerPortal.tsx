@@ -160,6 +160,7 @@ import { JourneyPhaseLabel } from "./JourneyPhaseLabel";
 import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 import { TopBusinessPartnersCard } from "./TopBusinessPartnersCard";
 import { SystemPitchDeck } from "./SystemPitchDeck";
+import { FTHBPipelineDashboard } from "./FTHBPipelineDashboard";
 import { BranchManagerDashboard } from "./BranchManagerDashboard";
 import { GrowthDashboard } from "./GrowthDashboard";
 import { AdsRoiPerformanceTab } from "./AdsRoiPerformanceTab";
@@ -3084,6 +3085,19 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 >
                   {guidesState.syncedProperties?.length || 6}
                 </span>
+              </button>
+
+              <button
+                data-tab-id="fthb_pipeline"
+                onClick={() => setActiveTab("fthb_pipeline")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                  activeTab === "fthb_pipeline"
+                    ? "bg-[#2D362E] text-white shadow-xs"
+                    : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+                }`}
+              >
+                <Inbox className="w-4 h-4 text-emerald-500" />
+                <span>FTHB Pipeline</span>
               </button>
 
               <button
@@ -7826,6 +7840,9 @@ Mike Ford`;
                 onNavigateToAdsPortal={() => setActiveTab("ad_campaigns")}
               />
             )}
+
+            {/* Tab: FTHB Pipeline Dashboard */}
+            {activeTab === "fthb_pipeline" && <FTHBPipelineDashboard />}
 
             {/* Tab 5: Multi-Channel Social Push */}
             {activeTab === "social_push" && (

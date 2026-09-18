@@ -1441,6 +1441,7 @@ export default function App() {
       <TelemetryDiagnosticsModal
         isOpen={showTelemetryModal}
         onClose={() => setShowTelemetryModal(false)}
+        isMikeFordAdmin={guidesState.loanOfficer?.name === "Mike Ford" || guidesState.loanOfficer?.id === "lo-mike-ford"}
       />
 
       {/* Privacy Policy & TCPA Disclosures Modal */}

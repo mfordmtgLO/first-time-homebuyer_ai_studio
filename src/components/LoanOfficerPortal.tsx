@@ -3282,7 +3282,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 }`}
               >
                 <PieChart className="w-4 h-4" />
-                <span>Pitch Deck & ROI Metrics</span>
+                <span>Executive Pitch Decks</span>
               </button>
 
               {(isAdminUser || permissions.canViewBranchMetrics) && (
@@ -3295,7 +3295,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   }`}
                 >
                   <PieChart className="w-4 h-4 text-[#C18C5D]" />
-                  <span>Branch Performance & ROI</span>
+                  <span>Branch Performance & ROI Intelligence</span>
                 </button>
               )}
 

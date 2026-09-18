@@ -231,7 +231,7 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
         },
         {
           id: "system_pitch_deck",
-          label: "Pitch Deck & ROI Metrics",
+          label: "Executive Pitch Decks",
           icon: <PieChart className="w-4 h-4" />,
         },
         {
@@ -339,7 +339,7 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
         },
         {
           id: "branch_admin_metrics",
-          label: "Branch Performance & ROI",
+          label: "Branch Performance & ROI Intelligence",
           icon: <PieChart className="w-4 h-4" />,
           requiresAdmin: true,
         },

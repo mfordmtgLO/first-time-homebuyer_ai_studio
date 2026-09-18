@@ -6745,6 +6745,78 @@ At the end, include a strong, dynamic Call to Action encouraging the user to rea
     }
   });
 
+  app.post("/api/security/generate-summary", async (req, res) => {
+    try {
+      const { breadcrumbs, errors, systemHealthScore, threatCount } = req.body;
+
+      const prompt = `You are an expert Enterprise Cybersecurity, Compliance Auditor, and Chief Information Security Officer (CISO).
+Analyze the following telemetry state and generate a formal, professional, one-page executive security and compliance summary for IT managers and compliance auditors.
+
+Telemetry State:
+- System Health Score: ${systemHealthScore ?? 99.8}%
+- Active Threat Count: ${threatCount ?? 0}
+- Captured Errors Count: ${errors?.length || 0}
+- Recent Security Breadcrumbs/Events: ${JSON.stringify(breadcrumbs?.filter((b: any) => b.category === "security").slice(-10) || [], null, 2)}
+
+Provide your response in JSON format with the following structure:
+{
+  "title": "Executive Security & Compliance Audit Summary",
+  "generatedAt": "${new Date().toISOString()}",
+  "executiveSummary": "A concise paragraph summarizing the overall security posture and zero-trust health.",
+  "architecturePosture": "Details on Cloud Run container isolation, Express edge proxying, and role-based access control (RBAC).",
+  "piiComplianceStatus": "Analysis of real-time PII shredding, SSN redaction, and sanitization metrics.",
+  "threatMitigationFindings": "Overview of firewall performance, whitelist enforcement, and active request handling.",
+  "recommendations": ["Recommendation 1 for IT directors", "Recommendation 2 for compliance auditors"]
+}
+`;
+
+      const ai = require("@google/genai").GoogleGenAI
+        ? new (require("@google/genai").GoogleGenAI)({ apiKey: process.env.GEMINI_API_KEY })
+        : null;
+      if (!ai) {
+        return res.status(500).json({ error: "Gemini API key not configured on server." });
+      }
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              generatedAt: { type: "string" },
+              executiveSummary: { type: "string" },
+              architecturePosture: { type: "string" },
+              piiComplianceStatus: { type: "string" },
+              threatMitigationFindings: { type: "string" },
+              recommendations: {
+                type: "array",
+                items: { type: "string" },
+              },
+            },
+            required: [
+              "title",
+              "generatedAt",
+              "executiveSummary",
+              "architecturePosture",
+              "piiComplianceStatus",
+              "threatMitigationFindings",
+              "recommendations",
+            ],
+          },
+        },
+      });
+
+      const data = JSON.parse(response.text || "{}");
+      res.json(data);
+    } catch (error: any) {
+      console.error("Generate Security Summary Error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate security summary" });
+    }
+  });
+
   // ==========================================
   // INBOUND VANTAGE AI ADS ENGINE WEBHOOK SYNC
   // ==========================================

@@ -22,11 +22,13 @@ import {
 interface TelemetryDiagnosticsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isMikeFordAdmin?: boolean;
 }
 
 export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps> = ({
   isOpen,
   onClose,
+  isMikeFordAdmin = true,
 }) => {
   const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([]);
   const [errors, setErrors] = useState<CapturedErrorEvent[]>([]);
@@ -42,6 +44,90 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
   const [isExporting, setIsExporting] = useState(false);
   const [testPayload, setTestPayload] = useState("");
   const [testResult, setTestResult] = useState<"idle" | "testing" | "passed" | "failed">("idle");
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [securitySummary, setSecuritySummary] = useState<any | null>(null);
+
+  const handleGenerateSummary = async () => {
+    if (!isMikeFordAdmin) return;
+    setIsGeneratingSummary(true);
+    setSecuritySummary(null);
+    try {
+      const res = await fetch("/api/security/generate-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          breadcrumbs,
+          errors,
+          systemHealthScore,
+          threatCount,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to generate summary");
+      const data = await res.json();
+      setSecuritySummary(data);
+    } catch (err: any) {
+      console.error(err);
+      alert("Failed to generate security summary: " + err.message);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const handleExportPDF = () => {
+    if (!securitySummary || !isMikeFordAdmin) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${securitySummary.title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; color: #111; line-height: 1.6; }
+            h1 { color: #065F46; border-bottom: 2px solid #065F46; padding-bottom: 10px; }
+            .meta { font-size: 12px; color: #666; margin-bottom: 20px; }
+            .section { margin-bottom: 20px; }
+            .section h3 { color: #1F2937; margin-bottom: 5px; }
+            .box { background: #F9FAFB; border: 1px solid #E5E7EB; padding: 15px; border-radius: 8px; }
+            ul { padding-left: 20px; }
+            li { margin-bottom: 8px; }
+          </style>
+        </head>
+        <body>
+          <h1>${securitySummary.title}</h1>
+          <div class="meta">Generated exclusively for Mike Ford Admin (CISO Compliance Portal) · ${new Date(securitySummary.generatedAt).toLocaleString()}</div>
+          
+          <div class="section">
+            <h3>Executive Summary</h3>
+            <div class="box">${securitySummary.executiveSummary}</div>
+          </div>
+
+          <div class="section">
+            <h3>Architecture Posture</h3>
+            <div class="box">${securitySummary.architecturePosture}</div>
+          </div>
+
+          <div class="section">
+            <h3>PII Compliance Status</h3>
+            <div class="box">${securitySummary.piiComplianceStatus}</div>
+          </div>
+
+          <div class="section">
+            <h3>Threat Mitigation Findings</h3>
+            <div class="box">${securitySummary.threatMitigationFindings}</div>
+          </div>
+
+          <div class="section">
+            <h3>Actionable IT Recommendations</h3>
+            <ul>
+              ${securitySummary.recommendations?.map((r: string) => `<li>${r}</li>`).join("")}
+            </ul>
+          </div>
+          <script>window.print();</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -544,7 +630,7 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
 
           {activeTab === "threat_mitigation" && (
             <div className="space-y-4">
-              <div className="bg-slate-900 border border-emerald-500/30 p-4 rounded-xl flex items-center justify-between gap-4">
+              <div className="bg-slate-900 border border-emerald-500/30 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-4">
                   <div className="bg-emerald-500/20 p-3 rounded-full text-emerald-400">
                     <ShieldAlert className="w-6 h-6" />
@@ -556,11 +642,102 @@ export const TelemetryDiagnosticsModal: React.FC<TelemetryDiagnosticsModalProps>
                     </p>
                   </div>
                 </div>
-                <div className="bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-emerald-400 font-mono text-xs flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span>Firewall Active</span>
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                  {isMikeFordAdmin && (
+                    <button
+                      onClick={handleGenerateSummary}
+                      disabled={isGeneratingSummary}
+                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition cursor-pointer whitespace-nowrap"
+                    >
+                      {isGeneratingSummary ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Generating Summary...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Generate Security Summary</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-emerald-400 font-mono text-xs hidden md:flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span>Firewall Active</span>
+                  </div>
                 </div>
               </div>
+
+              {securitySummary && (
+                <div className="bg-slate-950 border border-emerald-500/50 rounded-2xl p-6 space-y-4 animate-in fade-in slide-in-from-bottom-3">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>{securitySummary.title}</span>
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        Generated by Gemini CISO Agent at {new Date(securitySummary.generatedAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {isMikeFordAdmin && (
+                        <button
+                          onClick={handleExportPDF}
+                          className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Export PDF Report</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setSecuritySummary(null)}
+                        className="text-slate-400 hover:text-white text-xs underline"
+                      >
+                        Dismiss Summary
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 text-xs text-slate-300">
+                    <div>
+                      <span className="text-emerald-400 font-bold uppercase tracking-wider text-[10px] block mb-1">Executive Summary</span>
+                      <p className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 leading-relaxed text-slate-200">
+                        {securitySummary.executiveSummary}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                        <span className="text-indigo-400 font-bold uppercase tracking-wider text-[10px]">Architecture Posture</span>
+                        <p className="text-slate-300 text-[11px] leading-relaxed">{securitySummary.architecturePosture}</p>
+                      </div>
+                      <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                        <span className="text-purple-400 font-bold uppercase tracking-wider text-[10px]">PII Compliance Status</span>
+                        <p className="text-slate-300 text-[11px] leading-relaxed">{securitySummary.piiComplianceStatus}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                      <span className="text-amber-400 font-bold uppercase tracking-wider text-[10px]">Threat Mitigation Findings</span>
+                      <p className="text-slate-300 text-[11px] leading-relaxed">{securitySummary.threatMitigationFindings}</p>
+                    </div>
+
+                    <div>
+                      <span className="text-emerald-400 font-bold uppercase tracking-wider text-[10px] block mb-1.5">Actionable IT Recommendations</span>
+                      <ul className="space-y-1.5">
+                        {securitySummary.recommendations?.map((rec: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-800/80 text-[11px]">
+                            <span className="text-emerald-400 font-bold font-mono">0{idx + 1}.</span>
+                            <span>{rec}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Sub-cards detailing request handling */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

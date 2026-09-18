@@ -3674,7 +3674,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                     {
                       id: "pre_approved",
                       name: "Prequalified",
-                      subText: "Pre-Approved Buyer",
+                      subText: "Prequalified Buyer",
                       count: preApprovedCount,
                       reached: reachedPreApproved,
                       pctOfTotal: Math.round((preApprovedCount / (totalCount || 1)) * 100),
@@ -5227,7 +5227,7 @@ Best regards,`,
                                     >
                                       <option value="new">🔵 New / Uncontacted</option>
                                       <option value="contacted">🟡 Contacted</option>
-                                      <option value="pre_approved">🟢 Pre-Approved</option>
+                                      <option value="pre_approved">🟢 Prequalified</option>
                                       <option value="in_escrow">🟣 In Escrow</option>
                                       <option value="closed">🏁 Closed</option>
                                       <option value="archived">⚪ Archived</option>

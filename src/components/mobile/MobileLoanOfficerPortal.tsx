@@ -425,7 +425,7 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
                       : "bg-white text-emerald-800 border border-emerald-200"
                   }`}
                 >
-                  Pre-Approved
+                  Prequalified
                 </button>
               </div>
             </div>
@@ -477,7 +477,7 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
                         <option value="new">New Inbound</option>
                         <option value="contacted">Contacted</option>
                         <option value="in_review">In Review</option>
-                        <option value="pre_approved">Pre-Approved</option>
+                        <option value="pre_approved">Prequalified</option>
                         <option value="closed">Closed / Funded</option>
                       </select>
                     </div>

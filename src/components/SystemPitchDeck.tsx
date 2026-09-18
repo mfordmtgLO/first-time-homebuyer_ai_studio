@@ -41,7 +41,9 @@ import {
   AlertCircle,
   LayoutGrid,
   Maximize2,
-  Bot
+  Bot,
+  Terminal,
+  UserCheck
 } from "lucide-react";
 
 interface PitchSlide {
@@ -575,6 +577,195 @@ export const SystemPitchDeck: React.FC = () => {
             <div className="p-2 bg-white rounded-lg border border-slate-200 flex justify-between">
               <span>Master Role Mutation History</span>
               <span className="text-indigo-600">CSV Export Ready</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "sec-6",
+      slideNumber: 6,
+      category: "System Access & RBAC Governance",
+      title: "System Access Matrix: Complete Role Permissions Mapping",
+      subtitle: "Explicit Portal Permissions, Visibility Boundaries, and Administrative Capabilities Across All 6 Tiers",
+      badge: "Access Matrix",
+      icon: <UserCheck className="w-6 h-6 text-indigo-600" />,
+      overview: "A comprehensive governance matrix defining precise access controls, lead visibility scopes, and administrative privileges for every persona interacting with the mortgage platform.",
+      keyPillars: [
+        {
+          heading: "Mike Ford Admin (Super Admin)",
+          description: "Full master governance, role promotion/revocation, API key vault access, and global system configuration.",
+          highlight: "Unrestricted Master"
+        },
+        {
+          heading: "Branch Manager & Loan Officer",
+          description: "Branch-scoped lead pipeline management, mortgage lab calculations, co-branded marketing studio, and borrower sync.",
+          highlight: "Operational Branch"
+        },
+        {
+          heading: "Agent & IT / Peer Tester",
+          description: "Realtor partner co-marketing access with scoped lead handoffs; IT & Peer Testers receive debug toggles and telemetry logs.",
+          highlight: "Scoped Partner / Dev"
+        }
+      ],
+      roiTakeaway: "Eliminates privilege creep and unauthorized data exposure with mathematically enforced role boundaries.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>System Access Matrix (6-Tier Governance)</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">RBAC Enforced</span>
+          </div>
+          <div className="space-y-2 text-[10px] max-h-56 overflow-y-auto pr-1">
+            <div className="p-2 bg-white rounded-lg border border-slate-200">
+              <div className="font-bold text-indigo-900 flex justify-between">
+                <span>1. Mike Ford Admin</span>
+                <span className="text-emerald-700">Master Super Admin</span>
+              </div>
+              <p className="text-gray-600 mt-0.5">Permissions: Full access to all portals, role management, API keys, compliance logs. Visibility: Global enterprise. Admin: Ultimate control.</p>
+            </div>
+            <div className="p-2 bg-white rounded-lg border border-slate-200">
+              <div className="font-bold text-indigo-900 flex justify-between">
+                <span>2. Branch Manager</span>
+                <span className="text-blue-700">Branch Leadership</span>
+              </div>
+              <p className="text-gray-600 mt-0.5">Permissions: Branch lead roster, loan officer performance analytics, co-branding studio. Visibility: Branch-wide. Admin: Branch settings.</p>
+            </div>
+            <div className="p-2 bg-white rounded-lg border border-slate-200">
+              <div className="font-bold text-indigo-900 flex justify-between">
+                <span>3. Loan Officer (LO)</span>
+                <span className="text-emerald-700">Production Originator</span>
+              </div>
+              <p className="text-gray-600 mt-0.5">Permissions: Lead journey pipeline, SMS templates, property tour sync, 2-1 buydown lab. Visibility: Assigned leads. Admin: Personal profile.</p>
+            </div>
+            <div className="p-2 bg-white rounded-lg border border-slate-200">
+              <div className="font-bold text-indigo-900 flex justify-between">
+                <span>4. Agent (Realtor Partner)</span>
+                <span className="text-purple-700">Co-Marketing Partner</span>
+              </div>
+              <p className="text-gray-600 mt-0.5">Permissions: Co-branded marketing studio, shared listing leads, client tour map view. Visibility: Co-marketed leads. Admin: None.</p>
+            </div>
+            <div className="p-2 bg-white rounded-lg border border-slate-200">
+              <div className="font-bold text-indigo-900 flex justify-between">
+                <span>5. IT Tech / Manager</span>
+                <span className="text-amber-700">Technical Ops</span>
+              </div>
+              <p className="text-gray-600 mt-0.5">Permissions: Error Whisperer telemetry, exception stack traces, container logs. Visibility: Technical logs. Admin: Patch deployment.</p>
+            </div>
+            <div className="p-2 bg-white rounded-lg border border-slate-200">
+              <div className="font-bold text-indigo-900 flex justify-between">
+                <span>6. Peer Tester</span>
+                <span className="text-rose-700">Staging & QA</span>
+              </div>
+              <p className="text-gray-600 mt-0.5">Permissions: Sandbox testing flows, mock lead creation, feedback submission. Visibility: Isolated test data. Admin: None.</p>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "sec-7",
+      slideNumber: 7,
+      category: "Access Security & Whitelist Governance",
+      title: "Security & Whitelist Access Controls: Restricting Environment Access",
+      subtitle: "Firestore whitelisted_emails Collection, Branch Manager Authorizations & Instant Revocation",
+      badge: "Whitelist Shield",
+      icon: <ShieldCheck className="w-6 h-6 text-indigo-600" />,
+      overview: "To guarantee absolute data confidentiality, the platform enforces strict **Security & Whitelist** verification on every session. Unauthorized email addresses are automatically blocked at the authentication gateway. Only pre-authorized Cornerstone First Mortgage originators and staff listed in the secure `whitelisted_emails` collection are granted entry.",
+      keyPillars: [
+        {
+          heading: "Firestore `whitelisted_emails` Collection",
+          description: "Every login attempt cross-references real-time database whitelist records to verify active employment and role eligibility.",
+          highlight: "Zero Unauthorized Entry"
+        },
+        {
+          heading: "Branch Manager & Admin Provisioning",
+          description: "Branch leaders and Mike Ford Admin can authorize new staff, assign custom role tiers, and manage security credentials instantly.",
+          highlight: "Decentralized Governance"
+        },
+        {
+          heading: "1-Click Revocation & Lockout",
+          description: "Instantly terminate session tokens, revoke portal access, and purge whitelist records the moment an employee departs.",
+          highlight: "Immediate Revocation"
+        }
+      ],
+      roiTakeaway: "Prevents unauthorized data scraping and insider threats by locking the entire production environment behind a verified corporate whitelist.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Whitelist Access Enforcement Flow</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">Encrypted Gate</span>
+          </div>
+          <div className="space-y-2 text-[11px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>1. User Authentication Attempt (Email/Google)</span>
+              <span className="text-blue-600">Incoming Login</span>
+            </div>
+            <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 flex items-center justify-between">
+              <span>2. Firestore `whitelisted_emails` Database Check</span>
+              <span className="text-indigo-700 font-bold">Active Whitelist Match</span>
+            </div>
+            <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+              <span>3. Authorized Portal Entry & RBAC Assignment</span>
+              <span className="text-emerald-700 font-bold">Secure Session Issued</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "sec-8",
+      slideNumber: 8,
+      category: "Compliance & IT Architecture",
+      title: "Architectural Synergy: Telemetry vs. Whisperer vs. Whitelist vs. RBAC",
+      subtitle: "A Complete Technical Breakdown for CISOs, Compliance Officers & IT Managers",
+      badge: "Architecture 101",
+      icon: <Terminal className="w-6 h-6 text-indigo-600" />,
+      overview: "For IT Directors and Compliance auditors evaluating our 3-point microservices container architecture, this slide defines the precise operational boundaries and complementary roles of our four core security subsystems.",
+      keyPillars: [
+        {
+          heading: "1. Telemetry (The System Nervous System)",
+          description: "Continuous background logging of container health, API response times, and exceptions across Cloud Run without human touch.",
+          highlight: "Diagnostic Sensors"
+        },
+        {
+          heading: "2. Error Whisperer (The IT Remediation Tool)",
+          description: "Hidden by default; toggled ON exclusively by Mike Ford Admin to let IT techs inspect stack traces and run AI-powered code patches.",
+          highlight: "Mechanic's Diagnostic Rig"
+        },
+        {
+          heading: "3. Whitelist (The Front-Door Security Guard)",
+          description: "Database-backed email verification gate (`whitelisted_emails`) that instantly blocks unauthorized logins before entry.",
+          highlight: "Lobby Turnstile"
+        },
+        {
+          heading: "4. RBAC (The Internal Hallway Passes)",
+          description: "Role-Based Access Control mapping authorized users to strict portal permissions and pipeline view boundaries (Principle of Least Privilege).",
+          highlight: "Employee Badge Suites"
+        }
+      ],
+      roiTakeaway: "Provides enterprise-grade defense-in-depth: Telemetry diagnoses health, Whisperer repairs code, Whitelist blocks outsiders, and RBAC governs insiders.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-2.5 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>4-Pillar Security Ecosystem</span>
+            <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">Defense-in-Depth</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-[10px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1">
+              <div className="font-bold text-blue-900">1. Telemetry</div>
+              <p className="text-gray-600">Background logging & latency monitoring.</p>
+            </div>
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1">
+              <div className="font-bold text-amber-900">2. Error Whisperer</div>
+              <p className="text-gray-600">IT debug console (Admin toggled).</p>
+            </div>
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1">
+              <div className="font-bold text-emerald-900">3. Whitelist</div>
+              <p className="text-gray-600">Firestore gatekeeper blocking outsiders.</p>
+            </div>
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1">
+              <div className="font-bold text-indigo-900">4. RBAC</div>
+              <p className="text-gray-600">Granular role permission boundaries.</p>
             </div>
           </div>
         </div>

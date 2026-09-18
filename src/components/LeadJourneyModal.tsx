@@ -103,7 +103,7 @@ export const LeadJourneyModal: React.FC<LeadJourneyModalProps> = ({
   const stages: { key: CapturedLead['status']; label: string; desc: string }[] = [
     { key: 'new', label: '1. Inbound Lead', desc: 'AI Chatbot intake completed' },
     { key: 'contacted', label: '2. LO Contacted', desc: 'Initial outreach & call' },
-    { key: 'pre_approved', label: '3. Pre-Approved', desc: 'Financial audit & pre-qual' },
+    { key: 'pre_approved', label: '3. Prequalified', desc: 'Financial audit & pre-qual' },
     { key: 'in_escrow', label: '4. In Escrow', desc: 'Home offer accepted' },
     { key: 'closed', label: '5. Loan Closed', desc: 'Key handover & funded' }
   ];
@@ -205,7 +205,7 @@ export const LeadJourneyModal: React.FC<LeadJourneyModalProps> = ({
               >
                 <option value="new">🔵 New / Uncontacted</option>
                 <option value="contacted">🟡 Contacted</option>
-                <option value="pre_approved">🟢 Pre-Approved</option>
+                <option value="pre_approved">🟢 Prequalified</option>
                 <option value="in_escrow">🟣 In Escrow</option>
                 <option value="closed">🏁 Closed</option>
                 <option value="archived">⚪ Archived</option>

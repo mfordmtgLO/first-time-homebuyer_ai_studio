@@ -74,7 +74,7 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({
   const columns = [
     { id: "new", title: "New (Uncontacted)", icon: <Inbox className="w-4 h-4 text-blue-500" />, bg: "bg-blue-50" },
     { id: "contacted", title: "Contacted", icon: <Phone className="w-4 h-4 text-yellow-500" />, bg: "bg-yellow-50" },
-    { id: "pre_approved", title: "Qualified (Pre-Approved)", icon: <ShieldCheck className="w-4 h-4 text-emerald-500" />, bg: "bg-emerald-50" },
+    { id: "pre_approved", title: "Qualified (Prequalified)", icon: <ShieldCheck className="w-4 h-4 text-emerald-500" />, bg: "bg-emerald-50" },
     { id: "closed", title: "Funded & Closed (ROLI)", icon: <Trophy className="w-4 h-4 text-amber-500" />, bg: "bg-amber-50" }
   ];
 
@@ -553,7 +553,7 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({
                             {(lead.curatedPropertyIds?.length || 0) > 0 && (
                                 <button 
                                   onClick={() => {
-                                    alert(`Success! Pushed ${lead.curatedPropertyIds?.length} curated property pins directly to ${lead.fullName}'s personal Google Maps "Saved Lists" via secure token!\n\nThe synced map layer includes your custom CRM tags:\n✓ "Pre-Approved" Badge\n✓ Est. Monthly Payments\n✓ Zero-Down Eligibility Flags\n\nNote: The co-branded invite email dispatched to ${lead.email} explicitly instructs the buyer to click "Follow" or "Save" once the map opens to ensure permanent retention.`);
+                                    alert(`Success! Pushed ${lead.curatedPropertyIds?.length} curated property pins directly to ${lead.fullName}'s personal Google Maps "Saved Lists" via secure token!\n\nThe synced map layer includes your custom CRM tags:\n✓ "Prequalified" Badge\n✓ Est. Monthly Payments\n✓ Zero-Down Eligibility Flags\n\nNote: The co-branded invite email dispatched to ${lead.email} explicitly instructs the buyer to click "Follow" or "Save" once the map opens to ensure permanent retention.`);
                                     
                                     const newLog = {
                                       id: Date.now().toString(),

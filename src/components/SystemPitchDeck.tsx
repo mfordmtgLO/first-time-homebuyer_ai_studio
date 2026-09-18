@@ -698,7 +698,15 @@ export const SystemPitchDeck: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <button
+            onClick={() => window.print()}
+            className="px-4 py-2 rounded-2xl bg-[#4A5D4E] hover:bg-[#3D4C40] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+            title="Export all cards into a cleanly organized presentation PDF for C-Suite, Sales & IT"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Save Pitch Deck PDF</span>
+          </button>
           <div className="bg-[#FAF9F5] border border-[#EAE7E0] p-1 rounded-2xl flex items-center gap-1">
             <button
               onClick={() => setViewMode("slides")}
@@ -954,6 +962,65 @@ export const SystemPitchDeck: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Hidden Print Container for Exporting All 10 Cards to PDF */}
+      <div className="hidden print:block space-y-8">
+        <div className="text-center space-y-2 mb-8 page-break-after">
+          <h1 className="text-3xl font-black font-display text-[#2D362E]">First-Time Homebuyer Enterprise Software Suite</h1>
+          <p className="text-sm text-[#606C5D]">Executive Pitch Deck for C-Suite Personnel, Sales Managers, and IT Managers • Melded 3-Point Microservices Ecosphere</p>
+        </div>
+
+        {slides.map((s) => (
+          <div key={s.id} className="pitch-deck-print-slide bg-white border border-[#EAE7E0] rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-xl bg-[#2D362E] text-white flex items-center justify-center font-mono font-bold text-sm">
+                  {s.slideNumber}
+                </span>
+                <div>
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-[#4A5D4E] block">
+                    {s.category} • {s.badge}
+                  </span>
+                  <h3 className="text-lg font-bold text-[#2D362E] font-display">
+                    {s.title}
+                  </h3>
+                </div>
+              </div>
+              <span className="text-xs font-mono text-gray-500">Slide {s.slideNumber} of 10</span>
+            </div>
+
+            <div className="space-y-1.5">
+              <h4 className="text-sm font-bold text-[#2D362E]">{s.subtitle}</h4>
+              <p className="text-xs text-[#4A5D4E] leading-relaxed">{s.overview}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="space-y-2">
+                <h5 className="text-xs font-bold text-[#2D362E] uppercase tracking-wider">Key Pillars</h5>
+                {s.keyPillars.map((p, pIdx) => (
+                  <div key={pIdx} className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-0.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#2D362E]">{p.heading}</span>
+                      {p.highlight && <span className="text-[9px] font-mono bg-white px-1.5 py-0.5 rounded border border-[#EAE7E0]">{p.highlight}</span>}
+                    </div>
+                    <p className="text-[11px] text-[#606C5D]">{p.description}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <h5 className="text-xs font-bold text-[#2D362E] uppercase tracking-wider">Architecture & Telemetry</h5>
+                <div className="scale-90 origin-top-left">
+                  {s.visualComponent}
+                </div>
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 mt-2">
+                  <span className="font-bold block text-[10px] uppercase text-emerald-800">Strategic ROI Takeaway</span>
+                  <p className="text-[11px] font-medium">{s.roiTakeaway}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

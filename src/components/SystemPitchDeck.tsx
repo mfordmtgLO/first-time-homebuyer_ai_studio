@@ -43,7 +43,8 @@ import {
   Maximize2,
   Bot,
   Terminal,
-  UserCheck
+  UserCheck,
+  ShieldAlert
 } from "lucide-react";
 
 interface PitchSlide {
@@ -1450,6 +1451,16 @@ export const SystemPitchDeck: React.FC = () => {
                     {currentSlide.roiTakeaway}
                   </p>
                 </div>
+
+                {(activeDeck === "security" || activeDeck === "vantage_brain" || currentSlide.category.toLowerCase().includes("security") || currentSlide.category.toLowerCase().includes("privacy") || currentSlide.category.toLowerCase().includes("cloud") || currentSlide.category.toLowerCase().includes("guardrails")) && (
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent("open-telemetry"))}
+                    className="w-full py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer border border-slate-700"
+                  >
+                    <ShieldAlert className="w-4 h-4 text-emerald-400" />
+                    <span>Launch Live Telemetry & Threat Inspector</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1540,20 +1551,31 @@ export const SystemPitchDeck: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[#F1EFE9] flex items-center justify-between">
-                <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-1 rounded-lg">
-                  ROI: {slide.roiTakeaway.slice(0, 45)}...
-                </span>
-                <button
-                  onClick={() => {
-                    setCurrentSlideIndex(slide.slideNumber - 1);
-                    setViewMode("slides");
-                  }}
-                  className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Open Slide</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+              <div className="pt-3 border-t border-[#F1EFE9] space-y-2">
+                {(activeDeck === "security" || activeDeck === "vantage_brain" || slide.category.toLowerCase().includes("security") || slide.category.toLowerCase().includes("privacy") || slide.category.toLowerCase().includes("cloud") || slide.category.toLowerCase().includes("guardrails")) && (
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent("open-telemetry"))}
+                    className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer border border-slate-700"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Launch Telemetry & Threat Inspector</span>
+                  </button>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-1 rounded-lg">
+                    ROI: {slide.roiTakeaway.slice(0, 40)}...
+                  </span>
+                  <button
+                    onClick={() => {
+                      setCurrentSlideIndex(slide.slideNumber - 1);
+                      setViewMode("slides");
+                    }}
+                    className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Open Slide</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}

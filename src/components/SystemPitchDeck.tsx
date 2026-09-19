@@ -1295,139 +1295,146 @@ export const SystemPitchDeck: React.FC = () => {
   return (
     <div className="max-w-[1600px] mx-auto p-4 sm:p-8 space-y-6 animate-in fade-in duration-300">
       {/* Header & Deck Switcher */}
-      <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 lg:p-8 shadow-xs flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 w-full overflow-hidden">
-        <div className="space-y-2 max-w-2xl">
-          <div className="flex items-center gap-2.5">
-            <span className="px-3 py-1 rounded-full bg-[#2D362E] text-white text-xs font-mono font-bold tracking-wider uppercase">
-              Enterprise Executive Portals
-            </span>
-            <span className="text-xs font-mono text-[#606C5D]">
+      <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 lg:p-8 shadow-xs flex flex-col gap-6 w-full overflow-hidden">
+        <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 w-full">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center gap-2.5">
+              <span className="px-3 py-1 rounded-full bg-[#2D362E] text-white text-xs font-mono font-bold tracking-wider uppercase">
+                Enterprise Executive Portals
+              </span>
+              <span className="text-xs font-mono text-[#606C5D]">
+                {activeDeck === "sales" 
+                  ? "Executive Sales & Conversion Deck" 
+                  : activeDeck === "security" 
+                    ? "Enterprise Security & Compliance Deck" 
+                    : vantageSubDeck === "assistant" 
+                      ? "Vantage AI Brain • Sales & BD Deck" 
+                      : "Vantage AI Brain • Security & Guardrails Deck"}
+              </span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black font-display text-[#2D362E]">
               {activeDeck === "sales" 
-                ? "Executive Sales & Conversion Deck" 
+                ? "First-Time Homebuyer Executive Sales Pitch Deck" 
                 : activeDeck === "security" 
-                  ? "Enterprise Security & Compliance Deck" 
-                  : vantageSubDeck === "assistant" 
-                    ? "Vantage AI Brain • Sales & BD Deck" 
-                    : "Vantage AI Brain • Security & Guardrails Deck"}
-            </span>
+                  ? "Enterprise Security, Zero-Trust & Compliance Architecture Deck" 
+                  : "Vantage AI Brain: 2-Layer Executive & Security Pitch Deck"}
+            </h2>
+            <p className="text-sm text-[#606C5D] max-w-3xl">
+              {activeDeck === "sales" 
+                ? "Comprehensive strategic overview for C-Suite executives, Sales Managers, and Loan Officers highlighting top-of-funnel conversion velocity, partner co-branding, and negligible SaaS costs."
+                : activeDeck === "security"
+                  ? "Steel-clad architectural breakdown for Chief Information Security Officers (CISOs) and IT Directors detailing Cloud Run microservices, zero-trust PII vaults, RBAC governance, and IT error whisperer telemetry."
+                  : "Dedicated dual-layer architecture: Layer 1 highlights 24/7 AI intake, tour sync, and ad studio velocity; Layer 2 details deterministic prompt boundaries, zero-hallucination grounding, and mandatory PII/SSN destruction."}
+            </p>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black font-display text-[#2D362E]">
-            {activeDeck === "sales" 
-              ? "First-Time Homebuyer Executive Sales Pitch Deck" 
-              : activeDeck === "security" 
-                ? "Enterprise Security, Zero-Trust & Compliance Architecture Deck" 
-                : "Vantage AI Brain: 2-Layer Executive & Security Pitch Deck"}
-          </h2>
-          <p className="text-sm text-[#606C5D] max-w-3xl">
-            {activeDeck === "sales" 
-              ? "Comprehensive strategic overview for C-Suite executives, Sales Managers, and Loan Officers highlighting top-of-funnel conversion velocity, partner co-branding, and negligible SaaS costs."
-              : activeDeck === "security"
-                ? "Steel-clad architectural breakdown for Chief Information Security Officers (CISOs) and IT Directors detailing Cloud Run microservices, zero-trust PII vaults, RBAC governance, and IT error whisperer telemetry."
-                : "Dedicated dual-layer architecture: Layer 1 highlights 24/7 AI intake, tour sync, and ad studio velocity; Layer 2 details deterministic prompt boundaries, zero-hallucination grounding, and mandatory PII/SSN destruction."}
-          </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 flex-wrap">
-          {/* Deck Switcher Tabs */}
-          <div className="bg-[#FAF9F5] border border-[#EAE7E0] p-1.5 rounded-2xl flex items-center gap-1.5 flex-wrap">
-            <button
-              onClick={() => setActiveDeck("sales")}
-              className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                activeDeck === "sales"
-                  ? "bg-[#2D362E] text-white shadow-sm"
-                  : "text-[#606C5D] hover:text-[#2D362E]"
-              }`}
-            >
-              <Building className="w-4 h-4" />
-              <span>Sales Deck</span>
-            </button>
-            <button
-              onClick={() => setActiveDeck("security")}
-              className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                activeDeck === "security"
-                  ? "bg-indigo-900 text-white shadow-sm"
-                  : "text-[#606C5D] hover:text-[#2D362E]"
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Security Deck</span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveDeck("vantage_brain");
-                setVantageSubDeck("assistant");
-              }}
-              className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                activeDeck === "vantage_brain"
-                  ? "bg-purple-900 text-white shadow-sm"
-                  : "text-[#606C5D] hover:text-[#2D362E]"
-              }`}
-            >
-              <Bot className="w-4 h-4" />
-              <span>Vantage AI Brain</span>
-            </button>
-          </div>
-
-          {/* Vantage Sub-Layer Toggle (Only when Vantage AI Brain is active) */}
-          {activeDeck === "vantage_brain" && (
-            <div className="bg-purple-50 border border-purple-200 p-1.5 rounded-2xl flex items-center gap-1">
+        {/* Toolbar row with deck switchers, layer toggles, pdf export, and view mode */}
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[#EAE7E0] w-full">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Deck Switcher Tabs */}
+            <div className="bg-[#FAF9F5] border border-[#EAE7E0] p-1.5 rounded-2xl flex items-center gap-1.5 flex-wrap">
               <button
-                onClick={() => setVantageSubDeck("assistant")}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  vantageSubDeck === "assistant"
-                    ? "bg-purple-900 text-white shadow-sm"
-                    : "text-purple-800 hover:bg-purple-100"
+                onClick={() => setActiveDeck("sales")}
+                className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeDeck === "sales"
+                    ? "bg-[#2D362E] text-white shadow-sm"
+                    : "text-[#606C5D] hover:text-[#2D362E]"
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Layer 1: Sales & BD Assistant</span>
+                <Building className="w-4 h-4" />
+                <span>Sales Deck</span>
               </button>
               <button
-                onClick={() => setVantageSubDeck("guardrails")}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  vantageSubDeck === "guardrails"
-                    ? "bg-rose-900 text-white shadow-sm"
-                    : "text-rose-800 hover:bg-rose-100"
+                onClick={() => setActiveDeck("security")}
+                className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeDeck === "security"
+                    ? "bg-indigo-900 text-white shadow-sm"
+                    : "text-[#606C5D] hover:text-[#2D362E]"
                 }`}
               >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Layer 2: Security & Guardrails</span>
+                <ShieldCheck className="w-4 h-4" />
+                <span>Security Deck</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveDeck("vantage_brain");
+                  setVantageSubDeck("assistant");
+                }}
+                className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeDeck === "vantage_brain"
+                    ? "bg-purple-900 text-white shadow-sm"
+                    : "text-[#606C5D] hover:text-[#2D362E]"
+                }`}
+              >
+                <Bot className="w-4 h-4" />
+                <span>Vantage AI Brain</span>
               </button>
             </div>
-          )}
 
-          <button
-            onClick={handleExportDeckPdf}
-            className="px-4 py-2.5 rounded-2xl bg-[#4A5D4E] hover:bg-[#3D4C40] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
-            title="Export entire presentation deck to printable PDF"
-          >
-            <FileText className="w-4 h-4" />
-            <span>Save Deck PDF</span>
-          </button>
+            {/* Vantage Sub-Layer Toggle (Only when Vantage AI Brain is active) */}
+            {activeDeck === "vantage_brain" && (
+              <div className="bg-purple-50 border border-purple-200 p-1.5 rounded-2xl flex items-center gap-1 flex-wrap">
+                <button
+                  onClick={() => setVantageSubDeck("assistant")}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    vantageSubDeck === "assistant"
+                      ? "bg-purple-900 text-white shadow-sm"
+                      : "text-purple-800 hover:bg-purple-100"
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Layer 1: Sales & BD Assistant</span>
+                </button>
+                <button
+                  onClick={() => setVantageSubDeck("guardrails")}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    vantageSubDeck === "guardrails"
+                      ? "bg-rose-900 text-white shadow-sm"
+                      : "text-rose-800 hover:bg-rose-100"
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Layer 2: Security & Guardrails</span>
+                </button>
+              </div>
+            )}
+          </div>
 
-          <div className="bg-[#FAF9F5] border border-[#EAE7E0] p-1 rounded-2xl flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={() => setViewMode("slides")}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === "slides"
-                  ? "bg-white text-[#2D362E] shadow-2xs"
-                  : "text-[#606C5D] hover:text-[#2D362E]"
-              }`}
+              onClick={handleExportDeckPdf}
+              className="px-4 py-2.5 rounded-2xl bg-[#4A5D4E] hover:bg-[#3D4C40] text-white text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+              title="Export active current deck category to printable PDF"
             >
-              <Maximize2 className="w-3.5 h-3.5" />
-              <span>Slide View</span>
+              <FileText className="w-4 h-4" />
+              <span>Save Deck PDF</span>
             </button>
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === "grid"
-                  ? "bg-white text-[#2D362E] shadow-2xs"
-                  : "text-[#606C5D] hover:text-[#2D362E]"
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>All Cards</span>
-            </button>
+
+            <div className="bg-[#FAF9F5] border border-[#EAE7E0] p-1 rounded-2xl flex items-center gap-1">
+              <button
+                onClick={() => setViewMode("slides")}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === "slides"
+                    ? "bg-white text-[#2D362E] shadow-2xs"
+                    : "text-[#606C5D] hover:text-[#2D362E]"
+                }`}
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>Slide View</span>
+              </button>
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === "grid"
+                    ? "bg-white text-[#2D362E] shadow-2xs"
+                    : "text-[#606C5D] hover:text-[#2D362E]"
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>All Cards</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

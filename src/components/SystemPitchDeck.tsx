@@ -885,7 +885,7 @@ export const SystemPitchDeck: React.FC = () => {
       visualComponent: (
         <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
           <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
-            <span>Vantage AI Assistant Intake Pipeline</span>
+            <span>Vantage Intelligence Assist (VIA)ant Intake Pipeline</span>
             <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">24/7 Active</span>
           </div>
           <div className="space-y-2 text-[11px]">

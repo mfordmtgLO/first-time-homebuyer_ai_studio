@@ -248,7 +248,7 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
       items: [
         {
           id: "ai_2nd_brain",
-          label: "Vantage AI Assist",
+          label: "Vantage Intelligence Assist (VIA)",
           icon: <Brain className="w-4 h-4" />,
           badge: "Vantage",
           badgeColor: "bg-emerald-100 text-emerald-800",

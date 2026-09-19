@@ -138,7 +138,7 @@ export const AILoanOfficer2ndBrain: React.FC<AILoanOfficer2ndBrainProps> = ({
   const defaultWelcomeMessage: BrainMessage = {
     id: "init-1",
     sender: "copilot",
-    text: `👋 Welcome to your **Vantage AI Assist**, ${currentLo.name.split(" ")[0]}!
+    text: `👋 Welcome to your **Vantage Intelligence Assist (VIA)**, ${currentLo.name.split(" ")[0]}!
 
 I am calibrated specifically to Fannie Mae (DU), Freddie Mac (LPA), FHA 4000.1, VA Pamphlet 26-7, USDA RD, Interested Party Contributions (IPC), 2-1 Rate Buydowns, and Schedule C Self-Employed cash flow math.
 
@@ -393,7 +393,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
 
       setMessages(prev => [...prev, botMsg]);
     } catch (err: any) {
-      console.error("Vantage AI Assist error:", err);
+      console.error("Vantage Intelligence Assist (VIA) error:", err);
       
       const isMissingKey = err.message?.includes("No AI Provider configured");
       
@@ -401,7 +401,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
         id: `copilot-${Date.now()}`,
         sender: "copilot",
         text: isMissingKey 
-          ? `⚠️ **AI Copilot Disconnected**\n\nNo AI Provider configured. Please add your \`GEMINI_API_KEY\` or \`DEEPSEEK_API_KEY\` in the Google AI Studio Settings > Secrets panel to activate Vantage AI Assist.`
+          ? `⚠️ **AI Copilot Disconnected**\n\nNo AI Provider configured. Please add your \`GEMINI_API_KEY\` or \`DEEPSEEK_API_KEY\` in the Google AI Studio Settings > Secrets panel to activate Vantage Intelligence Assist (VIA).`
           : `⚠️ **AI Copilot Error**\n\nAn error occurred while connecting to the AI: ${err.message || 'Unknown error'}\n\n### 📋 LO Guideline Reference Summary\n\n**Key Guideline Takeaway:**\n- **Conventional Loans (Fannie Mae B3-4.1-02)**: LTV >90% allows max **3.0%** IPC; LTV 80.01% - 90.00% allows max **6.0%**; LTV ≤80% allows max **9.0%**.\n- **FHA (HUD 4000.1)**: Max **6.0%** seller contribution.\n- **VA (Pamphlet 26-7)**: Max **4.0%** seller concessions for debt payoff / buydowns / fees, plus standard buyer closing costs.\n- **2-1 Buydown Rule**: Borrower must qualify at the full note rate. Year 1 rate = Note - 2%, Year 2 = Note - 1%.\n\n*Synced with LO Master Command Center.*`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
@@ -417,7 +417,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
       return;
     }
     const timestamp = new Date().toLocaleDateString();
-    const snippet = `[${timestamp} Vantage AI Assist Analysis]: ${text.slice(0, 240)}...`;
+    const snippet = `[${timestamp} Vantage Intelligence Assist (VIA) Analysis]: ${text.slice(0, 240)}...`;
     if (onUpdateLeadNotes) {
       onUpdateLeadNotes(activeLead.id, snippet);
       if (onTriggerToast) onTriggerToast(`✓ Saved analysis to ${activeLead.fullName}'s CRM profile!`);
@@ -439,7 +439,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
       body: text,
       loanOfficer: currentLo,
       lead: activeLead || undefined,
-      templateName: "Vantage AI Assist Dispatch"
+      templateName: "Vantage Intelligence Assist (VIA) Dispatch"
     });
   };
 
@@ -465,7 +465,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
               <span>Vantage Command Architecture</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
-              Vantage AI Assist Underwriting & Production Copilot
+              Vantage Intelligence Assist (VIA) Underwriting & Production Copilot
             </h2>
             <p className="text-sm text-[#D8D2C2] max-w-2xl leading-relaxed">
               Instant agency guideline intelligence (Fannie/Freddie, FHA, VA, USDA), 2-1 buydown structurer, Schedule C tax analyzer, and high-converting client & realtor objection scripts.
@@ -613,7 +613,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-xs font-bold text-[#2D362E]">
-                LO Vantage AI Assist Session
+                LO Vantage Intelligence Assist (VIA) Session
               </span>
               {activeLead && (
                 <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#4A5D4E]/10 text-[#4A5D4E] font-medium border border-[#4A5D4E]/20">
@@ -785,7 +785,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
                 </div>
                 <div className="p-3.5 bg-[#F9F8F4] rounded-2xl border border-[#EAE7E0] text-xs text-[#606C5D] flex items-center gap-2">
                   <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#4A5D4E]" />
-                  <span>Vantage AI Assist is analyzing underwriting guidelines and scenario data...</span>
+                  <span>Vantage Intelligence Assist (VIA) is analyzing underwriting guidelines and scenario data...</span>
                 </div>
               </div>
             )}

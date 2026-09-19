@@ -1137,7 +1137,7 @@ Return JSON matching this shape:
             docText = fallbackResponse.text || `Synthesized guidelines from ${url}`;
           } catch (fallbackErr: any) {
             console.error("URL ingestion fallback failed:", fallbackErr);
-            docText = `Ingested URL: ${url} (Guidelines synchronized with Vantage AI Assist knowledge base).`;
+            docText = `Ingested URL: ${url} (Guidelines synchronized with Vantage Intelligence Assist (VIA) knowledge base).`;
           }
         }
       } else if (fileBase64 && mimeType) {

@@ -115,7 +115,7 @@ export const BulkSmsModal: React.FC<BulkSmsModalProps> = ({
       .replace(/{{coBrandUrl}}/g, coBrand);
   };
 
-  // Generate new template using Vantage AI Assist
+  // Generate new template using Vantage Intelligence Assist (VIA)
   const handleGenerateAiTemplate = async () => {
     setIsGeneratingAi(true);
     const goalObj = AI_PRESET_GOALS.find(g => g.id === selectedAiGoal);
@@ -148,7 +148,7 @@ export const BulkSmsModal: React.FC<BulkSmsModalProps> = ({
             onSaveTemplate(newTpl);
           }
           if (onTriggerToast) {
-            onTriggerToast(`✨ Vantage AI Assist created: "${newTpl.title}"`);
+            onTriggerToast(`✨ Vantage Intelligence Assist (VIA) created: "${newTpl.title}"`);
           }
           setShowAiGenerator(false);
         }
@@ -163,7 +163,7 @@ export const BulkSmsModal: React.FC<BulkSmsModalProps> = ({
         title: `✨ AI: ${goalObj?.label.replace(/[^a-zA-Z0-9 ]/g, "").trim() || "Loan Options Check"}`,
         content: `Hi {{firstName}}, {{loName}} here with Cornerstone First Mortgage. Wanted to share a quick update on new down payment grants and 2-1 buydown programs in {{location}}. Would you like me to crunch sample monthly payments for you? Reply STOP to opt out.`,
         category: "follow_up",
-        tags: ["Vantage AI Assist", "Nurture"],
+        tags: ["Vantage Intelligence Assist (VIA)", "Nurture"],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         ownerId: loanOfficer?.id || "lo_default"
@@ -173,7 +173,7 @@ export const BulkSmsModal: React.FC<BulkSmsModalProps> = ({
       setEditedContent(fallbackTpl.content);
       setSelectedTemplateId(fallbackTpl.id);
       if (onSaveTemplate) onSaveTemplate(fallbackTpl);
-      if (onTriggerToast) onTriggerToast(`✨ Vantage AI Assist created template!`);
+      if (onTriggerToast) onTriggerToast(`✨ Vantage Intelligence Assist (VIA) created template!`);
       setShowAiGenerator(false);
     } finally {
       setIsGeneratingAi(false);
@@ -307,7 +307,7 @@ export const BulkSmsModal: React.FC<BulkSmsModalProps> = ({
               <div className="w-6 h-6 rounded-lg bg-emerald-700 flex items-center justify-center text-white text-xs">
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs font-bold text-[#2D362E]">Vantage AI Assist SMS Studio</span>
+              <span className="text-xs font-bold text-[#2D362E]">Vantage Intelligence Assist (VIA) SMS Studio</span>
             </div>
             <button
               type="button"
@@ -323,7 +323,7 @@ export const BulkSmsModal: React.FC<BulkSmsModalProps> = ({
           {showAiGenerator && (
             <div className="pt-2 border-t border-[#EAE7E0] space-y-3 animate-in fade-in-50 duration-200">
               <div className="text-xs text-[#606C5D]">
-                Select a high-converting goal or enter custom guidance. Vantage AI Assist will craft an SMS with appropriate variables and opt-out phrasing.
+                Select a high-converting goal or enter custom guidance. Vantage Intelligence Assist (VIA) will craft an SMS with appropriate variables and opt-out phrasing.
               </div>
 
               {/* Goal Presets */}

@@ -29,7 +29,7 @@ export function DualRoleAssignmentList({
 
   const categories = [
     { id: 'all', label: 'All Operations' },
-    { id: 'vantage_brain', label: 'Vantage 2nd Brain' },
+    { id: 'vantage_brain', label: 'Vantage AI Assist' },
     { id: 'tax_cashflow', label: 'Tax & Cash Flow' },
     { id: 'focus_flow', label: 'Daily Focus & Flow' },
     { id: 'ground_search', label: 'Ground Sweeps' },

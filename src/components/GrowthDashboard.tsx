@@ -453,7 +453,7 @@ export const GrowthDashboard: React.FC<GrowthDashboardProps> = ({ guidesState })
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#606C5D]">2nd Brain Usage (High)</span>
+                  <span className="text-[#606C5D]">Vantage AI Assist Usage (High)</span>
                   <span className="font-bold text-[#4A5D4E]">-3.2 days</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-1.5">

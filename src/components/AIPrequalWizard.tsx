@@ -18,7 +18,7 @@ export const AIPrequalWizard: React.FC<AIPrequalWizardProps> = ({
   onComplete
 }) => {
   const [messages, setMessages] = useState<{sender: 'user' | 'bot', text: string}[]>([
-    { sender: 'bot', text: `Hi! I'm ${loanOfficer.name}'s AI Underwriting Assistant powered by the Vantage AI Mortgage Second Brain. I can help you build your Pre-Qualification Profile in about 60 seconds. To start, what is your approximate total annual household income before taxes?` }
+    { sender: 'bot', text: `Hi! I'm ${loanOfficer.name}'s AI Underwriting Assistant powered by Vantage AI Assist. I can help you build your Pre-Qualification Profile in about 60 seconds. To start, what is your approximate total annual household income before taxes?` }
   ]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -114,7 +114,7 @@ export const AIPrequalWizard: React.FC<AIPrequalWizardProps> = ({
                  {loanOfficer.name}'s AI Assistant
                  <Zap className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
                </h3>
-               <p className="text-[11px] text-[#606C5D]">Powered by Vantage AI Mortgage Second Brain</p>
+               <p className="text-[11px] text-[#606C5D]">Powered by Vantage AI Assist</p>
              </div>
           </div>
           <div className="bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">

@@ -594,7 +594,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F1EFE9] text-[#4A5D4E] text-xs font-semibold border border-[#EAE7E0]">
               <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
-              <span>Roadmap Real Estate Intelligence • Gemini 3.7 Flash</span>
+              <span>Roadmap Real Estate Intelligence • Gemini 3.8 Flash</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#2D362E]">
               AI Homebuyer Copilot & Strategic Tools

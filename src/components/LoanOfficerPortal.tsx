@@ -2925,7 +2925,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 }`}
               >
                 <Brain className="w-4 h-4 text-[#E7C19D]" />
-                <span>AI 2nd Brain Copilot</span>
+                <span>Vantage AI Assist</span>
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     activeTab === "ai_2nd_brain"

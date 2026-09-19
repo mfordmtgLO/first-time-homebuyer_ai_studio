@@ -1389,7 +1389,7 @@ export default function App() {
                   </div>
                   <p>© {new Date().getFullYear()} Cornerstone First Mortgage, LLC.</p>
                   <p>All Rights Reserved. NMLS ID #173855</p>
-                  <p className="mt-2 text-[#C18C5D] font-medium">Powered by Gemini 3.7 Flash</p>
+                  <p className="mt-2 text-[#C18C5D] font-medium">Powered by Gemini 3.8 Flash</p>
                 </div>
               </div>
             </div>

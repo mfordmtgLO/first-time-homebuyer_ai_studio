@@ -1117,7 +1117,7 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
             ) : (
               <p className="text-xs text-[#606C5D]">
                 Click above to generate an instant, personalized audit of your DTI ratios, safe
-                price ceiling, and recommended loan programs via Gemini 3.7 Flash.
+                price ceiling, and recommended loan programs via Gemini 3.8 Flash.
               </p>
             )}
           </div>

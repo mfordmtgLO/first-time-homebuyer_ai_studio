@@ -78,7 +78,14 @@ export const SystemPitchDeck: React.FC = () => {
   }, [activeDeck, vantageSubDeck]);
 
   const handleExportDeckPdf = () => {
-    const currentSlides = activeDeck === "sales" ? salesSlides : securitySlides;
+    const currentSlides = 
+      activeDeck === "sales" 
+        ? salesSlides 
+        : activeDeck === "security" 
+          ? securitySlides 
+          : vantageSubDeck === "assistant" 
+            ? vantageAssistantSlides 
+            : vantageGuardrailSlides;
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
@@ -1288,8 +1295,8 @@ export const SystemPitchDeck: React.FC = () => {
   return (
     <div className="max-w-[1600px] mx-auto p-4 sm:p-8 space-y-6 animate-in fade-in duration-300">
       {/* Header & Deck Switcher */}
-      <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 lg:p-8 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className="space-y-2">
+      <div className="bg-white rounded-3xl border border-[#EAE7E0] p-6 lg:p-8 shadow-xs flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 w-full overflow-hidden">
+        <div className="space-y-2 max-w-2xl">
           <div className="flex items-center gap-2.5">
             <span className="px-3 py-1 rounded-full bg-[#2D362E] text-white text-xs font-mono font-bold tracking-wider uppercase">
               Enterprise Executive Portals

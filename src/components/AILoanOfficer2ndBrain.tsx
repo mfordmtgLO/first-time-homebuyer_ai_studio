@@ -36,6 +36,8 @@ import {
 import { LoanOfficerProfile, CapturedLead, FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
 import { launchLocalOutlookDraft } from "../utils/outlookEmailService";
+import { GeminiAgentPanel } from "./GeminiAgentPanel";
+import { DeepSeekHarnessPanel } from "./DeepSeekHarnessPanel";
 
 interface AILoanOfficer2ndBrainProps {
   currentLo: LoanOfficerProfile;
@@ -65,7 +67,7 @@ export const AILoanOfficer2ndBrain: React.FC<AILoanOfficer2ndBrainProps> = ({
   onTriggerToast
 }) => {
   const [selectedLeadIdState, setSelectedLeadIdState] = useState<string>(activeLeadId || (leads[0]?.id || ""));
-  const [activeCategory, setActiveCategory] = useState<"all" | "guidelines" | "scenario" | "objection" | "cobrand">("all");
+  const [activeCategory, setActiveCategory] = useState<"all" | "guidelines" | "scenario" | "objection" | "cobrand" | "agent" | "deepseek_harness">("all");
   const [inputQuery, setInputQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -636,7 +638,9 @@ How can I assist your pipeline today? You can select any active borrower from yo
                 { id: "all", label: "All Modes" },
                 { id: "guidelines", label: "AUS / Guidelines" },
                 { id: "scenario", label: "Scenario Math" },
-                { id: "objection", label: "Client Scripts" }
+                { id: "objection", label: "Client Scripts" },
+                { id: "agent", label: "Gemini Agent & Cron Tasks" },
+                { id: "deepseek_harness", label: "DeepSeek Harness (dsh)" }
               ].map(cat => (
                 <button
                   key={cat.id}
@@ -654,9 +658,18 @@ How can I assist your pipeline today? You can select any active borrower from yo
             </div>
           </div>
 
-          {/* Messages Feed */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-            {messages.map((msg) => (
+          {/* Messages Feed or Agent Panels */}
+          {activeCategory === "agent" ? (
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-950/20">
+              <GeminiAgentPanel />
+            </div>
+          ) : activeCategory === "deepseek_harness" ? (
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-950/20">
+              <DeepSeekHarnessPanel />
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={`flex gap-3 group ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
@@ -791,8 +804,10 @@ How can I assist your pipeline today? You can select any active borrower from yo
             )}
             <div ref={messagesEndRef} />
           </div>
+          )}
 
           {/* Input Box */}
+          {activeCategory !== "agent" && activeCategory !== "deepseek_harness" && (
           <div className="p-4 border-t border-[#EAE7E0] bg-[#FDFCF9]">
             {showUrlInput && (
               <div className="flex gap-2 mb-3 bg-white p-2 rounded-xl border border-emerald-200 shadow-sm animate-in fade-in slide-in-from-bottom-2">
@@ -900,6 +915,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
               </div>
             </form>
           </div>
+          )}
         </div>
       </div>
       

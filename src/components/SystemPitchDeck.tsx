@@ -1061,6 +1061,56 @@ export const SystemPitchDeck: React.FC = () => {
           </div>
         </div>
       )
+    },
+    {
+      id: "vantage-asst-5",
+      slideNumber: 5,
+      category: "Vantage AI Brain • Hybrid Agents",
+      title: "Hybrid Agent Orchestration & Unattended Cron Automation",
+      subtitle: "Dual-Model Cognitive Architecture (Gemini + DeepSeek) Stacked with Hybrid 2nd Brain",
+      badge: "Hybrid Agents",
+      icon: <Cpu className="w-6 h-6 text-indigo-600" />,
+      overview: "Combines the Gemini SDK Agent (for Google Search grounding and multimodal reasoning) with the DeepSeek Harness Agent (dsh with deepseek-reasoner and multi-step tool loops) on top of a centralized Hybrid 2nd Brain and unattended cron scheduler (dsh-cron), delivering enterprise mortgage intelligence and automated overnight workflows.",
+      keyPillars: [
+        {
+          heading: "Dual-Model Reasoning (Gemini + DeepSeek)",
+          description: "Gemini handles live web grounding and workspace integrations, while DeepSeek manages rigorous multi-step mathematical underwriting audits.",
+          highlight: "Best of Both AI"
+        },
+        {
+          heading: "Persistent 2nd Brain Knowledge",
+          description: "All agent discoveries, ingested guideline URLs, and borrower notes are synchronized with an encrypted vector vault for continuous institutional memory.",
+          highlight: "Vector RAG Memory"
+        },
+        {
+          heading: "Unattended Cron Jobs (dsh-cron)",
+          description: "Automated overnight competitor rate monitoring and FHA/VA guideline syncs run without human intervention.",
+          highlight: "24/7 Background Work"
+        }
+      ],
+      roiTakeaway: "Maximizes operational efficiency by pairing real-time grounded search with rigorous mathematical reasoning and unattended automation.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Hybrid Agent & 2nd Brain Architecture</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">Multi-Model Stack</span>
+          </div>
+          <div className="space-y-2 text-[11px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>1. Gemini Agent (Search Grounding & Multimodal)</span>
+              <span className="text-blue-600 font-bold">Active</span>
+            </div>
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>2. DeepSeek Harness Agent (Multi-Step DSH Math)</span>
+              <span className="text-emerald-600 font-bold">Reasoner</span>
+            </div>
+            <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 flex items-center justify-between">
+              <span>3. Hybrid 2nd Brain & dsh-cron Unattended Sync</span>
+              <span className="text-indigo-700 font-bold">24/7 Autonomous</span>
+            </div>
+          </div>
+        </div>
+      )
     }
   ];
 

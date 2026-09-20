@@ -34,6 +34,7 @@ import { ScenarioOutreachModal } from "./ScenarioOutreachModal";
 import { buildSavedScenario } from "../utils/scenarioOutreachGenerator";
 import { DTIUnderwritingMeter } from "./DTIUnderwritingMeter";
 import { ContextualVideoPlayer } from "./ContextualVideoPlayer";
+import { GeminiAgentPanel } from "./GeminiAgentPanel";
 
 interface MortgageLabProps {
   profile: FinancialProfile;
@@ -60,7 +61,7 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
   isLoanOfficerMode = false,
   onBack
 }) => {
-  const [activeTab, setActiveTab] = useState<"buydown" | "costofwaiting" | "accelerator" | "amortization" | "closingcosts" | "rentvsbuy">(initialTab);
+  const [activeTab, setActiveTab] = useState<"buydown" | "costofwaiting" | "accelerator" | "amortization" | "closingcosts" | "rentvsbuy" | "agent">(initialTab as any);
 
   useEffect(() => {
     if (initialTab) {
@@ -267,6 +268,7 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
             { id: "amortization", label: "Amortization Curve", icon: Layers },
             { id: "closingcosts", label: "Itemized Closing Costs", icon: FileText },
             { id: "rentvsbuy", label: "Rent vs Buy (10-Yr Equity)", icon: TrendingUp },
+            { id: "agent", label: "Gemini Agent & Search", icon: Sparkles, badge: "AI" },
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -925,6 +927,12 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
               <span className="text-[11px] text-[#9A9488] block">100% unrecoverable housing cost</span>
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === "agent" && (
+        <div className="space-y-6">
+          <GeminiAgentPanel />
         </div>
       )}
 

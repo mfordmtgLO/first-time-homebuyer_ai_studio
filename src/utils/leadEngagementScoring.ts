@@ -41,9 +41,9 @@ export function computeLeadEngagement(lead: CapturedLead): EngagementBreakdown {
   const finalScore = Math.min(100, Math.max(15, score));
 
   // Determine tier
-  let tier: 'high' | 'moderate' | 'low' = 'low';
-  let badgeLabel = 'Dormant / Low Activity';
-  let badgeColorClass = 'bg-stone-100 text-stone-700 border-stone-200';
+  let tier: 'high' | 'moderate' | 'low';
+  let badgeLabel: string;
+  let badgeColorClass: string;
 
   if (finalScore >= 75) {
     tier = 'high';

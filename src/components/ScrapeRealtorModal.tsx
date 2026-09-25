@@ -173,29 +173,35 @@ export const ScrapeRealtorModal: React.FC<ScrapeRealtorModalProps> = ({
         </div>
 
         {/* Search Input */}
-        <div className="flex gap-2 shrink-0">
-          <input
-            type="text"
-            placeholder="e.g. 'Fairway Independent Mortgage - Portland Branch team roster'"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSearch();
-              }
-            }}
-            className="flex-1 bg-white border border-emerald-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 text-[#2D362E]"
-          />
-          <button
-            type="button"
-            onClick={handleSearch}
-            disabled={isSearching || !query.trim()}
-            className="px-6 py-3 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 transition-all shadow-xs"
-          >
-            <Search className={`w-4 h-4 text-emerald-100 ${isSearching ? 'animate-spin' : ''}`} />
-            <span>{isSearching ? "Agent Searching..." : "Launch Scraper"}</span>
-          </button>
+        <div className="space-y-1 shrink-0">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="e.g. 'Keller Williams', 'Compass', 'Cascade Hasson', or Agent Name / License #"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSearch();
+                }
+              }}
+              className="flex-1 bg-white border border-emerald-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 text-[#2D362E]"
+            />
+            <button
+              type="button"
+              onClick={handleSearch}
+              disabled={isSearching || !query.trim()}
+              className="px-6 py-3 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 transition-all shadow-xs cursor-pointer"
+            >
+              <Search className={`w-4 h-4 text-emerald-100 ${isSearching ? 'animate-spin' : ''}`} />
+              <span>{isSearching ? "Scraping Roster..." : "Launch Scraper"}</span>
+            </button>
+          </div>
+          <p className="text-[11px] text-[#606C5D] font-medium px-1 flex items-center justify-between">
+            <span>💡 <strong>Tip:</strong> Enter brokerage names like <code className="bg-[#FAF9F5] px-1 py-0.5 rounded border border-[#EAE7E0] text-[#2D362E]">Keller Williams</code>, <code className="bg-[#FAF9F5] px-1 py-0.5 rounded border border-[#EAE7E0] text-[#2D362E]">Compass</code>, or <code className="bg-[#FAF9F5] px-1 py-0.5 rounded border border-[#EAE7E0] text-[#2D362E]">eXp</code> to pull statewide rosters across Portland, Lake Oswego, Bend, Eugene, Salem & Beaverton.</span>
+            <span className="text-emerald-700 font-bold shrink-0">Up to 50 Agents / Search</span>
+          </p>
         </div>
 
         {errorMsg && (

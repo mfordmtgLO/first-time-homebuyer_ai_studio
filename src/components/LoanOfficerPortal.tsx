@@ -419,7 +419,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [viewingHistoryLo, setViewingHistoryLo] = useState<string | null>(null);
 
-  // Left Sidebar & Daily Rhythm State
+  // Left Sidebar & Mobile Drawer State
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("lo_sidebar_collapsed") === "true";
@@ -2730,6 +2731,17 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               <span>AI Video Ads Studio</span>
             </button>
 
+            {/* Mobile Side Navigation Drawer Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsMobileNavOpen(true)}
+              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2D362E] text-white text-xs font-bold shadow-xs hover:bg-[#1E241F] transition-all cursor-pointer"
+              title="Open Side Navigation Menu"
+            >
+              <PanelLeft className="w-4 h-4 text-[#E7C19D]" />
+              <span>Nav Menu</span>
+            </button>
+
             {/* Top Tabs Toggle Button */}
             <button
               onClick={() => {
@@ -3374,6 +3386,50 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           >
             Review & Answer Now
           </button>
+        </div>
+      )}
+
+      {/* Mobile Side Navigation Drawer (Slide-Over for Mobile / Tablet) */}
+      {isMobileNavOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileNavOpen(false)}
+          />
+          <div className="relative w-80 max-w-[85vw] bg-[#FDFBF7] h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
+            <div className="p-3 border-b border-[#EAE7E0] flex items-center justify-between bg-white">
+              <span className="font-bold text-xs text-[#2D362E] flex items-center gap-2">
+                <PanelLeft className="w-4 h-4 text-[#4A5D4E]" />
+                Side Navigation Directory
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <LoanOfficerSidebar
+                userRole={userRole as string}
+                activeTab={activeTab}
+                onSelectTab={(tab) => {
+                  setActiveTab(tab);
+                  setIsMobileNavOpen(false);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                isCollapsed={false}
+                onToggleCollapse={() => {}}
+                currentLo={currentLo}
+                loggedInUser={loggedInUser}
+                guidesState={guidesState}
+                isAdminUser={isAdminUser}
+                onOpenDailyReview={handleOpenDailyReview}
+                workspaceConnected={Boolean(workspaceUser)}
+              />
+            </div>
+          </div>
         </div>
       )}
 

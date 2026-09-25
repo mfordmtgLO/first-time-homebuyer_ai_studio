@@ -19,16 +19,11 @@ import {
   PieChart,
   TrendingUp,
   Key,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   ChevronUp,
-  Folder,
   Layers,
   Zap,
   Building,
-  CheckCircle2,
-  Calendar,
   PanelLeftClose,
   PanelRightClose,
   Video,
@@ -114,7 +109,8 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
 }) => {
   // Category Collapsible state in expanded mode
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({
-    marketing: false, // keep open by default
+    marketing: false,
+    underwriting: false,
   });
 
   const isMasterAdmin = loggedInUser?.email === "fordmj@gmail.com" || loggedInUser?.email === "mford@cfmtg.com";
@@ -130,15 +126,16 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
     }));
   };
 
-  let navCategories: NavCategory[] = [
+  // Construct structured navigation categories
+  const baseCategories: NavCategory[] = [
     {
       id: "pipeline",
-      title: "Pipeline & Buyer CRM",
+      title: "Pipeline & Lead CRM",
       icon: <Inbox className="w-3.5 h-3.5 text-[#C18C5D]" />,
       items: [
         {
           id: "leads",
-          label: "Buyer Leads & CRM",
+          label: "Lead Management (Buyer CRM)",
           icon: <Inbox className="w-4 h-4" />,
           badge: `${guidesState.leads?.length || 0}`,
           badgeColor: "bg-[#4A5D4E]/15 text-[#2D362E]",
@@ -200,15 +197,56 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
       ],
     },
     {
+      id: "recruiting",
+      title: "Recruiting & Roster Command",
+      icon: <Target className="w-3.5 h-3.5 text-[#C18C5D]" />,
+      items: [
+        {
+          id: "recruitment_pipeline",
+          label: canManageLoRecruits ? "Recruitment Command Center" : "Find Top Agents",
+          icon: <Target className="w-4 h-4 text-amber-600" />,
+          badge: "Top 50",
+          badgeColor: "bg-amber-100 text-amber-900 font-bold",
+          hidden: !canManageLoRecruits && !canManageAgentRecruits,
+        },
+        {
+          id: "realtor_cobranding",
+          label: "Co-Branding Command Hub",
+          icon: <Users className="w-4 h-4" />,
+          badge: `${guidesState.agentRoster?.length || 0}`,
+          badgeColor: "bg-emerald-100 text-emerald-800",
+        },
+        {
+          id: "realtor_roster",
+          label: "Realtor Partner Roster",
+          icon: <UserCheck className="w-4 h-4" />,
+          badge: `${guidesState.agentRoster?.length || 0}`,
+        },
+        {
+          id: "pairings",
+          label: "LO + Agent Pairings",
+          icon: <Link className="w-4 h-4" />,
+          badge: `${guidesState.pairings?.length || 0}`,
+        },
+        {
+          id: "ai_partner_campaign",
+          label: "AI Partner Outreach",
+          icon: <Sparkles className="w-4 h-4" />,
+          badge: "Recruit",
+          badgeColor: "bg-amber-100 text-amber-900",
+        },
+      ],
+    },
+    {
       id: "marketing",
       title: "Marketing & Campaigns",
       icon: <Globe className="w-3.5 h-3.5 text-[#C18C5D]" />,
       items: [
         {
           id: "ai_ad_generator",
-          label: "AI Ad Generator",
+          label: "AI Commercial & Video Ads",
           icon: <Video className="w-4 h-4 text-amber-600" />,
-          badge: "AI Video",
+          badge: "AI Studio",
           badgeColor: "bg-amber-100 text-amber-900 font-bold",
         },
         {
@@ -243,7 +281,7 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
     },
     {
       id: "underwriting",
-      title: "Underwriting & Financial",
+      title: "Underwriting & Financial Tools",
       icon: <Brain className="w-3.5 h-3.5 text-[#C18C5D]" />,
       items: [
         {
@@ -284,43 +322,20 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
       ],
     },
     {
-      id: "realtor",
-      title: "Realtor Partner Growth",
-      icon: <Users className="w-3.5 h-3.5 text-[#C18C5D]" />,
-      items: [
-        {
-          id: "realtor_cobranding",
-          label: "Co-Branding Command Hub",
-          icon: <Users className="w-4 h-4" />,
-          badge: `${guidesState.agentRoster?.length || 0}`,
-          badgeColor: "bg-emerald-100 text-emerald-800",
-        },
-        {
-          id: "realtor_roster",
-          label: "Realtor Partner Roster",
-          icon: <UserCheck className="w-4 h-4" />,
-          badge: `${guidesState.agentRoster?.length || 0}`,
-        },
-        {
-          id: "pairings",
-          label: "LO + Agent Pairings",
-          icon: <Link className="w-4 h-4" />,
-          badge: `${guidesState.pairings?.length || 0}`,
-        },
-        {
-          id: "ai_partner_campaign",
-          label: "AI Partner Outreach",
-          icon: <Sparkles className="w-4 h-4" />,
-          badge: "Recruit",
-          badgeColor: "bg-amber-100 text-amber-900",
-        },
-      ],
-    },
-    {
       id: "branch",
-      title: "Branch Admin & Recruiting",
+      title: "Branch Admin & Compliance",
       icon: <Building className="w-3.5 h-3.5 text-[#C18C5D]" />,
       items: [
+        {
+          id: "team_distribution",
+          label: "Branch Team LO Roster",
+          icon: <Users className="w-4 h-4" />,
+          badge: `${guidesState.loanOfficers?.length || 0}`,
+          requiresAdmin: true,
+          urgentBadge: guidesState.loanOfficers.some(
+            (l) => !l.isAdmin && l.passwordResetRequestedAt && !l.passwordResetAuthorized
+          ),
+        },
         {
           id: "branch_management",
           label: "Branch Security & Whitelist",
@@ -344,33 +359,30 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
           requiresAdmin: true,
         },
         {
-          id: "respa_cost_sharing",
-          label: "LO+Agent RESPA Cost-Sharing",
-          icon: <ShieldCheck className="w-4 h-4 text-emerald-600" />,
-        },
-        {
           id: "growth_dashboard",
           label: "Growth & Production Metrics",
           icon: <TrendingUp className="w-4 h-4" />,
           badge: "Pacing",
         },
-        {
-          id: "team_distribution",
-          label: "Team LO Roster & Pacing",
-          icon: <Users className="w-4 h-4" />,
-          badge: `${guidesState.loanOfficers?.length || 0}`,
-          requiresAdmin: true,
-          urgentBadge: guidesState.loanOfficers.some(
-            (l) => !l.isAdmin && l.passwordResetRequestedAt && !l.passwordResetAuthorized
-          ),
-        },
-        {
-          id: "recruitment_pipeline",
-          label: canManageLoRecruits ? "LO+Agent Recruit Command Center" : "Find Top Agents",
-          icon: <Target className="w-4 h-4" />,
-          badge: "NMLS",
-          hidden: !canManageLoRecruits && !canManageAgentRecruits,
-        },
+        ...(userRole === "compliance_auditor" || isMasterAdmin
+          ? [
+              {
+                id: "compliance_audit" as TabId,
+                label: "Zero-Trust Audit Trail",
+                icon: <ShieldCheck className="w-4 h-4 text-indigo-500" />,
+                badge: "Audit",
+                requiresAdmin: true,
+              },
+              {
+                id: "master_role_manager" as TabId,
+                label: "Master Role & Access",
+                icon: <Key className="w-4 h-4 text-amber-600" />,
+                badge: "Master",
+                badgeColor: "bg-amber-100 text-amber-900",
+                requiresAdmin: true,
+              },
+            ]
+          : []),
       ],
     },
   ];
@@ -384,18 +396,22 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
     >
       {/* 0. SIDEBAR HEADER WITH TOGGLE */}
       <div
-        className={`p-2 border-b border-[#EAE7E0]/80 bg-[#FDFBF7] flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}
+        className={`p-2.5 border-b border-[#EAE7E0]/80 bg-[#FDFBF7] flex items-center ${
+          isCollapsed ? "justify-center" : "justify-between"
+        }`}
       >
         {!isCollapsed && (
-          <span className="text-[10px] font-bold tracking-wider uppercase text-[#4A5D4E] px-2 py-0.5 rounded-full bg-[#F1EFE9] border border-[#EAE7E0] self-start">
-            Dashboard
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold tracking-wider uppercase text-[#4A5D4E] px-2.5 py-0.5 rounded-full bg-[#F1EFE9] border border-[#EAE7E0]">
+              Nav Directory
+            </span>
+          </div>
         )}
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="p-1 rounded-lg bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
-          title={isCollapsed ? "Expand Sidebar (Cmd+B)" : "Collapse Sidebar (Cmd+B)"}
+          className="p-1.5 rounded-xl bg-white hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#606C5D] hover:text-[#2D362E] transition-all cursor-pointer flex items-center gap-1.5 text-[11px] font-semibold shadow-2xs"
+          title={isCollapsed ? "Expand Side Navigation (Cmd+B)" : "Collapse Side Navigation (Cmd+B)"}
         >
           {isCollapsed ? (
             <PanelRightClose className="w-4 h-4 text-[#4A5D4E]" />
@@ -417,46 +433,137 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
         onSelectTab={onSelectTab}
       />
 
-      {/* 2. SCROLLABLE NAVIGATION DIRECTORY */}
-      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-4 dashboard-vertical-scrollbar">
-        {navCategories.map((category) => {
-          const isMasterAdmin = loggedInUser?.email === "fordmj@gmail.com";
-          if (userRole === "compliance_auditor") {
-            navCategories = [
-              {
-                id: "compliance",
-                title: "Compliance & Security",
-        icon: <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />,
-                items: [
-                  {
-                    id: "compliance_audit",
-                    label: "Zero-Trust Audit Trail",
-                    icon: <ShieldCheck className="w-5 h-5" />,
-                    badge: "Secure",
-                  },
-                ],
-              },
-            ];
-          } else {
-            const branchAdminCategory = navCategories.find((c) => c.id === "branch_admin");
-            if (branchAdminCategory && isMasterAdmin) {
-              branchAdminCategory.items.push({
-                id: "compliance_audit",
-                label: "Zero-Trust Audit Trail",
-                icon: <ShieldCheck className="w-5 h-5" />,
-                requiresAdmin: true,
-              });
-              branchAdminCategory.items.push({
-                id: "master_role_manager",
-                label: "Master Role & Access",
-                icon: <Key className="w-5 h-5" />,
-                requiresAdmin: true,
-                badge: "Master",
-                badgeColor: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
-              });
-            }
-          }
+      {/* 2. CORE COMMAND HUB QUICK SWITCHER (Lead Management & Recruitment Command Center) */}
+      <div className="px-2.5 pt-2 pb-1 border-b border-[#EAE7E0]">
+        {!isCollapsed ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#7D8877] px-1">
+              <span>Core Command Screens</span>
+              <span className="text-[9px] text-[#C18C5D] font-black">1-CLICK</span>
+            </div>
 
+            {/* Quick Access Pill 1: Lead Management */}
+            <button
+              type="button"
+              onClick={() => onSelectTab("leads")}
+              className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer border ${
+                activeTab === "leads"
+                  ? "bg-[#2D362E] text-white border-[#2D362E] shadow-md ring-1 ring-amber-400/40"
+                  : "bg-white text-[#2D362E] border-[#EAE7E0] hover:bg-[#F4F1EA] hover:border-[#606C5D]"
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
+                    activeTab === "leads"
+                      ? "bg-amber-500/20 text-[#E7C19D]"
+                      : "bg-[#4A5D4E]/10 text-[#4A5D4E]"
+                  }`}
+                >
+                  <Inbox className="w-4 h-4" />
+                </div>
+                <div className="text-left min-w-0">
+                  <p className="truncate leading-snug">Lead Management</p>
+                  <p
+                    className={`text-[10px] font-normal truncate ${
+                      activeTab === "leads" ? "text-amber-200" : "text-[#7D8877]"
+                    }`}
+                  >
+                    Buyer CRM & Inquiries
+                  </p>
+                </div>
+              </div>
+              <span
+                className={`text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 ${
+                  activeTab === "leads"
+                    ? "bg-amber-400 text-amber-950 font-extrabold"
+                    : "bg-[#4A5D4E]/10 text-[#2D362E]"
+                }`}
+              >
+                {guidesState.leads?.length || 0}
+              </span>
+            </button>
+
+            {/* Quick Access Pill 2: Recruitment Command Center */}
+            {(canManageLoRecruits || canManageAgentRecruits) && (
+              <button
+                type="button"
+                onClick={() => onSelectTab("recruitment_pipeline")}
+                className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer border ${
+                  activeTab === "recruitment_pipeline"
+                    ? "bg-[#2D362E] text-white border-[#2D362E] shadow-md ring-1 ring-amber-400/40"
+                    : "bg-white text-[#2D362E] border-[#EAE7E0] hover:bg-[#F4F1EA] hover:border-[#606C5D]"
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
+                      activeTab === "recruitment_pipeline"
+                        ? "bg-amber-500/20 text-[#E7C19D]"
+                        : "bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    <Target className="w-4 h-4" />
+                  </div>
+                  <div className="text-left min-w-0">
+                    <p className="truncate leading-snug">Recruitment Command</p>
+                    <p
+                      className={`text-[10px] font-normal truncate ${
+                        activeTab === "recruitment_pipeline" ? "text-amber-200" : "text-[#7D8877]"
+                      }`}
+                    >
+                      Top 50 LOs & Agents
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={`text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 ${
+                    activeTab === "recruitment_pipeline"
+                      ? "bg-amber-400 text-amber-950 font-extrabold"
+                      : "bg-amber-100 text-amber-900 border border-amber-200"
+                  }`}
+                >
+                  Top 50
+                </span>
+              </button>
+            )}
+          </div>
+        ) : (
+          /* Collapsed Mode Launchers for Lead Management & Recruitment */
+          <div className="flex flex-col items-center gap-2 py-1">
+            <button
+              type="button"
+              onClick={() => onSelectTab("leads")}
+              title={`Lead Management (${guidesState.leads?.length || 0} Leads)`}
+              className={`p-2.5 rounded-xl transition-all ${
+                activeTab === "leads"
+                  ? "bg-[#2D362E] text-[#E7C19D] shadow-md"
+                  : "bg-white text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F4F1EA]"
+              }`}
+            >
+              <Inbox className="w-5 h-5" />
+            </button>
+            {(canManageLoRecruits || canManageAgentRecruits) && (
+              <button
+                type="button"
+                onClick={() => onSelectTab("recruitment_pipeline")}
+                title="Recruitment Command Center (Top 50 LOs & Agents)"
+                className={`p-2.5 rounded-xl transition-all ${
+                  activeTab === "recruitment_pipeline"
+                    ? "bg-[#2D362E] text-amber-400 shadow-md"
+                    : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+                }`}
+              >
+                <Target className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 3. SCROLLABLE NAVIGATION DIRECTORY */}
+      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-4 dashboard-vertical-scrollbar">
+        {baseCategories.map((category) => {
           // Filter items based on user admin status and hidden flag
           const visibleItems = category.items.filter((item) => {
             if (item.hidden) return false;
@@ -565,9 +672,11 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
         })}
       </div>
 
-      {/* 3. BOTTOM FOOTER BAR: USER PROFILE */}
+      {/* 4. BOTTOM FOOTER BAR: USER PROFILE */}
       <div
-        className={`p-2.5 border-t border-[#EAE7E0] bg-white flex items-center ${isCollapsed ? "justify-center" : "gap-2"}`}
+        className={`p-2.5 border-t border-[#EAE7E0] bg-white flex items-center ${
+          isCollapsed ? "justify-center" : "gap-2"
+        }`}
       >
         <HeadshotAvatar
           src={

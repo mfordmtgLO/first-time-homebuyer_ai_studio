@@ -143,11 +143,11 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
   const candidates: any[] = [];
   const seenNames = new Set<string>();
 
-  // If query itself looks like a full person's name (e.g. "Stuart Sandor")
-  const isDirectNameSearch = query.trim().split(/\s+/).length >= 2 && !/(mortgage|lending|realty|real estate|properties|group|bank|company)/i.test(query);
+  // If query itself looks like a full person's name (e.g. "Stuart Sandor" or "Kanndice McLean")
+  const isDirectNameSearch = rawQuery.split(/\s+/).length >= 2 && !/(mortgage|lending|realty|real estate|properties|group|bank|company)/i.test(rawQuery);
 
   if (isDirectNameSearch) {
-    const cleanName = query.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+    const cleanName = rawQuery.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
     
     // Scan all snippets for this specific person
     let detectedCompany = company || (type === "lo" ? "PrimeLending" : "Keller Williams");

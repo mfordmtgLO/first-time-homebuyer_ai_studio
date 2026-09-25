@@ -10701,6 +10701,61 @@ Don't forget to file your State Homestead Tax Exemption!`,
         }}
       />
 
+      {/* Scrape Realtor Modal */}
+      <ScrapeRealtorModal
+        isOpen={showScrapeRealtorModal}
+        onClose={() => setShowScrapeRealtorModal(false)}
+        onAddMultipleAgents={(agents) => {
+          const newAgents: RealEstateAgentProfile[] = agents.map((a, idx) => {
+            const agentId = `agent-scraped-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`;
+            const name = a.name || "Realtor Partner";
+            const customSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+            return {
+              id: agentId,
+              name: name,
+              title: a.title || "Buyer Specialist, REALTOR®",
+              company: a.company || a.brokerage || "Premier Real Estate",
+              licenseNumber: a.licenseNumber || "OR Lic #",
+              email: a.email || `${customSlug}@brokerage.com`,
+              phone: a.phone || "(503) 555-0199",
+              headshotUrl: a.headshotUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256",
+              rating: a.rating || 4.9,
+              yearsExperience: a.yearsExperience || 8,
+              activeListingsCount: a.activeListingsCount || 5,
+              agentType: "buyer_agent",
+              bio: a.bio || "Passionate about guiding first-time buyers through neighborhood selection and structuring winning offers.",
+              specialties: ["First-Time Homebuyers", "USDA Zero-Down", "Flex DPA"],
+              areasServed: ["Portland Metro", "Willamette Valley", "Bend"],
+              customSlug: customSlug,
+              assignedLoIds: [currentLo.id],
+            } as RealEstateAgentProfile;
+          });
+
+          const newPairings = newAgents.map((ag) => ({
+            id: `pair-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            loId: currentLo.id,
+            agentId: ag.id,
+            title: `${currentLo.name} + ${ag.name}`,
+            customSlug: `${currentLo.customSlug || "lo"}-and-${ag.customSlug}`,
+            campaignTag: "realtor-partnership",
+            createdAt: new Date().toISOString().split("T")[0],
+            active: true,
+            totalViews: 0,
+            totalLeads: 0,
+          }));
+
+          onUpdateGuidesState({
+            ...guidesState,
+            agentRoster: [...guidesState.agentRoster, ...newAgents],
+            pairings: [...guidesState.pairings, ...newPairings],
+            activeAgentId: newAgents[0]?.id || guidesState.activeAgentId,
+          });
+
+          triggerToast(`✅ Successfully imported ${newAgents.length} Realtor agent partner(s) to your roster!`);
+          setShowScrapeRealtorModal(false);
+        }}
+      />
+
       {/* Recruiting Campaign Modal */}
       <RecruitingCampaignModal
         isOpen={showRecruitingCampaignModal}

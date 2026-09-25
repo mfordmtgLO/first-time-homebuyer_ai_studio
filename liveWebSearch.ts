@@ -2,9 +2,14 @@ import { GoogleGenAI } from "@google/genai";
 
 export interface SearchRegistryParams {
   query?: string;
+  agentName?: string;
+  licenseNumber?: string;
+  brokerage?: string;
   company?: string;
   city?: string;
   county?: string;
+  cities?: string[];
+  counties?: string[];
   state?: string;
   minYears?: number;
   minUnits?: number;
@@ -469,14 +474,35 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
  * 2. Falls back smoothly to the high-accuracy Live Web Search Engine if Gemini hits 429 quota/credits
  */
 export async function searchLiveRegistry(params: SearchRegistryParams, type: "lo" | "agent"): Promise<LiveSearchResult> {
-  const { query = "", company = "", city = "", county = "", state = "OR", minYears = 0, minUnits = 0, minVolume = 0 } = params;
+  const { 
+    query = "", 
+    agentName = "", 
+    licenseNumber = "", 
+    brokerage = "", 
+    company = "", 
+    city = "", 
+    county = "", 
+    cities = [], 
+    counties = [], 
+    state = "OR", 
+    minYears = 0, 
+    minUnits = 0, 
+    minVolume = 0 
+  } = params;
+
+  const targetBrokerage = brokerage.trim() || company.trim();
+  const targetLocation = [
+    cities.length > 0 ? cities.join(" ") : city.trim(),
+    counties.length > 0 ? counties.map(c => `${c} County`).join(" ") : (county ? `${county.trim()} County` : ""),
+    state || "Oregon"
+  ].filter(Boolean).join(" ");
 
   const searchQuery = [
+    agentName.trim(),
+    licenseNumber.trim() ? `License #${licenseNumber.trim()}` : "",
     query.trim(),
-    company.trim(),
-    city.trim(),
-    county ? `${county.trim()} County` : "",
-    state || "Oregon",
+    targetBrokerage,
+    targetLocation,
     type === "lo" ? "Mortgage Loan Officer NMLS" : "Real Estate Agent Realtor"
   ].filter(Boolean).join(" ");
 

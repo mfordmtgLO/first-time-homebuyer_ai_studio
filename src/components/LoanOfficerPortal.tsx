@@ -170,6 +170,7 @@ import { RespaCostSharingHub } from "./RespaCostSharingHub";
 import { BranchManagement } from "./BranchManagement";
 import { MetadataConfiguration } from "./MetadataConfiguration";
 import { RecruitmentPipeline } from "./RecruitmentPipeline";
+import { MasterRealtorCommandCenter } from "./MasterRealtorCommandCenter";
 import { AILoanOfficer2ndBrain } from "./AILoanOfficer2ndBrain";
 import { ScheduleCTaxAnalyzer } from "./ScheduleCTaxAnalyzer";
 import { Buydown21ScenarioEngine } from "./Buydown21ScenarioEngine";
@@ -5925,24 +5926,33 @@ Best regards,`,
 
             {/* Tab: Realtor Co-Branding Command Hub */}
             {activeTab === "realtor_cobranding" && (
-              <RealtorCoBrandingHub
+              <MasterRealtorCommandCenter
                 guidesState={guidesState}
                 onUpdateGuidesState={onUpdateGuidesState}
                 currentLo={currentLo}
                 leads={guidesState.leads || []}
                 properties={properties}
+                userRole={effectiveRbacRole}
                 onTriggerToast={triggerToast}
+                initialSubTab="cobranding"
+                onOpenScrapeModal={() => setShowScrapeRealtorModal(true)}
+                onOpenEmailOutreachModal={() => setShowEmailOutreachModal(true)}
               />
             )}
 
+            {/* Tab: LO+Agent Recruit Command Center */}
             {activeTab === "recruitment_pipeline" && (
-              <RecruitmentPipeline
+              <MasterRealtorCommandCenter
                 guidesState={guidesState}
                 onUpdateGuidesState={onUpdateGuidesState}
-                onTriggerToast={triggerToast}
+                currentLo={currentLo}
+                leads={guidesState.leads || []}
+                properties={properties}
                 userRole={effectiveRbacRole}
-                currentLoId={currentLo.id}
-                currentLoName={currentLo.name}
+                onTriggerToast={triggerToast}
+                initialSubTab="recruiting"
+                onOpenScrapeModal={() => setShowScrapeRealtorModal(true)}
+                onOpenEmailOutreachModal={() => setShowEmailOutreachModal(true)}
               />
             )}
 
@@ -6874,6 +6884,21 @@ Mike Ford`;
 
             {/* Tab 2: LO + Real Estate Agent Pairings & Custom Co-Branded Links */}
             {activeTab === "pairings" && (
+              <MasterRealtorCommandCenter
+                guidesState={guidesState}
+                onUpdateGuidesState={onUpdateGuidesState}
+                currentLo={currentLo}
+                leads={guidesState.leads || []}
+                properties={properties}
+                userRole={effectiveRbacRole}
+                onTriggerToast={triggerToast}
+                initialSubTab="pairings"
+                onOpenScrapeModal={() => setShowScrapeRealtorModal(true)}
+                onOpenEmailOutreachModal={() => setShowEmailOutreachModal(true)}
+              />
+            )}
+
+            {false && (
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm">
                   <div>
@@ -7195,6 +7220,21 @@ Mike Ford`;
 
             {/* Tab 3: Real Estate Agent Partner Roster */}
             {activeTab === "realtor_roster" && (
+              <MasterRealtorCommandCenter
+                guidesState={guidesState}
+                onUpdateGuidesState={onUpdateGuidesState}
+                currentLo={currentLo}
+                leads={guidesState.leads || []}
+                properties={properties}
+                userRole={effectiveRbacRole}
+                onTriggerToast={triggerToast}
+                initialSubTab="roster"
+                onOpenScrapeModal={() => setShowScrapeRealtorModal(true)}
+                onOpenEmailOutreachModal={() => setShowEmailOutreachModal(true)}
+              />
+            )}
+
+            {false && (
               <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm">
                   <div>
@@ -8128,13 +8168,17 @@ Mike Ford`;
 
             {/* Tab: AI Partner Campaign Engine */}
             {activeTab === "ai_partner_campaign" && (
-              <AIPartnerCampaign
-                loanOfficer={currentLo}
-                agentRoster={guidesState.agentRoster}
+              <MasterRealtorCommandCenter
+                guidesState={guidesState}
+                onUpdateGuidesState={onUpdateGuidesState}
+                currentLo={currentLo}
+                leads={guidesState.leads || []}
                 properties={properties}
-                pairingUrl={activePairingUrl}
+                userRole={effectiveRbacRole}
+                onTriggerToast={triggerToast}
+                initialSubTab="campaigns"
+                onOpenScrapeModal={() => setShowScrapeRealtorModal(true)}
                 onOpenEmailOutreachModal={() => setShowEmailOutreachModal(true)}
-                triggerToast={triggerToast}
               />
             )}
 

@@ -6361,13 +6361,29 @@ Return ONLY valid JSON in this exact structure:
   // POST /api/gemini/realtor-roster-lookup - AI Assist Realtor Roster lookup
   app.post("/api/gemini/realtor-roster-lookup", async (req, res) => {
     try {
-      const { query, minYearsExp, minUnits, minVolume, licenseStateFilter } = req.body || {};
+      const { 
+        query, 
+        agentName, 
+        licenseNumber, 
+        brokerage, 
+        selectedCities, 
+        selectedCounties, 
+        minYearsExp, 
+        minUnits, 
+        minVolume, 
+        licenseStateFilter 
+      } = req.body || {};
       const stateMatch = String(licenseStateFilter || "").match(/\(([A-Z]{2})\)/);
       const state = stateMatch ? stateMatch[1] : "OR";
 
       const searchRes = await searchLiveRegistry(
         {
-          query: query || "top real estate agents",
+          query: query || "",
+          agentName: agentName || "",
+          licenseNumber: licenseNumber || "",
+          brokerage: brokerage || "",
+          cities: Array.isArray(selectedCities) ? selectedCities : [],
+          counties: Array.isArray(selectedCounties) ? selectedCounties : [],
           state,
           minYears: Number(minYearsExp) || 0,
           minUnits: Number(minUnits) || 0,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { MessageSquare, Mail, 
   Users, 
   Link as LinkIcon, 
@@ -32,6 +32,7 @@ import {
 import { formatUSD, calculateMonthlyPI } from "../utils/mortgageMath";
 import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 import { launchLocalOutlookDraft, appendWorkEmailSignature } from "../utils/outlookEmailService";
+import { getUnifiedMasterAgentRoster } from "../utils/unifiedAgentRoster";
 
 interface RealtorCoBrandingHubProps {
   guidesState: ProfessionalGuidesState;
@@ -50,8 +51,13 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
   properties = [],
   onTriggerToast
 }) => {
+  // Unified Master Agent Roster (100% complete agent pool)
+  const masterAgentRoster = useMemo(() => {
+    return getUnifiedMasterAgentRoster(guidesState);
+  }, [guidesState]);
+
   const [selectedAgentId, setSelectedAgentId] = useState<string>(
-    guidesState.agentRoster[0]?.id || ""
+    masterAgentRoster[0]?.id || ""
   );
   const [activeSubTab, setActiveSubTab] = useState<"portal_links" | "flyer_studio" | "partner_pipeline" | "invite_realtor">("portal_links");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -71,7 +77,7 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
   const [newAgentEmail, setNewAgentEmail] = useState("");
   const [newAgentDre, setNewAgentDre] = useState("");
 
-  const selectedAgent = guidesState.agentRoster.find(a => a.id === selectedAgentId) || guidesState.agentRoster[0];
+  const selectedAgent = masterAgentRoster.find(a => a.id === selectedAgentId) || masterAgentRoster[0];
 
   // Find or generate pairing
   const existingPairing = guidesState.pairings.find(
@@ -313,9 +319,9 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
               onChange={(e) => setSelectedAgentId(e.target.value)}
               className="text-xs font-bold bg-[#F9F8F4] border border-[#EAE7E0] rounded-lg px-3 py-1.5 text-[#2D362E]"
             >
-              {guidesState.agentRoster.map(agent => (
+              {masterAgentRoster.map(agent => (
                 <option key={agent.id} value={agent.id}>
-                  {agent.name} ({agent.brokerage})
+                  {agent.name} — {agent.company || agent.brokerage} {agent.isTop50 ? "🏆 (Top 50)" : ""}
                 </option>
               ))}
                         </select>

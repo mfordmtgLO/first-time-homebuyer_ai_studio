@@ -63,6 +63,7 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
   activeAgent,
   adCampaignDrafts,
   properties = [],
+  leads = [],
   onSaveAdDraft,
   onUpdateCampaign,
   onBulkUpdateCampaigns,

@@ -597,7 +597,25 @@ export default function App() {
   }, [isPortalAccess, userRole]);
   const [scorecardProperty, setScorecardProperty] = useState<PropertyListing | null>(null);
   const [showNewPropertyModal, setShowNewPropertyModal] = useState<boolean>(false);
-  const [loPortalInitialTab, setLoPortalInitialTab] = useState<string>("leads");
+  const [loPortalInitialTab, setLoPortalInitialTab] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get("tab");
+      if (tabParam) {
+        if (
+          tabParam === "master_realtor" ||
+          tabParam === "realtor" ||
+          tabParam === "realtors" ||
+          tabParam === "command_center" ||
+          tabParam === "realtor_command_center"
+        ) {
+          return "master_realtor";
+        }
+        return tabParam;
+      }
+    }
+    return "leads";
+  });
 
   // Collapsible Sidebar Layout State (Initial state: collapsed)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true);

@@ -42,6 +42,7 @@ export type TabId =
   | "ai_diagnostics"
   | "tax_schedule_c"
   | "buydown_2_1"
+  | "master_realtor"
   | "realtor_cobranding"
   | "scenario_workbench"
   | "sms_compliance"
@@ -198,9 +199,16 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
     },
     {
       id: "recruiting",
-      title: "Recruiting & Roster Command",
-      icon: <Target className="w-3.5 h-3.5 text-[#C18C5D]" />,
+      title: "Master Realtor & Recruiting Command",
+      icon: <Users className="w-3.5 h-3.5 text-[#C18C5D]" />,
       items: [
+        {
+          id: "master_realtor",
+          label: "Master Realtor Command Center",
+          icon: <Users className="w-4 h-4 text-emerald-600" />,
+          badge: "All-in-One",
+          badgeColor: "bg-emerald-100 text-emerald-800 font-bold",
+        },
         {
           id: "recruitment_pipeline",
           label: canManageLoRecruits ? "Recruitment Command Center" : "Find Top Agents",

@@ -6,8 +6,6 @@ import {
   ExternalLink,
   LogOut,
   CheckCircle2,
-  Copy,
-  Share2,
   Sparkles,
   Building2,
   Users,
@@ -32,6 +30,7 @@ import {
 import { formatUSD } from "../../utils/mortgageMath";
 import { auth } from "../../firebase";
 import { signOut } from "firebase/auth";
+import { MasterRealtorCommandCenter } from "../MasterRealtorCommandCenter";
 
 interface MobileLoanOfficerPortalProps {
   userRole?: RbacRole | "admin" | "lo" | string | null;
@@ -83,9 +82,25 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
   );
 
   // Active Mobile Tab
-  const [mobileTab, setMobileTab] = useState<"leads" | "ai_rhythm" | "calculators" | "realtors" | "tools">(
-    (initialTab as any) || "leads"
-  );
+  const [mobileTab, setMobileTab] = useState<"leads" | "ai_rhythm" | "calculators" | "realtors" | "tools">(() => {
+    if (initialTab) {
+      if (
+        initialTab === "master_realtor" ||
+        initialTab === "realtors" ||
+        initialTab === "realtor_cobranding" ||
+        initialTab === "recruitment_pipeline" ||
+        initialTab === "pairings" ||
+        initialTab === "realtor_roster" ||
+        initialTab === "ai_partner_campaign"
+      ) {
+        return "realtors";
+      }
+      if (["leads", "ai_rhythm", "calculators", "tools"].includes(initialTab)) {
+        return initialTab as any;
+      }
+    }
+    return "leads";
+  });
 
   // Filter & Search states for Leads
   const [leadSearch, setLeadSearch] = useState("");
@@ -791,61 +806,19 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
           </div>
         )}
 
-        {/* TAB 4: REALTORS & CO-BRANDING */}
+        {/* TAB 4: REALTORS & CO-BRANDING / MASTER REALTOR COMMAND CENTER */}
         {mobileTab === "realtors" && (
-          <div className="space-y-3 animate-in fade-in duration-150">
-            <div>
-              <h4 className="font-serif font-bold text-base text-[#2D362E]">
-                Realtor Co-Branded Partner Roster
-              </h4>
-              <p className="text-xs text-[#606C5D] mt-0.5">
-                Share dual-branded homebuyer acquisition portals with your agent partners.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {(guidesState.agentRoster || []).map((agent) => {
-                const pairingUrl = `${origin}/?lo=mike-ford&agent=${agent.id.replace(/^agent-/, "")}`;
-
-                return (
-                  <div
-                    key={agent.id}
-                    className="bg-white rounded-3xl p-4 border border-[#EAE7E0] shadow-2xs space-y-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <HeadshotAvatar
-                        src={agent.headshotUrl}
-                        name={agent.name}
-                        className="w-11 h-11 rounded-2xl border border-[#EAE7E0] shadow-2xs shrink-0"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <h5 className="font-bold text-sm text-[#2D362E] truncate">{agent.name}</h5>
-                        <p className="text-[11px] text-[#606C5D] truncate">{agent.brokerage}</p>
-                        <p className="text-[10px] text-[#9A9488]">License: {agent.licenseNumber}</p>
-                      </div>
-                    </div>
-
-                    {/* Quick 1-Tap Copy & Share Actions */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-[#EAE7E0]">
-                      <button
-                        onClick={() => copyToClipboard(pairingUrl, `${agent.name}'s Co-Brand Link`)}
-                        className="flex-1 min-h-[44px] flex items-center justify-center gap-1.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-xl text-xs font-bold transition-transform active:scale-95"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copy Link</span>
-                      </button>
-                      <a
-                        href={`sms:?body=Hi! Here is our official co-branded First-Time Homebuyer Portal for buyers: ${encodeURIComponent(pairingUrl)}`}
-                        className="min-h-[44px] px-3.5 flex items-center justify-center gap-1 bg-[#FAF9F5] border border-[#EAE7E0] text-[#2D362E] rounded-xl text-xs font-bold transition-transform active:scale-95"
-                      >
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span>SMS Link</span>
-                      </a>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="space-y-4 animate-in fade-in duration-150">
+            <MasterRealtorCommandCenter
+              guidesState={guidesState}
+              onUpdateGuidesState={onUpdateGuidesState}
+              currentLo={currentLo}
+              leads={guidesState.leads || []}
+              properties={properties}
+              userRole={userRole}
+              onTriggerToast={showToast}
+              initialSubTab="overview"
+            />
           </div>
         )}
 

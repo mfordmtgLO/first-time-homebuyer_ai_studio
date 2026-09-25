@@ -263,9 +263,26 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
   }, [userRole, authenticatedLoId, guidesState.loanOfficers, guidesState.adminLoanOfficerId]);
 
   // Current user / viewing context
-  const [activeTab, setActiveTab] = useState<TabId>(
-    initialTab || (userRole === "compliance_auditor" ? "compliance_audit" : "leads")
-  );
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    if (initialTab) return initialTab;
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get("tab") as TabId | null;
+      if (tabParam) {
+        if (
+          (tabParam as string) === "master_realtor" ||
+          (tabParam as string) === "realtor" ||
+          (tabParam as string) === "realtors" ||
+          (tabParam as string) === "command_center" ||
+          (tabParam as string) === "realtor_command_center"
+        ) {
+          return "master_realtor";
+        }
+        return tabParam;
+      }
+    }
+    return userRole === "compliance_auditor" ? "compliance_audit" : "leads";
+  });
 
   useEffect(() => {
     if (initialTab) {
@@ -3013,6 +3030,28 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                   }`}
                 >
                   Seller Concessions
+                </span>
+              </button>
+
+              <button
+                data-tab-id="master_realtor"
+                onClick={() => setActiveTab("master_realtor")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                  activeTab === "master_realtor"
+                    ? "bg-[#2F5738] text-white shadow-xs"
+                    : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
+                }`}
+              >
+                <Users className="w-4 h-4 text-[#D4A373]" />
+                <span>Master Realtor Command Center</span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    activeTab === "master_realtor"
+                      ? "bg-white/20 text-white"
+                      : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                  }`}
+                >
+                  All-in-One Hub
                 </span>
               </button>
 
@@ -5921,6 +5960,22 @@ Best regards,`,
                   });
                 }}
                 onTriggerToast={triggerToast}
+              />
+            )}
+
+            {/* Tab: Master Realtor Partner & Recruiting Command Center */}
+            {activeTab === "master_realtor" && (
+              <MasterRealtorCommandCenter
+                guidesState={guidesState}
+                onUpdateGuidesState={onUpdateGuidesState}
+                currentLo={currentLo}
+                leads={guidesState.leads || []}
+                properties={properties}
+                userRole={effectiveRbacRole}
+                onTriggerToast={triggerToast}
+                initialSubTab="overview"
+                onOpenScrapeModal={() => setShowScrapeRealtorModal(true)}
+                onOpenEmailOutreachModal={() => setShowEmailOutreachModal(true)}
               />
             )}
 

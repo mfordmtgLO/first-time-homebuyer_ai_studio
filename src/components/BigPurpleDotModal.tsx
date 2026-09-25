@@ -1,5 +1,5 @@
 import { auth } from "../firebase";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   X, CheckCircle2, ShieldCheck, Key, Lock, Radio, Copy, ExternalLink, 
   RefreshCw, AlertCircle, Layers, Send, Sparkles, Server, Sliders, 

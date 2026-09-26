@@ -600,7 +600,9 @@ export async function fetchScraperLogs(): Promise<AgentScraperLogEntry[]> {
   // Return initial curated logs and cache locally
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_SCRAPER_LOGS));
-  } catch {}
+  } catch (err) {
+    console.warn("Storage setItem warning:", err);
+  }
   return INITIAL_SCRAPER_LOGS;
 }
 
@@ -677,7 +679,9 @@ export async function deleteScraperLog(logId: string): Promise<void> {
     const current = await fetchScraperLogs();
     const filtered = current.filter((l) => l.id !== logId);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-  } catch {}
+  } catch (err) {
+    console.warn("Storage filter notice:", err);
+  }
 
   try {
     await deleteDoc(doc(db, "agent_scraper_logs", logId));
@@ -982,12 +986,12 @@ export async function executeTop50SweepRun(
   const startTime = Date.now();
   const logId = `sweep-top50-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
-  let title = "Top 50 Market Sweep";
-  let sourceUrl = "https://www.realtrends.com/rankings/americas-best/oregon";
-  let sourceType: AgentScraperLogEntry["sourceType"] = "realtrends";
-  let topMetric = "Top 50 Ranking Criteria";
-  let qualified = 42;
-  let topEntities: string[] = [];
+  let title: string;
+  let sourceUrl: string;
+  let sourceType: AgentScraperLogEntry["sourceType"];
+  let topMetric: string;
+  let qualified: number;
+  let topEntities: string[];
 
   if (sweepType === "realtrends_top50_agents") {
     title = "RealTrends 2025 Oregon Top 50 Individual Producer Sweep";

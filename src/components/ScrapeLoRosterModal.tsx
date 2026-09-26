@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Sparkles, Search, X, Check, CheckCircle2, UserPlus, Filter, Award, Target, MapPin } from "lucide-react";
 import { LoanOfficerProfile } from "../types";
+import { VantageScraper2ndBrainPrompt, ScraperRoutineConfig } from "./VantageScraper2ndBrainPrompt";
 
 interface ScrapeLoRosterModalProps {
   isOpen: boolean;
@@ -26,6 +27,13 @@ export const ScrapeLoRosterModal: React.FC<ScrapeLoRosterModalProps> = ({
   const [scrapedProfiles, setScrapedProfiles] = useState<Partial<LoanOfficerProfile>[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [filterText, setFilterText] = useState("");
+
+  const handleApplyConfigFrom2ndBrain = (cfg: ScraperRoutineConfig) => {
+    if (cfg.query) setQuery(cfg.query);
+    if (typeof cfg.minYearsExp === "number") setMinYearsExp(cfg.minYearsExp);
+    if (typeof cfg.minUnits === "number") setMinUnits(cfg.minUnits);
+    if (typeof cfg.minVolume === "number") setMinVolume(cfg.minVolume);
+  };
 
   if (!isOpen) return null;
 
@@ -120,6 +128,16 @@ export const ScrapeLoRosterModal: React.FC<ScrapeLoRosterModalProps> = ({
             ✕ Close
           </button>
         </div>
+
+        {/* Vantage AI 2nd Brain Chat Prompt Box */}
+        <VantageScraper2ndBrainPrompt 
+          onApplyConfig={handleApplyConfigFrom2ndBrain} 
+          onExecuteScrapeNow={(cfg) => {
+            handleApplyConfigFrom2ndBrain(cfg);
+            setTimeout(() => handleSearch(), 100);
+          }}
+          compactMode
+        />
 
         {/* AI Scraper Filters */}
         <div className="bg-[#FAF9F5] p-4 rounded-2xl border border-[#EAE7E0] shrink-0 grid grid-cols-1 md:grid-cols-4 gap-4">

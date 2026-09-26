@@ -26,6 +26,15 @@ import {
   Mail,
   Phone
 } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from "recharts";
 import { RealEstateAgentProfile, LoanOfficerProfile, PropertyListing, LOPairing, CapturedLead } from "../types";
 import {
   MarketTrendItem,
@@ -38,6 +47,21 @@ import { GEOSPHERE_MOCK_LISTINGS } from "../data/geoSphereData";
 import { matchMarketNewsSpotlightListings } from "../utils/marketNewsListingMatcher";
 import { formatUSD } from "../utils/mortgageMath";
 import { AgentSpotlightLeadModal } from "./AgentSpotlightLeadModal";
+
+const OREGON_MARKET_TREND_CHART_DATA = [
+  { month: "Jan", medianPrice: 485000, inventory: 4200, closedSales: 2800 },
+  { month: "Feb", medianPrice: 489000, inventory: 4400, closedSales: 3100 },
+  { month: "Mar", medianPrice: 495000, inventory: 4900, closedSales: 3600 },
+  { month: "Apr", medianPrice: 502000, inventory: 5300, closedSales: 4100 },
+  { month: "May", medianPrice: 510000, inventory: 5800, closedSales: 4600 },
+  { month: "Jun", medianPrice: 515000, inventory: 6100, closedSales: 4900 },
+  { month: "Jul", medianPrice: 512000, inventory: 5900, closedSales: 4700 },
+  { month: "Aug", medianPrice: 508000, inventory: 5600, closedSales: 4400 },
+  { month: "Sep", medianPrice: 505000, inventory: 5200, closedSales: 4000 },
+  { month: "Oct", medianPrice: 502000, inventory: 4800, closedSales: 3700 },
+  { month: "Nov", medianPrice: 498000, inventory: 4400, closedSales: 3300 },
+  { month: "Dec", medianPrice: 502000, inventory: 4300, closedSales: 3500 },
+];
 
 interface MarketTrendsProps {
   activeAgent?: RealEstateAgentProfile;
@@ -740,6 +764,45 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
         </div>
       </div>
 
+      {/* 2.5 Dynamic Market Appreciation & Inventory Trend Chart (Responsive & Mobile-Optimized) */}
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#EAE7E0] shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EAE7E0] pb-3">
+          <div>
+            <h3 className="font-serif font-bold text-lg text-[#2D362E] flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#C18C5D]" />
+              <span>Oregon Housing Market Appreciation & Inventory Trends</span>
+            </h3>
+            <p className="text-xs text-[#606C5D]">
+              12-month median price appreciation and active listing inventory trajectory across {primaryCounty} County.
+            </p>
+          </div>
+          <span className="px-3 py-1 bg-emerald-50 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-200 self-start sm:self-auto">
+            Dynamic Viewport Resizing Active
+          </span>
+        </div>
+
+        {/* Responsive Container guaranteeing zero overflow and dynamic width */}
+        <div className="w-full h-[260px] sm:h-[300px] min-w-0 overflow-hidden pt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={OREGON_MARKET_TREND_CHART_DATA} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EAE7E0" />
+              <XAxis dataKey="month" stroke="#9A9488" tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="left" stroke="#4A5D4E" tick={{ fontSize: 11 }} tickFormatter={(val) => `$${val / 1000}k`} />
+              <YAxis yAxisId="right" orientation="right" stroke="#C18C5D" tick={{ fontSize: 11 }} />
+              <Tooltip
+                contentStyle={{ backgroundColor: "#2D362E", borderRadius: "12px", color: "#fff", border: "none", fontSize: "12px" }}
+                formatter={(value: any, name: any) => [
+                  name === "medianPrice" ? formatUSD(Number(value)) : value.toLocaleString(),
+                  name === "medianPrice" ? "Median Home Price" : "Active Inventory"
+                ]}
+              />
+              <Line yAxisId="left" type="monotone" dataKey="medianPrice" stroke="#4A5D4E" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} name="medianPrice" />
+              <Line yAxisId="right" type="monotone" dataKey="inventory" stroke="#C18C5D" strokeWidth={2} dot={{ r: 3 }} name="inventory" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* 3. PROPERTY SNAPSHOTS VIEW: RECENT HOMES IN AGENT'S ACTIVE OREGON MLS AREA (10-15 Low/No Down Payment Listings) */}
       <div id="property-snapshots-view" className="space-y-4">
         <div className="bg-white rounded-3xl p-6 border border-[#EAE7E0] shadow-sm space-y-4">
@@ -881,12 +944,12 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="flex overflow-x-auto sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-5 pb-4 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {filteredMatchedListings.map(({ listing, isDirectListing, zillowUrl, eligibilityHighlights, matchedCounty, countyFips, geoid, tractFormatted }) => {
                 return (
                   <div
                     key={listing.id}
-                    className={`rounded-3xl p-4.5 flex flex-col justify-between transition-all duration-200 hover:shadow-md relative group ${
+                    className={`snap-start shrink-0 w-[85vw] sm:w-auto max-w-[360px] sm:max-w-none rounded-3xl p-4.5 flex flex-col justify-between transition-all duration-200 hover:shadow-md relative group ${
                       isDirectListing
                         ? "bg-gradient-to-b from-amber-50/70 via-white to-white border-2 border-amber-400/95 ring-2 ring-amber-400/20 shadow-xs"
                         : "bg-white border border-[#EAE7E0] hover:border-[#4A5D4E]/40"
@@ -1219,7 +1282,7 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="flex overflow-x-auto sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-4 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {filteredItems.map((item, index) => {
             // Randomly / pseudo-randomly associate the cobrand agent recommendation banner
             // with rotating sources (e.g. on every 2nd or 3rd item, plus when index matches spotlight)
@@ -1231,7 +1294,7 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
             return (
               <div
                 key={item.id}
-                className="bg-white rounded-3xl border border-[#EAE7E0] hover:border-[#DCD7CD] p-5 flex flex-col justify-between transition-all duration-200 hover:shadow-md group relative"
+                className="snap-start shrink-0 w-[85vw] sm:w-auto max-w-[380px] sm:max-w-none bg-white rounded-3xl border border-[#EAE7E0] hover:border-[#DCD7CD] p-5 flex flex-col justify-between transition-all duration-200 hover:shadow-md group relative"
               >
                 <div className="space-y-3">
                   {/* Top Metadata Badge */}

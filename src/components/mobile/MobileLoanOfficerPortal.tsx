@@ -25,12 +25,14 @@ import {
   ProfessionalGuidesState, 
   CapturedLead, 
   PropertyListing,
-  RbacRole 
+  RbacRole,
+  RealEstateAgentProfile 
 } from "../../types";
 import { formatUSD } from "../../utils/mortgageMath";
 import { auth } from "../../firebase";
 import { signOut } from "firebase/auth";
 import { MasterRealtorCommandCenter } from "../MasterRealtorCommandCenter";
+import { ScrapeRealtorModal } from "../ScrapeRealtorModal";
 
 interface MobileLoanOfficerPortalProps {
   userRole?: RbacRole | "admin" | "lo" | string | null;
@@ -106,6 +108,7 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
   const [leadSearch, setLeadSearch] = useState("");
   const [leadFilter, setLeadFilter] = useState<"all" | "hot" | "new" | "pre_approved">("all");
   const [showAiDossierModal, setShowAiDossierModal] = useState<CapturedLead | null>(null);
+  const [showScrapeRealtorModal, setShowScrapeRealtorModal] = useState<boolean>(false);
 
   // Quick Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -209,16 +212,6 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
   const [netProfit, setNetProfit] = useState(68000);
   const [depreciationAddBack, setDepreciationAddBack] = useState(14000);
   const qualifyingMonthlyIncome = (netProfit + depreciationAddBack) / 12;
-
-  // Copy helper
-  const copyToClipboard = (text: string, label: string) => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      showToast(`${label} copied to clipboard!`);
-    }
-  };
-
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://first-time-homebuyer-ai-studio.vercel.app";
 
   return (
     <div className="min-h-screen bg-[#F7F6F2] text-[#2D362E] pb-28 select-none">
@@ -818,6 +811,7 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
               userRole={userRole}
               onTriggerToast={showToast}
               initialSubTab="overview"
+              onOpenScrapeModal={() => setShowScrapeRealtorModal(true)}
             />
           </div>
         )}
@@ -996,6 +990,71 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
           </div>
         </div>
       )}
+
+      {/* Scrape Realtor Modal for Mobile */}
+      <ScrapeRealtorModal
+        isOpen={showScrapeRealtorModal}
+        onClose={() => setShowScrapeRealtorModal(false)}
+        onAddMultipleAgents={(agents) => {
+          const newAgents: RealEstateAgentProfile[] = agents.map((a, idx) => {
+            const agentId = `agent-scraped-mobile-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`;
+            const name = a.name || "Realtor Partner";
+            const customSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+            return {
+              id: agentId,
+              name: name,
+              title: a.title || "Buyer Specialist, REALTOR®",
+              company: a.company || a.brokerage || "Premier Real Estate",
+              brokerage: a.brokerage || a.company || "Premier Real Estate",
+              licenseNumber: a.licenseNumber || "OR Lic #",
+              email: a.email || `${customSlug}@brokerage.com`,
+              phone: a.phone || "(503) 555-0199",
+              headshotUrl: a.headshotUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256",
+              websiteUrl: a.websiteUrl || a.sourceUrl || "",
+              sourceUrl: a.sourceUrl || a.websiteUrl || "",
+              deepScrapedFromUrl: !!a.deepScrapedFromUrl,
+              rating: a.rating || 4.9,
+              yearsExperience: a.yearsExperience || (a as any).experienceYears || 8,
+              experienceYears: (a as any).experienceYears || a.yearsExperience || 8,
+              production12MoVolume: a.production12MoVolume || 21500000,
+              production12MoUnits: a.production12MoUnits || 38,
+              buysideVolume12Mo: a.buysideVolume12Mo || Math.round((a.production12MoVolume || 21500000) * 0.72),
+              buysideUnits12Mo: a.buysideUnits12Mo || Math.round((a.production12MoUnits || 38) * 0.72),
+              buysideSharePct: a.buysideSharePct || 72,
+              activeListingsCount: a.activeListingsCount || 5,
+              agentType: a.agentType || "buyer_agent",
+              bio: a.bio || "Passionate about guiding first-time buyers through neighborhood selection and structuring winning offers.",
+              specialties: ["First-Time Homebuyers", "USDA Zero-Down", "Flex DPA"],
+              areasServed: ["Portland Metro", "Willamette Valley", "Bend"],
+              customSlug: customSlug,
+              assignedLoIds: [currentLo.id],
+            } as RealEstateAgentProfile;
+          });
+
+          const newPairings = newAgents.map((ag) => ({
+            id: `pair-mobile-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            loId: currentLo.id,
+            agentId: ag.id,
+            title: `${currentLo.name} + ${ag.name}`,
+            customSlug: `${currentLo.customSlug || "lo"}-and-${ag.customSlug}`,
+            campaignTag: "realtor-partnership",
+            createdAt: new Date().toISOString().split("T")[0],
+            active: true,
+            totalViews: 0,
+            totalLeads: 0,
+          }));
+
+          onUpdateGuidesState({
+            ...guidesState,
+            agentRoster: [...guidesState.agentRoster, ...newAgents],
+            pairings: [...guidesState.pairings, ...newPairings],
+            activeAgentId: newAgents[0]?.id || guidesState.activeAgentId,
+          });
+
+          showToast(`✅ Successfully imported ${newAgents.length} Realtor agent partner(s) to your roster!`);
+          setShowScrapeRealtorModal(false);
+        }}
+      />
     </div>
   );
 };

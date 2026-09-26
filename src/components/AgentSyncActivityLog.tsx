@@ -62,6 +62,13 @@ import {
   executeVantageAiImportRun
 } from "../services/agentScraperLogService";
 import { GEOSPHERE_DATASETS } from "../data/geoSphereData";
+import { VantageScraper2ndBrainPrompt, ScraperRoutineConfig } from "./VantageScraper2ndBrainPrompt";
+import { 
+  fetchScheduledCronJobs, 
+  executeCronJobNow, 
+  toggleCronJobStatus, 
+  ScheduledCronJob 
+} from "../services/cronSchedulerService";
 
 interface AgentSyncActivityLogProps {
   guidesState: ProfessionalGuidesState;
@@ -88,6 +95,11 @@ export const AgentSyncActivityLog: React.FC<AgentSyncActivityLogProps> = ({
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [expandedLogIds, setExpandedLogIds] = useState<Set<string>>(new Set());
+
+  // Cron Job Scheduler State
+  const [cronJobs, setCronJobs] = useState<ScheduledCronJob[]>([]);
+  const [executingCronId, setExecutingCronId] = useState<string | null>(null);
+  const [showCronPanel, setShowCronPanel] = useState<boolean>(true);
 
   // Inspect Modal
   const [inspectingPayloadLog, setInspectingPayloadLog] = useState<AgentScraperLogEntry | null>(null);
@@ -120,17 +132,47 @@ export const AgentSyncActivityLog: React.FC<AgentSyncActivityLogProps> = ({
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [executingStepText, setExecutingStepText] = useState<string>("");
 
-  // Load logs
+  // Load logs & cron schedules
   const loadLogs = async () => {
     setIsLoading(true);
     try {
       const data = await fetchScraperLogs();
       setLogs(data);
+      const cronData = await fetchScheduledCronJobs();
+      setCronJobs(cronData);
     } catch (err) {
-      console.error("Failed to load scraper logs:", err);
+      console.error("Failed to load scraper logs or cron jobs:", err);
       onTriggerToast("Notice: Loaded cached sync activity telemetry.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleTriggerCronNow = async (jobId: string) => {
+    setExecutingCronId(jobId);
+    try {
+      const res = await executeCronJobNow(jobId, currentLo.name || "Mike Ford");
+      if (res.success) {
+        onTriggerToast(`✓ Successfully executed unattended cron job: ${res.job.name}`);
+        loadLogs();
+      } else {
+        onTriggerToast(`✕ Cron job execution encountered an error.`);
+      }
+    } catch (err: any) {
+      console.error("Cron manual trigger error:", err);
+      onTriggerToast("Failed to execute cron job.");
+    } finally {
+      setExecutingCronId(null);
+    }
+  };
+
+  const handleToggleCron = async (jobId: string) => {
+    try {
+      const updated = await toggleCronJobStatus(jobId);
+      setCronJobs(updated);
+      onTriggerToast("✓ Updated cron job status.");
+    } catch (err) {
+      console.error("Cron toggle error:", err);
     }
   };
 
@@ -605,6 +647,97 @@ export const AgentSyncActivityLog: React.FC<AgentSyncActivityLogProps> = ({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Unattended Cron Job Schedulers (dsh-cron + Hybrid 2nd Brain) Panel */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-white shadow-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <Clock className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                <span>Unattended Cron Job Schedulers (dsh-cron + Hybrid 2nd Brain)</span>
+                <span className="text-[10px] font-mono bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-800">
+                  {cronJobs.filter(j => j.status === 'active').length} Active Schedulers
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                Automated background tasks executing unattended Top 50 sweeps, GeoMap property syncs, and co-branded campaign imports.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCronPanel(!showCronPanel)}
+            className="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 cursor-pointer"
+          >
+            {showCronPanel ? "Hide Cron Jobs" : "Show Cron Jobs"}
+          </button>
+        </div>
+
+        {showCronPanel && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            {cronJobs.map((job) => {
+              const isExecutingThis = executingCronId === job.id;
+              return (
+                <div 
+                  key={job.id} 
+                  className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2 flex flex-col justify-between"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-white flex items-center gap-1.5">
+                        <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
+                        {job.name}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                        job.status === 'active' 
+                          ? 'bg-emerald-950 text-emerald-300 border-emerald-800' 
+                          : 'bg-slate-700 text-slate-400 border-slate-600'
+                      }`}>
+                        {job.status === 'active' ? 'Active (Unattended)' : 'Paused'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      {job.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-700/80 flex items-center justify-between text-[11px] text-slate-400">
+                    <div className="flex items-center gap-2 font-mono text-[10px]">
+                      <span className="bg-slate-900 px-2 py-0.5 rounded text-sky-300 border border-slate-700">
+                        {job.cronExpression}
+                      </span>
+                      <span>Run #{job.executionCount}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleCron(job.id)}
+                        className="text-[10px] px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md cursor-pointer transition-colors"
+                      >
+                        {job.status === 'active' ? 'Pause' : 'Resume'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleTriggerCronNow(job.id)}
+                        disabled={isExecutingThis}
+                        className="px-2.5 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold text-[10px] rounded-md shadow-xs flex items-center gap-1 cursor-pointer transition-all"
+                      >
+                        <Zap className={`w-3 h-3 text-amber-300 ${isExecutingThis ? 'animate-spin' : ''}`} />
+                        <span>{isExecutingThis ? "Running..." : "⚡ Run Now"}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Primary KPI Metrics Strip */}
@@ -1691,8 +1824,8 @@ export const AgentSyncActivityLog: React.FC<AgentSyncActivityLogProps> = ({
 
       {/* Modal 4: Live Agent Scraper Runner */}
       {showScrapeRunner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 relative my-auto max-h-[90vh] overflow-y-auto dashboard-vertical-scrollbar">
             <button
               onClick={() => !isExecuting && setShowScrapeRunner(false)}
               className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
@@ -1715,6 +1848,23 @@ export const AgentSyncActivityLog: React.FC<AgentSyncActivityLogProps> = ({
             </div>
 
             <div className="space-y-4 text-xs">
+              {/* Vantage AI 2nd Brain Chat & Scraper Routines Box */}
+              <VantageScraper2ndBrainPrompt
+                compactMode
+                onApplyConfig={(cfg) => {
+                  if (cfg.agentWebsiteUrl) setNewScrapeUrl(cfg.agentWebsiteUrl);
+                  if (cfg.agentName) setNewScrapeName(cfg.agentName);
+                  if (cfg.brokerage) setNewScrapeBrokerage(cfg.brokerage);
+                  if (cfg.query && !newScrapeUrl) setNewScrapeName(cfg.query);
+                }}
+                onExecuteScrapeNow={(cfg) => {
+                  if (cfg.agentWebsiteUrl) setNewScrapeUrl(cfg.agentWebsiteUrl);
+                  if (cfg.agentName) setNewScrapeName(cfg.agentName);
+                  if (cfg.brokerage) setNewScrapeBrokerage(cfg.brokerage);
+                  setTimeout(() => handleExecuteLiveScrape(), 100);
+                }}
+              />
+
               <div>
                 <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
                   Agent Web Bio / Profile URL <span className="text-rose-500">*</span>

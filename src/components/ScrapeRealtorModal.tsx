@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { 
   Sparkles, Search, Check, Filter, MapPin, Building, 
-  User, ShieldCheck, ChevronDown, RotateCcw, CheckSquare, Square,
+  User, ShieldCheck, ChevronDown, ChevronUp, RotateCcw, CheckSquare, Square,
   Globe, Link2, ExternalLink, CheckCircle2, AlertCircle, AlertTriangle,
   Edit3, Wand2, Image as ImageIcon, Clock, Mail, Phone
 } from "lucide-react";
@@ -12,6 +12,7 @@ import {
   PROFESSIONAL_HEADSHOT_PRESETS 
 } from "../utils/agentValidation";
 import { AgentPreCommitValidationModal } from "./AgentPreCommitValidationModal";
+import { VantageScraper2ndBrainPrompt, ScraperRoutineConfig } from "./VantageScraper2ndBrainPrompt";
 
 interface ScrapeRealtorModalProps {
   isOpen: boolean;
@@ -79,7 +80,8 @@ export const ScrapeRealtorModal: React.FC<ScrapeRealtorModalProps> = ({
   const [deepScrapingIndex, setDeepScrapingIndex] = useState<number | null>(null);
   const [successBackfillIndex, setSuccessBackfillIndex] = useState<number | null>(null);
 
-  // Validation Layer State
+  // Validation Layer & Collapsible Panel State
+  const [isConfigCollapsed, setIsConfigCollapsed] = useState<boolean>(false);
   const [showValidationGate, setShowValidationGate] = useState<boolean>(false);
   const [agentsForValidation, setAgentsForValidation] = useState<Partial<RealEstateAgentProfile>[]>([]);
   const [editingGapIndex, setEditingGapIndex] = useState<number | null>(null);
@@ -154,6 +156,19 @@ export const ScrapeRealtorModal: React.FC<ScrapeRealtorModalProps> = ({
     setErrorMsg(null);
   };
 
+  const handleApplyConfigFrom2ndBrain = (cfg: ScraperRoutineConfig) => {
+    if (cfg.query) setQuery(cfg.query);
+    if (cfg.agentName) setAgentName(cfg.agentName);
+    if (cfg.brokerage) setBrokerage(cfg.brokerage);
+    if (cfg.licenseNumber) setLicenseNumber(cfg.licenseNumber);
+    if (cfg.selectedCities) setSelectedCities(cfg.selectedCities);
+    if (cfg.selectedCounties) setSelectedCounties(cfg.selectedCounties);
+    if (typeof cfg.minYearsExp === "number") setMinYearsExp(cfg.minYearsExp);
+    if (typeof cfg.minUnits === "number") setMinUnits(cfg.minUnits);
+    if (typeof cfg.minVolume === "number") setMinVolume(cfg.minVolume);
+    if (cfg.agentWebsiteUrl) setAgentWebsiteUrl(cfg.agentWebsiteUrl);
+  };
+
   const handleSearch = async () => {
     setIsSearching(true);
     setErrorMsg(null);
@@ -199,6 +214,7 @@ export const ScrapeRealtorModal: React.FC<ScrapeRealtorModalProps> = ({
             }
           });
           setCardUrlInputs(urls);
+          setIsConfigCollapsed(true);
         } else {
           setErrorMsg(data.error || "No qualified profiles found matching your search configuration.");
         }
@@ -329,8 +345,8 @@ export const ScrapeRealtorModal: React.FC<ScrapeRealtorModalProps> = ({
   const filteredCountyList = OREGON_COUNTIES.filter(c => c.toLowerCase().includes(countySearchFilter.toLowerCase()));
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-3xl max-w-5xl w-full p-5 sm:p-7 space-y-4 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E] max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-5xl w-full p-4 sm:p-6 space-y-3.5 border border-[#EAE7E0] shadow-2xl animate-in zoom-in-95 duration-150 text-[#2D362E] max-h-[92vh] flex flex-col my-auto overflow-hidden">
         
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3 shrink-0">
@@ -353,300 +369,339 @@ export const ScrapeRealtorModal: React.FC<ScrapeRealtorModalProps> = ({
         </div>
 
         {/* DEDICATED SEARCH CONFIGURATION PANEL */}
-        <div className="bg-[#FAF9F5] p-4 rounded-2xl border border-[#EAE7E0] space-y-4 shrink-0 overflow-y-auto max-h-[45vh] dashboard-vertical-scrollbar">
+        <div className="bg-[#FAF9F5] rounded-2xl border border-[#EAE7E0] shrink-0 transition-all duration-200 overflow-hidden">
           
-          <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#4A5D4E] flex items-center gap-1.5">
-              <Filter className="w-3.5 h-3.5 text-emerald-600" />
-              Search & Scraper Configuration Panel
-            </span>
-            <button
-              type="button"
-              onClick={handleResetFilters}
-              className="text-[11px] font-semibold text-[#606C5D] hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
-            >
-              <RotateCcw className="w-3 h-3" /> Reset Config
-            </button>
-          </div>
-
-          {/* Row 1: Direct Agent & Brokerage Inputs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1 flex items-center gap-1">
-                <User className="w-3 h-3 text-emerald-600" /> Target Agent Name
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Kanndice McLean"
-                value={agentName}
-                onChange={(e) => setAgentName(e.target.value)}
-                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-600 text-[#2D362E]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-emerald-600" /> State License Number
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. 201209811"
-                value={licenseNumber}
-                onChange={(e) => setLicenseNumber(e.target.value)}
-                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-600 text-[#2D362E]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Building className="w-3 h-3 text-emerald-600" /> Target Brokerage / Office
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Keller Williams, Compass, eXp"
-                value={brokerage}
-                onChange={(e) => setBrokerage(e.target.value)}
-                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-600 text-[#2D362E]"
-              />
-            </div>
-          </div>
-
-          {/* Row 1B: Agent Workplace / Bio Page Live URL for 100% Accurate Extraction */}
-          <div className="bg-white p-3 rounded-2xl border border-emerald-200 shadow-2xs space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[10px] font-bold text-[#4A5D4E] uppercase tracking-wider flex items-center gap-1.5">
-                <Globe className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Agent Workplace / Agency Bio Page URL (Direct Live Grounding)</span>
-                <span className="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded border border-emerald-300">
-                  100% Headshot & Contacts
+          <div className="p-3.5 flex items-center justify-between border-b border-[#EAE7E0]/80">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#4A5D4E] flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-emerald-600" />
+                Search & Scraper Configuration Panel
+              </span>
+              {scrapedProfiles.length > 0 && (
+                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
+                  {scrapedProfiles.length} Results Ready
                 </span>
-              </label>
-              {agentWebsiteUrl && (
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {scrapedProfiles.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setAgentWebsiteUrl("")}
-                  className="text-[10px] text-gray-400 hover:text-gray-600 underline cursor-pointer"
+                  onClick={() => setIsConfigCollapsed(!isConfigCollapsed)}
+                  className="text-xs font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
                 >
-                  Clear URL
+                  {isConfigCollapsed ? (
+                    <>
+                      <ChevronDown className="w-3.5 h-3.5 text-emerald-700" /> Show Filters
+                    </>
+                  ) : (
+                    <>
+                      <ChevronUp className="w-3.5 h-3.5 text-emerald-700" /> Hide Filters
+                    </>
+                  )}
                 </button>
               )}
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-[11px] font-semibold text-[#606C5D] hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" /> Reset Config
+              </button>
             </div>
+          </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="relative flex-1">
-                <Link2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600" />
-                <input
-                  type="url"
-                  placeholder="e.g. https://kanndicemclean.kw.com or official workplace agency bio page"
-                  value={agentWebsiteUrl}
-                  onChange={(e) => setAgentWebsiteUrl(e.target.value)}
-                  className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-emerald-600 text-[#2D362E]"
-                />
+          {!isConfigCollapsed && (
+            <div className="p-4 space-y-4 max-h-[44vh] overflow-y-auto dashboard-vertical-scrollbar">
+              {/* Vantage AI 2nd Brain Chat & Scraper Routines Box */}
+              <VantageScraper2ndBrainPrompt 
+                onApplyConfig={handleApplyConfigFrom2ndBrain} 
+                onExecuteScrapeNow={(cfg) => {
+                  handleApplyConfigFrom2ndBrain(cfg);
+                  setTimeout(() => handleSearch(), 100);
+                }}
+              />
+
+              {/* Row 1: Direct Agent & Brokerage Inputs */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <User className="w-3 h-3 text-emerald-600" /> Target Agent Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Kanndice McLean"
+                    value={agentName}
+                    onChange={(e) => setAgentName(e.target.value)}
+                    className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-600 text-[#2D362E]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-emerald-600" /> State License Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 201209811"
+                    value={licenseNumber}
+                    onChange={(e) => setLicenseNumber(e.target.value)}
+                    className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-600 text-[#2D362E]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Building className="w-3 h-3 text-emerald-600" /> Target Brokerage / Office
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Keller Williams, Compass, eXp"
+                    value={brokerage}
+                    onChange={(e) => setBrokerage(e.target.value)}
+                    className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-600 text-[#2D362E]"
+                  />
+                </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleDeepScrapeUrl(agentWebsiteUrl)}
-                disabled={isDeepScraping || !agentWebsiteUrl.trim()}
-                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 shadow-2xs transition-all cursor-pointer"
-                title="Direct Gemini SDK agent to scrape this individual workplace page"
-              >
-                <Sparkles className={`w-3.5 h-3.5 text-amber-300 ${isDeepScraping && deepScrapingIndex === -1 ? 'animate-spin' : ''}`} />
-                <span>{isDeepScraping && deepScrapingIndex === -1 ? "Scraping Live URL..." : "⚡ Deep Scrape URL Now"}</span>
-              </button>
-            </div>
-
-            <p className="text-[10px] text-[#606C5D] leading-relaxed">
-              If initial web search yields partial data, provide the agent's actual live workplace or agency bio page URL so the Gemini 2nd Brain extracts 100% real headshot, cell phone, email, and brokerage name.
-            </p>
-          </div>
-
-          {/* Row 2: Geographic Dropdown Selectors (Cities & All 36 Oregon Counties) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            
-            {/* Oregon Cities Multi-Select Dropdown */}
-            <div className="relative">
-              <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-emerald-600" /> Target Oregon Cities
-                </span>
-                <span className="text-[10px] text-emerald-700 font-bold">
-                  {selectedCities.length === 0 ? "All Cities" : `${selectedCities.length} Selected`}
-                </span>
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsCityDropdownOpen(!isCityDropdownOpen);
-                  setIsCountyDropdownOpen(false);
-                }}
-                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-left flex items-center justify-between cursor-pointer focus:outline-none focus:border-emerald-600"
-              >
-                <span className="truncate font-medium text-[#2D362E]">
-                  {selectedCities.length === 0 
-                    ? "All Major Oregon Cities (Statewide)" 
-                    : selectedCities.join(", ")}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-[#9A9488] shrink-0" />
-              </button>
-
-              {isCityDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#EAE7E0] rounded-2xl shadow-xl p-3 z-30 space-y-2 max-h-56 overflow-y-auto">
-                  <div className="flex items-center justify-between gap-2 pb-1 border-b border-[#EAE7E0]">
-                    <input
-                      type="text"
-                      placeholder="Search cities..."
-                      value={citySearchFilter}
-                      onChange={(e) => setCitySearchFilter(e.target.value)}
-                      className="flex-1 bg-[#FAF9F5] border border-[#EAE7E0] rounded-lg px-2.5 py-1 text-xs"
-                    />
+              {/* Row 1B: Agent Workplace / Bio Page Live URL for 100% Accurate Extraction */}
+              <div className="bg-white p-3 rounded-2xl border border-emerald-200 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-[#4A5D4E] uppercase tracking-wider flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Agent Workplace / Agency Bio Page URL (Direct Live Grounding)</span>
+                    <span className="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded border border-emerald-300">
+                      100% Headshot & Contacts
+                    </span>
+                  </label>
+                  {agentWebsiteUrl && (
                     <button
                       type="button"
-                      onClick={handleSelectAllCities}
-                      className="text-[10px] font-bold text-emerald-700 hover:underline shrink-0"
+                      onClick={() => setAgentWebsiteUrl("")}
+                      className="text-[10px] text-gray-400 hover:text-gray-600 underline cursor-pointer"
                     >
-                      {selectedCities.length === OREGON_CITIES.length ? "Clear" : "Select All"}
+                      Clear URL
                     </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5 pt-1">
-                    {filteredCityList.map(city => {
-                      const isChecked = selectedCities.includes(city);
-                      return (
-                        <button
-                          key={city}
-                          type="button"
-                          onClick={() => handleCityToggle(city)}
-                          className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-left cursor-pointer transition-colors ${
-                            isChecked ? "bg-emerald-50 text-emerald-800 font-bold" : "hover:bg-gray-50 text-[#2D362E]"
-                          }`}
-                        >
-                          {isChecked ? <CheckSquare className="w-3.5 h-3.5 text-emerald-600" /> : <Square className="w-3.5 h-3.5 text-gray-300" />}
-                          <span className="truncate">{city}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* All 36 Oregon Counties Dropdown Selector */}
-            <div className="relative">
-              <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-emerald-600" /> Target Oregon Counties (All 36)
-                </span>
-                <span className="text-[10px] text-emerald-700 font-bold">
-                  {selectedCounties.length === 0 ? "All 36 Counties" : `${selectedCounties.length} Selected`}
-                </span>
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsCountyDropdownOpen(!isCountyDropdownOpen);
-                  setIsCityDropdownOpen(false);
-                }}
-                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-left flex items-center justify-between cursor-pointer focus:outline-none focus:border-emerald-600"
-              >
-                <span className="truncate font-medium text-[#2D362E]">
-                  {selectedCounties.length === 0 
-                    ? "All 36 Oregon Counties (Statewide)" 
-                    : selectedCounties.map(c => `${c} Co.`).join(", ")}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-[#9A9488] shrink-0" />
-              </button>
-
-              {isCountyDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#EAE7E0] rounded-2xl shadow-xl p-3 z-30 space-y-2 max-h-56 overflow-y-auto">
-                  <div className="flex items-center justify-between gap-2 pb-1 border-b border-[#EAE7E0]">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <div className="relative flex-1">
+                    <Link2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600" />
                     <input
-                      type="text"
-                      placeholder="Search 36 counties..."
-                      value={countySearchFilter}
-                      onChange={(e) => setCountySearchFilter(e.target.value)}
-                      className="flex-1 bg-[#FAF9F5] border border-[#EAE7E0] rounded-lg px-2.5 py-1 text-xs"
+                      type="url"
+                      placeholder="e.g. https://kanndicemclean.kw.com or official workplace agency bio page"
+                      value={agentWebsiteUrl}
+                      onChange={(e) => setAgentWebsiteUrl(e.target.value)}
+                      className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-emerald-600 text-[#2D362E]"
                     />
-                    <button
-                      type="button"
-                      onClick={handleSelectAllCounties}
-                      className="text-[10px] font-bold text-emerald-700 hover:underline shrink-0"
-                    >
-                      {selectedCounties.length === OREGON_COUNTIES.length ? "Clear" : "Select All"}
-                    </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-1.5 pt-1">
-                    {filteredCountyList.map(county => {
-                      const isChecked = selectedCounties.includes(county);
-                      return (
-                        <button
-                          key={county}
-                          type="button"
-                          onClick={() => handleCountyToggle(county)}
-                          className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-left cursor-pointer transition-colors ${
-                            isChecked ? "bg-emerald-50 text-emerald-800 font-bold" : "hover:bg-gray-50 text-[#2D362E]"
-                          }`}
-                        >
-                          {isChecked ? <CheckSquare className="w-3.5 h-3.5 text-emerald-600" /> : <Square className="w-3.5 h-3.5 text-gray-300" />}
-                          <span className="truncate">{county} County</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Row 3: Production & Licensing Criteria */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-1 border-t border-[#EAE7E0]/60">
-            <div>
-              <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1">
-                License State
-              </label>
-              <input 
-                type="text" 
-                value={licenseStateFilter} 
-                onChange={(e) => setLicenseStateFilter(e.target.value)}
-                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-600"
-              />
+                  <button
+                    type="button"
+                    onClick={() => handleDeepScrapeUrl(agentWebsiteUrl)}
+                    disabled={isDeepScraping || !agentWebsiteUrl.trim()}
+                    className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 shadow-2xs transition-all cursor-pointer"
+                    title="Direct Gemini SDK agent to scrape this individual workplace page"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 text-amber-300 ${isDeepScraping && deepScrapingIndex === -1 ? 'animate-spin' : ''}`} />
+                    <span>{isDeepScraping && deepScrapingIndex === -1 ? "Scraping Live URL..." : "⚡ Deep Scrape URL Now"}</span>
+                  </button>
+                </div>
+
+                <p className="text-[10px] text-[#606C5D] leading-relaxed">
+                  If initial web search yields partial data, provide the agent's actual live workplace or agency bio page URL so the Gemini 2nd Brain extracts 100% real headshot, cell phone, email, and brokerage name.
+                </p>
+              </div>
+
+              {/* Row 2: Geographic Dropdown Selectors (Cities & All 36 Oregon Counties) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                
+                {/* Oregon Cities Multi-Select Dropdown */}
+                <div className="relative">
+                  <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-emerald-600" /> Target Oregon Cities
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-bold">
+                      {selectedCities.length === 0 ? "All Cities" : `${selectedCities.length} Selected`}
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCityDropdownOpen(!isCityDropdownOpen);
+                      setIsCountyDropdownOpen(false);
+                    }}
+                    className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-left flex items-center justify-between cursor-pointer focus:outline-none focus:border-emerald-600"
+                  >
+                    <span className="truncate font-medium text-[#2D362E]">
+                      {selectedCities.length === 0 
+                        ? "All Major Oregon Cities (Statewide)" 
+                        : selectedCities.join(", ")}
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#9A9488] shrink-0" />
+                  </button>
+
+                  {isCityDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#EAE7E0] rounded-2xl shadow-xl p-3 z-30 space-y-2 max-h-56 overflow-y-auto">
+                      <div className="flex items-center justify-between gap-2 pb-1 border-b border-[#EAE7E0]">
+                        <input
+                          type="text"
+                          placeholder="Search cities..."
+                          value={citySearchFilter}
+                          onChange={(e) => setCitySearchFilter(e.target.value)}
+                          className="flex-1 bg-[#FAF9F5] border border-[#EAE7E0] rounded-lg px-2.5 py-1 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSelectAllCities}
+                          className="text-[10px] font-bold text-emerald-700 hover:underline shrink-0"
+                        >
+                          {selectedCities.length === OREGON_CITIES.length ? "Clear" : "Select All"}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 pt-1">
+                        {filteredCityList.map(city => {
+                          const isChecked = selectedCities.includes(city);
+                          return (
+                            <button
+                              key={city}
+                              type="button"
+                              onClick={() => handleCityToggle(city)}
+                              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-left cursor-pointer transition-colors ${
+                                isChecked ? "bg-emerald-50 text-emerald-800 font-bold" : "hover:bg-gray-50 text-[#2D362E]"
+                              }`}
+                            >
+                              {isChecked ? <CheckSquare className="w-3.5 h-3.5 text-emerald-600" /> : <Square className="w-3.5 h-3.5 text-gray-300" />}
+                              <span className="truncate">{city}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* All 36 Oregon Counties Dropdown Selector */}
+                <div className="relative">
+                  <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-emerald-600" /> Target Oregon Counties (All 36)
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-bold">
+                      {selectedCounties.length === 0 ? "All 36 Counties" : `${selectedCounties.length} Selected`}
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCountyDropdownOpen(!isCountyDropdownOpen);
+                      setIsCityDropdownOpen(false);
+                    }}
+                    className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-left flex items-center justify-between cursor-pointer focus:outline-none focus:border-emerald-600"
+                  >
+                    <span className="truncate font-medium text-[#2D362E]">
+                      {selectedCounties.length === 0 
+                        ? "All 36 Oregon Counties (Statewide)" 
+                        : selectedCounties.map(c => `${c} Co.`).join(", ")}
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5 text-[#9A9488] shrink-0" />
+                  </button>
+
+                  {isCountyDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#EAE7E0] rounded-2xl shadow-xl p-3 z-30 space-y-2 max-h-56 overflow-y-auto">
+                      <div className="flex items-center justify-between gap-2 pb-1 border-b border-[#EAE7E0]">
+                        <input
+                          type="text"
+                          placeholder="Search 36 counties..."
+                          value={countySearchFilter}
+                          onChange={(e) => setCountySearchFilter(e.target.value)}
+                          className="flex-1 bg-[#FAF9F5] border border-[#EAE7E0] rounded-lg px-2.5 py-1 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSelectAllCounties}
+                          className="text-[10px] font-bold text-emerald-700 hover:underline shrink-0"
+                        >
+                          {selectedCounties.length === OREGON_COUNTIES.length ? "Clear" : "Select All"}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 pt-1">
+                        {filteredCountyList.map(county => {
+                          const isChecked = selectedCounties.includes(county);
+                          return (
+                            <button
+                              key={county}
+                              type="button"
+                              onClick={() => handleCountyToggle(county)}
+                              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-left cursor-pointer transition-colors ${
+                                isChecked ? "bg-emerald-50 text-emerald-800 font-bold" : "hover:bg-gray-50 text-[#2D362E]"
+                              }`}
+                            >
+                              {isChecked ? <CheckSquare className="w-3.5 h-3.5 text-emerald-600" /> : <Square className="w-3.5 h-3.5 text-gray-300" />}
+                              <span className="truncate">{county} County</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 3: Production & Licensing Criteria */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-1 border-t border-[#EAE7E0]/60">
+                <div>
+                  <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1">
+                    License State
+                  </label>
+                  <input 
+                    type="text" 
+                    value={licenseStateFilter} 
+                    onChange={(e) => setLicenseStateFilter(e.target.value)}
+                    className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1">
+                    Min Years Licensed
+                  </label>
+                  <input 
+                    type="number" 
+                    min={0}
+                    value={minYearsExp} 
+                    onChange={(e) => setMinYearsExp(parseInt(e.target.value) || 0)}
+                    className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1">
+                    Min 12mo Units
+                  </label>
+                  <input 
+                    type="number" 
+                    min={0}
+                    value={minUnits} 
+                    onChange={(e) => setMinUnits(parseInt(e.target.value) || 0)}
+                    className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1">
+                    Min 12mo Vol ($M)
+                  </label>
+                  <input 
+                    type="number" 
+                    min={0}
+                    value={minVolume} 
+                    onChange={(e) => setMinVolume(parseInt(e.target.value) || 0)}
+                    className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-600"
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1">
-                Min Years Licensed
-              </label>
-              <input 
-                type="number" 
-                min={0}
-                value={minYearsExp} 
-                onChange={(e) => setMinYearsExp(parseInt(e.target.value) || 0)}
-                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-600"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1">
-                Min 12mo Units
-              </label>
-              <input 
-                type="number" 
-                min={0}
-                value={minUnits} 
-                onChange={(e) => setMinUnits(parseInt(e.target.value) || 0)}
-                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-600"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-[#7D8877] uppercase tracking-wider mb-1">
-                Min 12mo Vol ($M)
-              </label>
-              <input 
-                type="number" 
-                min={0}
-                value={minVolume} 
-                onChange={(e) => setMinVolume(parseInt(e.target.value) || 0)}
-                className="w-full bg-white border border-[#EAE7E0] rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-600"
-              />
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Action & Filter Summary Bar */}
@@ -764,8 +819,8 @@ export const ScrapeRealtorModal: React.FC<ScrapeRealtorModalProps> = ({
               </div>
             </div>
 
-            {/* Scrollable Profiles List */}
-            <div className="flex-1 overflow-y-auto pr-1 space-y-2.5 dashboard-vertical-scrollbar max-h-[35vh]">
+            {/* Scrollable Profiles List with Dedicated Vertical Scrollbar */}
+            <div className="flex-1 overflow-y-auto pr-2 space-y-2.5 dashboard-vertical-scrollbar min-h-[220px] max-h-[58vh]">
               {filteredProfiles.map((p) => {
                 const actualIndex = scrapedProfiles.indexOf(p);
                 const isSelected = selectedIndices.has(actualIndex);

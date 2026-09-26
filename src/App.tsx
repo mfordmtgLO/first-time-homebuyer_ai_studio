@@ -16,11 +16,12 @@ import { MobileDashboardOverview } from "./components/mobile/MobileDashboardOver
 import { PropertyTracker } from "./components/PropertyTracker";
 import { TourScorecardModal } from "./components/TourScorecardModal";
 import { NewPropertyModal } from "./components/NewPropertyModal";
-import { MortgageLab } from "./components/MortgageLab";
-import { AICopilot } from "./components/AICopilot";
 import { EscrowTracker } from "./components/EscrowTracker";
 import { MarketTrends } from "./components/MarketTrends";
-import { GeoSphereSyncHub } from "./components/GeoSphereSyncHub";
+
+const MortgageLab = React.lazy(() => import("./components/MortgageLab").then(m => ({ default: m.MortgageLab })));
+const AICopilot = React.lazy(() => import("./components/AICopilot").then(m => ({ default: m.AICopilot })));
+const GeoSphereSyncHub = React.lazy(() => import("./components/GeoSphereSyncHub").then(m => ({ default: m.GeoSphereSyncHub })));
 import { Step4AIScenarioSummary } from "./components/Step4AIScenarioSummary";
 import { AIPrequalWizard } from "./components/AIPrequalWizard";
 import { LoanOfficerPortal } from "./components/LoanOfficerPortal";
@@ -34,6 +35,7 @@ import { checkAndProvisionUser } from "./utils/authUtils";
 import { applyMetadataToDocument, fetchSavedSeoMetadata } from "./utils/seoManager";
 import { SEOSchemaInjector } from "./components/SEOSchemaInjector";
 import { PrivacyPolicyModal } from "./components/PrivacyPolicyModal";
+import { cleanupStaleCaches } from "./utils/cacheCleanup";
 import {
   INITIAL_PROFILE,
   INITIAL_PROPERTIES,
@@ -196,6 +198,34 @@ export default function App() {
       clearTimeout(timer);
       unsubscribeAuth();
       unsubscribeSettings();
+    };
+  }, []);
+
+  // Idle tracking & cache cleanup utility on useEffect cleanup return if idle > 5 mins
+  const lastActivityRef = useRef<number>(Date.now());
+  useEffect(() => {
+    const updateActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    window.addEventListener("mousemove", updateActivity);
+    window.addEventListener("keydown", updateActivity);
+    window.addEventListener("touchstart", updateActivity);
+    window.addEventListener("scroll", updateActivity);
+    window.addEventListener("click", updateActivity);
+
+    return () => {
+      window.removeEventListener("mousemove", updateActivity);
+      window.removeEventListener("keydown", updateActivity);
+      window.removeEventListener("touchstart", updateActivity);
+      window.removeEventListener("scroll", updateActivity);
+      window.removeEventListener("click", updateActivity);
+
+      const idleDuration = Date.now() - lastActivityRef.current;
+      const FIVE_MINUTES = 5 * 60 * 1000;
+      if (idleDuration >= FIVE_MINUTES) {
+        cleanupStaleCaches();
+      }
     };
   }, []);
 
@@ -1290,43 +1320,50 @@ export default function App() {
                       />
                     )}
 
-                    {(activeTab === "geomap" || activeTab === "geosphere" || activeTab === "geosphere_sync") && (
-                      <GeoSphereSyncHub
-                        guidesState={guidesState}
-                        onUpdateGuidesState={handleUpdateGuidesState}
-                        properties={properties}
-                        setProperties={setProperties}
-                        onTriggerToast={(msg) => console.log(msg)}
-                        onNavigateToAdsPortal={() => {
-                          setLoPortalInitialTab("ad_campaigns");
-                          setShowLoPortal(true);
-                        }}
-                        onNavigateToFthbPipeline={() => {
-                          setLoPortalInitialTab("fthb_pipeline");
-                          setShowLoPortal(true);
-                        }}
-                      />
-                    )}
+                    <React.Suspense fallback={
+                      <div className="flex flex-col items-center justify-center p-16 space-y-4">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
+                        <p className="text-sm font-medium text-gray-600 animate-pulse">Loading module with 2nd Brain Grounding...</p>
+                      </div>
+                    }>
+                      {(activeTab === "geomap" || activeTab === "geosphere" || activeTab === "geosphere_sync") && (
+                        <GeoSphereSyncHub
+                          guidesState={guidesState}
+                          onUpdateGuidesState={handleUpdateGuidesState}
+                          properties={properties}
+                          setProperties={setProperties}
+                          onTriggerToast={(msg) => console.log(msg)}
+                          onNavigateToAdsPortal={() => {
+                            setLoPortalInitialTab("ad_campaigns");
+                            setShowLoPortal(true);
+                          }}
+                          onNavigateToFthbPipeline={() => {
+                            setLoPortalInitialTab("fthb_pipeline");
+                            setShowLoPortal(true);
+                          }}
+                        />
+                      )}
 
-                    {activeTab === "mortgagelab" && (
-                      <MortgageLab
-                        profile={profile}
-                        loanOfficer={guidesState.loanOfficer}
-                        activeAgent={activeAgent}
-                        isLoanOfficerMode={false}
-                        initialTab={mortgageLabInitialTab}
-                        onBack={() => handleNavigate(isMobile ? "hero" : "dashboard", isMobile ? "website" : "dashboard")}
-                      />
-                    )}
+                      {activeTab === "mortgagelab" && (
+                        <MortgageLab
+                          profile={profile}
+                          loanOfficer={guidesState.loanOfficer}
+                          activeAgent={activeAgent}
+                          isLoanOfficerMode={false}
+                          initialTab={mortgageLabInitialTab}
+                          onBack={() => handleNavigate(isMobile ? "hero" : "dashboard", isMobile ? "website" : "dashboard")}
+                        />
+                      )}
 
-                    {activeTab === "ai_copilot" && (
-                      <AICopilot
-                        profile={profile}
-                        properties={properties}
-                        loanOfficer={guidesState.loanOfficer}
-                        activeAgent={activeAgent}
-                      />
-                    )}
+                      {activeTab === "ai_copilot" && (
+                        <AICopilot
+                          profile={profile}
+                          properties={properties}
+                          loanOfficer={guidesState.loanOfficer}
+                          activeAgent={activeAgent}
+                        />
+                      )}
+                    </React.Suspense>
 
                     {activeTab === "escrow" && <EscrowTracker />}
 

@@ -26,7 +26,9 @@ import {
   Layers, 
   CheckCircle2, 
   Zap,
-  UserCheck
+  UserCheck,
+  Download,
+  FileSpreadsheet
 } from "lucide-react";
 import { 
   ProfessionalGuidesState, 
@@ -44,6 +46,7 @@ import {
 import { Top50RecruitLeaderboard } from "./Top50RecruitLeaderboard";
 import { RealtorCoBrandingHub } from "./RealtorCoBrandingHub";
 import { AIPartnerCampaign } from "./AIPartnerCampaign";
+import { AgentRosterExportModal, ExportMode } from "./AgentRosterExportModal";
 
 interface MasterRealtorCommandCenterProps {
   guidesState: ProfessionalGuidesState;
@@ -112,6 +115,10 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
 
   // Copy Feedback
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // CSV Export Modal States
+  const [showExportModal, setShowExportModal] = useState<boolean>(false);
+  const [exportInitialMode, setExportInitialMode] = useState<ExportMode>("filtered");
 
   // Get Unified Master Agent Roster (100% complete agent pool)
   const masterAgentRoster = useMemo(() => {
@@ -325,6 +332,19 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
               <LinkIcon className="w-4 h-4 text-amber-300" />
               <span>Create LO+Agent Pairing</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setExportInitialMode("all");
+                setShowExportModal(true);
+              }}
+              className="px-4 py-2.5 bg-emerald-600/30 hover:bg-emerald-600/50 text-white border border-emerald-400/40 text-xs font-bold rounded-xl shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+              title="Export complete or filtered Agent Roster to CSV for CRM or marketing tools"
+            >
+              <Download className="w-4 h-4 text-emerald-300" />
+              <span>Export to CSV</span>
+            </button>
           </div>
         </div>
 
@@ -460,68 +480,84 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
               </div>
             </div>
 
-            {/* Category Filter Chips */}
-            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#EAE7E0]">
-              <button
-                type="button"
-                onClick={() => setRosterFilter("all")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  rosterFilter === "all"
-                    ? "bg-[#2D362E] text-white"
-                    : "bg-[#FAF9F5] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F4F1EA]"
-                }`}
-              >
-                All Agents ({masterAgentRoster.length})
-              </button>
+            {/* Category Filter Chips & CSV Export Action */}
+            <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-[#EAE7E0]">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setRosterFilter("all")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    rosterFilter === "all"
+                      ? "bg-[#2D362E] text-white"
+                      : "bg-[#FAF9F5] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F4F1EA]"
+                  }`}
+                >
+                  All Agents ({masterAgentRoster.length})
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setRosterFilter("top50")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  rosterFilter === "top50"
-                    ? "bg-amber-500 text-amber-950 font-extrabold"
-                    : "bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100"
-                }`}
-              >
-                <span>🏆 Top 50 Recruits</span>
-                <span>({masterAgentRoster.filter((a) => a.isTop50).length})</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setRosterFilter("top50")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    rosterFilter === "top50"
+                      ? "bg-amber-500 text-amber-950 font-extrabold"
+                      : "bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100"
+                  }`}
+                >
+                  <span>🏆 Top 50 Recruits</span>
+                  <span>({masterAgentRoster.filter((a) => a.isTop50).length})</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setRosterFilter("paired")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  rosterFilter === "paired"
-                    ? "bg-blue-600 text-white"
-                    : "bg-blue-50 text-blue-900 border border-blue-200 hover:bg-blue-100"
-                }`}
-              >
-                <span>🔗 Paired Partners</span>
-                <span>({masterAgentRoster.filter((a) => a.isPaired).length})</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setRosterFilter("paired")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    rosterFilter === "paired"
+                      ? "bg-blue-600 text-white"
+                      : "bg-blue-50 text-blue-900 border border-blue-200 hover:bg-blue-100"
+                  }`}
+                >
+                  <span>🔗 Paired Partners</span>
+                  <span>({masterAgentRoster.filter((a) => a.isPaired).length})</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setRosterFilter("buyer_agent")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  rosterFilter === "buyer_agent"
-                    ? "bg-emerald-700 text-white"
-                    : "bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100"
-                }`}
-              >
-                Buyer Specialists ({masterAgentRoster.filter((a) => a.agentType === "buyer_agent").length})
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setRosterFilter("buyer_agent")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    rosterFilter === "buyer_agent"
+                      ? "bg-emerald-700 text-white"
+                      : "bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100"
+                  }`}
+                >
+                  Buyer Specialists ({masterAgentRoster.filter((a) => a.agentType === "buyer_agent").length})
+                </button>
 
+                <button
+                  type="button"
+                  onClick={() => setRosterFilter("listing_agent")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    rosterFilter === "listing_agent"
+                      ? "bg-purple-700 text-white"
+                      : "bg-purple-50 text-purple-900 border border-purple-200 hover:bg-purple-100"
+                  }`}
+                >
+                  Listing Agents ({masterAgentRoster.filter((a) => a.agentType === "listing_agent").length})
+                </button>
+              </div>
+
+              {/* Export to CSV Button in Roster Toolbar */}
               <button
                 type="button"
-                onClick={() => setRosterFilter("listing_agent")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  rosterFilter === "listing_agent"
-                    ? "bg-purple-700 text-white"
-                    : "bg-purple-50 text-purple-900 border border-purple-200 hover:bg-purple-100"
-                }`}
+                onClick={() => {
+                  setExportInitialMode(rosterFilter === "top50" ? "top50" : "filtered");
+                  setShowExportModal(true);
+                }}
+                className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer shrink-0"
+                title="Download filtered agent roster to CSV for CRM or marketing tools"
               >
-                Listing Agents ({masterAgentRoster.filter((a) => a.agentType === "listing_agent").length})
+                <Download className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Export to CSV ({filteredAgents.length})</span>
               </button>
             </div>
           </div>
@@ -721,6 +757,19 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
                   ))}
                 </select>
               </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setExportInitialMode("pairings");
+                  setShowExportModal(true);
+                }}
+                className="px-4 py-2.5 bg-white hover:bg-[#FAF9F5] text-[#2D362E] border border-[#EAE7E0] text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
+                title="Export LO + Agent pairings list to CSV"
+              >
+                <Download className="w-4 h-4 text-blue-600" />
+                <span>Export to CSV ({sortedAndFilteredPairings.length})</span>
+              </button>
 
               <button
                 type="button"
@@ -1007,6 +1056,19 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
           </div>
         </div>
       )}
+
+      {/* Agent Roster & Partnerships CSV Export Modal */}
+      <AgentRosterExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        masterAgentRoster={masterAgentRoster}
+        currentFilteredAgents={filteredAgents}
+        pairings={guidesState.pairings || []}
+        loanOfficers={guidesState.loanOfficers || []}
+        currentLo={currentLo}
+        onTriggerToast={onTriggerToast}
+        initialExportMode={exportInitialMode}
+      />
     </div>
   );
 };

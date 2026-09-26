@@ -7,7 +7,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { loadKnowledgeBase, searchKnowledge, addDocumentToKnowledge } from "./vantageKnowledge.js";
-import { searchLiveRegistry } from "./liveWebSearch.js";
+import { searchLiveRegistry, scrapeAgentUrlDirectly } from "./liveWebSearch.js";
 import { handleIncomingTwilioWebhook } from "./src/services/smsSyncService.js";
 
 // Enterprise Encryption Vault Setup (Zero-Trust Security Architecture)
@@ -6371,10 +6371,27 @@ Return ONLY valid JSON in this exact structure:
         minYearsExp, 
         minUnits, 
         minVolume, 
-        licenseStateFilter 
+        licenseStateFilter,
+        agentWebsiteUrl,
+        websiteUrl
       } = req.body || {};
       const stateMatch = String(licenseStateFilter || "").match(/\(([A-Z]{2})\)/);
       const state = stateMatch ? stateMatch[1] : "OR";
+
+      const effectiveUrl = agentWebsiteUrl || websiteUrl;
+      let directUrlProfile: any = null;
+
+      if (effectiveUrl && String(effectiveUrl).trim()) {
+        try {
+          directUrlProfile = await scrapeAgentUrlDirectly(
+            String(effectiveUrl).trim(),
+            agentName || query,
+            brokerage
+          );
+        } catch (urlErr) {
+          console.warn("Direct agent website URL scrape notice:", urlErr);
+        }
+      }
 
       const searchRes = await searchLiveRegistry(
         {
@@ -6385,6 +6402,7 @@ Return ONLY valid JSON in this exact structure:
           cities: Array.isArray(selectedCities) ? selectedCities : [],
           counties: Array.isArray(selectedCounties) ? selectedCounties : [],
           state,
+          websiteUrl: effectiveUrl,
           minYears: Number(minYearsExp) || 0,
           minUnits: Number(minUnits) || 0,
           minVolume: (Number(minVolume) || 0) * 1000000,
@@ -6392,13 +6410,42 @@ Return ONLY valid JSON in this exact structure:
         "agent"
       );
 
+      let combinedProfiles = searchRes.results || [];
+      if (directUrlProfile) {
+        // Prepend direct URL profile so it's at index 0 and highlighted
+        combinedProfiles = [
+          directUrlProfile,
+          ...combinedProfiles.filter((p: any) => p.name.toLowerCase() !== directUrlProfile.name.toLowerCase())
+        ];
+      }
+
       res.json({
         success: true,
-        profiles: searchRes.results || [],
+        profiles: combinedProfiles,
       });
     } catch (err: any) {
       console.error("Realtor roster lookup error:", err);
       res.status(500).json({ error: err.message || "Failed to lookup realtor roster" });
+    }
+  });
+
+  // POST /api/gemini/scrape-agent-url - 2nd Brain direct individual agent workplace bio page scraper
+  app.post("/api/gemini/scrape-agent-url", async (req, res) => {
+    try {
+      const { url, agentName, brokerage } = req.body || {};
+      if (!url || typeof url !== "string" || !url.trim()) {
+        return res.status(400).json({ error: "A valid agent website or bio page URL is required." });
+      }
+
+      const profile = await scrapeAgentUrlDirectly(url.trim(), agentName, brokerage);
+
+      res.json({
+        success: true,
+        profile,
+      });
+    } catch (err: any) {
+      console.error("Individual agent URL scrape error:", err);
+      res.status(500).json({ error: err.message || "Failed to scrape agent from website URL" });
     }
   });
 

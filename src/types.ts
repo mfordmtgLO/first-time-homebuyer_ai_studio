@@ -505,6 +505,8 @@ export interface RealEstateAgentProfile {
   activeListingsCount?: number;
   rating?: number;
   websiteUrl?: string;
+  sourceUrl?: string;
+  deepScrapedFromUrl?: boolean;
   socialLinks?: {
     zillow?: string;
     linkedin?: string;

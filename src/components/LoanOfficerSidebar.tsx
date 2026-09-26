@@ -27,6 +27,7 @@ import {
   PanelLeftClose,
   PanelRightClose,
   Video,
+  Activity,
 } from "lucide-react";
 import { AIDailyRhythmCard } from "./AIDailyRhythmCard";
 import { LoanOfficerProfile, ProfessionalGuidesState } from "../types";
@@ -51,9 +52,11 @@ export type TabId =
   | "recruitment_pipeline"
   | "pairings"
   | "realtor_roster"
+  | "agent_sync_activity"
   | "dpa_grants"
   | "ai_partner_campaign"
   | "geosphere_sync"
+  | "geomap"
   | "my_profile"
   | "social_push"
   | "ad_campaigns"
@@ -231,6 +234,13 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
           badge: `${guidesState.agentRoster?.length || 0}`,
         },
         {
+          id: "agent_sync_activity",
+          label: "Agent & GeoMap Sync Activity",
+          icon: <Activity className="w-4 h-4 text-sky-600" />,
+          badge: "Unified Log",
+          badgeColor: "bg-sky-100 text-sky-800 font-bold",
+        },
+        {
           id: "pairings",
           label: "LO + Agent Pairings",
           icon: <Link className="w-4 h-4" />,
@@ -266,9 +276,9 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
         },
         {
           id: "geosphere_sync",
-          label: "GeoSphere Map Sync",
-          icon: <Globe className="w-4 h-4" />,
-          badge: `${guidesState.syncedProperties?.length || 6}`,
+          label: "GeoMap / GeoSphere Sync",
+          icon: <Globe className="w-4 h-4 text-emerald-600" />,
+          badge: `${guidesState.syncedProperties?.length || 249}`,
         },
         {
           id: "social_push",
@@ -613,7 +623,12 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
               {(!isCatCollapsed || isCollapsed) && (
                 <div className="space-y-0.5">
                   {visibleItems.map((item) => {
-                    const isActive = activeTab === item.id;
+                    const isActive =
+                      activeTab === item.id ||
+                      (item.id === "geosphere_sync" &&
+                        ((activeTab as string) === "geomap" ||
+                          (activeTab as string) === "geosphere" ||
+                          (activeTab as string) === "geo_map"));
 
                     return (
                       <button

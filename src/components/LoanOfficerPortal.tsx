@@ -171,6 +171,7 @@ import { BranchManagement } from "./BranchManagement";
 import { MetadataConfiguration } from "./MetadataConfiguration";
 import { RecruitmentPipeline } from "./RecruitmentPipeline";
 import { MasterRealtorCommandCenter } from "./MasterRealtorCommandCenter";
+import { AgentSyncActivityLog } from "./AgentSyncActivityLog";
 import { AILoanOfficer2ndBrain } from "./AILoanOfficer2ndBrain";
 import { ScheduleCTaxAnalyzer } from "./ScheduleCTaxAnalyzer";
 import { Buydown21ScenarioEngine } from "./Buydown21ScenarioEngine";
@@ -362,7 +363,11 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     const handleDeepLink = (e: any) => {
       const payload = e.detail;
       if (payload.targetTab) {
-        setActiveTab(payload.targetTab);
+        let tab = payload.targetTab;
+        if (tab === "geomap" || tab === "geosphere" || tab === "geo_map" || tab === "geomap_sync") {
+          tab = "geosphere_sync";
+        }
+        setActiveTab(tab);
       }
       if (payload.targetLeadId) {
         // Find lead if it exists
@@ -3255,21 +3260,21 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 data-tab-id="geosphere_sync"
                 onClick={() => setActiveTab("geosphere_sync")}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
-                  activeTab === "geosphere_sync"
+                  activeTab === "geosphere_sync" || (activeTab as string) === "geomap" || (activeTab as string) === "geosphere"
                     ? "bg-[#2F5738] text-white shadow-xs"
                     : "bg-[#F9F8F4] text-[#606C5D] border border-[#EAE7E0] hover:bg-[#F1EFE9]"
                 }`}
               >
                 <Globe className="w-4 h-4 text-[#D4A373]" />
-                <span>GeoSphere Map Sync Hub</span>
+                <span>GeoMap / GeoSphere Sync Hub</span>
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    activeTab === "geosphere_sync"
+                    activeTab === "geosphere_sync" || (activeTab as string) === "geomap"
                       ? "bg-white/20 text-white"
                       : "bg-emerald-100 text-emerald-800"
                   }`}
                 >
-                  {guidesState.syncedProperties?.length || 6}
+                  {guidesState.syncedProperties?.length || 249}
                 </span>
               </button>
 
@@ -7289,6 +7294,18 @@ Mike Ford`;
               />
             )}
 
+            {/* Tab: Agent Sync Activity & Scraper Logs */}
+            {activeTab === "agent_sync_activity" && (
+              <AgentSyncActivityLog
+                guidesState={guidesState}
+                onUpdateGuidesState={onUpdateGuidesState}
+                currentLo={currentLo}
+                onTriggerToast={triggerToast}
+                onNavigateToRealtorRoster={() => setActiveTab("realtor_roster")}
+                onNavigateToPairings={() => setActiveTab("pairings")}
+              />
+            )}
+
             {false && (
               <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-sm">
@@ -8238,7 +8255,7 @@ Mike Ford`;
             )}
 
             {/* Tab: GeoSphere Oregon Map Sync & Listing Curation Hub */}
-            {activeTab === "geosphere_sync" && (
+            {(activeTab === "geosphere_sync" || (activeTab as string) === "geomap" || (activeTab as string) === "geosphere" || (activeTab as string) === "geo_map") && (
               <GeoSphereSyncHub
                 guidesState={guidesState}
                 onUpdateGuidesState={onUpdateGuidesState}

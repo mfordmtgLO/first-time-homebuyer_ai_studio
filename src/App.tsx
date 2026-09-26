@@ -20,6 +20,7 @@ import { MortgageLab } from "./components/MortgageLab";
 import { AICopilot } from "./components/AICopilot";
 import { EscrowTracker } from "./components/EscrowTracker";
 import { MarketTrends } from "./components/MarketTrends";
+import { GeoSphereSyncHub } from "./components/GeoSphereSyncHub";
 import { Step4AIScenarioSummary } from "./components/Step4AIScenarioSummary";
 import { AIPrequalWizard } from "./components/AIPrequalWizard";
 import { LoanOfficerPortal } from "./components/LoanOfficerPortal";
@@ -1179,6 +1180,9 @@ export default function App() {
                       ![
                         "step4_ai_plan",
                         "properties",
+                        "geomap",
+                        "geosphere",
+                        "geosphere_sync",
                         "mortgagelab",
                         "ai_copilot",
                         "escrow",
@@ -1283,6 +1287,24 @@ export default function App() {
                         onOpenScorecard={(prop) => setScorecardProperty(prop)}
                         onOpenNewModal={() => setShowNewPropertyModal(true)}
                         onAskAiAboutProperty={handleAskAiAboutProperty}
+                      />
+                    )}
+
+                    {(activeTab === "geomap" || activeTab === "geosphere" || activeTab === "geosphere_sync") && (
+                      <GeoSphereSyncHub
+                        guidesState={guidesState}
+                        onUpdateGuidesState={handleUpdateGuidesState}
+                        properties={properties}
+                        setProperties={setProperties}
+                        onTriggerToast={(msg) => console.log(msg)}
+                        onNavigateToAdsPortal={() => {
+                          setLoPortalInitialTab("ad_campaigns");
+                          setShowLoPortal(true);
+                        }}
+                        onNavigateToFthbPipeline={() => {
+                          setLoPortalInitialTab("fthb_pipeline");
+                          setShowLoPortal(true);
+                        }}
                       />
                     )}
 

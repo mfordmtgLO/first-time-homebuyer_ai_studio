@@ -151,6 +151,7 @@ export const StepNavigationBanner: React.FC<StepNavigationBannerProps> = ({
 
   const searchTools = [
     { id: "properties", label: "Saved Properties", icon: Building, mode: "dashboard" as const, count: propertiesCount },
+    { id: "geomap", label: "GeoMap / GIS Sync", icon: Globe, mode: "dashboard" as const },
     { id: "market_trends", label: "Market Trends & Insights", icon: Globe, mode: "dashboard" as const },
     { id: "ai_copilot", label: "AI Property Copilot", icon: Sparkles, mode: "dashboard" as const },
     { id: "escrow", label: "Closing Tracker & Escrow", icon: ShieldCheck, mode: "dashboard" as const },

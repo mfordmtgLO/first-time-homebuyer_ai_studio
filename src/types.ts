@@ -1280,3 +1280,123 @@ export interface RespaCostSharingExpense {
   agentName: string;
   notes?: string;
 }
+
+export interface ScraperValidationWarning {
+  id: string;
+  code:
+    | 'MISSING_NMLS'
+    | 'UNVERIFIED_LICENSE'
+    | 'LOW_RES_AVATAR'
+    | 'MISSING_DIRECT_PHONE'
+    | 'MISSING_EMAIL'
+    | 'DISCREPANCY_PRODUCTION'
+    | 'RATE_LIMIT_WARNING'
+    | 'OUTDATED_TRANSACTIONS'
+    | 'SSL_CERT_WARNING'
+    | 'UNKNOWN_BROKERAGE'
+    | 'OHCS_PRICE_LIMIT_EXCEEDED'
+    | 'MISSING_MLS_NUMBER'
+    | 'UNVERIFIED_AD_DISCLAIMER'
+    | 'MISSING_GEO_COORDINATES'
+    | 'COUNTY_MISMATCH'
+    | 'MISSING_HEADSHOT_ASSET';
+  severity: 'high' | 'medium' | 'low';
+  message: string;
+  field?: string;
+  resolved: boolean;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolutionNote?: string;
+}
+
+export type SyncActivityCategory =
+  | 'agent_scraper'
+  | 'geomap_property_sync'
+  | 'top50_sweep'
+  | 'vantage_ai_import';
+
+export interface AgentScraperLogEntry {
+  id: string;
+  category?: SyncActivityCategory;
+  title?: string;
+  agentName: string;
+  brokerage?: string;
+  sourceUrl: string;
+  sourceType:
+    | 'zillow'
+    | 'realtrends'
+    | 'scotsman_guide'
+    | 'brokerage_bio'
+    | 'nmls_registry'
+    | 'realtor_com'
+    | 'linkedin'
+    | 'direct_search'
+    | 'custom_url'
+    | 'geosphere_gis'
+    | 'rentcast_api'
+    | 'vantage_ai_studio'
+    | 'luther_geosphere_web'
+    | 'batch_sweep';
+  attemptTimestamp: string;
+  status: 'success' | 'warning' | 'failed' | 'in_progress';
+  latencyMs?: number;
+  httpStatus?: number;
+  scrapedData?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    licenseNumber?: string;
+    nmlsId?: string;
+    brokerage?: string;
+    headshotUrl?: string;
+    yearsExperience?: number;
+    production12MoVolume?: number;
+    production12MoUnits?: number;
+    buysideSharePct?: number;
+    marketAreas?: string[];
+    bio?: string;
+  };
+  propertySyncMeta?: {
+    datasetId?: string;
+    datasetName?: string;
+    listingsCount?: number;
+    matchedAgentCount?: number;
+    loPairsAutoPushed?: number;
+    rentcastApiCallsUsed?: number;
+    targetCounty?: string;
+    targetCity?: string;
+    priceRangeSummary?: string;
+    ohcsEligibleCount?: number;
+    usdaEligibleCount?: number;
+    sampleAddresses?: string[];
+  };
+  top50SweepMeta?: {
+    sweepType?:
+      | 'realtrends_top50_agents'
+      | 'top50_usda_listings'
+      | 'top50_junction_city'
+      | 'top50_lane_county'
+      | 'top50_metro_buyside';
+    sweepName?: string;
+    scannedCount?: number;
+    qualifiedCount?: number;
+    topRankMetric?: string;
+    topEntityNames?: string[];
+  };
+  vantageAiSyncMeta?: {
+    campaignName?: string;
+    targetAudience?: string;
+    channels?: ('meta' | 'google' | 'instagram' | 'youtube' | 'tiktok')[];
+    draftAdCount?: number;
+    coBrandedPartnerAgent?: string;
+    coBrandedLoanOfficer?: string;
+    adSpendBudget?: number;
+    vantageQueueStatus?: 'queued' | 'published' | 'draft' | 'synced';
+    generatedCreativeHeadline?: string;
+  };
+  validationWarnings: ScraperValidationWarning[];
+  errorMessage?: string;
+  retryCount?: number;
+  initiatedBy?: string;
+  rawPayloadSnippet?: string;
+}

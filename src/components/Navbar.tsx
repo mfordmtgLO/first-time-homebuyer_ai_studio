@@ -124,6 +124,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: "mortgagelab", label: "Mortgage Lab & PITI", shortLabel: "Mortgage Lab", icon: TrendingUp, mode: "dashboard" },
     { id: "ai_copilot", label: "AI Advisor Copilot", shortLabel: "AI Advisor", icon: Sparkles, badge: "Gemini 3.7", mode: "dashboard" },
     { id: "escrow", label: "Closing & Escrow Tracker", shortLabel: "Closing Tracker", icon: ShieldCheck, mode: "dashboard" },
+    { id: "geomap", label: "GeoMap / GeoSphere & RentCast Sync", shortLabel: "GeoMap / GIS Sync", icon: Globe, badge: "GIS Sync", mode: "dashboard" },
     { id: "market_trends", label: "Market Trends & Insights", shortLabel: "Market Trends", icon: Globe, badge: "Live", mode: "dashboard" },
   ];
 

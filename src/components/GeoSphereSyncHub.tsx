@@ -152,7 +152,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   const [selectedListingIds, setSelectedListingIds] = useState<string[]>([]);
   const [activeOverlayFilter, setActiveOverlayFilter] = useState<string>("all");
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"cards" | "map" | "cloud_run_live">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "map" | "cloud_run_live">("map");
   const [countyFilter, setCountyFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "dom" | "sqft">("default");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -256,10 +256,18 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   };
 
   
-  // Custom API endpoint & token drawer state
-  const [showAdvancedEndpoint, setShowAdvancedEndpoint] = useState<boolean>(false);
-  const [customEndpointUrl, setCustomEndpointUrl] = useState<string>(`${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings`);
-  const [customSyncToken, setCustomSyncToken] = useState<string>("");
+  // Luther GeoSphere Map & RentCast Sync State
+  const [showAdvancedEndpoint, setShowAdvancedEndpoint] = useState<boolean>(true);
+  const [customEndpointUrl, setCustomEndpointUrl] = useState<string>(() => {
+    return localStorage.getItem("luther_geosphere_url") || `${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings`;
+  });
+  const [customSyncToken, setCustomSyncToken] = useState<string>(() => {
+    return localStorage.getItem("luther_sync_token") || "";
+  });
+  const [rentcastApiKeyInput, setRentcastApiKeyInput] = useState<string>(() => {
+    return (currentLo as any)?.rentcastApiKey || localStorage.getItem("rentcast_api_key") || "";
+  });
+  const [syncTargetCity, setSyncTargetCity] = useState<string>("all");
 
   // Import JSON Modal State
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
@@ -548,6 +556,11 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
       await incrementRentCastUsage(1);
       let liveListings: PropertyListing[] = [];
 
+      // Store user inputs for convenience
+      if (customEndpointUrl) localStorage.setItem("luther_geosphere_url", customEndpointUrl.trim());
+      if (customSyncToken) localStorage.setItem("luther_sync_token", customSyncToken.trim());
+      if (rentcastApiKeyInput) localStorage.setItem("rentcast_api_key", rentcastApiKeyInput.trim());
+
       try {
         const res = await fetch("/api/geosphere/sync", {
           method: "POST",
@@ -555,6 +568,8 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           body: JSON.stringify({
             endpointUrl: customEndpointUrl.trim() || undefined,
             syncToken: customSyncToken.trim() || undefined,
+            rentcastApiKey: rentcastApiKeyInput.trim() || undefined,
+            city: syncTargetCity !== "all" ? syncTargetCity : undefined,
           }),
         });
 
@@ -785,6 +800,11 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
     try {
       let liveListings: PropertyListing[] = [];
 
+      // Store user inputs for convenience
+      if (customEndpointUrl) localStorage.setItem("luther_geosphere_url", customEndpointUrl.trim());
+      if (customSyncToken) localStorage.setItem("luther_sync_token", customSyncToken.trim());
+      if (rentcastApiKeyInput) localStorage.setItem("rentcast_api_key", rentcastApiKeyInput.trim());
+
       // 1. Call our backend proxy /api/geosphere/sync
       try {
         const res = await fetch("/api/geosphere/sync", {
@@ -793,6 +813,8 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           body: JSON.stringify({
             endpointUrl: customEndpointUrl.trim() || undefined,
             syncToken: customSyncToken.trim() || undefined,
+            rentcastApiKey: rentcastApiKeyInput.trim() || undefined,
+            city: syncTargetCity !== "all" ? syncTargetCity : undefined,
           }),
         });
 
@@ -1111,39 +1133,80 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
           <div className="space-y-2 max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
               <Globe className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-              <span>GeoSphere Oregon GIS Integration • {syncedListings.length} Saved Properties</span>
+              <span>GeoMap & GeoSphere Oregon GIS Integration • {syncedListings.length} Saved Properties</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#2D362E] tracking-tight">
-              GeoSphere Oregon Map Sync & Listing Curation Hub
+              GeoMap & GeoSphere Oregon GIS Sync Hub
             </h2>
             <p className="text-xs sm:text-sm text-[#606C5D] leading-relaxed">
-              Synchronize saved property listings from the GeoSphere Oregon GIS system directly into your loan officer portal. Filter by USDA 0% Down boundaries, OHCS LMI tracts, Dual Qualification, and FirstHome price limits, then publish curated selections to your public-facing site.
+              Synchronize saved property listings from your Luther GeoSphere map website and RentCast for-sale API feed directly into your loan officer portal. Filter by USDA 0% Down boundaries, OHCS LMI tracts, Dual Qualification, and FirstHome price limits, then explore on the interactive GeoMap or publish curated selections to your public-facing site.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* Quick View Mode Switchers */}
             <button
-              onClick={handleExportJson}
-              className="px-4 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"
+              type="button"
+              onClick={() => setViewMode("map")}
+              className={`px-3.5 py-2.5 rounded-xl font-bold text-xs shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === "map"
+                  ? "bg-[#2F5738] text-white shadow-xs"
+                  : "bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E]"
+              }`}
             >
-              <Download className="w-4 h-4 text-[#C18C5D]" />
-              <span>Export Backup JSON</span>
+              <Globe className="w-4 h-4 text-emerald-300" />
+              <span>Interactive GeoMap</span>
             </button>
             <button
-              onClick={() => setShowImportModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"
+              type="button"
+              onClick={() => setViewMode("cards")}
+              className={`px-3.5 py-2.5 rounded-xl font-bold text-xs shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === "cards"
+                  ? "bg-[#2F5738] text-white shadow-xs"
+                  : "bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E]"
+              }`}
             >
-              <Upload className="w-4 h-4 text-[#C18C5D]" />
-              <span>Import JSON / Snapshot</span>
+              <Building className="w-4 h-4 text-[#C18C5D]" />
+              <span>Curated Cards</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("cloud_run_live")}
+              className={`px-3.5 py-2.5 rounded-xl font-bold text-xs shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === "cloud_run_live"
+                  ? "bg-emerald-800 text-white shadow-xs ring-2 ring-emerald-500/30"
+                  : "bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-emerald-800"
+              }`}
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>GeoSphere Live Site</span>
             </button>
 
             <button
-              onClick={() => handleRunSync(selectedDataset)}
-              disabled={isFetching}
-              className="px-5 py-2.5 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              onClick={handleExportJson}
+              className="px-3.5 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="Download backup JSON of all saved listings"
             >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
-              <span>{isFetching ? "Syncing All Listings..." : "Sync All Listings Now"}</span>
+              <Download className="w-4 h-4 text-[#C18C5D]" />
+              <span>Export JSON</span>
+            </button>
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="px-3.5 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E] font-bold text-xs shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="Import JSON listing payload"
+            >
+              <Upload className="w-4 h-4 text-[#C18C5D]" />
+              <span>Import</span>
+            </button>
+
+            <button
+              onClick={handleIngestVercelLiveListings}
+              disabled={isFetching}
+              className="px-5 py-2.5 rounded-xl bg-[#2F5738] hover:bg-[#1E3A24] text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 ring-2 ring-emerald-400/40"
+              title="Click to sync saved property listings from GeoSphere Oregon map website and RentCast API"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin text-amber-300" : "text-amber-300"}`} />
+              <span>{isFetching ? "Syncing Listings..." : "⚡ Click Sync to Pull Listings"}</span>
             </button>
           </div>
         </div>
@@ -1174,23 +1237,26 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
             className="text-xs font-semibold text-[#4A5D4E] hover:underline flex items-center gap-1 cursor-pointer"
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>{showAdvancedEndpoint ? "Hide Endpoint Settings" : "Configure Custom Sync Endpoint"}</span>
+            <span>{showAdvancedEndpoint ? "Hide GeoSphere Website & RentCast Settings" : "Configure GeoSphere Website & RentCast API"}</span>
           </button>
         </div>
 
-        {/* Advanced Endpoint Drawer */}
+        {/* Dedicated GeoSphere Map & RentCast API Ingestion Suite */}
         {showAdvancedEndpoint && (
-          <div className="mt-4 p-4 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <h4 className="text-xs font-bold text-[#2D362E] uppercase tracking-wider">
-                GeoSphere Cloud Run / GIS Connection Settings
-              </h4>
+          <div className="mt-4 p-5 rounded-2xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EAE7E0] pb-3">
               <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-emerald-700" />
+                <h4 className="text-xs font-bold text-[#2D362E] uppercase tracking-wider">
+                  GeoSphere Oregon Map Website & RentCast Ingestion Suite
+                </h4>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => {
                     setCustomEndpointUrl(`${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings`);
-                    onTriggerToast("Switched to Google Cloud Run microservice endpoint");
+                    onTriggerToast("Switched to GeoSphere Cloud Run microservice endpoint");
                   }}
                   className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                     customEndpointUrl.includes("geosphere-map-oregon.ai.studio")
@@ -1198,13 +1264,13 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                       : "bg-white text-[#2D362E] border-[#EAE7E0] hover:bg-stone-50"
                   }`}
                 >
-                  Cloud Run (ai.studio)
+                  GeoSphere Cloud Run (ai.studio)
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setCustomEndpointUrl(`${GEOSPHERE_VERCEL_FALLBACK_URL}/api/map-saved-listings`);
-                    onTriggerToast("Switched to Vercel deployment endpoint");
+                    onTriggerToast("Switched to GeoSphere Vercel deployment endpoint");
                   }}
                   className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                     customEndpointUrl.includes("vercel.app")
@@ -1212,13 +1278,16 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                       : "bg-white text-[#2D362E] border-[#EAE7E0] hover:bg-stone-50"
                   }`}
                 >
-                  Vercel Fallback
+                  GeoSphere Vercel (vercel.app)
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="text-[11px] font-bold text-[#606C5D] block mb-1">Target Endpoint URL</label>
+                <label className="text-[11px] font-bold text-[#606C5D] block mb-1">
+                  GeoSphere Website / API URL
+                </label>
                 <input
                   type="text"
                   value={customEndpointUrl}
@@ -1226,17 +1295,64 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                   className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-[#EAE7E0] focus:ring-1 focus:ring-[#4A5D4E] outline-none font-mono"
                   placeholder="https://geosphere-map-oregon.ai.studio/api/map-saved-listings"
                 />
+                <p className="text-[10px] text-stone-500 mt-1">
+                  Auto-discovers saved property listings on any custom domain or sub-path.
+                </p>
               </div>
+
               <div>
-                <label className="text-[11px] font-bold text-[#606C5D] block mb-1">Optional Sync Token (x-geosphere-sync-token)</label>
+                <label className="text-[11px] font-bold text-[#606C5D] block mb-1">
+                  RentCast API Key (Optional BYOK for Direct Feed)
+                </label>
                 <input
                   type="password"
-                  value={customSyncToken}
-                  onChange={(e) => setCustomSyncToken(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-[#EAE7E0] focus:ring-1 focus:ring-[#4A5D4E] outline-none"
-                  placeholder="Optional token for private /api/saved-listings"
+                  value={rentcastApiKeyInput}
+                  onChange={(e) => setRentcastApiKeyInput(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-[#EAE7E0] focus:ring-1 focus:ring-[#4A5D4E] outline-none font-mono"
+                  placeholder="Paste RentCast API Key (e.g. 523a...)"
                 />
+                <p className="text-[10px] text-stone-500 mt-1">
+                  Enables direct RentCast for-sale listing pulls across Oregon counties.
+                </p>
               </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-[#606C5D] block mb-1">
+                  Target Pull City / Geographic Focus
+                </label>
+                <select
+                  value={syncTargetCity}
+                  onChange={(e) => setSyncTargetCity(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-[#EAE7E0] focus:ring-1 focus:ring-[#4A5D4E] outline-none text-[#2D362E] cursor-pointer"
+                >
+                  <option value="all">All Oregon / Entire Master Catalog (249)</option>
+                  <option value="Junction City">Junction City (Lane County / Jake Zach Live Pull)</option>
+                  <option value="Veneta">Veneta (Lane County Rural / USDA 0% Down)</option>
+                  <option value="Eugene">Eugene / Springfield (Willamette Valley)</option>
+                  <option value="Coos Bay">Coos Bay / North Bend / Bandon (Coastal)</option>
+                  <option value="Bend">Bend / Redmond / Sisters (Central Oregon)</option>
+                  <option value="Portland">Portland Metro (Multnomah / Clackamas)</option>
+                  <option value="Salem">Salem / Marion County</option>
+                </select>
+                <p className="text-[10px] text-stone-500 mt-1">
+                  Spatially filters listings to your target market.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between flex-wrap gap-2 text-xs">
+              <span className="text-[#606C5D]">
+                Connected: <strong className="text-emerald-800">{customEndpointUrl}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={handleIngestVercelLiveListings}
+                disabled={isFetching}
+                className="px-4 py-2 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-2xs"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
+                <span>{isFetching ? "Syncing..." : "⚡ Click Sync to Ingest Now"}</span>
+              </button>
             </div>
           </div>
         )}
@@ -1711,13 +1827,13 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-bold text-sm">GeoSphere Oregon GIS (Cloud Run Microservice)</h4>
+                    <h4 className="font-bold text-sm">GeoSphere Oregon GIS & RentCast Map</h4>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      GCP us-west2 Live
+                      Live Map Feed
                     </span>
                   </div>
                   <p className="text-xs text-stone-300 font-mono mt-0.5">
-                    Endpoint: <span className="text-emerald-400">https://geosphere-map-oregon.ai.studio</span>
+                    Website: <span className="text-emerald-400">{customEndpointUrl.replace(/\/api\/.*$/, "") || "https://geosphere-map-oregon.ai.studio"}</span>
                   </p>
                 </div>
               </div>
@@ -1731,7 +1847,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                   <span>{isFetching ? "Syncing..." : "Sync Listings to Portal"}</span>
                 </button>
                 <a
-                  href="https://geosphere-map-oregon.ai.studio"
+                  href={customEndpointUrl.replace(/\/api\/.*$/, "") || "https://geosphere-map-oregon.ai.studio"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -1740,20 +1856,29 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
                 <button
-                  onClick={() => setViewMode("cards")}
-                  className="px-3 py-2 rounded-xl bg-stone-700 hover:bg-stone-600 text-stone-200 text-xs font-semibold transition-colors cursor-pointer"
+                  onClick={() => setViewMode("map")}
+                  className="px-3 py-2 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-semibold transition-colors cursor-pointer"
                 >
-                  Back to Curated Cards
+                  Switch to Interactive GeoMap
                 </button>
               </div>
             </div>
-            <div className="relative w-full h-[720px] rounded-3xl overflow-hidden border border-[#EAE7E0] bg-[#FAF9F5] shadow-sm">
+            <div className="relative w-full h-[720px] rounded-3xl overflow-hidden border border-[#EAE7E0] bg-[#FAF9F5] shadow-sm flex flex-col">
               <iframe
-                src="https://geosphere-map-oregon.ai.studio"
-                title="GeoSphere Oregon Map - Google Cloud Run Microservice"
-                className="w-full h-full border-0"
+                src={customEndpointUrl.replace(/\/api\/.*$/, "") || "https://geosphere-map-oregon.ai.studio"}
+                title="GeoSphere Oregon Map"
+                className="w-full h-full border-0 flex-1"
                 allow="geolocation; camera"
               />
+              <div className="p-3 bg-stone-50 border-t border-[#EAE7E0] text-[11px] text-[#606C5D] flex items-center justify-between flex-wrap gap-2">
+                <span>Note: If browser security headers restrict iframe embedding for your website domain, use <strong>Open Full Window</strong> or <strong>Interactive GeoMap</strong> view.</span>
+                <button
+                  onClick={() => setViewMode("map")}
+                  className="px-2.5 py-1 bg-white border border-[#EAE7E0] text-[#2D362E] font-bold rounded-lg text-[10px] hover:bg-stone-100"
+                >
+                  Open Internal GeoMap
+                </button>
+              </div>
             </div>
           </div>
         ) : viewMode === "map" ? (

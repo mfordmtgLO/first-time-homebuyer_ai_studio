@@ -159,8 +159,17 @@ export const ClusteredPropertyMarkers = ({
 
   useEffect(() => {
     if (!clusterer) return;
-    clusterer.clearMarkers();
-    clusterer.addMarkers(Object.values(markers));
+    try {
+      clusterer.clearMarkers();
+      const validMarkers = Object.values(markers).filter(
+        (m) => m && typeof (m as any).getPosition === "function"
+      );
+      if (validMarkers.length > 0) {
+        clusterer.addMarkers(validMarkers);
+      }
+    } catch (err) {
+      console.warn("MarkerClusterer notice:", err);
+    }
   }, [clusterer, markers]);
 
   return (
@@ -729,14 +738,19 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
               className="w-full text-xs font-medium px-3 py-2 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] text-[#2D362E] focus:outline-none focus:border-[#4A5D4E] cursor-pointer"
             >
               <option value="custom" className="font-bold text-[#4A5D4E] hidden">📍 My Current Location</option>
-              <option value="portland">Portland Metro (Division / SE)</option>
+              <option value="junction city">Junction City (Lane County / RentCast Live Pull)</option>
+              <option value="veneta">Veneta (Lane County Rural / USDA 0% Down)</option>
+              <option value="eugene">Eugene / Springfield (Willamette Valley / 4J)</option>
+              <option value="coos bay">Coos Bay / North Bend / Bandon (Coastal / USDA 100%)</option>
+              <option value="bend">Bend / Redmond / Sisters (Central Oregon Cascades)</option>
+              <option value="portland">Portland Metro (Division / Multnomah)</option>
               <option value="beaverton">Beaverton (Silicon Forest / MAX)</option>
               <option value="lake oswego">Lake Oswego (Top Ranked Schools)</option>
               <option value="hillsboro">Hillsboro (Tech Corridor / Orenco)</option>
-              <option value="bend">Bend (Old Mill / Deschutes)</option>
-              <option value="eugene">Eugene (South Hills / 4J)</option>
-              <option value="salem">Salem (Capital / Keizer)</option>
-              <option value="coos bay">Coos Bay (Coastal / USDA 100%)</option>
+              <option value="salem">Salem / Marion County (Capital / Keizer)</option>
+              <option value="corvallis">Corvallis / Albany (Linn-Benton)</option>
+              <option value="roseburg">Roseburg / Douglas County</option>
+              <option value="medford">Medford / Grants Pass (Southern OR)</option>
             </select>
           </div>
 

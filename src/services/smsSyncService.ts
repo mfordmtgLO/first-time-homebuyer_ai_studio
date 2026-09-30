@@ -144,11 +144,15 @@ export async function handleIncomingTwilioWebhook(req: any, res: any, adminApp: 
               }
             }
             
-            if ((!matchingVault || !matchingVault.accountSid) && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+            const envSid = typeof process !== 'undefined' ? process?.env?.TWILIO_ACCOUNT_SID : undefined;
+            const envToken = typeof process !== 'undefined' ? process?.env?.TWILIO_AUTH_TOKEN : undefined;
+            const envPhone = typeof process !== 'undefined' ? process?.env?.TWILIO_PHONE_NUMBER : undefined;
+
+            if ((!matchingVault || !matchingVault.accountSid) && envSid && envToken) {
               matchingVault = {
-                accountSid: process.env.TWILIO_ACCOUNT_SID,
-                authToken: process.env.TWILIO_AUTH_TOKEN,
-                phoneNumber: process.env.TWILIO_PHONE_NUMBER || To || "+15035550199"
+                accountSid: envSid,
+                authToken: envToken,
+                phoneNumber: envPhone || To || "+15035550199"
               };
             }
 

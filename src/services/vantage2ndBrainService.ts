@@ -2,14 +2,20 @@ import { GoogleGenAI } from '@google/genai';
 import { db } from '../firebase';
 import { collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build'
+function getAiClient(): GoogleGenAI {
+  const geminiApiKey =
+    (typeof process !== 'undefined' && process?.env?.GEMINI_API_KEY) ||
+    ((import.meta as any)?.env?.VITE_GEMINI_API_KEY as string) ||
+    '';
+  return new GoogleGenAI({
+    apiKey: geminiApiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build'
+      }
     }
-  }
-});
+  });
+}
 
 const VANTAGE_REMOTE_BASE_URL = 'https://ais-dev-ytqtpwssj6gdvjvqbsrbyo-427099073161.us-east5.run.app';
 
@@ -38,6 +44,7 @@ export async function query2ndBrainWithGrounding(prompt: string, contextMemories
       : '';
 
     const fullPrompt = `${memoryContext}User Question: ${prompt}`;
+    const ai = getAiClient();
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.8-flash',

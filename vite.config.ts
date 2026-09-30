@@ -58,6 +58,10 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    define: {
+      'process.env': {},
+      global: 'window',
+    },
     build: {
       sourcemap: false, // Ensures production builds do not expose original TypeScript/React source code
       chunkSizeWarningLimit: 1500,

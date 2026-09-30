@@ -1,6 +1,7 @@
 import { RentCastUsageCounter } from "./RentCastUsageCounter";
 import { incrementRentCastUsage } from "../utils/rentcastUsageService";
 import { PropertyMapOverlay } from "./PropertyMapOverlay";
+import { Nationwide50StateGeoMap } from "./Nationwide50StateGeoMap";
 import React, { useState, useMemo, useRef } from "react";
 import { 
   Layers, 
@@ -153,7 +154,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   const [selectedListingIds, setSelectedListingIds] = useState<string[]>([]);
   const [activeOverlayFilter, setActiveOverlayFilter] = useState<string>("all");
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"cards" | "map" | "cloud_run_live">("map");
+  const [viewMode, setViewMode] = useState<"cards" | "map" | "cloud_run_live" | "us_50_states">("map");
   const [countyFilter, setCountyFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"default" | "price_asc" | "price_desc" | "dom" | "sqft">("default");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -1161,6 +1162,18 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
             {/* Quick View Mode Switchers */}
             <button
               type="button"
+              onClick={() => setViewMode("us_50_states")}
+              className={`px-3.5 py-2.5 rounded-xl font-bold text-xs shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === "us_50_states"
+                  ? "bg-[#2F5738] text-white shadow-xs"
+                  : "bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#2D362E]"
+              }`}
+            >
+              <Globe className="w-4 h-4 text-amber-400" />
+              <span>50-State National GeoMap</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setViewMode("map")}
               className={`px-3.5 py-2.5 rounded-xl font-bold text-xs shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer ${
                 viewMode === "map"
@@ -1747,6 +1760,17 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
             <span>Interactive Overlay Map</span>
           </button>
           <button
+            onClick={() => setViewMode("us_50_states")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap cursor-pointer ${
+              viewMode === "us_50_states"
+                ? "bg-[#2D362E] text-white shadow-2xs font-bold"
+                : "text-[#606C5D] hover:text-[#2D362E]"
+            }`}
+          >
+            <Globe className="w-4 h-4 text-amber-400" />
+            <span>50-State National GeoMap</span>
+          </button>
+          <button
             onClick={() => setViewMode("cloud_run_live")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap cursor-pointer ${
               viewMode === "cloud_run_live"
@@ -1894,6 +1918,15 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+        ) : viewMode === "us_50_states" ? (
+          <div className="mb-6">
+            <Nationwide50StateGeoMap
+              guidesState={guidesState}
+              onNavigateToTab={onNavigateToAdsPortal ? () => onNavigateToAdsPortal() : undefined}
+              onTriggerToast={onTriggerToast}
+              properties={properties}
+            />
           </div>
         ) : viewMode === "map" ? (
           <div className="mb-6">

@@ -27,6 +27,7 @@ import { US_STATES } from "./StateLicensingSelector";
 import { getNationwideHfaDetails, NATIONWIDE_HFA_DATABASE } from "../utils/nationwideHfaLimits";
 import { parseGeoid, buildGeoid, ParsedGeoid } from "../utils/geoidEngine";
 import { formatUSD } from "../utils/mortgageMath";
+import { Nationwide50StateGeoMap } from "./Nationwide50StateGeoMap";
 
 export interface GrantFinderProps {
   guidesState?: ProfessionalGuidesState;
@@ -94,6 +95,7 @@ export const GrantFinder: React.FC<GrantFinderProps> = ({ guidesState, onNavigat
   const [geoidResult, setGeoidResult] = useState<ParsedGeoid | null>(() => parseGeoid("41011001000"));
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedLeadId, setSelectedLeadId] = useState<string>("");
+  const [activeViewMode, setActiveViewMode] = useState<"geomap" | "hfa_table">("geomap");
 
   // Active state HFA profile
   const hfaProfile = useMemo(() => {
@@ -180,6 +182,33 @@ export const GrantFinder: React.FC<GrantFinderProps> = ({ guidesState, onNavigat
           </div>
 
           <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="flex items-center gap-1 bg-black/30 p-1 rounded-2xl border border-white/20">
+              <button
+                type="button"
+                onClick={() => setActiveViewMode("geomap")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeViewMode === "geomap"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-stone-300 hover:text-white"
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>50-State GeoMap</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveViewMode("hfa_table")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeViewMode === "hfa_table"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-stone-300 hover:text-white"
+                }`}
+              >
+                <Building className="w-3.5 h-3.5" />
+                <span>HFA Matrix Table</span>
+              </button>
+            </div>
+
             <button
               onClick={() => window.print()}
               className="px-4 py-2.5 bg-[#FAF9F5]/10 hover:bg-[#FAF9F5]/20 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 border border-white/20 cursor-pointer"
@@ -198,7 +227,16 @@ export const GrantFinder: React.FC<GrantFinderProps> = ({ guidesState, onNavigat
         </div>
       </div>
 
-      {/* LO Pipeline Quick Connect & Scenario Filter */}
+      {activeViewMode === "geomap" ? (
+        <Nationwide50StateGeoMap
+          guidesState={guidesState}
+          onNavigateToTab={onNavigate}
+          onTriggerToast={onTriggerToast}
+          initialStateCode={selectedState}
+        />
+      ) : (
+        <>
+          {/* LO Pipeline Quick Connect & Scenario Filter */}
       <div className="bg-white rounded-3xl p-6 border border-[#EAE7E0] shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#EAE7E0] pb-4">
           <div className="flex items-center gap-2">
@@ -421,6 +459,8 @@ export const GrantFinder: React.FC<GrantFinderProps> = ({ guidesState, onNavigat
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 };

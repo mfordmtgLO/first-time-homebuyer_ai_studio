@@ -46,6 +46,7 @@ import {
   KEY_OREGON_AMENITIES,
 } from "../utils/propertyMapUtils";
 import { getZillowUrl } from "../utils/overlayClassification";
+import { UsdaArcGisMapLayer, UsdaArcGisLayerControlWidget } from "./UsdaArcGisMapLayer";
 
 interface PropertyMapOverlayProps {
   properties: PropertyListing[];
@@ -340,6 +341,8 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [showHeatmap, setShowHeatmap] = useState<boolean>(false);
+  const [showUsdaArcGisLayer, setShowUsdaArcGisLayer] = useState<boolean>(true);
+  const [usdaLayerOpacity, setUsdaLayerOpacity] = useState<number>(0.55);
 
   // Map view type: 'google' or 'fallback_vector'
   const isGoogleMapsReady = Boolean(apiKey && apiKey.trim().length > 10);
@@ -794,6 +797,14 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                 <Flame className="w-3.5 h-3.5 text-purple-300" />
                 <span>{showHeatmap ? "Hide Heatmap" : "Market Heatmap"}</span>
               </button>
+
+              <UsdaArcGisLayerControlWidget
+                visible={showUsdaArcGisLayer}
+                onToggle={() => setShowUsdaArcGisLayer((prev) => !prev)}
+                opacity={usdaLayerOpacity}
+                onOpacityChange={setUsdaLayerOpacity}
+                selectedState="OR"
+              />
             </div>
           </div>
         </div>
@@ -1122,6 +1133,11 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                     properties={filteredProperties}
                     amenities={KEY_OREGON_AMENITIES}
                     visible={showHeatmap}
+                  />
+                  <UsdaArcGisMapLayer
+                    visible={showUsdaArcGisLayer}
+                    opacity={usdaLayerOpacity}
+                    stateCode="OR"
                   />
                   {/* Visual Search Radius Circle */}
                   <Circle

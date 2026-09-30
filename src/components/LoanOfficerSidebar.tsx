@@ -332,10 +332,10 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
         },
         {
           id: "dpa_grants",
-          label: "DPA & State Grants",
+          label: "50-State DPA & GeoMap",
           icon: <Award className="w-4 h-4" />,
           badge: "50 States",
-          badgeColor: "bg-amber-100 text-amber-900",
+          badgeColor: "bg-emerald-100 text-emerald-900 font-bold",
         },
       ],
     },

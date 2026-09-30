@@ -60,21 +60,12 @@ import {
   LakeviewProgramBadge 
 } from './fthb/ProgramBadgeWithTooltip';
 import { launchLocalOutlookDraft } from '../utils/outlookEmailService';
+import { getNationwideUsdaIncomeLimit } from '../utils/usdaIncomeLimits';
 
-// USDA Income Limits (2026 Oregon & Pacific Northwest Tiers)
-const getUsdaIncomeLimit = (county: string, householdSize: number) => {
-  const isLarge = householdSize > 4;
-  const pdxMetro = ['Multnomah', 'Washington', 'Clackamas', 'Yamhill', 'Columbia'];
-  const seaMetro = ['King', 'Snohomish', 'Pierce'];
-  
-  if (pdxMetro.includes(county)) {
-    return isLarge ? 178850 : 135500;
-  }
-  if (seaMetro.includes(county)) {
-    return isLarge ? 229100 : 173550;
-  }
-  // Default Oregon Counties
-  return isLarge ? 148450 : 112450;
+// USDA Income Limits (2026 Nationwide Engine: 1-4 vs 5-8 Family Size Caps)
+const getUsdaIncomeLimit = (county: string, householdSize: number, stateCode: string = 'OR') => {
+  const result = getNationwideUsdaIncomeLimit(stateCode, county, householdSize);
+  return result.limit;
 };
 
 // Lakeview AMI 140% Limits
@@ -369,7 +360,7 @@ export const FTHBPipelineDashboard: React.FC<FTHBPipelineDashboardProps> = ({
       const county = normalizeOregonCounty(listing.county, listing.city);
       
       // USDA RD Logic
-      const usdaLimit = getUsdaIncomeLimit(county, householdSize);
+      const usdaLimit = getUsdaIncomeLimit(county, householdSize, listing.state || 'OR');
       const isUsdaArea = Boolean(listing.overlayEligibility?.usdaEligible || listing.overlayEligibility?.usda);
       const meetsUsdaIncome = householdIncome <= usdaLimit;
       const usdaQualifies = isUsdaArea && meetsUsdaIncome;

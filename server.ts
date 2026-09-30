@@ -358,9 +358,17 @@ async function startServer() {
     next();
   });
 
+  // Anti-Scraping, Anti-Crawling & Anti-Indexing Protection
+  // Automatically injects X-Robots-Tag into every HTTP response
+  app.use((_req, res, next) => {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, noimageindex");
+    next();
+  });
+
   // Priority 3 Item 9: Enterprise Security Headers (CSP, X-Content-Type-Options, HSTS)
   app.use(
     helmet({
+      crossOriginResourcePolicy: false,
       crossOriginOpenerPolicy: false,
       crossOriginEmbedderPolicy: false,
       contentSecurityPolicy: {
@@ -7723,6 +7731,74 @@ Provide your response in JSON format with the following structure:
         ads: inMemorySyncedAds 
       });
     }
+  });
+
+  // Strict Anti-Scraper & Anti-Crawler Protection Robots Definition
+  const STRICT_ROBOTS_TXT = `# Strict Anti-Scraper & Anti-Crawler Protection
+# Block all search engines, AI scrapers, web spiders, and archiving crawlers
+
+User-agent: *
+Disallow: /
+
+# Explicitly block known AI scrapers and LLM training bots
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: FacebookBot
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: Cohere-ai
+Disallow: /
+
+User-agent: Omgilibot
+Disallow: /
+
+User-agent: OmgiliBot
+Disallow: /
+`;
+
+  // Dedicated strict robots.txt endpoint (serves with anti-indexing header)
+  app.get("/robots.txt", (_req, res) => {
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, noimageindex");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.send(STRICT_ROBOTS_TXT);
   });
 
   // Vite middleware in dev, static serving in prod

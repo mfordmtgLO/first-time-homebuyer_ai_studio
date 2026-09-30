@@ -1,37 +1,57 @@
-# Block AI and LLM scrapers
+# Strict Anti-Scraper & Anti-Crawler Protection
+# Block all search engines, AI scrapers, web spiders, and archiving crawlers
+
+User-agent: *
+Disallow: /
+
+# Explicitly block known AI scrapers and LLM training bots
 User-agent: GPTBot
 Disallow: /
 
-User-agent: ClaudeBot
-Disallow: /
-
-User-agent: PerplexityBot
-Disallow: /
-
-User-agent: Google-Extended
+User-agent: ChatGPT-User
 Disallow: /
 
 User-agent: CCBot
 Disallow: /
 
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
 User-agent: anthropic-ai
 Disallow: /
 
-User-agent: OmgiliBot
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: Diffbot
 Disallow: /
 
 User-agent: FacebookBot
 Disallow: /
 
-# General rules for search engines
-User-agent: *
-Disallow: /dashboard/
-Disallow: /portal/
-Disallow: /admin/
-Disallow: /*?*lo=*
-Disallow: /*?*agent=*
+User-agent: meta-externalagent
+Disallow: /
 
-# Allow public landing pages
-Allow: /
-Allow: /calculator
-Allow: /roadmap
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: Cohere-ai
+Disallow: /
+
+User-agent: Omgilibot
+Disallow: /
+
+User-agent: OmgiliBot
+Disallow: /

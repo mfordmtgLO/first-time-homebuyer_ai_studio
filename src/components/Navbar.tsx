@@ -213,18 +213,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? "bg-[#FDF0E6] text-[#91461A] border border-[#F6D0B5]"
                   : "bg-white text-[#606C5D] border border-[#EAE7E0]"
               }`}
-              onClick={() => setShowTrendDetails(!showTrendDetails)}
+              onClick={() => setShowTrendDetails((prev) => !prev)}
               title="Click to view detailed interest rate trend analysis"
             >
               {rateTrend.direction === "down" ? (
                 <div className="flex items-center gap-1">
                   <ArrowDownRight className="w-4 h-4 text-[#2F5738] animate-pulse" />
-                  <span>Rate Trend: Easing ↓</span>
+                  <span>Rate Trend: Easing {rateTrend.diffBasisPoints !== 0 ? `(${rateTrend.diffBasisPoints} bps)` : ""} ↓</span>
                 </div>
               ) : rateTrend.direction === "up" ? (
                 <div className="flex items-center gap-1">
                   <ArrowUpRight className="w-4 h-4 text-[#91461A]" />
-                  <span>Rate Trend: Rising ↑</span>
+                  <span>Rate Trend: Rising {rateTrend.diffBasisPoints !== 0 ? `(+${rateTrend.diffBasisPoints} bps)` : ""} ↑</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1">
@@ -250,7 +250,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     key={h.id}
                     type="button"
                     onClick={() => setTrendHorizon(h.id)}
-                    className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
+                    className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
                       isSelected
                         ? "bg-[#4A5D4E] text-white shadow-xs"
                         : "text-[#606C5D] hover:text-[#2D362E] hover:bg-[#F1EFE9]"
@@ -269,8 +269,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               {rateTrend.isOneYearHigh ? (
                 <button
                   type="button"
-                  onClick={() => setShowTrendDetails(!showTrendDetails)}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#C18C5D]/15 text-[#C18C5D] font-bold text-[11px] border border-[#C18C5D]/30 hover:bg-[#C18C5D]/25 transition-colors"
+                  onClick={() => setShowTrendDetails((prev) => !prev)}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#C18C5D]/15 text-[#C18C5D] font-bold text-[11px] border border-[#C18C5D]/30 hover:bg-[#C18C5D]/25 transition-colors cursor-pointer"
                   title="Highest rate peak observed in the most recent 12 months"
                 >
                   <Zap className="w-3 h-3 text-[#C18C5D]" />
@@ -280,7 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               ) : (
                 <button
                   type="button"
-                  onClick={() => setShowTrendDetails(!showTrendDetails)}
+                  onClick={() => setShowTrendDetails((prev) => !prev)}
                   className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white hover:bg-[#FAF9F5] text-[#2D362E] text-[11px] font-semibold border border-[#DEDAD2] transition-colors shadow-2xs group cursor-pointer"
                   title="Click to view full 1-year historical benchmark rate comparison"
                 >
@@ -317,14 +317,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                           Mortgage Rate Momentum ({rateTrend.horizonLabel})
                         </h4>
                         <p className="text-[11px] text-[#606C5D]">
-                          Directional 30-Yr Benchmark Trajectory
+                          vs. {rateTrend.horizonLabel} Ago ({rateTrend.comparisonDateFormatted})
                         </p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowTrendDetails(false)}
-                      className="p-1 rounded-lg text-[#9A9488] hover:text-[#2D362E] hover:bg-[#F1EFE9]"
+                      className="p-1 rounded-lg text-[#9A9488] hover:text-[#2D362E] hover:bg-[#F1EFE9] cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -332,9 +332,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                   <div className="py-3 space-y-2.5 text-xs">
                     <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0]">
-                      <div className="font-bold text-[#4A5D4E] flex items-center gap-1.5 mb-1">
-                        <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
-                        <span>{rateTrend.directionLabel}</span>
+                      <div className="font-bold text-[#4A5D4E] flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
+                          <span>{rateTrend.directionLabel}</span>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488] bg-white px-2 py-0.5 rounded border border-[#EAE7E0]">
+                          {rateTrend.horizonLabel} Horizon
+                        </span>
                       </div>
                       <p className="text-[#606C5D] text-[11px] leading-relaxed">
                         {rateTrend.insight}
@@ -352,7 +357,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </p>
                       ) : (
                         <p className="text-[11px] text-[#4A5D4E] leading-relaxed font-medium">
-                          Today's benchmark is <strong>not</strong> the 1-year high. The last time rates traded at today's matching level was <strong>{rateTrend.lastMatchedDateFormatted}</strong>.
+                          Today's benchmark is <strong>not</strong> the 1-year high. Interest rates last matched this current level on <strong>{rateTrend.lastMatchedDateFormatted}</strong>.
                         </p>
                       )}
                     </div>
@@ -365,7 +370,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         setShowTrendDetails(false);
                         handleNavClick("mortgagelab", "dashboard");
                       }}
-                      className="text-[11px] font-bold text-[#4A5D4E] hover:underline flex items-center gap-1"
+                      className="text-[11px] font-bold text-[#4A5D4E] hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <TrendingUp className="w-3 h-3" />
                       <span>Test in Mortgage Lab →</span>

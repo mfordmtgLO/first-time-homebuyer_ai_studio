@@ -22,13 +22,12 @@ import { MarketTrends } from "./components/MarketTrends";
 const MortgageLab = React.lazy(() => import("./components/MortgageLab").then(m => ({ default: m.MortgageLab })));
 const AICopilot = React.lazy(() => import("./components/AICopilot").then(m => ({ default: m.AICopilot })));
 const GeoSphereSyncHub = React.lazy(() => import("./components/GeoSphereSyncHub").then(m => ({ default: m.GeoSphereSyncHub })));
-import { Step4AIScenarioSummary } from "./components/Step4AIScenarioSummary";
-import { AIPrequalWizard } from "./components/AIPrequalWizard";
-import { LoanOfficerPortal } from "./components/LoanOfficerPortal";
-import { MobileLoanOfficerPortal } from "./components/mobile/MobileLoanOfficerPortal";
-import { LeadIntakeChatbot } from "./components/LeadIntakeChatbot";
-import { LoginScreen } from "./components/LoginScreen";
-import { BranchManagement } from "./components/BranchManagement";
+const Step4AIScenarioSummary = React.lazy(() => import("./components/Step4AIScenarioSummary").then(m => ({ default: m.Step4AIScenarioSummary })));
+const AIPrequalWizard = React.lazy(() => import("./components/AIPrequalWizard").then(m => ({ default: m.AIPrequalWizard })));
+const LoanOfficerPortal = React.lazy(() => import("./components/LoanOfficerPortal").then(m => ({ default: m.LoanOfficerPortal })));
+const MobileLoanOfficerPortal = React.lazy(() => import("./components/mobile/MobileLoanOfficerPortal").then(m => ({ default: m.MobileLoanOfficerPortal })));
+const LeadIntakeChatbot = React.lazy(() => import("./components/LeadIntakeChatbot").then(m => ({ default: m.LeadIntakeChatbot })));
+const LoginScreen = React.lazy(() => import("./components/LoginScreen").then(m => ({ default: m.LoginScreen })));
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut, getRedirectResult } from "firebase/auth";
 import { checkAndProvisionUser } from "./utils/authUtils";
@@ -948,16 +947,24 @@ export default function App() {
   // 2. If accessing the root website, always render the public consumer view
   if (!userRole && (isPortalAccess || showLoPortal)) {
     return (
-      <LoginScreen
-        guidesState={guidesState}
-        onLogin={(role) => {
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("lo_portal_logged_out");
-          }
-          setUserRole(role as any);
-          setShowLoPortal(true);
-        }}
-      />
+      <React.Suspense
+        fallback={
+          <div className="min-h-screen bg-[#F9F8F4] dark:bg-slate-950 flex items-center justify-center">
+            <div className="animate-spin w-8 h-8 border-2 border-[#4A5D4E] border-t-transparent rounded-full" />
+          </div>
+        }
+      >
+        <LoginScreen
+          guidesState={guidesState}
+          onLogin={(role) => {
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("lo_portal_logged_out");
+            }
+            setUserRole(role as any);
+            setShowLoPortal(true);
+          }}
+        />
+      </React.Suspense>
     );
   }
 
@@ -1081,39 +1088,48 @@ export default function App() {
           >
             {/* LOAN OFFICER PORTAL VIEW */}
             {showLoPortal ? (
-              isMobile && !forceDesktopLoPortal ? (
-                <MobileLoanOfficerPortal
-                  userRole={userRole}
-                  guidesState={guidesState}
-                  onUpdateGuidesState={handleUpdateGuidesState}
-                  onClose={() => setShowLoPortal(false)}
-                  onViewPublicSite={() => {
-                    setShowLoPortal(false);
-                    handleNavigate("hero", "website");
-                  }}
-                  onLogout={handleAppLogout}
-                  properties={properties}
-                  setProperties={setProperties}
-                  onSwitchToDesktop={() => setForceDesktopLoPortal(true)}
-                  initialTab={loPortalInitialTab as any}
-                />
-              ) : (
-                <LoanOfficerPortal
-                  userRole={userRole}
-                  guidesState={guidesState}
-                  onUpdateGuidesState={handleUpdateGuidesState}
-                  onClose={() => setShowLoPortal(false)}
-                  onViewPublicSite={() => {
-                    setShowLoPortal(false);
-                    handleNavigate("hero", "website");
-                  }}
-                  onLogout={handleAppLogout}
-                  properties={properties}
-                  setProperties={setProperties}
-                  onSwitchToMobile={() => setForceDesktopLoPortal(false)}
-                  initialTab={loPortalInitialTab as any}
-                />
-              )
+              <React.Suspense
+                fallback={
+                  <div className="flex-1 w-full min-h-[500px] flex flex-col items-center justify-center gap-3">
+                    <div className="animate-spin w-8 h-8 border-2 border-[#4A5D4E] border-t-transparent rounded-full" />
+                    <span className="text-xs text-[#606C5D] font-mono">Loading Command Center...</span>
+                  </div>
+                }
+              >
+                {isMobile && !forceDesktopLoPortal ? (
+                  <MobileLoanOfficerPortal
+                    userRole={userRole}
+                    guidesState={guidesState}
+                    onUpdateGuidesState={handleUpdateGuidesState}
+                    onClose={() => setShowLoPortal(false)}
+                    onViewPublicSite={() => {
+                      setShowLoPortal(false);
+                      handleNavigate("hero", "website");
+                    }}
+                    onLogout={handleAppLogout}
+                    properties={properties}
+                    setProperties={setProperties}
+                    onSwitchToDesktop={() => setForceDesktopLoPortal(true)}
+                    initialTab={loPortalInitialTab as any}
+                  />
+                ) : (
+                  <LoanOfficerPortal
+                    userRole={userRole}
+                    guidesState={guidesState}
+                    onUpdateGuidesState={handleUpdateGuidesState}
+                    onClose={() => setShowLoPortal(false)}
+                    onViewPublicSite={() => {
+                      setShowLoPortal(false);
+                      handleNavigate("hero", "website");
+                    }}
+                    onLogout={handleAppLogout}
+                    properties={properties}
+                    setProperties={setProperties}
+                    onSwitchToMobile={() => setForceDesktopLoPortal(false)}
+                    initialTab={loPortalInitialTab as any}
+                  />
+                )}
+              </React.Suspense>
             ) : (
               <>
                 {/* WEBSITE MODE VIEWS */}
@@ -1266,42 +1282,56 @@ export default function App() {
 
 
                     {activeTab === "ai_prequal" && (
-                      <AIPrequalWizard
-                        loanOfficer={guidesState.loanOfficer}
-                        currentProfile={profile}
-                        onUpdateProfile={(updates) => setProfile(prev => ({ ...prev, ...updates }))}
-                        onComplete={() => setActiveTab("step4_ai_plan")}
-                      />
+                      <React.Suspense fallback={
+                        <div className="flex flex-col items-center justify-center p-16 space-y-4">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                          <p className="text-sm font-medium text-gray-600">Loading AI Assistant...</p>
+                        </div>
+                      }>
+                        <AIPrequalWizard
+                          loanOfficer={guidesState.loanOfficer}
+                          currentProfile={profile}
+                          onUpdateProfile={(updates) => setProfile(prev => ({ ...prev, ...updates }))}
+                          onComplete={() => setActiveTab("step4_ai_plan")}
+                        />
+                      </React.Suspense>
                     )}
 
                     {activeTab === "step4_ai_plan" && (
-                      <Step4AIScenarioSummary
-                        onRequestBlueprint={() => {
-                          setLeadBotSourceContext({
-                            source: "Step 4 - Blueprint Download Request",
-                            intent: "blueprint_download",
-                          });
-                          setIsLeadBotOpen(true);
-                        }}
-                        onRequestListings={() => {
-                          setLeadBotSourceContext({
-                            source: "Step 4 - Curated Listings Request",
-                            intent: "chat_listings",
-                          });
-                          setIsLeadBotOpen(true);
-                        }}
-                        profile={profile}
-                        properties={properties}
-                        milestones={milestones}
-                        documents={documents}
-                        setDocuments={setDocuments}
-                        loanOfficer={guidesState.loanOfficer}
-                        activeAgent={activeAgent}
-                        isCoBranded={guidesState.isCoBranded}
-                        onNavigate={handleNavigate}
-                        onOpenLoPortal={() => setShowLoPortal(true)}
-                        agentRoster={guidesState.agentRoster}
-                      />
+                      <React.Suspense fallback={
+                        <div className="flex flex-col items-center justify-center p-16 space-y-4">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                          <p className="text-sm font-medium text-gray-600">Loading Scenario Plan...</p>
+                        </div>
+                      }>
+                        <Step4AIScenarioSummary
+                          onRequestBlueprint={() => {
+                            setLeadBotSourceContext({
+                              source: "Step 4 - Blueprint Download Request",
+                              intent: "blueprint_download",
+                            });
+                            setIsLeadBotOpen(true);
+                          }}
+                          onRequestListings={() => {
+                            setLeadBotSourceContext({
+                              source: "Step 4 - Curated Listings Request",
+                              intent: "chat_listings",
+                            });
+                            setIsLeadBotOpen(true);
+                          }}
+                          profile={profile}
+                          properties={properties}
+                          milestones={milestones}
+                          documents={documents}
+                          setDocuments={setDocuments}
+                          loanOfficer={guidesState.loanOfficer}
+                          activeAgent={activeAgent}
+                          isCoBranded={guidesState.isCoBranded}
+                          onNavigate={handleNavigate}
+                          onOpenLoPortal={() => setShowLoPortal(true)}
+                          agentRoster={guidesState.agentRoster}
+                        />
+                      </React.Suspense>
                     )}
 
                     {activeTab === "properties" && (
@@ -1496,21 +1526,23 @@ export default function App() {
 
       {/* 24/7 AI Lead Intake & Prequal Chatbot */}
       {!showLoPortal && (
-        <LeadIntakeChatbot
-          initialLeadSource={leadBotSourceContext?.source}
-          initialIntent={leadBotSourceContext?.intent}
-          loanOfficer={guidesState.loanOfficer}
-          agent={activeAgent}
-          isCoBranded={guidesState.isCoBranded}
-          financialProfile={profile}
-          onSaveLead={handleSaveLead}
-          isOpen={isLeadBotOpen}
-          onClose={() => {
-            setLeadBotSourceContext(undefined);
-            setIsLeadBotOpen(false);
-          }}
-          onOpen={() => setIsLeadBotOpen(true)}
-        />
+        <React.Suspense fallback={null}>
+          <LeadIntakeChatbot
+            initialLeadSource={leadBotSourceContext?.source}
+            initialIntent={leadBotSourceContext?.intent}
+            loanOfficer={guidesState.loanOfficer}
+            agent={activeAgent}
+            isCoBranded={guidesState.isCoBranded}
+            financialProfile={profile}
+            onSaveLead={handleSaveLead}
+            isOpen={isLeadBotOpen}
+            onClose={() => {
+              setLeadBotSourceContext(undefined);
+              setIsLeadBotOpen(false);
+            }}
+            onOpen={() => setIsLeadBotOpen(true)}
+          />
+        </React.Suspense>
       )}
 
 

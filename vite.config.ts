@@ -60,6 +60,28 @@ export default defineConfig(() => {
     },
     build: {
       sourcemap: false, // Ensures production builds do not expose original TypeScript/React source code
+      chunkSizeWarningLimit: 1500,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('firebase')) {
+                return 'vendor-firebase';
+              }
+              if (id.includes('motion')) {
+                return 'vendor-motion';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-lucide';
+              }
+              if (id.includes('@sentry')) {
+                return 'vendor-sentry';
+              }
+              return 'vendor-libs';
+            }
+          }
+        }
+      }
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

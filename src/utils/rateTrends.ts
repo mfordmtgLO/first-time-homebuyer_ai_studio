@@ -18,16 +18,17 @@ export interface TrendAnalysisResult {
   directionLabel: string;
   sentiment: "favorable" | "unfavorable" | "neutral";
   summary: string;
-  diffBasisPoints: number; // e.g. -6 bps or +14 bps
+  diffBasisPoints: number; // e.g. -5 bps or +14 bps
   isOneYearHigh: boolean;
   oneYearHighRate: number;
   oneYearLowRate: number;
-  lastMatchedDate: string | null; // e.g., "Nov 14, 2025"
-  lastMatchedDateFormatted: string | null;
+  lastMatchedDate: string | null; // e.g., "2025-12-15"
+  lastMatchedDateFormatted: string; // e.g., "Dec 15, 2025"
+  comparisonDateFormatted: string; // e.g., "Sep 22, 2026"
   insight: string;
 }
 
-// 52+ weeks historical benchmark dataset leading up to Aug 2026
+// 52+ weeks historical benchmark dataset
 export const HISTORICAL_BENCHMARK_RATES: RateDataPoint[] = [
   // 2025 Historical Curve
   { date: "2025-08-25", rate: 6.52 },
@@ -40,28 +41,33 @@ export const HISTORICAL_BENCHMARK_RATES: RateDataPoint[] = [
   { date: "2025-11-12", rate: 6.98 },
   { date: "2025-11-19", rate: 6.82 },
   { date: "2025-12-01", rate: 6.72 },
-  { date: "2025-12-15", rate: 6.62 }, // Historical Exact Match with today! (Dec 15, 2025)
+  { date: "2025-12-15", rate: 6.62 }, // Historical Exact Match with today's 6.62% benchmark level!
   { date: "2025-12-29", rate: 6.54 },
   
   // 2026 Historical Curve
   { date: "2026-01-12", rate: 6.45 },
   { date: "2026-01-26", rate: 6.38 }, // 1-Year Low around 6.38%
   { date: "2026-02-09", rate: 6.42 },
-  { date: "2026-02-24", rate: 6.48 }, // 6 Months ago (~6.48%)
+  { date: "2026-02-24", rate: 6.48 },
   { date: "2026-03-10", rate: 6.58 },
   { date: "2026-03-24", rate: 6.65 },
   { date: "2026-04-07", rate: 6.74 },
   { date: "2026-04-21", rate: 6.82 },
   { date: "2026-05-05", rate: 6.88 },
-  { date: "2026-05-26", rate: 6.85 }, // 90 Days ago (~6.85%)
+  { date: "2026-05-26", rate: 6.85 },
   { date: "2026-06-09", rate: 6.80 },
   { date: "2026-06-23", rate: 6.76 },
   { date: "2026-07-07", rate: 6.72 },
   { date: "2026-07-21", rate: 6.70 },
   { date: "2026-08-04", rate: 6.69 },
   { date: "2026-08-11", rate: 6.67 },
-  { date: "2026-08-17", rate: 6.68 }, // 1 Week ago (~6.68%)
-  { date: "2026-08-24", rate: 6.62 }, // Today's Current Benchmark (~6.62%)
+  { date: "2026-08-18", rate: 6.68 },
+  { date: "2026-08-25", rate: 6.65 },
+  { date: "2026-09-01", rate: 6.66 },
+  { date: "2026-09-08", rate: 6.64 },
+  { date: "2026-09-15", rate: 6.65 },
+  { date: "2026-09-22", rate: 6.67 }, // ~1 Week ago (~6.67%)
+  { date: "2026-09-29", rate: 6.62 }, // Current Active Benchmark (~6.62%)
 ];
 
 /**
@@ -89,44 +95,73 @@ export function analyzeRateTrends(
   horizon: TrendHorizon = "1w",
   history: RateDataPoint[] = HISTORICAL_BENCHMARK_RATES
 ): TrendAnalysisResult {
+  if (!history || history.length === 0) {
+    return {
+      horizon: "1w",
+      horizonLabel: "1 Week",
+      direction: "flat",
+      directionLabel: "Holding Steady",
+      sentiment: "neutral",
+      summary: "Rates holding steady. Predictable pricing window.",
+      diffBasisPoints: 0,
+      isOneYearHigh: false,
+      oneYearHighRate: 7.08,
+      oneYearLowRate: 6.38,
+      lastMatchedDate: "2025-12-15",
+      lastMatchedDateFormatted: "Dec 15, 2025",
+      comparisonDateFormatted: "Sep 22, 2026",
+      insight: "Market momentum is stable. Great environment to compare loan programs.",
+    };
+  }
+
   const currentDataPoint = history[history.length - 1];
   const currentRate = currentDataPoint.rate;
+  const currentTimestamp = new Date(currentDataPoint.date + "T00:00:00Z").getTime();
 
-  // Filter 1-year data window (past 365 days)
-  const oneYearAgoDate = "2025-08-24";
-  const oneYearHistory = history.filter((p) => p.date >= oneYearAgoDate);
+  // 1-Year Window Calculation (365 days prior)
+  const oneYearCutoff = currentTimestamp - (365 * 24 * 60 * 60 * 1000);
+  const oneYearHistory = history.filter(
+    (p) => new Date(p.date + "T00:00:00Z").getTime() >= oneYearCutoff
+  );
 
   const ratesInYear = oneYearHistory.map((p) => p.rate);
   const oneYearHighRate = Math.max(...ratesInYear);
   const oneYearLowRate = Math.min(...ratesInYear);
 
-  // Check if today is the 1-Year High
-  const isOneYearHigh = currentRate >= oneYearHighRate - 0.01;
+  // Check if today is near the 1-Year High (within 0.05%)
+  const isOneYearHigh = currentRate >= oneYearHighRate - 0.05;
 
-  // Determine comparison data point based on chosen horizon
-  let comparisonPoint: RateDataPoint;
-  let horizonLabel: string;
-
+  // Determine comparison point based on chosen horizon
+  let targetDaysAgo = 7;
+  let horizonLabel = "1 Week";
   if (horizon === "1w") {
-    // ~7 days ago (second to last point or closest to 7 days)
-    comparisonPoint = history[history.length - 2] || history[0];
+    targetDaysAgo = 7;
     horizonLabel = "1 Week";
   } else if (horizon === "90d") {
-    // ~90 days ago (~8-10 points back)
-    const targetDate = "2026-05-26";
-    comparisonPoint = history.find((p) => p.date <= targetDate) || history[Math.max(0, history.length - 8)];
+    targetDaysAgo = 90;
     horizonLabel = "90 Days";
-  } else {
-    // 6 Months ago (~12-14 points back)
-    const targetDate = "2026-02-24";
-    comparisonPoint = history.find((p) => p.date <= targetDate) || history[Math.max(0, history.length - 13)];
+  } else if (horizon === "6m") {
+    targetDaysAgo = 180;
     horizonLabel = "6 Months";
   }
 
-  // Last matched level date dynamically wired to the selected horizon's benchmark point
-  const lastMatchedDate: string | null = comparisonPoint.date;
-  const lastMatchedDateFormatted: string | null = formatRateDate(comparisonPoint.date);
+  const targetTimestamp = currentTimestamp - (targetDaysAgo * 24 * 60 * 60 * 1000);
 
+  // Find the point in history (excluding current latest point) closest to targetTimestamp
+  let comparisonPoint = history[0];
+  let minTimeDelta = Infinity;
+  for (let i = 0; i < history.length - 1; i++) {
+    const ptTimestamp = new Date(history[i].date + "T00:00:00Z").getTime();
+    const delta = Math.abs(ptTimestamp - targetTimestamp);
+    if (delta < minTimeDelta) {
+      minTimeDelta = delta;
+      comparisonPoint = history[i];
+    }
+  }
+
+  const comparisonDateFormatted = formatRateDate(comparisonPoint.date);
+
+  // Calculate basis points delta: (current - comparison)
   const rateDiff = Math.round((currentRate - comparisonPoint.rate) * 100) / 100;
   const diffBasisPoints = Math.round(rateDiff * 100);
 
@@ -134,33 +169,56 @@ export function analyzeRateTrends(
   let directionLabel: string;
   let sentiment: "favorable" | "unfavorable" | "neutral";
 
-  if (rateDiff <= -0.02) {
+  if (diffBasisPoints <= -2) {
     direction = "down";
-    directionLabel = "Trending Lower (Improving)";
-    sentiment = "favorable"; // Lower rates = better affordability
-  } else if (rateDiff >= 0.02) {
+    directionLabel = `Easing (${diffBasisPoints} bps)`;
+    sentiment = "favorable";
+  } else if (diffBasisPoints >= 2) {
     direction = "up";
-    directionLabel = "Trending Higher (Rising)";
-    sentiment = "unfavorable"; // Higher rates = higher borrowing cost
+    directionLabel = `Rising (+${diffBasisPoints} bps)`;
+    sentiment = "unfavorable";
   } else {
     direction = "flat";
-    directionLabel = "Holding Steady";
+    directionLabel = "Holding Steady (0 bps)";
     sentiment = "neutral";
   }
 
-  // Summary generation
+  // Find true "Last Matched Level":
+  // Search historical points at least 45 days prior to current date that matched this rate (within tolerance)
+  const minHistoricalGap = 45 * 24 * 60 * 60 * 1000;
+  const historicalCandidates = history.filter(
+    (p) => new Date(p.date + "T00:00:00Z").getTime() <= currentTimestamp - minHistoricalGap
+  );
+
+  let lastMatchedPoint: RateDataPoint = historicalCandidates[0] || history[0];
+  let minRateDelta = Infinity;
+
+  // Search backwards to find the most recent prior cycle match
+  for (let i = historicalCandidates.length - 1; i >= 0; i--) {
+    const delta = Math.abs(historicalCandidates[i].rate - currentRate);
+    if (delta < minRateDelta) {
+      minRateDelta = delta;
+      lastMatchedPoint = historicalCandidates[i];
+      if (delta === 0) break; // Exact match found!
+    }
+  }
+
+  const lastMatchedDate = lastMatchedPoint.date;
+  const lastMatchedDateFormatted = formatRateDate(lastMatchedPoint.date);
+
+  // Insight narrative
   let summary: string;
   let insight: string;
 
   if (direction === "down") {
-    summary = `Rates trending downward over the last ${horizonLabel}. Monthly purchasing power has expanded.`;
-    insight = `Borrowing costs have eased compared to ${horizonLabel} ago. Favorable window for locking pre-approvals.`;
+    summary = `Rates easing by ${Math.abs(diffBasisPoints)} bps over the last ${horizonLabel}. Monthly purchasing power has expanded.`;
+    insight = `Borrowing costs improved by ${Math.abs(diffBasisPoints)} basis points compared to ${horizonLabel} ago (${comparisonDateFormatted}). Excellent window for pre-approval lock opportunities.`;
   } else if (direction === "up") {
-    summary = `Rates trending upward over the last ${horizonLabel}. Focus on seller credits & buydowns.`;
-    insight = `Upward rate momentum over ${horizonLabel}. Leverage a 2-1 temporary buydown or seller concessions to offset payments.`;
+    summary = `Rates up by ${diffBasisPoints} bps over the last ${horizonLabel}. Focus on seller credits & buydowns.`;
+    insight = `Upward rate momentum (+${diffBasisPoints} bps vs ${horizonLabel} ago on ${comparisonDateFormatted}). Consider negotiating seller concessions to fund a 2-1 temporary buydown.`;
   } else {
     summary = `Rates holding steady over the last ${horizonLabel}. Predictable pricing window.`;
-    insight = `Market momentum is stable. Great environment to compare loan programs and final closing costs.`;
+    insight = `Benchmark rates are virtually unchanged over the past ${horizonLabel}. Predictable pricing environment for comparing loan programs and closing costs.`;
   }
 
   return {
@@ -176,6 +234,7 @@ export function analyzeRateTrends(
     oneYearLowRate,
     lastMatchedDate,
     lastMatchedDateFormatted,
+    comparisonDateFormatted,
     insight,
   };
 }

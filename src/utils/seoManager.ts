@@ -7,7 +7,7 @@ export const DEFAULT_SEO_METADATA: PublicWebsiteMetadata = {
   metaDescription: "Interactive Oregon first-time homebuyer roadmap. Calculate monthly payments, find $10,000+ DPA grants, USDA 0% down loans, and connect with trusted local lenders.",
   keywords: "first time home buyer, Oregon down payment assistance, mortgage calculator, Portland home loan, USDA zero down, OHCS grant, 2-1 buydown, Eugene mortgage lender, Bend OR home loan, FHA DPA",
   canonicalUrl: "",
-  robots: "index, follow",
+  robots: "noindex, nofollow, noarchive, nosnippet, noimageindex",
   author: "Cascade Financial Mortgage - Mike Ford Team",
 
   // Open Graph
@@ -167,7 +167,10 @@ export function applyMetadataToDocument(metadata: PublicWebsiteMetadata): void {
   setMeta("name", "title", metadata.metaTitle);
   setMeta("name", "description", metadata.metaDescription);
   if (metadata.keywords) setMeta("name", "keywords", metadata.keywords);
-  if (metadata.robots) setMeta("name", "robots", metadata.robots);
+  // Enforce strict anti-indexing and AI scraping block
+  setMeta("name", "robots", "noindex, nofollow, noarchive, nosnippet, noimageindex");
+  setMeta("name", "googlebot", "noindex, nofollow, noarchive, nosnippet, noimageindex");
+  setMeta("name", "bingbot", "noindex, nofollow, noarchive, nosnippet, noimageindex");
   if (metadata.author) setMeta("name", "author", metadata.author);
 
   // Open Graph tags

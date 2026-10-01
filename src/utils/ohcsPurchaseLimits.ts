@@ -1,4 +1,11 @@
 /**
+ * @deprecated [P1-5 PROGRAM-RULE SOURCE OF TRUTH]
+ * These hardcoded TypeScript reference tables are retained for backward-compatible
+ * client UI rendering only. Runtime program screening and eligibility evaluation MUST NOT
+ * consult these static tables; the canonical source of truth is GeoSphere's verbatim
+ * `overlayEligibility` enrichment generated upstream and synced to the Firestore `curated_listings` store.
+ * Canonical Source: `geosphere-map-oregon-ai-studio` repo JSON datasets & GeoSphere sync snapshots.
+ *
  * Authoritative Oregon Housing and Community Services (OHCS) FirstHome & Flex Lending
  * Purchase Price Limits and Targeted Area Reference Table.
  * Covers all 36 Oregon counties with Targeted and Non-Targeted maximum purchase price caps.

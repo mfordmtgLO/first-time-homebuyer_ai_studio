@@ -12778,44 +12778,79 @@ export function parseGeoSpherePayload(data: any): PropertyListing[] {
       return true;
     })
     .map((item: any, idx: number): PropertyListing => {
-      const price = Number(item.price) || 350000;
+      const rawPrice = Number(item.price);
+      const price = item.price !== undefined && item.price !== null && !isNaN(rawPrice) && rawPrice > 0 ? rawPrice : null;
       const address = item.address || item.addressLine1 || (item.formattedAddress ? item.formattedAddress.split(',')[0] : 'Oregon Property');
-      const city = item.city || 'Coos Bay';
-      const state = item.state || 'OR';
-      const zip = item.zipCode || item.zip || '97420';
+      const city = item.city || undefined;
+      const state = item.state || undefined;
+      const zip = item.zipCode || item.zip || undefined;
 
       const rawPtype = String(item.propertyType || '').toLowerCase();
-      let propertyType: PropertyListing['propertyType'] = 'Single Family';
+      let propertyType: PropertyListing['propertyType'] = null;
       if (rawPtype.includes('manufactured')) propertyType = 'Manufactured';
       else if (rawPtype.includes('mobile')) propertyType = 'Mobile';
       else if (rawPtype.includes('condo')) propertyType = 'Condo';
       else if (rawPtype.includes('townhouse') || rawPtype.includes('townhome')) propertyType = 'Townhouse';
       else if (rawPtype.includes('multi')) propertyType = 'Multi-Family';
+      else if (rawPtype.includes('single') || rawPtype.includes('residential') || rawPtype.includes('house')) propertyType = 'Single Family';
       else if (rawPtype.includes('land')) propertyType = 'Land';
+      else if (item.propertyType && typeof item.propertyType === 'string' && item.propertyType.trim()) {
+        propertyType = item.propertyType.trim() as any;
+      }
 
-      const usda = item.overlayEligibility?.usda ?? item.overlayEligibility?.usdaEligible ?? true;
+      const usda = item.overlayEligibility?.usda ?? item.overlayEligibility?.usdaEligible ?? false;
       const lmi = item.overlayEligibility?.lmi ?? item.overlayEligibility?.lmiEligible ?? false;
       const firstHome = item.overlayEligibility?.firstHome;
 
+      const rawBeds = Number(item.bedrooms ?? item.beds);
+      const beds = (item.bedrooms !== undefined || item.beds !== undefined) && !isNaN(rawBeds) ? rawBeds : null;
+
+      const rawBaths = Number(item.bathrooms ?? item.baths);
+      const baths = (item.bathrooms !== undefined || item.baths !== undefined) && !isNaN(rawBaths) ? rawBaths : null;
+
+      const rawSqft = Number(item.squareFootage ?? item.sqft);
+      const sqft = (item.squareFootage !== undefined || item.sqft !== undefined) && !isNaN(rawSqft) ? rawSqft : null;
+
+      const rawYear = Number(item.yearBuilt);
+      const yearBuilt = item.yearBuilt !== undefined && item.yearBuilt !== null && !isNaN(rawYear) ? rawYear : null;
+
+      const rawDom = Number(item.daysOnMarket);
+      const daysOnMarket = item.daysOnMarket !== undefined && item.daysOnMarket !== null && !isNaN(rawDom) ? rawDom : null;
+
+      const rawHoa = Number(item.hoaMonthly ?? item.hoa?.fee);
+      const hoaMonthly = (item.hoaMonthly !== undefined || item.hoa?.fee !== undefined) && !isNaN(rawHoa) ? rawHoa : null;
+
+      const rawTax = Number(item.propertyTaxAnnual);
+      const propertyTaxAnnual = item.propertyTaxAnnual !== undefined && item.propertyTaxAnnual !== null && !isNaN(rawTax) ? rawTax : (price ? Math.round(price * 0.009) : null);
+
+      const rawLat = Number(item.latitude ?? item.lat);
+      const rawLng = Number(item.longitude ?? item.lng);
+      const lat = (item.latitude !== undefined || item.lat !== undefined) && !isNaN(rawLat) ? rawLat : null;
+      const lng = (item.longitude !== undefined || item.lng !== undefined) && !isNaN(rawLng) ? rawLng : null;
+
       return {
         id: item.id || `geo-imported-${Date.now()}-${idx}`,
-        title: item.title || (item.formattedAddress ? `${item.formattedAddress.split(',')[0]} Home` : `${address} - ${city}`),
+        title: item.title || (item.formattedAddress ? `${item.formattedAddress.split(',')[0]} Home` : (city ? `${address} - ${city}` : address)),
         address,
         city,
         state,
         zip,
         price,
-        beds: Number(item.bedrooms ?? item.beds) || 3,
-        baths: Number(item.bathrooms ?? item.baths) || 2,
-        sqft: Number(item.squareFootage ?? item.sqft) || 1500,
-        yearBuilt: Number(item.yearBuilt) || 2016,
+        lat,
+        lng,
+        latitude: lat,
+        longitude: lng,
+        beds,
+        baths,
+        sqft,
+        yearBuilt,
         propertyType,
         imageUrl: (item.photos && item.photos[0] && !item.photos[0].includes('unsplash.com')) ? item.photos[0] : (item.imageUrl && !item.imageUrl.includes('unsplash.com') ? item.imageUrl : undefined),
         status: 'saved',
         notes: item.notes || `MLS #${item.mlsNumber || 'OR-GIS'}. ${usda ? 'USDA 100% Financing (0% Down). ' : ''}${lmi ? 'OHCS LMI Tract Qualified. ' : ''}${firstHome?.targetedAreaDetails || ''}`.trim(),
-        daysOnMarket: Number(item.daysOnMarket) || 12,
-        hoaMonthly: Number(item.hoaMonthly || item.hoa?.fee || 0),
-        propertyTaxAnnual: Number(item.propertyTaxAnnual || Math.round(price * 0.009)),
+        daysOnMarket,
+        hoaMonthly,
+        propertyTaxAnnual,
         isFavorite: Boolean(item.isFavorite),
         isPubliclyPublished: item.isPubliclyPublished !== undefined ? Boolean(item.isPubliclyPublished) : true,
         syncedAt: new Date().toISOString(),
@@ -12862,7 +12897,7 @@ export function parseGeoSpherePayload(data: any): PropertyListing[] {
           sourceDataset: 'GeoSphere Oregon GIS',
           firstHome: firstHome ? {
             available: Boolean(firstHome.available),
-            priceEligible: firstHome.priceEligible !== undefined ? firstHome.priceEligible : (price <= (firstHome.priceLimit || 692211)),
+            priceEligible: firstHome.priceEligible !== undefined ? firstHome.priceEligible : (price != null ? price <= (firstHome.priceLimit || 692211) : true),
             lmiEligible: Boolean(firstHome.lmiEligible ?? lmi),
             areaType: firstHome.areaType || 'targeted',
             priceLimit: firstHome.priceLimit || 692211,

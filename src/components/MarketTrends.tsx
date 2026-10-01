@@ -995,19 +995,19 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
                         </div>
                       </div>
 
-                      {/* Property Specs */}
+                      {/* Property Specs (Phase 1B: Null guarded) */}
                       <div className="flex items-center justify-between text-xs text-[#606C5D] border-b border-[#EAE7E0] pb-2">
                         <span className="font-bold flex items-center gap-1">
                           <Bed className="w-3.5 h-3.5 text-[#4A5D4E]" />
-                          {listing.beds} Beds
+                          {listing.beds != null ? `${listing.beds} Beds` : "— Beds"}
                         </span>
                         <span className="font-bold flex items-center gap-1">
                           <Bath className="w-3.5 h-3.5 text-[#4A5D4E]" />
-                          {listing.baths} Baths
+                          {listing.baths != null ? `${listing.baths} Baths` : "— Baths"}
                         </span>
                         <span className="font-bold flex items-center gap-1">
                           <Maximize2 className="w-3.5 h-3.5 text-[#4A5D4E]" />
-                          {listing.sqft.toLocaleString()} sqft
+                          {listing.sqft != null ? `${listing.sqft.toLocaleString()} sqft` : "— sqft"}
                         </span>
                         <span className="text-[11px] text-[#4A5D4E] font-medium">
                           {matchedCounty} Co. {countyFips ? `(FIPS ${countyFips})` : ""}

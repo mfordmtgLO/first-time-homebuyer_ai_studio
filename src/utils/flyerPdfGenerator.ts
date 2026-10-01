@@ -804,18 +804,22 @@ export function generateDatasheetPDF(options: {
     doc.setFontSize(9.5);
     doc.text(`#${idx + 1}. ${p.address}, ${p.city}, ${p.state} ${p.zip}`, margin + 12, y + 16);
 
-    // Price
+    // Price (Phase 1B: Null guarded)
     doc.setTextColor(193, 140, 93);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
-    doc.text(`$${p.price.toLocaleString()}`, pageWidth - margin - 12, y + 16, { align: "right" });
+    const priceText = p.price ? `$${p.price.toLocaleString()}` : "Price unavailable";
+    doc.text(priceText, pageWidth - margin - 12, y + 16, { align: "right" });
 
-    // Details
+    // Details (Phase 1B: Null guarded)
     doc.setTextColor(90, 100, 90);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
+    const bedsText = p.beds != null ? `${p.beds} Beds` : "— Beds";
+    const bathsText = p.baths != null ? `${p.baths} Baths` : "— Baths";
+    const sqftText = p.sqft != null ? `${p.sqft.toLocaleString()} Sq Ft` : "— Sq Ft";
     doc.text(
-      `${p.beds} Beds  |  ${p.baths} Baths  |  ${p.sqft.toLocaleString()} Sq Ft  |  Status: ${p.status || "Active"}`,
+      `${bedsText}  |  ${bathsText}  |  ${sqftText}  |  Status: ${p.status || "Active"}`,
       margin + 12,
       y + 30
     );

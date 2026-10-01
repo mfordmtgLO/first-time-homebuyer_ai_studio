@@ -246,6 +246,13 @@ service cloud.firestore {
       allow write: if isSignedIn(); 
     }
 
+    // Canonical curated listings collection (P1-1). Server-side updates only (firebase-admin).
+    match /curated_listings/{listingId} {
+      // Direct client writes are denied; all writes happen server-side during GeoSphere sync.
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Bidirectional property conversation notes between website visitors and loan officers.
     // Visitors are ANONYMOUS (visitor lead id lives in localStorage; no Firebase Auth),
     // so thread writes cannot be auth-gated without breaking the feature. Reads are

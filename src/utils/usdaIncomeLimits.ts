@@ -1,4 +1,11 @@
 /**
+ * @deprecated [P1-5 PROGRAM-RULE SOURCE OF TRUTH]
+ * These hardcoded TypeScript reference tables are retained for backward-compatible
+ * client UI rendering only. Runtime USDA screening and eligibility evaluation MUST NOT
+ * consult these static tables; the canonical source of truth is GeoSphere's verbatim
+ * `overlayEligibility` enrichment generated upstream and synced to the Firestore `curated_listings` store.
+ * Canonical Source: `geosphere-map-oregon-ai-studio` repo JSON datasets & GeoSphere sync snapshots.
+ *
  * 2026 USDA Rural Development (RD) Single Family Housing Guaranteed Loan Program
  * Nationwide Household Income Limits (1-4 Person vs. 5-8 Person Household Caps),
  * Area Eligibility Rules, and High-Cost MSA Adjustments for all 50 States.

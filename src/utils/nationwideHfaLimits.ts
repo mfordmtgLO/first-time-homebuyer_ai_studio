@@ -1,4 +1,11 @@
 /**
+ * @deprecated [P1-5 PROGRAM-RULE SOURCE OF TRUTH]
+ * These hardcoded TypeScript reference tables are retained for backward-compatible
+ * client UI rendering only. Runtime HFA / FHFA / DPA screening and eligibility evaluation MUST NOT
+ * consult these static tables; the canonical source of truth is GeoSphere's verbatim
+ * `overlayEligibility` enrichment generated upstream and synced to the Firestore `curated_listings` store.
+ * Canonical Source: `geosphere-map-oregon-ai-studio` repo JSON datasets & GeoSphere sync snapshots.
+ *
  * 50-State Housing Finance Agency (HFA) Down Payment Assistance (DPA) Programs,
  * 2026 FHFA Conforming Limits, FHA Limits, and State Tax Directory.
  */

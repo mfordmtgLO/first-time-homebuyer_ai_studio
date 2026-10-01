@@ -77,18 +77,24 @@ const GeosphereHeatmap: React.FC<{
 
     // Add properties with weight based on readiness score (higher score = more intense heat)
     properties.forEach((p) => {
-      heatmapData.push({
-        location: new google.maps.LatLng(p.lat, p.lng),
-        weight: (p.readiness?.score || 50) / 10,
-      });
+      const lat = p.lat ?? p.latitude;
+      const lng = p.lng ?? p.longitude;
+      if (lat != null && lng != null && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
+        heatmapData.push({
+          location: new google.maps.LatLng(Number(lat), Number(lng)),
+          weight: (p.readiness?.score || 50) / 10,
+        });
+      }
     });
 
     // Add amenities as high-density anchors to show clustering
     amenities.forEach((a) => {
-      heatmapData.push({
-        location: new google.maps.LatLng(a.lat, a.lng),
-        weight: 15, // High weight for amenities to form strong cluster centers
-      });
+      if (a.lat != null && a.lng != null && !isNaN(Number(a.lat)) && !isNaN(Number(a.lng))) {
+        heatmapData.push({
+          location: new google.maps.LatLng(Number(a.lat), Number(a.lng)),
+          weight: 15, // High weight for amenities to form strong cluster centers
+        });
+      }
     });
 
     const layer = new (google.maps.visualization as any).HeatmapLayer({
@@ -176,20 +182,30 @@ export const ClusteredPropertyMarkers = ({
   return (
     <>
       {properties.map((property: any) => {
+        const propLat = property.lat ?? property.latitude;
+        const propLng = property.lng ?? property.longitude;
+        if (propLat == null || propLng == null || isNaN(Number(propLat)) || isNaN(Number(propLng))) {
+          return null;
+        }
+
         const isSelected = selectedPropertyId === property.id;
         const isHovered = hoveredPropertyId === property.id;
 
         const pinBg =
-          property.readiness.tier === "High"
+          property.readiness?.tier === "High"
             ? "#15803d" // emerald-700
-            : property.readiness.tier === "Moderate"
+            : property.readiness?.tier === "Moderate"
               ? "#b45309" // amber-700
               : "#475569"; // slate-600
+
+        const priceText = property.price != null && !isNaN(Number(property.price))
+          ? `$${Math.round(Number(property.price) / 1000)}k`
+          : "—";
 
         return (
           <AdvancedMarker
             key={property.id}
-            position={{ lat: property.lat, lng: property.lng }}
+            position={{ lat: Number(propLat), lng: Number(propLng) }}
             onClick={() => setSelectedPropertyId(property.id)}
             zIndex={isSelected ? 100 : isHovered ? 90 : 50}
             ref={(marker) => setMarkerRef(marker, property.id)}
@@ -207,7 +223,7 @@ export const ClusteredPropertyMarkers = ({
                 className={`px-2 py-0.5 rounded-full text-white text-[10px] font-bold shadow-md border-2 border-white flex items-center gap-1 whitespace-nowrap`}
               >
                 <ShieldCheck className="w-2.5 h-2.5" />
-                <span>${Math.round(property.price / 1000)}k</span>
+                <span>{priceText}</span>
               </div>
               {/* Indicator triangle */}
               <div
@@ -385,37 +401,45 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
     }
   };
 
-  // Pre-process all properties with geocodes, school districts, amenities, and homebuying readiness
-  const enrichedProperties = useMemo(() => {
-    return properties.map((property) => {
-      const coords = getListingCoordinates(property);
-      const { district, assignedSchools } = getListingSchoolDistrict(
-        property,
-        coords.lat,
-        coords.lng
-      );
-      const amenities = getNearbyAmenities(coords.lat, coords.lng, 8);
-      const defaultProfile = { downPaymentSavings: 0, interestRate: 6.5, loanTermYears: 30, annualHomeInsurance: 1200, targetMonthlyPayment: 2500, dtiLimit: 43 };
-      const readiness = profile ? calculateHomebuyingReadiness(property, profile) : calculateHomebuyingReadiness(property, defaultProfile as any);
-      const distanceFromCenter = calculateHaversineDistance(
-        searchCenter.lat,
-        searchCenter.lng,
-        coords.lat,
-        coords.lng
-      );
+  // Unmapped listings count (Phase 1B: Null coordinates omitted from map pins)
+  const unmappedCount = useMemo(() => {
+    return properties.filter((p) => !getListingCoordinates(p)).length;
+  }, [properties]);
 
-      return {
-        ...property,
-        lat: coords.lat,
-        lng: coords.lng,
-        schoolDistrict: district.name,
-        districtInfo: district,
-        assignedSchools,
-        amenities,
-        readiness,
-        distanceFromCenter,
-      };
-    });
+  // Pre-process all properties with real geocodes, school districts, amenities, and homebuying readiness
+  const enrichedProperties = useMemo(() => {
+    return properties
+      .map((property) => {
+        const coords = getListingCoordinates(property);
+        if (!coords) return null;
+        const { district, assignedSchools } = getListingSchoolDistrict(
+          property,
+          coords.lat,
+          coords.lng
+        );
+        const amenities = getNearbyAmenities(coords.lat, coords.lng, 8);
+        const defaultProfile = { downPaymentSavings: 0, interestRate: 6.5, loanTermYears: 30, annualHomeInsurance: 1200, targetMonthlyPayment: 2500, dtiLimit: 43 };
+        const readiness = profile ? calculateHomebuyingReadiness(property, profile) : calculateHomebuyingReadiness(property, defaultProfile as any);
+        const distanceFromCenter = calculateHaversineDistance(
+          searchCenter.lat,
+          searchCenter.lng,
+          coords.lat,
+          coords.lng
+        );
+
+        return {
+          ...property,
+          lat: coords.lat,
+          lng: coords.lng,
+          schoolDistrict: district.name,
+          districtInfo: district,
+          assignedSchools,
+          amenities,
+          readiness,
+          distanceFromCenter,
+        };
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null);
   }, [properties, profile, searchCenter]);
 
   // Filter properties based on radius, school district, amenity proximity, and readiness tier
@@ -493,13 +517,14 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
   const radiusStats = useMemo(() => {
     const totalCount = filteredProperties.length;
     const highReadinessCount = filteredProperties.filter((p) => p.readiness.tier === "High").length;
+    const pricedProperties = filteredProperties.filter((p) => p.price && !isNaN(p.price) && p.price > 0);
     const avgPrice =
-      totalCount > 0
-        ? Math.round(filteredProperties.reduce((acc, p) => acc + p.price, 0) / totalCount)
+      pricedProperties.length > 0
+        ? Math.round(pricedProperties.reduce((acc, p) => acc + (p.price || 0), 0) / pricedProperties.length)
         : 0;
     const avgScore =
       totalCount > 0
-        ? Math.round(filteredProperties.reduce((acc, p) => acc + p.readiness.score, 0) / totalCount)
+        ? Math.round(filteredProperties.reduce((acc, p) => acc + (p.readiness?.score || 0), 0) / totalCount)
         : 0;
 
     return { totalCount, highReadinessCount, avgPrice, avgScore };
@@ -628,6 +653,17 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
               {radiusStats.totalCount > 0 ? `${radiusStats.avgScore} / 100` : "—"}
             </span>
           </div>
+
+          {unmappedCount > 0 && (
+            <div className="bg-amber-50/90 px-3.5 py-2 rounded-xl border border-amber-200 shadow-2xs">
+              <span className="block text-[10px] uppercase tracking-wider font-bold text-amber-800">
+                Omitted Pins
+              </span>
+              <span className="text-xs font-semibold text-amber-900">
+                {unmappedCount} {unmappedCount === 1 ? "listing" : "listings"} without map locations
+              </span>
+            </div>
+          )}
 
           <button
             onClick={() => setShowHeatmap(!showHeatmap)}
@@ -1213,11 +1249,11 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                     setHoveredPropertyId={setHoveredPropertyId}
                   />
 {/* Active Selected Property InfoWindow */}
-                  {activeSelectedProperty && (
+                  {activeSelectedProperty && (activeSelectedProperty.lat ?? activeSelectedProperty.latitude) != null && (activeSelectedProperty.lng ?? activeSelectedProperty.longitude) != null && (
                     <InfoWindow
                       position={{
-                        lat: activeSelectedProperty.lat,
-                        lng: activeSelectedProperty.lng,
+                        lat: Number(activeSelectedProperty.lat ?? activeSelectedProperty.latitude),
+                        lng: Number(activeSelectedProperty.lng ?? activeSelectedProperty.longitude),
                       }}
                       onCloseClick={() => setSelectedPropertyId(null)}
                     >
@@ -1230,10 +1266,10 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                             referrerPolicy="no-referrer"
                           />
                           <span
-                            className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm ${activeSelectedProperty.readiness.badgeColor}`}
+                            className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm ${activeSelectedProperty.readiness?.badgeColor || "bg-emerald-100 text-emerald-800"}`}
                           >
-                            {activeSelectedProperty.readiness.score}/100 •{" "}
-                            {activeSelectedProperty.readiness.tier}
+                            {activeSelectedProperty.readiness?.score || 50}/100 •{" "}
+                            {activeSelectedProperty.readiness?.tier || "Moderate"}
                           </span>
                         </div>
 
@@ -1243,9 +1279,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                               {formatUSD(activeSelectedProperty.price)}
                             </span>
                             <span className="text-[10px] text-[#606C5D]">
-                              est. $
-                              {activeSelectedProperty.readiness.monthlyPaymentEstimate.toLocaleString()}
-                              /mo
+                              est. {activeSelectedProperty.readiness?.monthlyPaymentEstimate ? `$${activeSelectedProperty.readiness.monthlyPaymentEstimate.toLocaleString()}/mo` : "—"}
                             </span>
                           </div>
                           <h4 className="font-serif font-bold text-xs leading-tight">
@@ -1260,15 +1294,15 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                         <div className="flex items-center gap-3 text-[10px] text-[#5C6F60] font-medium py-0.5">
                           <div className="flex items-center gap-1" title="Bedrooms">
                             <Bed className="w-3 h-3 text-[#8C9A8E]" />
-                            <span>{activeSelectedProperty.beds}</span>
+                            <span>{activeSelectedProperty.beds ?? "—"}</span>
                           </div>
                           <div className="flex items-center gap-1" title="Bathrooms">
                             <Bath className="w-3 h-3 text-[#8C9A8E]" />
-                            <span>{activeSelectedProperty.baths}</span>
+                            <span>{activeSelectedProperty.baths ?? "—"}</span>
                           </div>
                           <div className="flex items-center gap-1" title="Square Feet">
                             <Maximize className="w-3 h-3 text-[#8C9A8E]" />
-                            <span>{activeSelectedProperty.sqft.toLocaleString()}</span>
+                            <span>{activeSelectedProperty.sqft ? activeSelectedProperty.sqft.toLocaleString() : "—"}</span>
                           </div>
                           <div className="flex items-center gap-1 ml-auto" title="Days on Market">
                             <Clock className="w-3 h-3 text-[#8C9A8E]" />

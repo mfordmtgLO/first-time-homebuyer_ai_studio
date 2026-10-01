@@ -199,6 +199,10 @@ interface PropertyTrackerProps {
   onAskAiAboutProperty: (property: PropertyListing) => void;
 }
 
+function getExportFilename(prefix: string, ext: string): string {
+  return `${prefix}_${Date.now()}.${ext}`;
+}
+
 export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   properties,
   setProperties,
@@ -770,7 +774,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     // Auto trigger download
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Homebuyer_Curated_Map_${Date.now()}.kml`;
+    a.download = getExportFilename("Homebuyer_Curated_Map", "kml");
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -802,7 +806,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Homebuyer_Curated_GeoJSON_${Date.now()}.geojson`;
+    a.download = getExportFilename("Homebuyer_Curated_GeoJSON", "geojson");
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -863,9 +867,11 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
 
     return true;
   }).sort((a, b) => {
-    let comparison = 0;
+    let comparison: number;
     if (sortBy === "price") {
-      comparison = a.price - b.price;
+      const pA = a.price != null ? a.price : (sortOrder === "asc" ? Number.MAX_SAFE_INTEGER : -1);
+      const pB = b.price != null ? b.price : (sortOrder === "asc" ? Number.MAX_SAFE_INTEGER : -1);
+      comparison = pA - pB;
     } else if (sortBy === "match") {
       // Score based on grant eligibility and favorites
       const scoreA = (a.isFavorite ? 5 : 0) + (isUsdaEligible(a) ? 3 : 0) + (isLmiEligible(a) ? 2 : 0);
@@ -885,7 +891,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   // KPI Calculations
   const kpiStats = React.useMemo(() => {
     if (filtered.length === 0) return { totalVolume: 0, avgDom: 0, activeListings: 0 };
-    const totalVolume = filtered.reduce((sum, p) => sum + p.price, 0);
+    const totalVolume = filtered.reduce((sum, p) => sum + (p.price || 0), 0);
     const totalDom = filtered.reduce((sum, p) => sum + (p.daysOnMarket || 0), 0);
     const activeListings = filtered.length;
     return {
@@ -1925,9 +1931,12 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                   <tr>
                     <td className="p-3 text-[#606C5D]">Est. Monthly (P&I+Tax+Ins+HOA)</td>
                     {comparedProperties.map(p => {
-                      const loanAmt = Math.max(0, p.price - profile.downPaymentSavings);
+                      if (!p.price) {
+                        return <td key={p.id} className="p-3 font-medium text-[#9A9488]">Price unavailable</td>;
+                      }
+                      const loanAmt = Math.max(0, p.price - (profile.downPaymentSavings || 0));
                       const estPI = calculateMonthlyPI(loanAmt, profile.interestRate, profile.loanTermYears);
-                      const total = estPI + Math.round(p.propertyTaxAnnual / 12) + Math.round(profile.annualHomeInsurance / 12) + p.hoaMonthly;
+                      const total = estPI + Math.round((p.propertyTaxAnnual || 0) / 12) + Math.round((profile.annualHomeInsurance || 1200) / 12) + (p.hoaMonthly || 0);
                       return (
                         <td key={p.id} className="p-3 font-bold text-[#2D362E]">
                           {formatUSD(total)}/mo
@@ -1939,23 +1948,30 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
                     <td className="p-3 text-[#606C5D]">Price per SqFt</td>
                     {comparedProperties.map(p => (
                       <td key={p.id} className="p-3 text-[#2D362E]">
-                        ${Math.round(p.price / p.sqft)}/sqft
+                        {p.price && p.sqft ? `$${Math.round(p.price / p.sqft)}/sqft` : "—"}
                       </td>
                     ))}
                   </tr>
                   <tr>
                     <td className="p-3 text-[#606C5D]">Beds / Baths / SqFt</td>
-                    {comparedProperties.map(p => (
-                      <td key={p.id} className="p-3 text-[#2D362E]">
-                        {p.beds} Beds • {p.baths} Baths • {p.sqft} sqft
-                      </td>
-                    ))}
+                    {comparedProperties.map(p => {
+                      const parts = [
+                        p.beds != null ? `${p.beds} Beds` : null,
+                        p.baths != null ? `${p.baths} Baths` : null,
+                        p.sqft != null ? `${p.sqft.toLocaleString()} sqft` : null,
+                      ].filter(Boolean);
+                      return (
+                        <td key={p.id} className="p-3 text-[#2D362E]">
+                          {parts.join(" • ") || "—"}
+                        </td>
+                      );
+                    })}
                   </tr>
                   <tr>
                     <td className="p-3 text-[#606C5D]">Year Built</td>
                     {comparedProperties.map(p => (
                       <td key={p.id} className="p-3 text-[#2D362E]">
-                        {p.yearBuilt} ({new Date().getFullYear() - p.yearBuilt} yrs old)
+                        {p.yearBuilt ? `${p.yearBuilt} (${new Date().getFullYear() - p.yearBuilt} yrs old)` : "—"}
                       </td>
                     ))}
                   </tr>

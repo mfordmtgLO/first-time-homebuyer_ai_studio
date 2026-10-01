@@ -296,9 +296,11 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
           )}
 
           {visibleProperties.map(property => {
-            const loanAmount = property.price * 0.965;
-            const monthlyPI = calculateMonthlyPI(loanAmount, 6.5, 30);
-            const totalEstimatedMonthly = monthlyPI + (property.propertyTaxAnnual / 12) + (property.hoaMonthly || 0) + 120;
+            const loanAmount = property.price ? property.price * 0.965 : 0;
+            const monthlyPI = loanAmount ? calculateMonthlyPI(loanAmount, 6.5, 30) : 0;
+            const totalEstimatedMonthly = property.price
+              ? monthlyPI + ((property.propertyTaxAnnual || 0) / 12) + (property.hoaMonthly || 0) + 120
+              : null;
             const badges = getListingOverlayBadges(property);
             const hasPhoto = hasAuthenticPropertyPhoto(property);
             const priceLimitInfo = getPropertyOhcsPriceLimit(
@@ -308,6 +310,12 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
               property.overlayEligibility?.lmiCensusTract || property.overlayEligibility?.geoid,
               property.overlayEligibility?.targetedArea
             );
+
+            const specParts = [
+              property.beds != null ? `${property.beds}b` : null,
+              property.baths != null ? `${property.baths}ba` : null,
+              property.sqft != null ? `${property.sqft.toLocaleString()} sqft` : null,
+            ].filter(Boolean);
 
             return (
               <div
@@ -366,9 +374,11 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
                       <span className="text-2xl font-bold font-serif drop-shadow-sm">
                         {formatUSD(property.price)}
                       </span>
-                      <span className="text-xs font-semibold drop-shadow-sm text-stone-200">
-                        {property.beds}b • {property.baths}ba • {property.sqft} sqft
-                      </span>
+                      {specParts.length > 0 && (
+                        <span className="text-xs font-semibold drop-shadow-sm text-stone-200">
+                          {specParts.join(" • ")}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -378,7 +388,7 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#4A5D4E]/10 text-[#4A5D4E] border border-[#4A5D4E]/20">
-                          {property.propertyType}
+                          {property.propertyType || "Residential"}
                         </span>
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white text-[#606C5D] border border-[#EAE7E0]">
                           {priceLimitInfo.county} County
@@ -417,19 +427,21 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
                         <span className="text-2xl sm:text-3xl font-bold font-serif text-[#2D362E] tracking-tight">
                           {formatUSD(property.price)}
                         </span>
-                        <span className="text-xs text-[#9A9488] ml-2 font-medium">
-                          ${Math.round(property.price / (property.sqft || 1))}/sqft
-                        </span>
+                        {property.price && property.sqft ? (
+                          <span className="text-xs text-[#9A9488] ml-2 font-medium">
+                            ${Math.round(property.price / property.sqft)}/sqft
+                          </span>
+                        ) : null}
                       </div>
                     </div>
 
                     {/* Key specs pill row */}
-                    <div className="flex items-center gap-3 text-xs text-[#606C5D] font-medium pt-1">
-                      <span className="font-bold text-[#2D362E]">{property.beds} Beds</span>
-                      <span>•</span>
-                      <span className="font-bold text-[#2D362E]">{property.baths} Baths</span>
-                      <span>•</span>
-                      <span className="font-bold text-[#2D362E]">{property.sqft?.toLocaleString()} sq ft</span>
+                    <div className="flex items-center gap-2 flex-wrap text-xs text-[#606C5D] font-medium pt-1">
+                      {property.beds != null && <span className="font-bold text-[#2D362E]">{property.beds} Beds</span>}
+                      {property.beds != null && property.baths != null && <span>•</span>}
+                      {property.baths != null && <span className="font-bold text-[#2D362E]">{property.baths} Baths</span>}
+                      {(property.beds != null || property.baths != null) && property.sqft != null && <span>•</span>}
+                      {property.sqft != null && <span className="font-bold text-[#2D362E]">{property.sqft.toLocaleString()} sq ft</span>}
                       {property.yearBuilt ? (
                         <>
                           <span>•</span>
@@ -485,18 +497,33 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
 
                   {/* Financial Overview & Action CTA */}
                   <div className="pt-3 border-t border-[#EAE7E0] space-y-3">
-                    <div className="flex items-center justify-between text-xs bg-[#FAF9F5] p-2.5 rounded-xl border border-[#EAE7E0]/60">
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Est. Monthly</span>
-                        <strong className="text-[#2D362E] font-serif font-bold text-sm">
-                          {formatUSD(Math.round(totalEstimatedMonthly))}<span className="text-[10px] font-normal text-[#606C5D]">/mo</span>
-                        </strong>
+                    {totalEstimatedMonthly != null ? (
+                      <div className="flex items-center justify-between text-xs bg-[#FAF9F5] p-2.5 rounded-xl border border-[#EAE7E0]/60">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Est. Monthly</span>
+                          <strong className="text-[#2D362E] font-serif font-bold text-sm">
+                            {formatUSD(Math.round(totalEstimatedMonthly))}<span className="text-[10px] font-normal text-[#606C5D]">/mo</span>
+                          </strong>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Annual Tax</span>
+                          <span className="text-[#2D362E] font-bold">{formatUSD(property.propertyTaxAnnual)}/yr</span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Annual Tax</span>
-                        <span className="text-[#2D362E] font-bold">{formatUSD(property.propertyTaxAnnual)}/yr</span>
+                    ) : (
+                      <div className="flex items-center justify-between text-xs bg-[#FAF9F5] p-2.5 rounded-xl border border-[#EAE7E0]/60">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Price Status</span>
+                          <strong className="text-[#2D362E] font-serif font-bold text-sm">
+                            Price unavailable
+                          </strong>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Annual Tax</span>
+                          <span className="text-[#2D362E] font-bold">{formatUSD(property.propertyTaxAnnual)}</span>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* 1-Click Zillow & Down Payment Aid Action Row */}
                     <div className="flex items-center justify-between gap-2 pt-1">

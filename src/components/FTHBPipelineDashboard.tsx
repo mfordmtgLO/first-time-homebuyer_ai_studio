@@ -397,7 +397,7 @@ export const FTHBPipelineDashboard: React.FC<FTHBPipelineDashboardProps> = ({
       const isTargeted = Boolean(listing.overlayEligibility?.targetedArea || ohcs.isTargeted);
       const ohcsQualifies = (isLmiArea || isTargeted) && ohcs.isPriceEligible;
       const lmiPercentage = listing.overlayEligibility?.lmiPercentage ?? (isLmiArea ? 74 : (isTargeted ? 82 : 94));
-      const ohcsHeadroom = ohcs.applicablePriceLimit - listing.price;
+      const ohcsHeadroom = listing.price != null ? ohcs.applicablePriceLimit - listing.price : 0;
       const ohcsReason = ohcsQualifies
         ? `Listing price (${formatUSD(listing.price)}) is below the ${isTargeted ? 'Targeted' : 'Non-Targeted'} cap (${formatUSD(ohcs.applicablePriceLimit)}) and census tract (${censusTract}) qualifies for $15k DPA.`
         : !ohcs.isPriceEligible
@@ -408,9 +408,10 @@ export const FTHBPipelineDashboard: React.FC<FTHBPipelineDashboardProps> = ({
       const qualifiesCount = (usdaQualifies ? 1 : 0) + (lakeviewQualifies ? 1 : 0) + (ohcsQualifies ? 1 : 0);
       const stackedQualifies = qualifiesCount >= 2;
 
-      // Mortgage Math & RentCast Comps
-      const downPayment = usdaQualifies ? 0 : Math.round(listing.price * 0.035);
-      const loanAmount = Math.max(0, listing.price - downPayment);
+      // Mortgage Math & RentCast Comps (Phase 1B: Null guarded)
+      const price = listing.price || 0;
+      const downPayment = usdaQualifies ? 0 : Math.round(price * 0.035);
+      const loanAmount = Math.max(0, price - downPayment);
       
       // 30-year fixed estimate at 6.375%
       const r = 0.06375 / 12;
@@ -421,15 +422,23 @@ export const FTHBPipelineDashboard: React.FC<FTHBPipelineDashboardProps> = ({
       
       const taxMonthly = listing.propertyTaxAnnual 
         ? Math.round(listing.propertyTaxAnnual / 12) 
-        : Math.round((listing.price * 0.011) / 12);
+        : Math.round((price * 0.011) / 12);
       
       const insMonthly = 115;
       const pmiMonthly = usdaQualifies ? 0 : Math.round((loanAmount * 0.005) / 12);
-      const estimatedMonthlyPayment = pi + taxMonthly + insMonthly + pmiMonthly + (listing.hoaMonthly || 0);
+      const estimatedMonthlyPayment = listing.price
+        ? pi + taxMonthly + insMonthly + pmiMonthly + (listing.hoaMonthly || 0)
+        : null;
 
       // RentCast Comps
-      const rentcastEstRent = Math.round(listing.price * 0.0054);
-      const monthlyRentSavings = rentcastEstRent - estimatedMonthlyPayment;
+      const rentcastEstRent = listing.estimatedRent
+        ? Number(listing.estimatedRent)
+        : listing.price
+          ? Math.round(listing.price * 0.0054)
+          : null;
+      const monthlyRentSavings = rentcastEstRent != null && estimatedMonthlyPayment != null
+        ? rentcastEstRent - estimatedMonthlyPayment
+        : null;
 
       // DTI Calculation
       const grossMonthly = borrowerIncome > 0 ? borrowerIncome / 12 : 1;
@@ -1190,41 +1199,49 @@ export const FTHBPipelineDashboard: React.FC<FTHBPipelineDashboardProps> = ({
                                 {formatUSD(listing.price)}
                               </span>
                               <div className="text-[10px] text-stone-500">
-                                Est. Pmt: <strong>{formatUSD(listing.eval.estimatedMonthlyPayment)}/mo</strong>
+                                {listing.eval.estimatedMonthlyPayment != null ? (
+                                  <>Est. Pmt: <strong>{formatUSD(listing.eval.estimatedMonthlyPayment)}/mo</strong></>
+                                ) : (
+                                  <span>Est. Pmt: <strong>—</strong></span>
+                                )}
                               </div>
                             </div>
                           </div>
 
-                          {/* Quick Specs */}
-                          <div className="flex gap-4 text-xs text-[#606C5D]">
-                            <span>{listing.beds} Beds</span>
-                            <span>{listing.baths} Baths</span>
-                            <span>{listing.sqft} SqFt</span>
-                            <span>Built {listing.yearBuilt}</span>
-                            <span>{listing.daysOnMarket || 12} DOM</span>
+                          {/* Quick Specs (Phase 1B: Null guarded) */}
+                          <div className="flex gap-4 text-xs text-[#606C5D] flex-wrap">
+                            <span>{listing.beds != null ? `${listing.beds} Beds` : "— Beds"}</span>
+                            <span>{listing.baths != null ? `${listing.baths} Baths` : "— Baths"}</span>
+                            <span>{listing.sqft != null ? `${listing.sqft.toLocaleString()} SqFt` : "— SqFt"}</span>
+                            {listing.yearBuilt ? <span>Built {listing.yearBuilt}</span> : null}
+                            {listing.daysOnMarket != null ? <span>{listing.daysOnMarket} DOM</span> : null}
                           </div>
 
                           {/* RentCast Comparison Strip */}
-                          <div className="p-2 rounded-xl bg-stone-50 border border-stone-200/70 flex flex-wrap justify-between items-center text-[11px] gap-2">
-                            <div className="flex items-center gap-1.5 text-stone-700">
-                              <span className="font-bold text-stone-900">RentCast Market Rent:</span>
-                              <span>{formatUSD(listing.eval.rentcastEstRent)}/mo</span>
-                              <span className="text-emerald-700 font-semibold">
-                                ({listing.eval.monthlyRentSavings >= 0 ? `+$${listing.eval.monthlyRentSavings}/mo less to own` : `${formatUSD(Math.abs(listing.eval.monthlyRentSavings))}/mo rent delta`})
-                              </span>
-                            </div>
+                          {listing.eval.rentcastEstRent != null ? (
+                            <div className="p-2 rounded-xl bg-stone-50 border border-stone-200/70 flex flex-wrap justify-between items-center text-[11px] gap-2">
+                              <div className="flex items-center gap-1.5 text-stone-700">
+                                <span className="font-bold text-stone-900">RentCast Market Rent:</span>
+                                <span>{formatUSD(listing.eval.rentcastEstRent)}/mo</span>
+                                {listing.eval.monthlyRentSavings != null && (
+                                  <span className="text-emerald-700 font-semibold">
+                                    ({listing.eval.monthlyRentSavings >= 0 ? `+$${listing.eval.monthlyRentSavings}/mo less to own` : `${formatUSD(Math.abs(listing.eval.monthlyRentSavings))}/mo rent delta`})
+                                  </span>
+                                )}
+                              </div>
 
-                            <div className="flex items-center gap-2">
-                              <span className="text-stone-500">Qualifying DTI:</span>
-                              <span className={`font-bold px-1.5 py-0.2 rounded ${
-                                listing.eval.dtiStatus === 'pass' 
-                                  ? 'bg-emerald-100 text-emerald-800' 
-                                  : (listing.eval.dtiStatus === 'caution' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800')
-                              }`}>
-                                {listing.eval.buyerDtiPct}%
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-stone-500">Qualifying DTI:</span>
+                                <span className={`font-bold px-1.5 py-0.2 rounded ${
+                                  listing.eval.dtiStatus === 'pass' 
+                                    ? 'bg-emerald-100 text-emerald-800' 
+                                    : (listing.eval.dtiStatus === 'caution' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800')
+                                }`}>
+                                  {listing.eval.buyerDtiPct}%
+                                </span>
+                              </div>
                             </div>
-                          </div>
+                          ) : null}
 
                           {/* Real-Time Program Eligibility Badges */}
                           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#F1EFE9]">

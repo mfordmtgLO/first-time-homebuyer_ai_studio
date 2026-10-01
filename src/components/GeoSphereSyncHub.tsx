@@ -475,15 +475,31 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
       county: countyFilter,
     });
 
-    // 3. Sorting
+    // 3. Sorting (Phase 1B: Null-safe sorting - nulls sort to bottom)
     if (sortBy === "price_asc") {
-      return [...list].sort((a, b) => a.price - b.price);
+      return [...list].sort((a, b) => {
+        const pA = a.price != null ? a.price : Number.MAX_SAFE_INTEGER;
+        const pB = b.price != null ? b.price : Number.MAX_SAFE_INTEGER;
+        return pA - pB;
+      });
     } else if (sortBy === "price_desc") {
-      return [...list].sort((a, b) => b.price - a.price);
+      return [...list].sort((a, b) => {
+        const pA = a.price != null ? a.price : -1;
+        const pB = b.price != null ? b.price : -1;
+        return pB - pA;
+      });
     } else if (sortBy === "dom") {
-      return [...list].sort((a, b) => a.daysOnMarket - b.daysOnMarket);
+      return [...list].sort((a, b) => {
+        const domA = a.daysOnMarket != null ? a.daysOnMarket : Number.MAX_SAFE_INTEGER;
+        const domB = b.daysOnMarket != null ? b.daysOnMarket : Number.MAX_SAFE_INTEGER;
+        return domA - domB;
+      });
     } else if (sortBy === "sqft") {
-      return [...list].sort((a, b) => b.sqft - a.sqft);
+      return [...list].sort((a, b) => {
+        const sqftA = a.sqft != null ? a.sqft : -1;
+        const sqftB = b.sqft != null ? b.sqft : -1;
+        return sqftB - sqftA;
+      });
     }
 
     return list;
@@ -1998,7 +2014,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                           {formatUSD(listing.price)}
                         </span>
                         <span className="text-xs font-medium text-stone-200 drop-shadow-sm">
-                          {listing.beds}b • {listing.baths}ba • {listing.sqft} sqft
+                          {listing.beds != null ? `${listing.beds}b` : "—"} • {listing.baths != null ? `${listing.baths}ba` : "—"} • {listing.sqft ? `${listing.sqft.toLocaleString()} sqft` : "—"}
                         </span>
                       </div>
                     </div>
@@ -2040,7 +2056,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                           {formatUSD(listing.price)}
                         </span>
                         <span className="text-xs text-[#606C5D] font-medium">
-                          {listing.beds}b • {listing.baths}ba • {listing.sqft?.toLocaleString()} sqft
+                          {listing.beds != null ? `${listing.beds}b` : "—"} • {listing.baths != null ? `${listing.baths}ba` : "—"} • {listing.sqft ? `${listing.sqft.toLocaleString()} sqft` : "—"}
                         </span>
                       </div>
                     </div>
@@ -2344,11 +2360,13 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                   <div>
                     <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Listing Purchase Price</span>
                     <span className="text-2xl sm:text-3xl font-bold font-serif text-[#2D362E]">{formatUSD(inspectingListing.price)}</span>
-                    <span className="text-xs text-[#9A9488] ml-2">(${Math.round(inspectingListing.price / (inspectingListing.sqft || 1))}/sqft)</span>
+                    {inspectingListing.price && inspectingListing.sqft ? (
+                      <span className="text-xs text-[#9A9488] ml-2">(${Math.round(inspectingListing.price / inspectingListing.sqft)}/sqft)</span>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#4A5D4E]/10 text-[#4A5D4E] border border-[#4A5D4E]/20">
-                      {inspectingListing.propertyType}
+                      {inspectingListing.propertyType || "Single Family"}
                     </span>
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white text-[#606C5D] border border-[#EAE7E0]">
                       {inspectingListing.county || inspectingListing.overlayEligibility?.countyName || "Oregon"}
@@ -2361,23 +2379,23 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                 <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0] space-y-1.5">
                   <div className="flex justify-between">
                     <span className="text-[#606C5D]">Property Type:</span>
-                    <strong className="text-[#2D362E]">{inspectingListing.propertyType}</strong>
+                    <strong className="text-[#2D362E]">{inspectingListing.propertyType || "Single Family"}</strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#606C5D]">Beds / Baths:</span>
-                    <strong className="text-[#2D362E]">{inspectingListing.beds} beds • {inspectingListing.baths} baths</strong>
+                    <strong className="text-[#2D362E]">{inspectingListing.beds != null ? inspectingListing.beds : "—"} beds • {inspectingListing.baths != null ? inspectingListing.baths : "—"} baths</strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#606C5D]">Square Footage:</span>
-                    <strong className="text-[#2D362E]">{inspectingListing.sqft.toLocaleString()} sq ft</strong>
+                    <strong className="text-[#2D362E]">{inspectingListing.sqft ? `${inspectingListing.sqft.toLocaleString()} sq ft` : "—"}</strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#606C5D]">Year Built:</span>
-                    <strong className="text-[#2D362E]">{inspectingListing.yearBuilt}</strong>
+                    <strong className="text-[#2D362E]">{inspectingListing.yearBuilt || "—"}</strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#606C5D]">Days on Market:</span>
-                    <strong className="text-[#2D362E]">{inspectingListing.daysOnMarket} days</strong>
+                    <strong className="text-[#2D362E]">{inspectingListing.daysOnMarket != null ? `${inspectingListing.daysOnMarket} days` : "—"}</strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#606C5D]">Estimated Property Tax:</span>

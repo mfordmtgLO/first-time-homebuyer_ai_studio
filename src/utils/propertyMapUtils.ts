@@ -280,32 +280,16 @@ export function calculateHaversineDistance(
 }
 
 /**
- * Deterministically derives realistic latitude and longitude coordinates for any listing in Oregon.
+ * Extracts real latitude and longitude coordinates for a listing.
+ * Phase 1B: Returns null when source coordinates are absent (zero fabricated city jitter).
  */
-export function getListingCoordinates(listing: PropertyListing): GeoCoordinate {
-  if (listing.lat && listing.lng && !isNaN(listing.lat) && !isNaN(listing.lng)) {
-    return { lat: listing.lat, lng: listing.lng };
+export function getListingCoordinates(listing: PropertyListing): GeoCoordinate | null {
+  const rawLat = listing.latitude ?? listing.lat;
+  const rawLng = listing.longitude ?? listing.lng;
+  if (rawLat != null && rawLng != null && !isNaN(Number(rawLat)) && !isNaN(Number(rawLng))) {
+    return { lat: Number(rawLat), lng: Number(rawLng) };
   }
-
-  const cityNorm = (listing.city || "Portland").toLowerCase().trim();
-  const base = OREGON_CITY_COORDINATES[cityNorm] || OREGON_CITY_COORDINATES["portland"];
-
-  // Create a pseudo-random yet 100% deterministic offset based on address string hash
-  const hashStr = (listing.address || listing.title || listing.id).toLowerCase();
-  let hash = 0;
-  for (let i = 0; i < hashStr.length; i++) {
-    hash = (hash << 5) - hash + hashStr.charCodeAt(i);
-    hash |= 0;
-  }
-
-  // Jitter up to ~1.8 miles around city center
-  const latOffset = ((Math.abs(hash) % 1000) / 1000 - 0.5) * 0.045;
-  const lngOffset = ((Math.abs(hash >> 3) % 1000) / 1000 - 0.5) * 0.055;
-
-  return {
-    lat: Number((base.lat + latOffset).toFixed(6)),
-    lng: Number((base.lng + lngOffset).toFixed(6))
-  };
+  return null;
 }
 
 /**
@@ -377,9 +361,14 @@ export function calculateHomebuyingReadiness(
   property: PropertyListing,
   profile: FinancialProfile
 ): HomebuyingReadinessDetails {
-  const loanAmt = Math.max(0, property.price - profile.downPaymentSavings);
+  const price = property.price != null && !isNaN(Number(property.price))
+    ? Number(property.price)
+    : (profile.targetPrice || 350000);
+  const loanAmt = Math.max(0, price - profile.downPaymentSavings);
   const estPI = calculateMonthlyPI(loanAmt, profile.interestRate, profile.loanTermYears);
-  const monthlyTaxes = Math.round(property.propertyTaxAnnual / 12);
+  const monthlyTaxes = property.propertyTaxAnnual != null && !isNaN(Number(property.propertyTaxAnnual))
+    ? Math.round(Number(property.propertyTaxAnnual) / 12)
+    : Math.round((price * 0.009) / 12);
   const monthlyInsurance = Math.round(profile.annualHomeInsurance / 12);
   const hoa = property.hoaMonthly || 0;
   const totalMonthly = estPI + monthlyTaxes + monthlyInsurance + hoa;

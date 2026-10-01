@@ -533,6 +533,8 @@ async function startServer() {
     "POST /api/geoid/lookup",
     "POST /api/geoid/batch",
     "GET /api/nationwide/hfa-programs",
+    "GET /api/manifest", // P1-8: Public Muse plugin manifest
+    "GET /api/listings", // P1-2 & P1-3: Dedicated Muse API key authentication (timing-safe, fail-closed)
     // Inbound third-party webhooks with their own auth (M2M key / HMAC signatures)
     "POST /api/webhook/lead",
     "POST /api/twilio/webhook",
@@ -1895,6 +1897,348 @@ Return JSON matching this shape:
         return res.status(400).json({ error: err.message });
       }
       return res.status(500).json({ error: err.message || "Failed to process Muse query" });
+    }
+  });
+
+  // ============================================================================
+  // P1-3: MUSE SERVICE AUTHENTICATION & DISCLAIMER TRACKING
+  // ============================================================================
+  const LISTINGS_DISCLAIMER_TEXT =
+    "Vantage AI Disclaimer: Program eligibility indicators ('likely qualifies') are for informational and pre-qualification guidance only based on GIS geospatial boundaries and public guideline overlays. Final approval requires formal loan application, verified borrower underwriting, property appraisal, and institutional lender review. Equal Housing Opportunity.";
+
+  // In-memory disclaimer tracking per session (P1-2).
+  // Multi-instance scaling limitation notice: this in-memory Set tracks disclaimer delivery on a single process/instance.
+  // In horizontally-scaled multi-container deployments (Cloud Run multiple instances), session disclaimer state can be
+  // backed by Redis or Firestore session docs.
+  const listingsDisclaimerSessions = new Set<string>();
+
+  function verifyMuseApiKey(req: express.Request): { ok: true } | { ok: false; status: number; error: string; reason: string } {
+    const configuredKey = (process.env.MUSE_API_KEY || "").trim();
+    if (!configuredKey) {
+      return {
+        ok: false,
+        status: 503,
+        error: "Service unavailable: MUSE_API_KEY environment variable is not configured.",
+        reason: "MUSE_API_KEY_UNCONFIGURED",
+      };
+    }
+
+    let candidateKey = "";
+    const headerKey = req.headers["x-muse-api-key"];
+    if (typeof headerKey === "string" && headerKey.trim()) {
+      candidateKey = headerKey.trim();
+    } else {
+      const authHeader = req.headers["authorization"];
+      if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+        candidateKey = authHeader.slice(7).trim();
+      }
+    }
+
+    if (!candidateKey) {
+      return {
+        ok: false,
+        status: 401,
+        error: "Unauthorized: Missing Muse API key. Provide via 'x-muse-api-key' header or 'Authorization: Bearer <key>'.",
+        reason: "MISSING_KEY",
+      };
+    }
+
+    const bufConfigured = Buffer.from(configuredKey, "utf8");
+    const bufCandidate = Buffer.from(candidateKey, "utf8");
+
+    if (bufConfigured.length !== bufCandidate.length) {
+      return {
+        ok: false,
+        status: 401,
+        error: "Unauthorized: Invalid Muse API key.",
+        reason: "INVALID_KEY",
+      };
+    }
+
+    const isMatch = crypto.timingSafeEqual(bufConfigured, bufCandidate);
+    if (!isMatch) {
+      return {
+        ok: false,
+        status: 401,
+        error: "Unauthorized: Invalid Muse API key.",
+        reason: "INVALID_KEY",
+      };
+    }
+
+    return { ok: true };
+  }
+
+  // P1-8: PUBLIC PLUGIN MANIFEST ENDPOINT
+  app.get("/api/manifest", (_req, res) => {
+    res.json({
+      name: "vantage-listings-oracle",
+      version: "1.0.0",
+      description: "Vantage AI & Luther GeoSphere Oregon Canonical Listing Store & Grounding Engine",
+      auth: {
+        type: "api_key",
+        header: "x-muse-api-key",
+        bearerHeader: "Authorization: Bearer <MUSE_API_KEY>",
+        environmentVariable: "MUSE_API_KEY",
+      },
+      endpoints: [
+        {
+          path: "/api/listings",
+          method: "GET",
+          authRequired: true,
+          description: "Search and filter canonical property listings with verified GeoSphere overlay eligibility and source citations.",
+          filters: {
+            city: "string (e.g. Eugene, Junction City, Bend)",
+            minPrice: "number (USD)",
+            maxPrice: "number (USD)",
+            program: "enum: ['usda', 'lakeview', 'fhfa', 'calhfa', 'idaho', 'firsthome', 'lmi']",
+            maxDaysOnMarket: "number (days)",
+            listingId: "string",
+            limit: "number (1-100, default 25)",
+            cursor: "string (pagination cursor)",
+            includeStale: "boolean (default false)",
+            sessionId: "string (once-per-session disclaimer control)",
+          },
+          responseEnvelope: {
+            listings: "Array<PropertyListing>",
+            citation: "{ sourceHost, endpointPath, pulledAt, syncRunId }",
+            disclaimer: "string (Full regulatory disclaimer)",
+            disclaimerServed: "boolean",
+            count: "number",
+            cursor: "string | null",
+          },
+        },
+        {
+          path: "/api/manifest",
+          method: "GET",
+          authRequired: false,
+          description: "Public manifest description of endpoints, schemas, and compliance guardrails.",
+        },
+        {
+          path: "/api/muse/query",
+          method: "POST",
+          authRequired: true,
+          description: "Contextual conversational turn for Muse agent using buildMuseContext 10-step retrieval.",
+        },
+        {
+          path: "/api/brain/query",
+          method: "POST",
+          authRequired: false,
+          description: "Grounded 2nd Brain RAG query.",
+        },
+      ],
+      compliance: {
+        glbaAudited: true,
+        auditAction: "LISTINGS_QUERY",
+        zeroTrustAuth: "Timing-safe API key comparison",
+        eligibilityWording: "likely qualifies only",
+      },
+    });
+  });
+
+  // P1-2 & P1-3 & P1-4: CANONICAL LISTING QUERY API
+  app.get("/api/listings", async (req, res) => {
+    // 1. Service Auth (MUSE_API_KEY fail-closed, timing-safe)
+    const authResult = verifyMuseApiKey(req);
+    if (!authResult.ok) {
+      await recordComplianceAuditLog("LISTINGS_QUERY_DENIED", {
+        reason: authResult.reason,
+        ip: req.ip || "unknown",
+        path: req.path,
+      });
+      return res.status(authResult.status).json({ error: authResult.error });
+    }
+
+    try {
+      const {
+        city,
+        minPrice,
+        maxPrice,
+        program,
+        maxDaysOnMarket,
+        listingId,
+        limit: queryLimit,
+        cursor,
+        includeStale,
+        sessionId,
+      } = req.query;
+
+      const cleanCity = typeof city === "string" ? city.trim().toLowerCase() : "";
+      const numMinPrice = minPrice ? Number(minPrice) : null;
+      const numMaxPrice = maxPrice ? Number(maxPrice) : null;
+      const cleanProgram = typeof program === "string" ? program.trim().toLowerCase() : "";
+      const numMaxDom = maxDaysOnMarket ? Number(maxDaysOnMarket) : null;
+      const targetListingId = typeof listingId === "string" ? listingId.trim() : "";
+      const optIncludeStale = String(includeStale).toLowerCase() === "true";
+      const cleanSessionId = typeof sessionId === "string" ? sessionId.trim() : "";
+
+      const parsedLimit = parseInt(String(queryLimit || "25"), 10);
+      const limit = Math.max(1, Math.min(isNaN(parsedLimit) ? 25 : parsedLimit, 100));
+
+      const db = getAdminDb();
+      let matchedListings: any[] = [];
+
+      if (targetListingId) {
+        // Direct document lookup by ID
+        const singleDocSnap = await db.collection("curated_listings").doc(targetListingId).get();
+        if (singleDocSnap.exists) {
+          const d = singleDocSnap.data();
+          if (d && (optIncludeStale || d._stale !== true)) {
+            matchedListings.push(d);
+          }
+        }
+      } else {
+        // Fetch curated listings snapshot from Firestore
+        // Firestore Index Minimization Note: To prevent index combinatorial explosion across dynamic combinations of
+        // (city, minPrice, maxPrice, program, maxDaysOnMarket, _stale), we retrieve the active curated collection
+        // and evaluate predicate filters in-memory with stable sorting.
+        const snap = await db.collection("curated_listings").get();
+        const allDocs: any[] = [];
+        snap.docs.forEach((d) => {
+          const item = d.data();
+          if (item) allDocs.push(item);
+        });
+
+        // Apply filters
+        matchedListings = allDocs.filter((item: any) => {
+          // Stale filter
+          if (!optIncludeStale && item._stale === true) return false;
+
+          // City filter
+          if (cleanCity) {
+            const itemCity = String(item.city || "").toLowerCase();
+            if (!itemCity.includes(cleanCity)) return false;
+          }
+
+          // Price range filter
+          const price = Number(item.price);
+          if (!isNaN(price)) {
+            if (numMinPrice !== null && !isNaN(numMinPrice) && price < numMinPrice) return false;
+            if (numMaxPrice !== null && !isNaN(numMaxPrice) && price > numMaxPrice) return false;
+          }
+
+          // Days on market filter
+          if (numMaxDom !== null && !isNaN(numMaxDom)) {
+            const dom = Number(item.daysOnMarket);
+            if (!isNaN(dom) && dom > numMaxDom) return false;
+          }
+
+          // Program filter: evaluated strictly against VERBATIM overlayEligibility fields from GeoSphere
+          if (cleanProgram) {
+            const overlay = item.overlayEligibility || {};
+            switch (cleanProgram) {
+              case "usda":
+                if (!(overlay.usda === true || overlay.usdaEligible === true)) return false;
+                break;
+              case "lakeview": {
+                const lv = overlay.lakeviewNational ?? overlay.lakeviewNationalEligible;
+                const isLakeview = typeof lv === "object" ? Boolean(lv?.available) : Boolean(lv);
+                if (!isLakeview) return false;
+                break;
+              }
+              case "fhfa": {
+                const fhfa = overlay.fhfaCountyLimit;
+                const isFhfa = typeof fhfa === "object" ? Boolean(fhfa?.available) : Boolean(fhfa || overlay.fhfa);
+                if (!isFhfa) return false;
+                break;
+              }
+              case "calhfa": {
+                const cal = overlay.calhfaMyHome;
+                const isCal = typeof cal === "object" ? Boolean(cal?.available) : Boolean(cal || overlay.calhfa);
+                if (!isCal) return false;
+                break;
+              }
+              case "idaho": {
+                const idaho = overlay.idahoMrbTaxExempt;
+                const isIdaho = typeof idaho === "object" ? Boolean(idaho?.available) : Boolean(idaho || overlay.idaho);
+                if (!isIdaho) return false;
+                break;
+              }
+              case "firsthome": {
+                const fh = overlay.firstHome;
+                const isFh = typeof fh === "object" ? Boolean(fh?.available) : Boolean(fh || overlay.firstHomeEligible);
+                if (!isFh) return false;
+                break;
+              }
+              case "lmi":
+                if (!(overlay.lmi === true || overlay.lmiEligible === true)) return false;
+                break;
+              default:
+                return false;
+            }
+          }
+
+          return true;
+        });
+
+        // Stable sort by id
+        matchedListings.sort((a, b) => String(a.id || "").localeCompare(String(b.id || "")));
+      }
+
+      // Cursor-based pagination
+      let startIndex = 0;
+      if (cursor && typeof cursor === "string") {
+        const foundIdx = matchedListings.findIndex((item) => String(item.id) === cursor);
+        if (foundIdx >= 0) {
+          startIndex = foundIdx + 1;
+        }
+      }
+
+      const paginatedItems = matchedListings.slice(startIndex, startIndex + limit);
+      const nextCursor =
+        startIndex + limit < matchedListings.length
+          ? String(paginatedItems[paginatedItems.length - 1]?.id || "")
+          : null;
+
+      // Extract provenance citation from primary listing or default
+      const firstSource = paginatedItems[0]?._source || matchedListings[0]?._source || {};
+      const citation = {
+        sourceHost: firstSource.host || "geosphere-map-oregon.vercel.app",
+        endpointPath: firstSource.endpointPath || "/api/map-saved-listings",
+        pulledAt: firstSource.pulledAt || paginatedItems[0]?.pulledAt || new Date().toISOString(),
+        syncRunId: firstSource.syncRunId || null,
+      };
+
+      // Disclaimer tracking: once per session
+      let disclaimerServed = true;
+      if (cleanSessionId) {
+        if (listingsDisclaimerSessions.has(cleanSessionId)) {
+          disclaimerServed = false;
+        } else {
+          listingsDisclaimerSessions.add(cleanSessionId);
+          disclaimerServed = true;
+        }
+      }
+
+      // Record GLBA Compliance Telemetry (zero buyer PII)
+      await recordComplianceAuditLog("LISTINGS_QUERY", {
+        filters: {
+          city: cleanCity || undefined,
+          minPrice: numMinPrice,
+          maxPrice: numMaxPrice,
+          program: cleanProgram || undefined,
+          maxDaysOnMarket: numMaxDom,
+          listingId: targetListingId || undefined,
+          limit,
+          cursor: cursor || undefined,
+          includeStale: optIncludeStale,
+        },
+        count: paginatedItems.length,
+        totalMatched: matchedListings.length,
+        industryId: "mortgage_real_estate",
+        sessionId: cleanSessionId || "anonymous",
+      });
+
+      return res.json({
+        listings: paginatedItems,
+        citation,
+        disclaimer: LISTINGS_DISCLAIMER_TEXT,
+        disclaimerServed,
+        count: paginatedItems.length,
+        cursor: nextCursor,
+      });
+    } catch (err: any) {
+      console.error("[Listings Query API] Error:", err);
+      return res.status(500).json({ error: err.message || "Failed to query canonical listings." });
     }
   });
 
@@ -4702,9 +5046,10 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     "roseburg": { lat: 43.2165, lng: -123.3417 },
   };
 
-  // Helper to standardize and classify any listing from RentCast or Luther GeoSphere map
+  // Helper to standardize and classify any listing from RentCast or Luther GeoSphere map (Phase 1B: Nullable Numerics)
   function standardizeListingItem(item: any, idx: number) {
-    const price = Number(item.price) || 350000;
+    const rawPrice = Number(item.price);
+    const price = item.price !== undefined && item.price !== null && !isNaN(rawPrice) && rawPrice > 0 ? rawPrice : null;
     const address =
       item.addressLine1 ||
       item.address ||
@@ -4715,20 +5060,27 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     const state = item.state || undefined;
     const zip = item.zipCode || item.zip || undefined;
 
-    const cityKey = (city || "").toLowerCase().trim();
-    const cityDef = OREGON_CITY_DEFAULTS[cityKey] || OREGON_CITY_DEFAULTS["junction city"];
-    const lat = Number(item.latitude ?? item.lat) || cityDef.lat;
-    const lng = Number(item.longitude ?? item.lng) || cityDef.lng;
+    // Phase 1B: Source coordinates only — no fabricated fallback defaults
+    const rawLat = Number(item.latitude ?? item.lat);
+    const rawLng = Number(item.longitude ?? item.lng);
+    const lat = (item.latitude !== undefined || item.lat !== undefined) && !isNaN(rawLat) ? rawLat : null;
+    const lng = (item.longitude !== undefined || item.lng !== undefined) && !isNaN(rawLng) ? rawLng : null;
 
-    const rawPtype = String(item.propertyType || "").toLowerCase();
-    let propertyType = "Single Family";
+    const rawPtype = String(item.propertyType || "").toLowerCase().trim();
+    let propertyType: string | null = null;
     if (rawPtype.includes("manufactured")) propertyType = "Manufactured";
     else if (rawPtype.includes("mobile")) propertyType = "Mobile";
     else if (rawPtype.includes("condo")) propertyType = "Condo";
     else if (rawPtype.includes("townhouse") || rawPtype.includes("townhome"))
       propertyType = "Townhouse";
     else if (rawPtype.includes("multi")) propertyType = "Multi-Family";
-    else if (rawPtype.includes("land")) propertyType = "Land";
+    else if (rawPtype.includes("single") || rawPtype.includes("residential") || rawPtype.includes("house") || rawPtype.includes("sfh"))
+      propertyType = "Single Family";
+    else if (rawPtype.includes("land") || rawPtype.includes("lot"))
+      propertyType = "Land";
+    else if (item.propertyType && typeof item.propertyType === "string" && item.propertyType.trim()) {
+      propertyType = item.propertyType.trim();
+    }
 
     // FAITHFUL PASS-THROUGH (2026-10-01): eligibility classifications come verbatim
     // from the GeoSphere snapshot's overlayEligibility. The homebuyer backend MUST NOT
@@ -4745,7 +5097,39 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     const lakeviewNational =
       sourceOverlay.lakeviewNational ?? sourceOverlay.lakeviewNationalEligible;
 
-    const estimatedRent = Number(item.estimatedRent) || Math.round(price * 0.0054);
+    const rawEstRent = Number(item.estimatedRent);
+    const estimatedRent =
+      item.estimatedRent !== undefined && item.estimatedRent !== null && !isNaN(rawEstRent)
+        ? rawEstRent
+        : price
+          ? Math.round(price * 0.0054)
+          : null;
+
+    const rawBeds = Number(item.bedrooms ?? item.beds);
+    const beds = (item.bedrooms !== undefined || item.beds !== undefined) && !isNaN(rawBeds) ? rawBeds : null;
+
+    const rawBaths = Number(item.bathrooms ?? item.baths);
+    const baths = (item.bathrooms !== undefined || item.baths !== undefined) && !isNaN(rawBaths) ? rawBaths : null;
+
+    const rawSqft = Number(item.squareFootage ?? item.sqft);
+    const sqft = (item.squareFootage !== undefined || item.sqft !== undefined) && !isNaN(rawSqft) ? rawSqft : null;
+
+    const rawYear = Number(item.yearBuilt);
+    const yearBuilt = item.yearBuilt !== undefined && item.yearBuilt !== null && !isNaN(rawYear) ? rawYear : null;
+
+    const rawDom = Number(item.daysOnMarket);
+    const daysOnMarket = item.daysOnMarket !== undefined && item.daysOnMarket !== null && !isNaN(rawDom) ? rawDom : null;
+
+    const rawHoa = Number(item.hoaMonthly ?? item.hoa?.fee);
+    const hoaMonthly = (item.hoaMonthly !== undefined || item.hoa?.fee !== undefined) && !isNaN(rawHoa) ? rawHoa : null;
+
+    const rawTax = Number(item.propertyTaxAnnual);
+    const propertyTaxAnnual =
+      item.propertyTaxAnnual !== undefined && item.propertyTaxAnnual !== null && !isNaN(rawTax)
+        ? rawTax
+        : price
+          ? Math.round(price * 0.009)
+          : null;
 
     return {
       id: item.id || `geo-${Date.now()}-${idx}`,
@@ -4763,10 +5147,10 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
       lng,
       latitude: lat,
       longitude: lng,
-      beds: Number(item.bedrooms ?? item.beds) || 3,
-      baths: Number(item.bathrooms ?? item.baths) || 2,
-      sqft: Number(item.squareFootage ?? item.sqft) || 1650,
-      yearBuilt: Number(item.yearBuilt) || 2022,
+      beds,
+      baths,
+      sqft,
+      yearBuilt,
       propertyType,
       estimatedRent,
       imageUrl:
@@ -4787,9 +5171,9 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
         .filter(Boolean)
         .join(" ")
         .trim(),
-      daysOnMarket: Number(item.daysOnMarket) || 14,
-      hoaMonthly: Number(item.hoaMonthly || item.hoa?.fee || 0),
-      propertyTaxAnnual: Number(item.propertyTaxAnnual || Math.round(price * 0.009)),
+      daysOnMarket,
+      hoaMonthly,
+      propertyTaxAnnual,
       isFavorite: false,
       isPubliclyPublished: true,
       syncedAt: new Date().toISOString(),
@@ -4862,7 +5246,7 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
               priceEligible:
                 firstHome.priceEligible !== undefined
                   ? firstHome.priceEligible
-                  : firstHome.priceLimit !== undefined
+                  : firstHome.priceLimit !== undefined && price !== null
                     ? price <= firstHome.priceLimit
                     : undefined,
               lmiEligible: Boolean(firstHome.lmiEligible ?? lmi),
@@ -5122,6 +5506,92 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
           return true;
         })
         .map((item: any, idx: number) => standardizeListingItem(item, idx));
+
+      // ============================================================================
+      // P1-1: CANONICAL LISTING STORE PERSISTENCE (Firestore `curated_listings`)
+      // ============================================================================
+      const syncRunId = `sync_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const pulledAt = new Date().toISOString();
+      let winnerHost = "geosphere-map-oregon.vercel.app";
+      let winnerEndpointPath = "/api/map-saved-listings";
+      try {
+        const parsedWinnerUrl = new URL(winner.url);
+        winnerHost = parsedWinnerUrl.hostname;
+        winnerEndpointPath = parsedWinnerUrl.pathname;
+      } catch {
+        // use fallback defaults
+      }
+
+      const activeDocIds = new Set<string>();
+      try {
+        const db = getAdminDb();
+        const existingCuratedSnap = await db.collection("curated_listings").get();
+
+        const batchPromises: Promise<any>[] = [];
+        let batch = db.batch();
+        let opCount = 0;
+
+        for (const item of standardized) {
+          const rawDocId = String(item.id || "").trim();
+          const docId = (rawDocId || `geo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`).replace(/[\/\s#?]/g, "_");
+          activeDocIds.add(docId);
+
+          const docRef = db.collection("curated_listings").doc(docId);
+          const docData = {
+            ...item,
+            id: docId,
+            overlayEligibility: item.overlayEligibility || {},
+            _source: {
+              host: winnerHost,
+              endpointPath: winnerEndpointPath,
+              authMode: winner.authMode,
+              pulledAt,
+              syncRunId,
+            },
+            _stale: false,
+            _staleSince: null,
+            pulledAt,
+            updatedAt: pulledAt,
+          };
+
+          batch.set(docRef, docData, { merge: true });
+          opCount++;
+          if (opCount >= 400) {
+            batchPromises.push(batch.commit());
+            batch = db.batch();
+            opCount = 0;
+          }
+        }
+
+        // Stale detection: listings absent from this snapshot are marked _stale: true (never deleted)
+        existingCuratedSnap.docs.forEach((docSnap) => {
+          const existingId = docSnap.id;
+          const existingData = docSnap.data();
+          if (!activeDocIds.has(existingId) && existingData._stale !== true) {
+            const docRef = db.collection("curated_listings").doc(existingId);
+            batch.update(docRef, {
+              _stale: true,
+              _staleSince: pulledAt,
+              updatedAt: pulledAt,
+            });
+            opCount++;
+            if (opCount >= 400) {
+              batchPromises.push(batch.commit());
+              batch = db.batch();
+              opCount = 0;
+            }
+          }
+        });
+
+        if (opCount > 0) {
+          batchPromises.push(batch.commit());
+        }
+
+        await Promise.all(batchPromises);
+        console.log(`[Canonical Store] Successfully upserted ${standardized.length} listings into curated_listings (syncRunId: ${syncRunId}).`);
+      } catch (persistErr) {
+        console.warn("[Canonical Store] Curated listings Firestore persistence warning:", persistErr);
+      }
 
       // The long-accepted (but previously ignored) city filter, now honored.
       const cityFilter =

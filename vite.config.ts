@@ -19,6 +19,8 @@ export default defineConfig(() => {
       global: 'window',
     },
     build: {
+      outDir: 'dist',
+      emptyOutDir: true,
       sourcemap: false, // Ensures production builds do not expose original TypeScript/React source code
       chunkSizeWarningLimit: 1500,
       rollupOptions: {

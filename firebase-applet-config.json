@@ -6,5 +6,7 @@
   "firestoreDatabaseId": "ai-studio-vantageaiworkspa-320759cc-ded2-4188-b4e0-ed887f4ad5bd",
   "storageBucket": "astral-web-439103-g7.firebasestorage.app",
   "messagingSenderId": "664893075850",
-  "oAuthClientId": "664893075850-m138eunukp81sru327l7lf2rr4vb0lh4.apps.googleusercontent.com"
+  "measurementId": "",
+  "oAuthClientId": "664893075850-m138eunukp81sru327l7lf2rr4vb0lh4.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
 }

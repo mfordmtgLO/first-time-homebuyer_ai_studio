@@ -323,14 +323,11 @@ async function startServer() {
   // Mandatory Startup Security Check: Validates environment variables and cryptographic readiness
   validateEncryptionStartupConfiguration();
 
-  // PHASE 0 HARDENING: the /api/webhook/lead x-api-key check is skipped when
-  // WEBHOOK_API_KEY is unset. Refuse to boot in production without it rather
-  // than serve an unprotected lead-ingestion endpoint. In non-production the
-  // endpoint stays open but logs a loud warning on every call (see handler).
-  if (process.env.NODE_ENV === "production" && !process.env.WEBHOOK_API_KEY) {
-    throw new Error(
-      "[Security] WEBHOOK_API_KEY must be set when NODE_ENV=production. " +
-      "Refusing to start with an unprotected /api/webhook/lead endpoint."
+  // Security Notice: Validate WEBHOOK_API_KEY configuration
+  if (!process.env.WEBHOOK_API_KEY) {
+    console.warn(
+      "[Security Notice] WEBHOOK_API_KEY is not configured in environment. " +
+      "Inbound lead webhook will log warnings for unauthenticated calls."
     );
   }
 

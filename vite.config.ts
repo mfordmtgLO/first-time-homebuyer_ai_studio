@@ -66,6 +66,10 @@ export default defineConfig(() => {
       sourcemap: false, // Ensures production builds do not expose original TypeScript/React source code
       chunkSizeWarningLimit: 1500,
       rollupOptions: {
+        input: {
+          main: path.resolve(__dirname, 'index.html'),
+          firebase: path.resolve(__dirname, 'src/firebase.ts'),
+        },
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
@@ -82,6 +86,9 @@ export default defineConfig(() => {
                 return 'vendor-sentry';
               }
               return 'vendor-libs';
+            }
+            if (id.includes('src/firebase') || id.endsWith('src/firebase.ts') || id.includes('firebase-applet-config.json')) {
+              return 'firebase-core';
             }
           }
         }

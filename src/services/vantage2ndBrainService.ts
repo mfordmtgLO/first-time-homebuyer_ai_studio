@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { db } from '../firebase';
+import { db } from '../firebase.ts';
 import { collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 
 function getAiClient(): GoogleGenAI {

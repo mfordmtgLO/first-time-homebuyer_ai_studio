@@ -1,4 +1,4 @@
-import { PropertyListing } from "../types";
+import type { PropertyListing } from "../types.ts";
 
 /**
  * Live active RentCast listings pulled directly from GeoSphere Oregon GIS (Junction City, Lane County, OR)

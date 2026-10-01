@@ -6,10 +6,10 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import { loadKnowledgeBase, searchKnowledge, addDocumentToKnowledge } from "./vantageKnowledge.js";
-import { searchLiveRegistry, scrapeAgentUrlDirectly } from "./liveWebSearch.js";
-import { handleIncomingTwilioWebhook } from "./src/services/smsSyncService.js";
-import { GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS } from "./src/data/junctionCityLiveListings.js";
+import { loadKnowledgeBase, searchKnowledge, addDocumentToKnowledge } from "./vantageKnowledge.ts";
+import { searchLiveRegistry, scrapeAgentUrlDirectly } from "./liveWebSearch.ts";
+import { handleIncomingTwilioWebhook } from "./src/services/smsSyncService.ts";
+import { GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS } from "./src/data/junctionCityLiveListings.ts";
 
 // Enterprise Encryption Vault Setup (Zero-Trust Security Architecture)
 // In production, MASTER_ENCRYPTION_KEY can be configured via Cloud Secrets / Environment.

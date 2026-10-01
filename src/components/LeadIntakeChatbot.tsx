@@ -668,6 +668,38 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     status: "new",
   });
 
+  // Batch processing mechanism for consolidating lead intake updates during idle periods
+  const pendingIntakeBatchRef = useRef<Partial<CapturedLead>>({});
+  const intakeIdleTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const queueIntakeBatchUpdate = (update: Partial<CapturedLead>) => {
+    pendingIntakeBatchRef.current = {
+      ...pendingIntakeBatchRef.current,
+      ...update,
+    };
+    if (intakeIdleTimerRef.current) {
+      clearTimeout(intakeIdleTimerRef.current);
+    }
+    intakeIdleTimerRef.current = setTimeout(() => {
+      const batched = pendingIntakeBatchRef.current;
+      pendingIntakeBatchRef.current = {};
+      if (Object.keys(batched).length > 0) {
+        try {
+          const leadId = localStorage.getItem("fthb_lead_id") || `lead-draft-${Date.now()}`;
+          localStorage.setItem(`fthb_lead_draft_${leadId}`, JSON.stringify(batched));
+        } catch (e) {
+          // ignore
+        }
+      }
+    }, 1500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (intakeIdleTimerRef.current) clearTimeout(intakeIdleTimerRef.current);
+    };
+  }, []);
+
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const activeOptionsRef = useRef<HTMLDivElement | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
@@ -815,6 +847,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       updatedLead.sendSampleHomesOption = optionValue;
     }
     setLeadState(updatedLead);
+    queueIntakeBatchUpdate(updatedLead);
 
     // Add user message
     const userMsg = {

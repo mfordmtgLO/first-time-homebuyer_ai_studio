@@ -69,7 +69,7 @@ import {
   resolveFromUrlPath,
 } from "./utils/guideMatching";
 import { db } from "./firebase";
-import { doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, collection, writeBatch } from "firebase/firestore";
 
 import { GEOSPHERE_MOCK_LISTINGS } from "./data/geoSphereData";
 
@@ -655,6 +655,46 @@ export default function App() {
     return () => unsubLeads();
   }, [userRole]);
 
+  // Batch Processing & Debounced Idle Write Queue for Leads (minimizes Firestore writes & billing bottlenecks)
+  const pendingLeadBatchRef = useRef<Map<string, CapturedLead>>(new Map());
+  const leadBatchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const flushLeadBatch = async () => {
+    if (pendingLeadBatchRef.current.size === 0) return;
+    const entries = Array.from(pendingLeadBatchRef.current.entries());
+    pendingLeadBatchRef.current.clear();
+
+    try {
+      for (let i = 0; i < entries.length; i += 500) {
+        const chunk = entries.slice(i, i + 500);
+        const batch = writeBatch(db);
+        chunk.forEach(([id, lead]) => {
+          batch.set(doc(db, "leads", id), lead, { merge: true });
+        });
+        await batch.commit();
+      }
+    } catch (err) {
+      console.warn("Error committing batched lead writes to Firestore:", err);
+    }
+  };
+
+  const queueLeadWrite = (lead: CapturedLead) => {
+    pendingLeadBatchRef.current.set(lead.id, lead);
+    if (leadBatchTimerRef.current) {
+      clearTimeout(leadBatchTimerRef.current);
+    }
+    leadBatchTimerRef.current = setTimeout(() => {
+      flushLeadBatch();
+    }, 2000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (leadBatchTimerRef.current) clearTimeout(leadBatchTimerRef.current);
+      flushLeadBatch();
+    };
+  }, []);
+
   const handleUpdateGuidesState = (
     newState: ProfessionalGuidesState | ((prev: ProfessionalGuidesState) => ProfessionalGuidesState)
   ) => {
@@ -662,14 +702,12 @@ export default function App() {
       setGuidesState((prev) => {
         const computedState = newState(prev);
 
-        // 1. Shard-save: Save ONLY changed leads to prevent cost/perf write amplification
+        // 1. Shard-save: Queue changed leads into batch processing mechanism
         if (computedState.leads && Array.isArray(computedState.leads)) {
           computedState.leads.forEach((lead) => {
             const prevLead = prev.leads?.find((l) => l.id === lead.id);
             if (!prevLead || JSON.stringify(prevLead) !== JSON.stringify(lead)) {
-              setDoc(doc(db, "leads", lead.id), lead).catch((err) =>
-                console.warn(`Error writing changed sharded lead ${lead.id}:`, err)
-              );
+              queueLeadWrite(lead);
             }
           });
         }
@@ -682,14 +720,12 @@ export default function App() {
     } else {
       setGuidesState(newState);
 
-      // 1. Shard-save: Save ONLY changed leads to prevent cost/perf write amplification
+      // 1. Shard-save: Queue changed leads into batch processing mechanism
       if (newState.leads && Array.isArray(newState.leads)) {
         newState.leads.forEach((lead) => {
           const prevLead = guidesState.leads?.find((l) => l.id === lead.id);
           if (!prevLead || JSON.stringify(prevLead) !== JSON.stringify(lead)) {
-            setDoc(doc(db, "leads", lead.id), lead).catch((err) =>
-              console.warn(`Error writing changed sharded lead ${lead.id}:`, err)
-            );
+            queueLeadWrite(lead);
           }
         });
       }
@@ -1014,10 +1050,8 @@ export default function App() {
       leads: updatedLeads,
     }));
     
-    // Shard-save: Persist each lead individually in the Firestore leads collection
-    setDoc(doc(db, "leads", newLead.id), newLead).catch((err) =>
-      console.warn(`Error persisting sharded lead document ${newLead.id}:`, err)
-    );
+    // Shard-save: Queue sharded lead write into batch processing mechanism
+    queueLeadWrite(newLead);
   };
 
   const activeAgent =

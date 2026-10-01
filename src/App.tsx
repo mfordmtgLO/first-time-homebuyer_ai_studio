@@ -704,8 +704,16 @@ export default function App() {
   useEffect(() => {
     const pollWebhookLeads = async () => {
       try {
+        if (!auth.currentUser) return;
+        const token = await auth.currentUser.getIdToken().catch(() => null);
+        if (!token) return;
+
         const url = new URL("/api/data/sync/poll", window.location.origin).toString();
-        const res = await fetch(url);
+        const res = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.leads && data.leads.length > 0) {

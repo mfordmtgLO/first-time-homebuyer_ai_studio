@@ -326,8 +326,8 @@ async function startServer() {
   // Security Notice: Validate WEBHOOK_API_KEY configuration
   if (!process.env.WEBHOOK_API_KEY) {
     console.warn(
-      "[Security Notice] WEBHOOK_API_KEY is not configured in environment. " +
-      "Inbound lead webhook will log warnings for unauthenticated calls."
+      "[SECURITY ADVISORY] WEBHOOK_API_KEY is not configured in environment. " +
+      "Inbound lead webhook (/api/webhook/lead) will fail-closed (HTTP 503) until configured."
     );
   }
 
@@ -563,43 +563,42 @@ async function startServer() {
   app.post("/api/webhook/lead", (req, res) => {
     try {
       const apiKey = req.headers["x-api-key"] || req.headers["authorization"];
-      // PHASE 0 HARDENING: fail closed. When WEBHOOK_API_KEY is unset the check
-      // below is skipped; in production the server refuses to boot without the
-      // key (see startServer), so this branch only runs in non-production.
-      if (!process.env.WEBHOOK_API_KEY) {
-        console.warn(
-          "[Security] /api/webhook/lead called WITHOUT an API key check: " +
-          "WEBHOOK_API_KEY is not set. Set WEBHOOK_API_KEY to protect this endpoint."
-        );
+      // 1. Fail-Closed Authentication: Reject if WEBHOOK_API_KEY is unset or key is invalid
+      const configuredKey = process.env.WEBHOOK_API_KEY?.trim();
+      if (!configuredKey) {
+        console.error("[Security] Rejecting /api/webhook/lead: WEBHOOK_API_KEY is not configured in server environment.");
+        return res.status(503).json({
+          error: "Webhook service unavailable. Server requires WEBHOOK_API_KEY configuration.",
+        });
       }
-      // Basic security check (Optional: In production, validate against an env var)
-      if (
-        process.env.WEBHOOK_API_KEY &&
-        apiKey !== process.env.WEBHOOK_API_KEY &&
-        apiKey !== `Bearer ${process.env.WEBHOOK_API_KEY}`
-      ) {
+
+      if (apiKey !== configuredKey && apiKey !== `Bearer ${configuredKey}`) {
         return res.status(401).json({ error: "Unauthorized. Invalid API Key." });
       }
 
-      const lead = req.body;
+      const lead = req.body || {};
       if (!lead.fullName || !lead.email || !lead.phone) {
         return res.status(400).json({ error: "Missing required fields: fullName, email, phone" });
       }
 
+      // 2. Strict Schema Sanitization: Whitelist allowed fields only (prevent prototype/field-spread injection)
       const newLead = {
-        id: `lead-webhook-${Date.now()}`,
-        preferredContactTime: "As soon as possible",
-        timeline: "ASAP",
-        targetPriceRange: "TBD",
-        targetMonthlyBudget: "TBD",
-        downPaymentSavings: "TBD",
-        grantInterest: false,
-        creditScoreTier: "Unknown",
-        preferredLocations: "TBD",
-        propertyType: "Single Family",
-        leadSource: lead.source || "3rd Party Ad Campaign",
-        assignedLoId: "mike-ford",
-        ...lead, // Overwrite defaults with any provided fields
+        id: `lead-webhook-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
+        fullName: String(lead.fullName).trim().slice(0, 100),
+        email: String(lead.email).trim().toLowerCase().slice(0, 100),
+        phone: String(lead.phone).trim().slice(0, 30),
+        leadSource: String(lead.source || lead.leadSource || "3rd Party Ad Campaign").slice(0, 100),
+        preferredContactTime: String(lead.preferredContactTime || "As soon as possible").slice(0, 50),
+        timeline: String(lead.timeline || "ASAP").slice(0, 50),
+        targetPriceRange: String(lead.targetPriceRange || "TBD").slice(0, 50),
+        targetMonthlyBudget: String(lead.targetMonthlyBudget || "TBD").slice(0, 50),
+        downPaymentSavings: String(lead.downPaymentSavings || "TBD").slice(0, 50),
+        grantInterest: Boolean(lead.grantInterest),
+        creditScoreTier: String(lead.creditScoreTier || "Unknown").slice(0, 50),
+        preferredLocations: String(lead.preferredLocations || "TBD").slice(0, 100),
+        propertyType: String(lead.propertyType || "Single Family").slice(0, 50),
+        notes: lead.notes ? String(lead.notes).slice(0, 1000) : "",
+        assignedLoId: "mike-ford", // Server-enforced: cannot be overridden by payload
         createdAt: new Date().toISOString(),
       };
 

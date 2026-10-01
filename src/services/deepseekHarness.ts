@@ -49,6 +49,20 @@ const MAX_CONCURRENT_PER_TENANT = 4;
 const activeRunsPerTenant = new Map<string, number>();
 const dailyRunsPerTenant = new Map<string, { date: string; count: number }>();
 
+function sanitizeForFirestore<T>(obj: T): T {
+  if (obj === null || obj === undefined) return null as any;
+  if (typeof obj !== "object") return obj;
+  if (obj instanceof Date) return obj;
+  if (Array.isArray(obj)) {
+    return obj.filter((i) => i !== undefined).map((i) => sanitizeForFirestore(i)) as any;
+  }
+  const clean: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj as Record<string, any>)) {
+    if (v !== undefined) clean[k] = sanitizeForFirestore(v);
+  }
+  return clean as T;
+}
+
 function getAdminDb() {
   if (!getApps().length) {
     try {
@@ -59,21 +73,29 @@ function getAdminDb() {
       console.warn("Firebase Admin initializeApp notice in deepseekHarness:", e);
     }
   }
-  return getFirestore();
+  const db = getFirestore();
+  try {
+    db.settings({ ignoreUndefinedProperties: true });
+  } catch {
+    // Ignore if settings already set
+  }
+  return db;
 }
 
 async function logHarnessCompliance(action: string, details: Record<string, any>) {
   try {
     const db = getAdminDb();
     const timestamp = new Date().toISOString();
-    await db.collection("branch_audit_logs").add({
-      action,
-      details,
-      timestamp,
-      createdAt: timestamp,
-      glbaCompliant: true,
-      piiScrubbed: true,
-    });
+    await db.collection("branch_audit_logs").add(
+      sanitizeForFirestore({
+        action,
+        details,
+        timestamp,
+        createdAt: timestamp,
+        glbaCompliant: true,
+        piiScrubbed: true,
+      })
+    );
   } catch (err) {
     console.warn("[DeepSeek Harness Ledger] Audit write notice:", err);
   }

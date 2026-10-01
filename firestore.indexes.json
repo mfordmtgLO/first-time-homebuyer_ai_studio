@@ -1,0 +1,85 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "curated_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "_stale", "order": "ASCENDING" },
+        { "fieldPath": "cityNorm", "order": "ASCENDING" },
+        { "fieldPath": "programTags", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "price", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "curated_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "_stale", "order": "ASCENDING" },
+        { "fieldPath": "programTags", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "price", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "curated_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "_stale", "order": "ASCENDING" },
+        { "fieldPath": "cityNorm", "order": "ASCENDING" },
+        { "fieldPath": "price", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "curated_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "_stale", "order": "ASCENDING" },
+        { "fieldPath": "cityNorm", "order": "ASCENDING" },
+        { "fieldPath": "programTags", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "daysOnMarket", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "curated_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "_stale", "order": "ASCENDING" },
+        { "fieldPath": "programTags", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "daysOnMarket", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "curated_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "_stale", "order": "ASCENDING" },
+        { "fieldPath": "cityNorm", "order": "ASCENDING" },
+        { "fieldPath": "daysOnMarket", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "curated_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "_stale", "order": "ASCENDING" },
+        { "fieldPath": "price", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "curated_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "_stale", "order": "ASCENDING" },
+        { "fieldPath": "daysOnMarket", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -207,7 +207,7 @@ export async function buildMuseContext({
 
   // 4. Industry Knowledge: recent /memories for industryId (program docs, ingested_doc / ingested_media), cap 5
   let programDocsCount = 0;
-  let programDocChunks: string[] = [];
+  const programDocChunks: string[] = [];
   try {
     const db = getAdminDb();
     const progSnap = await db

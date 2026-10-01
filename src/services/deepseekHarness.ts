@@ -176,7 +176,7 @@ export async function executeDeepSeekHarness(req: HarnessRequest): Promise<Harne
   activeRunsPerTenant.set(tenantId, currentActive + 1);
   dailyRunsPerTenant.set(tenantId, { date: todayUtc, count: todayCount + 1 });
 
-  let outcome: "ok" | "timeout" | "error" | "escalation" = "escalation";
+  let outcome: "ok" | "timeout" | "error" | "escalation";
   let output: any = undefined;
   let escalation: string | undefined = undefined;
 

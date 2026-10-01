@@ -353,12 +353,13 @@ export function calculateRentVsBuy(
   return timeline;
 }
 
-export function formatUSD(amount: number): string {
+export function formatUSD(amount: number | null | undefined): string {
+  if (amount == null || isNaN(Number(amount))) return "—";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(Number(amount));
 }
 
 export type LoanProgramType = "conventional" | "fha" | "usda" | "va";

@@ -208,7 +208,7 @@ export async function addDocumentToKnowledge(text: string, metadata: any, aiClie
 }
 
 /**
- * P2-0.2 & P2-0.4: Tenant-Isolated Vector Search with Full Provenance / Citations
+ * P2-0.2 & P2-0.4 & F2: Tenant-Isolated Vector Search with Full Provenance / Citations (Fail-Closed)
  * Note on scaling ceiling: In-memory exact cosine similarity scales comfortably up to ~25,000 vectors.
  * For >50k vectors, integrate pgvector on Cloud SQL or Vertex AI Vector Search.
  */
@@ -216,7 +216,7 @@ export async function searchKnowledge(
   query: string,
   aiClient: any,
   topK: number = 3,
-  industryId: string = "mortgage_real_estate"
+  industryId: string
 ): Promise<KnowledgeSearchResult[]> {
   if (!industryId || typeof industryId !== "string" || !industryId.trim()) {
     throw new Error("Tenant isolation violation: searchKnowledge requires a valid industryId.");
@@ -254,3 +254,7 @@ export async function searchKnowledge(
     return [];
   }
 }
+
+// Re-export Muse context builder (F1)
+export { buildMuseContext } from "./src/services/museContext.ts";
+export type { MuseContextParams, MuseContextResult } from "./src/services/museContext.ts";

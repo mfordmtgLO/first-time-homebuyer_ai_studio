@@ -301,7 +301,8 @@ How can I assist your pipeline today? You can select any active borrower from yo
           body: JSON.stringify({
             documentText: text,
             fileName: file.name,
-            documentType: file.type || "text/plain"
+            documentType: file.type || "text/plain",
+            industryId: "mortgage_real_estate"
           })
         });
         const data = await res.json();
@@ -368,7 +369,8 @@ How can I assist your pipeline today? You can select any active borrower from yo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           prompt: fullPrompt,
-          chatHistory: messages.slice(-40)
+          chatHistory: messages.slice(-40),
+          industryId: "mortgage_real_estate"
         })
       });
       

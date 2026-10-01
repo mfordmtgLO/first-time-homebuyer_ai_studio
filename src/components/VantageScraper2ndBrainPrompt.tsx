@@ -126,6 +126,7 @@ export const VantageScraper2ndBrainPrompt: React.FC<VantageScraper2ndBrainPrompt
           prompt: `[CONTEXT: You are Vantage AI 2nd Brain Scraper Routine Specialist for Oregon Real Estate & Loan Officers].
 Analyze this user scraper routine request and provide a 3-bullet strategic targeting summary, plus recommend optimized filter parameter inputs for Oregon agents.
 User Request: "${effectivePrompt}"`,
+          industryId: "mortgage_real_estate"
         })
       });
 

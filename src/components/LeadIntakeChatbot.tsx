@@ -924,6 +924,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: query,
+          industryId: "mortgage_real_estate",
           leadData: leadState,
           chatHistory: messages.slice(-4),
           loanOfficer: loanOfficer,

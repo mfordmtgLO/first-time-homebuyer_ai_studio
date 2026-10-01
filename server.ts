@@ -6,7 +6,7 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import { loadKnowledgeBase, searchKnowledge, addDocumentToKnowledge } from "./vantageKnowledge.ts";
+import { loadKnowledgeBase, searchKnowledge, addDocumentToKnowledge, buildMuseContext } from "./vantageKnowledge.ts";
 import { searchLiveRegistry, scrapeAgentUrlDirectly } from "./liveWebSearch.ts";
 import { handleIncomingTwilioWebhook } from "./src/services/smsSyncService.ts";
 import { GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS } from "./src/data/junctionCityLiveListings.ts";
@@ -1371,7 +1371,10 @@ Return JSON matching this shape:
       }
 
       // 4. Ingest ONLY the sanitized content to the AI Memory (RAG)
-      const docIndustryId = req.body?.industryId || "mortgage_real_estate";
+      const docIndustryId = ((req as any).user?.industryId || req.body?.industryId || "").trim();
+      if (!docIndustryId) {
+        return res.status(400).json({ error: "Tenant isolation violation: industryId is required for knowledge ingestion." });
+      }
       const doc = await addDocumentToKnowledge(
         redactedDocText,
         { fileName: finalFileName, industryId: docIndustryId },
@@ -1406,6 +1409,28 @@ Return JSON matching this shape:
   // ============================================================================
   // VANTAGE AI 2ND BRAIN HYBRID ENGINE & REST BRIDGE ENDPOINTS (PHASE 2 HARDENED)
   // ============================================================================
+
+  const STAFF_ROLES = new Set([
+    "branch_manager",
+    "sales_manager",
+    "senior_lo",
+    "team_lo",
+    "processor",
+    "mktg_ads_creator",
+    "loa",
+    "it_manager",
+    "peer_tester",
+    "master_admin",
+    "admin",
+    "loan_officer",
+    "m2m_service",
+  ]);
+
+  function isStaffUser(user: any): boolean {
+    if (!user) return false;
+    const role = String(user.role || "").toLowerCase();
+    return STAFF_ROLES.has(role);
+  }
 
   // Helper: Compliance Audit Logger (GLBA Compliance Telemetry Ledger)
   async function recordComplianceAuditLog(
@@ -1514,90 +1539,56 @@ Return JSON matching this shape:
     };
   }
 
-  // PART P2-0.2, P2-0.4: Grounded Brain Query with Tenant Isolation and Citations
+  // PART P2-0.2, P2-0.4 & F1: Grounded Brain Query via buildMuseContext
   app.post("/api/brain/query", async (req, res) => {
     try {
-      const { query, industryId = "mortgage_real_estate" } = req.body || {};
+      const industryId = ((req as any).user?.industryId || req.body?.industryId || "").trim();
+      if (!industryId) {
+        return res.status(400).json({ error: "Tenant isolation violation: industryId is required for brain query." });
+      }
+      const { query, leadId, sessionId } = req.body || {};
       if (!query || typeof query !== "string") {
         return res.status(400).json({ error: "A valid 'query' string is required." });
       }
 
-      const ai = new GoogleGenAI({
-        apiKey: process.env.GEMINI_API_KEY,
-        httpOptions: { headers: { "User-Agent": "aistudio-build" } },
+      const ai = getGeminiClient();
+      const result = await buildMuseContext({
+        query,
+        industryId,
+        leadId,
+        sessionId,
+        aiClient: ai,
+        topK: 3,
       });
-
-      // 1. Vector Knowledge Search with Tenant Isolation (P2-0.2 & P2-0.4)
-      let vectorCitations: Array<{ docId: string; title: string; score: number }> = [];
-      let vectorContextChunks: string[] = [];
-      try {
-        const topDocs = await searchKnowledge(query, ai, 3, industryId);
-        vectorCitations = topDocs.map((d) => ({
-          docId: d.id,
-          title: d.metadata?.title || d.metadata?.fileName || d.id,
-          score: Math.round(d.score * 100) / 100,
-        }));
-        vectorContextChunks = topDocs.map(
-          (d, idx) => `[Source ${idx + 1} (${d.metadata?.title || d.metadata?.fileName || d.id})]: ${d.text}`
-        );
-      } catch (kErr) {
-        console.warn("[2nd Brain Query] Vector search notice:", kErr);
-      }
-
-      // 2. Fetch context memories tenant-scoped (P2-0.2)
-      let contextMemories: string[] = [];
-      try {
-        const db = getAdminDb();
-        const memSnap = await db.collection("memories").where("industryId", "==", industryId).limit(10).get();
-        memSnap.forEach((doc) => {
-          const data = doc.data();
-          if (data && data.content) {
-            contextMemories.push(`[${data.title || "Memory"}]: ${data.content}`);
-          }
-        });
-      } catch (dbErr) {
-        console.warn("Shared Firestore /memories read notice:", dbErr);
-      }
-
-      // 3. Assemble Prompt & Ground via Gemini
-      const memoryContextStr = contextMemories.length > 0 ? `Shared Memories:\n${contextMemories.join("\n")}\n\n` : "";
-      const vectorContextStr = vectorContextChunks.length > 0 ? `Knowledge Base Citations:\n${vectorContextChunks.join("\n\n")}\n\n` : "";
-      const fullPrompt = `${memoryContextStr}${vectorContextStr}Query: ${query}`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
-        config: {
-          tools: [{ googleSearch: {} }],
-          systemInstruction:
-            "You are Vantage AI 2nd Brain assistant for First-Time Homebuyers and Loan Officers. Enforce DTI < 45% and TRID compliance rules. Always qualify eligibility claims with 'likely qualifies based on these parameters' and cite specific sources.",
-        },
-      });
-
-      const candidate = response.candidates?.[0];
 
       // Audit read into GLBA compliance ledger
       await recordComplianceAuditLog("BRAIN_QUERY_EXECUTED", {
         query,
         industryId,
-        citationsCount: vectorCitations.length,
-        memoriesUsedCount: contextMemories.length,
+        citationsCount: result.citations.length,
+        memoriesUsedCount: result.memoriesUsedCount,
+        buyerContextUsed: result.buyerContextUsed,
       }, (req as any).user?.email || "staff");
 
       res.json({
         success: true,
-        text: response.text || "2nd Brain answer generated.",
-        response: response.text,
-        citations: vectorCitations,
-        groundingMetadata: candidate?.groundingMetadata,
-        sources: candidate?.groundingMetadata?.groundingChunks || [],
-        memoriesUsedCount: contextMemories.length,
+        text: result.text,
+        response: result.response,
+        citations: result.citations,
+        groundingMetadata: result.groundingMetadata,
+        sources: result.sources || [],
+        memoriesUsedCount: result.memoriesUsedCount,
         industryId,
-        disclaimerServed: true,
-        disclaimerText: "Programs, interest rates, and loan terms are subject to change. Borrower likely qualifies based on provided parameters, subject to full underwriting verification by Cornerstone First Mortgage (NMLS #173855).",
+        disclaimerServed: result.disclaimerServed,
+        disclaimerText: result.disclaimerText,
+        buyerContextUsed: result.buyerContextUsed,
+        sessionId: result.sessionId,
       });
     } catch (err: any) {
       console.warn("2nd Brain query notice (using offline fallback):", err?.message);
+      if (err?.message?.includes("Tenant isolation violation")) {
+        return res.status(400).json({ error: err.message });
+      }
       res.json({
         success: true,
         text: `[Vantage AI 2nd Brain - Offline Grounded Mode]: Successfully processed query "${req.body?.query || ""}". Enforcing DTI < 45%, OHCS purchase price limits, USDA 0% down guidelines, and TRID disclosure timelines.`,
@@ -1615,7 +1606,11 @@ Return JSON matching this shape:
   // PART P2-0.3: Train / Save Knowledge Memory with In-Function PII Redaction
   app.post("/api/brain/train", async (req, res) => {
     try {
-      const { title, content, tags = ["dpa", "first_time_buyer", "oregon"], industryId = "mortgage_real_estate" } = req.body || {};
+      const industryId = ((req as any).user?.industryId || req.body?.industryId || "").trim();
+      if (!industryId) {
+        return res.status(400).json({ error: "Tenant isolation violation: industryId is required for training 2nd Brain memory." });
+      }
+      const { title, content, tags = ["dpa", "first_time_buyer", "oregon"] } = req.body || {};
       if (!title || !content) {
         return res.status(400).json({ error: "Both 'title' and 'content' are required for training 2nd Brain memory." });
       }
@@ -1671,25 +1666,59 @@ Return JSON matching this shape:
   });
 
   // ============================================================================
-  // PART P2-1: MEMORY READ API (Tenant-Scoped & Fail-Closed)
+  // PART P2-1 & F3: MEMORY READ API (Tenant-Scoped & Role-Gated Buyer Sandbox)
   // ============================================================================
   app.get("/api/memories", async (req, res) => {
     try {
-      const industryId = (req.query.industryId as string)?.trim() || (req.body?.industryId as string)?.trim();
+      const industryId = ((req as any).user?.industryId || (req.query.industryId as string) || (req.body?.industryId as string) || "").trim();
       if (!industryId) {
         return res.status(400).json({
-          error: "industryId query parameter is required for tenant-scoped memory retrieval.",
+          error: "Tenant isolation violation: industryId query parameter is required for tenant-scoped memory retrieval.",
         });
       }
 
       const limitCount = Math.min(Number(req.query.limit) || 20, 100);
       const db = getAdminDb();
-      const snap = await db
-        .collection("memories")
-        .where("industryId", "==", industryId)
-        .orderBy("createdAt", "desc")
-        .limit(limitCount)
-        .get();
+      const user = (req as any).user;
+      const isStaff = isStaffUser(user);
+
+      let snap;
+      if (isStaff) {
+        // Staff Path: callers with staff role or service API key may query by industryId, optionally scoped by leadId
+        const requestedLeadId = (req.query.leadId as string)?.trim() || (req.body?.leadId as string)?.trim();
+        let queryRef = db.collection("memories").where("industryId", "==", industryId);
+        if (requestedLeadId) {
+          queryRef = queryRef.where("leadId", "==", requestedLeadId);
+        }
+        snap = await queryRef.orderBy("createdAt", "desc").limit(limitCount).get();
+      } else {
+        // Buyer Path: authenticated non-staff callers MUST supply leadId matching their own identity
+        const authLeadId = user?.leadId || user?.uid;
+        const requestedLeadId = (req.query.leadId as string)?.trim() || (req.body?.leadId as string)?.trim();
+
+        if (!authLeadId || (requestedLeadId && requestedLeadId !== authLeadId)) {
+          await recordComplianceAuditLog("MEMORIES_READ_FORBIDDEN", {
+            industryId,
+            requestedLeadId: requestedLeadId || "NONE_PROVIDED",
+            authLeadId: authLeadId || "NO_AUTH_LEAD_ID",
+            userRole: user?.role || "anonymous",
+            reason: "Non-staff user attempted un-scoped or cross-lead memory read",
+          }, user?.email || "unknown");
+
+          return res.status(403).json({
+            error: "Forbidden: Non-staff users may only access their own verified lead memories.",
+            code: "auth/forbidden-cross-lead-access",
+          });
+        }
+
+        snap = await db
+          .collection("memories")
+          .where("industryId", "==", industryId)
+          .where("leadId", "==", authLeadId)
+          .orderBy("createdAt", "desc")
+          .limit(limitCount)
+          .get();
+      }
 
       const memories = snap.docs.map((doc) => ({
         id: doc.id,
@@ -1700,7 +1729,9 @@ Return JSON matching this shape:
         industryId,
         count: memories.length,
         limit: limitCount,
-      }, (req as any).user?.email || "staff");
+        isStaff,
+        leadIdScoped: !isStaff,
+      }, user?.email || "staff");
 
       return res.json({
         success: true,
@@ -1719,11 +1750,15 @@ Return JSON matching this shape:
   // ============================================================================
   app.post("/api/memories/event", async (req, res) => {
     try {
+      const industryId = ((req as any).user?.industryId || req.body?.industryId || "").trim();
+      if (!industryId) {
+        return res.status(400).json({ error: "Tenant isolation violation: industryId is required for memory events." });
+      }
+
       const {
         title,
         content,
         kind = "engagement_event",
-        industryId = "mortgage_real_estate",
         leadId,
         listingId,
         sessionId,
@@ -1805,161 +1840,61 @@ Return JSON matching this shape:
   });
 
   // ============================================================================
-  // PART P2-3: MUSE RETRIEVAL FLOW & CONVERSATIONAL GROUNDING
+  // PART P2-3 & F1: MUSE RETRIEVAL FLOW & CONVERSATIONAL GROUNDING
   // ============================================================================
   app.post("/api/muse/query", async (req, res) => {
     try {
-      const { query, industryId = "mortgage_real_estate", leadId, sessionId = `session_${Date.now()}` } = req.body || {};
+      const industryId = ((req as any).user?.industryId || req.body?.industryId || "").trim();
+      if (!industryId) {
+        return res.status(400).json({ error: "Tenant isolation violation: industryId is required for muse query." });
+      }
+      const { query, leadId, sessionId } = req.body || {};
       if (!query || typeof query !== "string") {
         return res.status(400).json({ error: "A valid 'query' string is required." });
       }
 
-      // 1. Strict SSN/Financial Document Refusal Guardrail (P2-3 Item 6)
-      const ssnCheck = /\b(?!000|666|9\d{2})\d{3}[-.\s]?(?!00)\d{2}[-.\s]?(?!0000)\d{4}\b/.test(query);
-      const taxDocCheck = /\b(tax return|w-2|1099|bank statement|social security card)\b/i.test(query);
-      if (ssnCheck || taxDocCheck) {
-        return res.json({
-          success: true,
-          answer: "For your financial privacy and security, sensitive documents (tax returns, W-2s, statements) and Social Security Numbers are never accepted via chat. Please connect directly with Loan Officer Mike Ford for secure encrypted document submission.",
-          citations: [],
-          disclaimerServed: true,
-          sessionId,
-          securityRefusal: true,
-          qualifiedOnly: true,
-        });
-      }
-
-      // 2. Vector search with tenant isolation (P2-0.2 & P2-0.4)
       const ai = getGeminiClient();
-      let vectorCitations: Array<{ docId: string; title: string; score: number }> = [];
-      let vectorChunks: string[] = [];
-
-      try {
-        const topDocs = await searchKnowledge(query, ai, 3, industryId);
-        vectorCitations = topDocs.map((d) => ({
-          docId: d.id,
-          title: d.metadata?.title || d.metadata?.fileName || d.id,
-          score: Math.round(d.score * 100) / 100,
-        }));
-        vectorChunks = topDocs.map(
-          (d, idx) => `[Source ${idx + 1}: ${d.metadata?.title || d.metadata?.fileName || d.id}]: ${d.text}`
-        );
-      } catch (vecErr) {
-        console.warn("[Muse Retrieval] Vector search notice:", vecErr);
-      }
-
-      // 3. Pull recent /memories for buyer context (leadId) and program knowledge (industryId)
-      let buyerMemories: string[] = [];
-      let programMemories: string[] = [];
-      try {
-        const db = getAdminDb();
-        if (leadId) {
-          const leadSnap = await db.collection("memories")
-            .where("leadId", "==", leadId)
-            .limit(5)
-            .get();
-          leadSnap.forEach((doc) => {
-            const data = doc.data();
-            if (data?.content) buyerMemories.push(`[Buyer Context: ${data.title || "Note"}]: ${data.content}`);
-          });
-        }
-
-        const progSnap = await db.collection("memories")
-          .where("industryId", "==", industryId)
-          .limit(5)
-          .get();
-        progSnap.forEach((doc) => {
-          const data = doc.data();
-          if (data?.content) programMemories.push(`[Program Memory: ${data.title || "Guideline"}]: ${data.content}`);
-        });
-      } catch (memErr) {
-        console.warn("[Muse Retrieval] Memory fetch notice:", memErr);
-      }
-
-      // 4. Math / Underwriting check (P2-3 Item 4: DTI, buydown, amortization routed to DeepSeek execFile)
-      const isMathQuery = /\b(dti|debt-to-income|amortization|monthly payment|buydown|down payment calculation|apr)\b/i.test(query);
-      if (isMathQuery) {
-        try {
-          const { execFile } = await import("child_process");
-          const { promisify } = await import("util");
-          const execFileAsync = promisify(execFile);
-
-          const mathPrompt = `Underwrite and compute exact mortgage calculations for: "${query}". Context: ${buyerMemories.join(" ")}. Enforce DTI < 45% and qualified language.`;
-          const { stdout } = await execFileAsync("dsh", [
-            "execute",
-            "--model", "deepseek-v4-pro",
-            "--lightweight", "deepseek-flash",
-            "--prompt", mathPrompt,
-          ], { timeout: 5000 });
-
-          const mathResult = JSON.parse(stdout);
-          await recordComplianceAuditLog("MUSE_MATH_UNDERWRITE", { query, sessionId, model: "deepseek-v4-pro" });
-
-          return res.json({
-            success: true,
-            answer: mathResult.response || mathResult.text || "Calculation verified.",
-            citations: vectorCitations,
-            disclaimerServed: true,
-            disclaimerText: "Programs, interest rates, and loan terms are subject to change. Borrower likely qualifies based on provided parameters, subject to full underwriting verification by Cornerstone First Mortgage (NMLS #173855).",
-            sessionId,
-            engine: "deepseek-math-harness",
-            qualifiedOnly: true,
-          });
-        } catch (mathErr) {
-          console.warn("[Muse Retrieval] DeepSeek harness offline notice, falling back to Gemini:", mathErr);
-        }
-      }
-
-      // 5. Assemble Grounded Prompt with Citations & Qualified Language (P2-3 Item 5)
-      const contextBlocks = [
-        buyerMemories.length ? `[BUYER PROFILE CONTEXT]:\n${buyerMemories.join("\n")}` : "",
-        programMemories.length ? `[PROGRAM MEMORIES]:\n${programMemories.join("\n")}` : "",
-        vectorChunks.length ? `[CITED KNOWLEDGE SOURCES]:\n${vectorChunks.join("\n")}` : "",
-      ].filter(Boolean).join("\n\n");
-
-      const systemInstruction = `You are Muse, the intelligent 2nd Brain Copilot for First-Time Homebuyers and Loan Officer Mike Ford.
-Rules:
-1. Always qualify eligibility claims with "likely qualifies based on these parameters" and cite sources.
-2. Income must be discussed in standard brackets only (e.g. $80k-$100k/yr).
-3. NEVER ask for SSNs, tax returns, or banking credentials.
-4. Reference local Oregon Down Payment Assistance (OHCS Flex Lending, FirstHome, USDA 0% Down) with precision.`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: `${contextBlocks ? contextBlocks + "\n\n" : ""}User Inquiry: ${query}` }],
-          },
-        ],
-        config: {
-          tools: [{ googleSearch: {} }],
-          systemInstruction,
-          temperature: 0.3,
-        },
+      const result = await buildMuseContext({
+        query,
+        industryId,
+        leadId,
+        sessionId,
+        aiClient: ai,
+        topK: 3,
       });
 
-      const answerText = response.text || "I have analyzed your inquiry against our verified guidelines.";
       await recordComplianceAuditLog("MUSE_CONVERSATION_TURN", {
         query,
-        citationsCount: vectorCitations.length,
+        citationsCount: result.citations.length,
         industryId,
-        sessionId,
-      });
+        sessionId: result.sessionId,
+        buyerContextUsed: result.buyerContextUsed,
+        engine: result.engine,
+      }, (req as any).user?.email || "muse_user");
 
       return res.json({
         success: true,
-        answer: answerText,
-        citations: vectorCitations,
-        disclaimerServed: true,
-        disclaimerText: "Programs, interest rates, and loan terms are subject to change. Borrower likely qualifies based on provided parameters, subject to full underwriting verification by Cornerstone First Mortgage (NMLS #173855).",
-        sessionId,
-        engine: "gemini-3.8-flash-grounded",
-        qualifiedOnly: true,
+        answer: result.answer,
+        text: result.text,
+        response: result.response,
+        citations: result.citations,
+        disclaimerServed: result.disclaimerServed,
+        disclaimerText: result.disclaimerText,
+        sessionId: result.sessionId,
+        sources: result.sources || [],
+        memoriesUsedCount: result.memoriesUsedCount,
+        industryId,
+        engine: result.engine,
+        securityRefusal: result.securityRefusal,
+        qualifiedOnly: result.qualifiedOnly,
+        buyerContextUsed: result.buyerContextUsed,
       });
     } catch (err: any) {
       console.error("Muse query error:", err);
-      res.status(500).json({ error: err.message || "Failed to process Muse query" });
+      if (err?.message?.includes("Tenant isolation violation")) {
+        return res.status(400).json({ error: err.message });
+      }
+      return res.status(500).json({ error: err.message || "Failed to process Muse query" });
     }
   });
 
@@ -2008,6 +1943,11 @@ Rules:
   // Standard Chat Endpoint (Vantage AI)
   app.post("/api/chat", async (req, res) => {
     try {
+      const industryId = ((req as any).user?.industryId || req.body?.industryId || "").trim();
+      if (!industryId) {
+        return res.status(400).json({ error: "Tenant isolation violation: industryId is required." });
+      }
+
       const { prompt, chatHistory } = req.body;
       const provider = getActiveAIProvider();
 
@@ -2128,7 +2068,7 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
       try {
         const aiForEmbeddings = getGeminiClient();
         if (aiForEmbeddings) {
-          const relevantDocs = await searchKnowledge(prompt, aiForEmbeddings, 3, "mortgage_real_estate");
+          const relevantDocs = await searchKnowledge(prompt, aiForEmbeddings, 3, industryId);
           const strongDocs = relevantDocs.filter((d) => d.score > 0.5); // Threshold
 
           if (strongDocs.length > 0) {
@@ -2322,6 +2262,11 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
   // Document Analysis Endpoint with RAG Context
   app.post("/api/analyze-doc", async (req, res) => {
     try {
+      const industryId = ((req as any).user?.industryId || req.body?.industryId || "").trim();
+      if (!industryId) {
+        return res.status(400).json({ error: "Tenant isolation violation: industryId is required." });
+      }
+
       const { documentText, documentType, fileName } = req.body;
       const provider = getActiveAIProvider();
       if (provider === "none") return res.status(500).json({ error: "No AI key configured." });
@@ -2335,7 +2280,7 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
         if (ai) {
           // Use a snippet of the document to find related guidelines in our Knowledge Base
           const queryText = (documentText || "").substring(0, 1000);
-          const relevantDocs = await searchKnowledge(queryText, ai, 3, "mortgage_real_estate");
+          const relevantDocs = await searchKnowledge(queryText, ai, 3, industryId);
           const strongDocs = relevantDocs.filter((d) => d.score > 0.5);
 
           if (strongDocs.length > 0) {
@@ -3923,6 +3868,11 @@ INSTRUCTIONS:
   // API Route: Lead Intake Chatbot & Pre-Qualification Assistant
   app.post("/api/gemini/lead-intake", async (req, res) => {
     const { message, leadData, chatHistory, loanOfficer, agent } = req.body || {};
+    const industryId = ((req as any).user?.industryId || req.body?.industryId || leadData?.industryId || "").trim();
+    if (!industryId) {
+      return res.status(400).json({ error: "Tenant isolation violation: industryId is required." });
+    }
+
     const loName = loanOfficer?.name || "Mike Ford";
     const loNmls = loanOfficer?.nmlsId || "288455";
     const loContact =
@@ -3967,11 +3917,11 @@ INSTRUCTIONS:
         promptContent += `User Message: ${message}`;
       }
       
-      // True RAG: Query pgvector for Enterprise Knowledge Base guidelines related to this user message
+      // True RAG: Query knowledge base with tenant isolation for Enterprise Knowledge Base guidelines
       const ai = getGeminiClient();
       if (ai) {
          try {
-            const relevantDocs = await searchKnowledge(message, ai, 2, "mortgage_real_estate");
+            const relevantDocs = await searchKnowledge(message, ai, 2, industryId);
             if (relevantDocs && relevantDocs.length > 0) {
                promptContent += `\n\n[Enterprise 2nd Brain RAG Context retrieved for this inquiry]:\n`;
                relevantDocs.forEach(doc => {

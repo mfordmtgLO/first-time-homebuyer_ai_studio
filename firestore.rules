@@ -189,6 +189,15 @@ service cloud.firestore {
       allow read: if true; 
       allow write: if isSignedIn(); 
     }
+    // Sharded lead documents to prevent 1MB single-document cap
+    match /leads/{leadId} {
+      // Restricted: Only authenticated LO/staff can read or list leads (PII Guard)
+      allow read: if isSignedIn() && (isBranchManager() || isSeniorLo() || isTeamLo() || isProcessor());
+      // Anyone can create their lead profile, but updates are restricted to the lead owner or LO staff
+      allow create: if true;
+      allow update: if (isSignedIn() && (isBranchManager() || isSeniorLo() || isTeamLo() || isProcessor())) || (request.auth.uid == leadId);
+      allow delete: if isSignedIn() && isBranchManager();
+    }
     match /loan_officers/{loId} { 
       allow read: if true; 
       allow write: if isSignedIn(); 

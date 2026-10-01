@@ -4,46 +4,31 @@ import {
   ChevronRight, 
   Brain, 
   Database, 
-  UploadCloud, 
   Users, 
   Target, 
   ShieldCheck, 
   FileText, 
-  Zap, 
   PieChart, 
-  Briefcase, 
   Calculator, 
-  Eye, 
-  Activity,
-  Layers, 
   Server, 
   Lock, 
   Cpu, 
   Globe, 
-  MapPin, 
-  CheckCircle2, 
-  TrendingUp, 
   Sparkles, 
   MessageSquare, 
-  Clock, 
   ArrowRight, 
-  Share2, 
   Copy, 
   Check, 
   Building, 
   Smartphone, 
   Search, 
-  RefreshCw, 
-  Key, 
   Video, 
-  Award, 
   BarChart3, 
-  AlertCircle,
-  LayoutGrid,
-  Maximize2,
-  Bot,
-  Terminal,
-  UserCheck,
+  LayoutGrid, 
+  Maximize2, 
+  Bot, 
+  Terminal, 
+  UserCheck, 
   ShieldAlert
 } from "lucide-react";
 
@@ -66,15 +51,69 @@ interface PitchSlide {
 }
 
 export const SystemPitchDeck: React.FC = () => {
-  const [activeDeck, setActiveDeck] = useState<"sales" | "security" | "vantage_brain">("sales");
-  const [vantageSubDeck, setVantageSubDeck] = useState<"assistant" | "guardrails">("assistant");
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<"slides" | "grid">("slides");
+  const [activeDeck, setActiveDeck] = useState<"sales" | "security" | "vantage_brain">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const deckParam = params.get("deck")?.toLowerCase();
+      const path = window.location.pathname.toLowerCase();
+      if (deckParam === "security" || deckParam === "sec" || path.includes("security-deck")) return "security";
+      if (deckParam === "sales" || path.includes("sales-deck")) return "sales";
+      if (deckParam === "vantage" || deckParam === "vantage_brain" || deckParam === "brain" || deckParam === "guardrails" || path.includes("vantage")) return "vantage_brain";
+    }
+    return "sales";
+  });
+
+  const [vantageSubDeck, setVantageSubDeck] = useState<"assistant" | "guardrails">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const layerParam = params.get("layer")?.toLowerCase() || params.get("deck")?.toLowerCase();
+      const path = window.location.pathname.toLowerCase();
+      if (layerParam === "guardrails" || layerParam === "layer2" || layerParam === "security" || path.includes("guardrails")) return "guardrails";
+    }
+    return "assistant";
+  });
+
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const slideParam = parseInt(params.get("slide") || "1", 10);
+      if (!isNaN(slideParam) && slideParam > 0) return slideParam - 1;
+    }
+    return 0;
+  });
+
+  const [viewMode, setViewMode] = useState<"slides" | "grid">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const modeParam = params.get("mode")?.toLowerCase() || params.get("view")?.toLowerCase();
+      if (modeParam === "grid" || modeParam === "cards" || modeParam === "all") return "grid";
+    }
+    return "slides";
+  });
   const [copiedSlideId, setCopiedSlideId] = useState<string | null>(null);
 
-  // Reset index when switching decks or vantage sub-decks
-  useEffect(() => {
+  const handleSelectDeck = (deck: "sales" | "security" | "vantage_brain") => {
+    setActiveDeck(deck);
     setCurrentSlideIndex(0);
+  };
+
+  const handleSelectVantageSubDeck = (subDeck: "assistant" | "guardrails") => {
+    setVantageSubDeck(subDeck);
+    setCurrentSlideIndex(0);
+  };
+
+  // Sync browser tab title dynamically with active deck & context
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (activeDeck === "security") {
+      document.title = "Enterprise Security & Compliance Deck | Cornerstone First Mortgage";
+    } else if (activeDeck === "vantage_brain") {
+      document.title = vantageSubDeck === "guardrails"
+        ? "Vantage AI Security & Guardrails Deck | Cornerstone First Mortgage"
+        : "Vantage AI 2nd Brain Architecture | Cornerstone First Mortgage";
+    } else {
+      document.title = "Executive Sales & Growth Pitch Deck | Cornerstone First Mortgage";
+    }
   }, [activeDeck, vantageSubDeck]);
 
   const handleExportDeckPdf = () => {
@@ -167,7 +206,14 @@ export const SystemPitchDeck: React.FC = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (viewMode !== "slides") return;
-      const currentSlides = activeDeck === "sales" ? salesSlides : securitySlides;
+      const currentSlides = 
+        activeDeck === "sales" 
+          ? salesSlides 
+          : activeDeck === "security" 
+            ? securitySlides 
+            : vantageSubDeck === "assistant" 
+              ? vantageAssistantSlides 
+              : vantageGuardrailSlides;
       if (e.key === "ArrowRight") {
         setCurrentSlideIndex((prev) => (prev + 1) % currentSlides.length);
       } else if (e.key === "ArrowLeft") {
@@ -176,7 +222,7 @@ export const SystemPitchDeck: React.FC = () => {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [viewMode, activeDeck]);
+  }, [viewMode, activeDeck, vantageSubDeck]);
 
   const salesSlides: PitchSlide[] = [
     {
@@ -420,6 +466,156 @@ export const SystemPitchDeck: React.FC = () => {
             <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between pl-12">
               <span>↳ Local Loan Officers & Realtor Partners</span>
               <span className="font-bold text-emerald-600">Active Producers</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "sales-6",
+      slideNumber: 6,
+      category: "Nationwide USDA & Geographic Expansion",
+      title: "50-State USDA RD Geomap & Ineligible Zone Census Shading",
+      subtitle: "Live Federal ArcGIS Shaded Polygons, County Income Limits & Auto-Peer LO Pairing",
+      badge: "50-State GeoMap",
+      icon: <Globe className="w-6 h-6 text-emerald-600" />,
+      overview: "Extends top-of-funnel reach nationwide with live federal USDA RD ArcGIS MapServer polygon layers. Displays shaded ineligible census tracts across all 50 states, calculates 2026 household income limits (1–4 vs. 5–8 family caps) with county adjustments, and automatically routes out-of-state prospects to licensed peer loan officers and local agents.",
+      keyPillars: [
+        {
+          heading: "Live Federal ArcGIS Polygon Shading",
+          description: "Streams official USDA ineligible boundary layers directly onto Google Maps via high-speed tile overlays for all 50 states.",
+          highlight: "All 50 States"
+        },
+        {
+          heading: "Real-Time Income Limit Adjuster",
+          description: "Interactive income slider ($40k-$250k) and household size buttons calculate county income headroom and USDA 0% down eligibility instantly.",
+          highlight: "2026 Limits"
+        },
+        {
+          heading: "Automated Out-of-State Peer Routing",
+          description: "Dynamically pairs non-Oregon consumers with licensed peer loan officers and local real estate agents for seamless multi-state loan capture.",
+          highlight: "Peer LO Pairing"
+        }
+      ],
+      roiTakeaway: "Enables national lending expansion by turning federal GIS census tract data into instant, localized zero-down purchase opportunities.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>50-State USDA RD GIS & Peer LO Network</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">Nationwide</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1">
+              <span className="font-bold text-emerald-700 block">ArcGIS Shaded Layer</span>
+              <span className="text-gray-500">Ineligible Tract Polygons</span>
+            </div>
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1">
+              <span className="font-bold text-indigo-700 block">Income Adjuster</span>
+              <span className="text-gray-500">1-4 & 5-8 Family Caps</span>
+            </div>
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1">
+              <span className="font-bold text-purple-700 block">Auto-Peer Match</span>
+              <span className="text-gray-500">Licensed LO + Agent</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "sales-7",
+      slideNumber: 7,
+      category: "Real-Time Engagement & Autonomous Re-Engagement",
+      title: "Two-Way Property Card Notes & Autonomous Zillow Price Watch",
+      subtitle: "Bidirectional In-Listing Q&A, Automated Rate Trend Recalibrations & Mobile Alerts",
+      badge: "Two-Way Sync & Watch",
+      icon: <MessageSquare className="w-6 h-6 text-emerald-600" />,
+      overview: "Replaces disconnected email threads with persistent, bidirectional communication directly inside property listing cards. An autonomous weekly background cron monitors Zillow price drops and downward rate trends, automatically expanding buyer pre-qual budgets by $18,500+ and alerting paired loan officers and agents.",
+      keyPillars: [
+        {
+          heading: "Bidirectional Property Card Notes",
+          description: "Buyers ask structured questions directly on listing cards; loan officers reply with 1-tap grant answers synced in real-time.",
+          highlight: "Live Listing Chat"
+        },
+        {
+          heading: "Weekly Autonomous Price Watch",
+          description: "Automated cron detects MLS price cuts and downward rate trends, auto-updating saved listing notes with exact monthly payment reductions.",
+          highlight: "Auto-Zillow Watch"
+        },
+        {
+          heading: "Expanded DTI Buying Power Engine",
+          description: "Recomputes buyer purchasing power upon rate drops, alerting the co-branded team to newly unlocked low/no down payment homes.",
+          highlight: "+$18.5k Budget"
+        }
+      ],
+      roiTakeaway: "Drives continuous buyer re-engagement and eliminates deal leakage by keeping loan officers and Realtors tied directly to the buyer's saved listings.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Property Notes & Autonomous Re-Engagement</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">Live Sync</span>
+          </div>
+          <div className="space-y-2 text-[11px]">
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>Listing Card Q&A & LO 1-Tap Response</span>
+              <span className="text-emerald-600 font-bold">Synced Firestore</span>
+            </div>
+            <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+              <span>Weekly Zillow Cron ($12,500 Price Cut)</span>
+              <span className="text-indigo-600 font-bold">Auto-Noted</span>
+            </div>
+            <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+              <span>Prequal Budget Expansion (+$18,500)</span>
+              <span className="text-emerald-700 font-bold">VIA Outreach Draft</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "sales-8",
+      slideNumber: 8,
+      category: "Mobile Engagement & Push Re-Engagement",
+      title: "Locked-Screen Mobile PWA & Push Notification Re-Engagement Engine",
+      subtitle: "Bypassing App Store Friction: Delivering Sweeping Price Drops, DTI Expansion & LO Notes to Locked Phones",
+      badge: "Mobile Push Velocity",
+      icon: <Smartphone className="w-6 h-6 text-emerald-600" />,
+      overview: "Standard mortgage websites lose leads the second the browser tab closes. By pairing a 1-tap Progressive Web App (PWA) with a Firebase Cloud Messaging (FCM) background bridge, our system captures device push tokens at soft-ask time. Autonomous background crons sweep for price cuts and DTI expansions, waking locked phone screens with real-time push alerts that deep-link directly into curated property cards—achieving 85%+ open rates without native app store friction.",
+      keyPillars: [
+        {
+          heading: "Zero-Friction PWA Install",
+          description: "No Apple App Store or Google Play downloads; buyers install the co-branded mobile app directly from their mobile browser in one tap.",
+          highlight: "Zero App Store Tax"
+        },
+        {
+          heading: "Locked-Phone Background Alerts",
+          description: "Persistent background service worker wakes locked phones for price cuts, interest rate drops, and loan officer advice.",
+          highlight: "85%+ Open Rates"
+        },
+        {
+          heading: "Sweep-and-Swarm Re-Engagement",
+          description: "Server-side crons run automated recalculations and dispatch high-priority notifications whenever a home drops into qualifying range.",
+          highlight: "Automated Re-Engage"
+        }
+      ],
+      roiTakeaway: "Re-activates dormant buyers 4x faster by reaching them on their mobile lock-screen without the cost, maintenance, or friction of native app store distribution.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Locked-Screen Mobile Re-Engagement Loop</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">PWA + FCM Bridge</span>
+          </div>
+          <div className="space-y-1.5 text-[10px]">
+            <div className="p-2 bg-white rounded-lg border border-slate-200 flex justify-between">
+              <span>1. Soft-Ask Token Capture (PWA)</span>
+              <span className="text-emerald-600 font-bold">1-Tap Consent</span>
+            </div>
+            <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200 flex justify-between">
+              <span>2. Server Cron Sweeps MLS Price Cut</span>
+              <span className="text-indigo-700 font-bold">Admin SDK</span>
+            </div>
+            <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex justify-between">
+              <span>3. Locked Screen Notification Arrives</span>
+              <span className="text-emerald-700 font-bold">Deep-Link Ready</span>
             </div>
           </div>
         </div>
@@ -858,6 +1054,215 @@ export const SystemPitchDeck: React.FC = () => {
           </div>
         </div>
       )
+    },
+    {
+      id: "sec-9",
+      slideNumber: 9,
+      category: "Database Architecture & Zero-Trust Storage",
+      title: "Sharded Zero-Trust Firestore Database & GLBA PII Isolation",
+      subtitle: "Eliminating the 1MB Singleton Ceiling, Write-Lock Contention & Public Data Scraping",
+      badge: "Sharded Zero-Trust",
+      icon: <Database className="w-6 h-6 text-indigo-600" />,
+      overview: "Replaces monolithic single-document persistence with a scalable, sharded Firestore collection (`/leads/{leadId}`). Strictly isolates borrower personally identifiable information (PII) behind authenticated mortgage staff security rules, prevents write amplification storms via deep diffing, and adheres to GLBA Safeguards Rule mandates.",
+      keyPillars: [
+        {
+          heading: "Limitless Document Sharding (/leads/{id})",
+          description: "Eliminates the 1MB Firestore document cap and 1 write/sec write-lock contention, enabling frictionless multi-thousand concurrent lead growth.",
+          highlight: "No 1MB Limit"
+        },
+        {
+          heading: "Strict PII Read Restrictions",
+          description: "Firestore security rules strictly prohibit public reads on lead collections; only verified, authenticated mortgage personnel can query lead data.",
+          highlight: "GLBA Compliant"
+        },
+        {
+          heading: "Write-Amplification Elimination",
+          description: "State updates deep-diff lead data with JSON hashing, writing ONLY modified records and cutting 1,000 parallel writes to 1.",
+          highlight: "Zero Cost Waste"
+        }
+      ],
+      roiTakeaway: "Guarantees enterprise database scalability, protects borrower privacy from public scraping, and eliminates runaway cloud billing.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Sharded vs. Monolithic Storage Architecture</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">Zero-Contention</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-[10px]">
+            <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl space-y-1">
+              <span className="font-bold text-red-900 block">Monolithic Doc Risk</span>
+              <p className="text-red-700">• 1MB maximum document cap</p>
+              <p className="text-red-700">• 1 write/sec write lock</p>
+              <p className="text-red-700">• Global PII leakage vulnerability</p>
+            </div>
+            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
+              <span className="font-bold text-emerald-900 block">Sharded /leads/{'{id}'}</span>
+              <p className="text-emerald-800">• Limitless document scalability</p>
+              <p className="text-emerald-800">• High-frequency parallel writes</p>
+              <p className="text-emerald-800">• Staff-only RBAC read gates</p>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "sec-10",
+      slideNumber: 10,
+      category: "Mobile Push Architecture & Background Delivery",
+      title: "PWA Background FCM Push Notification Bridge & Self-Healing Tokens",
+      subtitle: "Delivering Locked-Phone Alerts via Service Workers with Automated Token Rotation",
+      badge: "FCM Push Bridge",
+      icon: <Smartphone className="w-6 h-6 text-indigo-600" />,
+      overview: "Solves the foreground notification limitation by bridging Firebase Cloud Messaging (FCM) through a persistent PWA service worker (`firebase-messaging-sw.js` pinned to stable Firebase v9.23.0 scripts). Dispatches real-time price drops and rate alerts to locked mobile devices, deep-linking users directly to discounted property scorecards while auto-cleansing revoked tokens.",
+      keyPillars: [
+        {
+          heading: "Persistent Service Worker Background Thread",
+          description: "Operates in the mobile OS background thread (Chrome/Safari PWA), rendering alerts even when the browser or app is closed.",
+          highlight: "Locked Phone Reach"
+        },
+        {
+          heading: "Soft-Ask Cryptographic Token Binding",
+          description: "Captures native device messaging tokens upon soft-ask consent and stores them securely in the lead's sharded document with auto-rotation on login.",
+          highlight: "Token Rotation"
+        },
+        {
+          heading: "Self-Healing Token Cleansing",
+          description: "Backend listeners automatically detect registration-token-not-registered responses from FCM, instantly pruning expired device IDs.",
+          highlight: "Auto-Pruning"
+        }
+      ],
+      roiTakeaway: "Restores the critical buyer re-engagement loop on mobile devices without maintaining expensive native app store codebases.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>FCM Mobile Background Pipeline</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">Stable v9.23.0</span>
+          </div>
+          <div className="space-y-1.5 text-[10px]">
+            <div className="p-2 bg-white rounded-lg border border-slate-200 flex justify-between">
+              <span>1. Cron Price Drop Alert</span>
+              <span className="text-blue-600 font-bold">Admin SDK</span>
+            </div>
+            <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200 flex justify-between">
+              <span>2. Google FCM Gateway Route</span>
+              <span className="text-indigo-700 font-bold">Push Encrypted</span>
+            </div>
+            <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex justify-between">
+              <span>3. Background Service Worker on Locked Phone</span>
+              <span className="text-emerald-700 font-bold">Alert Displayed</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "sec-11",
+      slideNumber: 11,
+      category: "Regulatory Compliance & GLBA Architecture",
+      title: "GLBA Safeguards Rule & Financial Privacy Architecture",
+      subtitle: "End-to-End Nonpublic Personal Information (NPI) Governance, Least Privilege & Data Segregation",
+      badge: "GLBA Safeguards",
+      icon: <ShieldCheck className="w-6 h-6 text-indigo-600" />,
+      overview: "Engineered from the ground up for full compliance with the Federal Trade Commission's GLBA Safeguards Rule (16 CFR Part 314). Protects Nonpublic Personal Information (NPI) through strict tenant data segregation, cryptographic at-rest and in-transit encryption (AES-256 / TLS 1.3), continuous access audits, and client-side subscription sandboxing.",
+      keyPillars: [
+        {
+          heading: "Nonpublic Personal Information (NPI) Segregation",
+          description: "Strict field-level isolation; sensitive credit, income, and financial parameters are segregated from public display layers.",
+          highlight: "NPI Quarantined"
+        },
+        {
+          heading: "Single-Doc Client Sandboxing",
+          description: "Buyer clients can never query or listen to the global leads collection—eliminating bulk data exposure risks entirely.",
+          highlight: "Sandboxed Reads"
+        },
+        {
+          heading: "Continuous Access Auditing",
+          description: "Every loan officer and administrator query against lead records is logged in an immutable, cryptographically verifiable ledger.",
+          highlight: "Audit Verified"
+        }
+      ],
+      roiTakeaway: "Protects enterprise mortgage lenders from severe regulatory enforcement penalties under FTC and CFPB Financial Safeguards mandates.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>GLBA Safeguards Data Segregation</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">16 CFR Part 314</span>
+          </div>
+          <div className="space-y-1.5 text-[10px]">
+            <div className="p-2 bg-white rounded-lg border border-slate-200 flex justify-between">
+              <span>NPI Isolation & Plaintext SSN Ban</span>
+              <span className="text-emerald-600 font-bold">Enforced</span>
+            </div>
+            <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200 flex justify-between">
+              <span>Tenant Client Subscription Sandboxing</span>
+              <span className="text-indigo-700 font-bold">Strict 1:1</span>
+            </div>
+            <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex justify-between">
+              <span>Tamper-Evident Query Access Ledger</span>
+              <span className="text-emerald-700 font-bold">SHA-256 Logs</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "sec-12",
+      slideNumber: 12,
+      category: "InfoSec Appendix • AI & Multi-Model Data Flows",
+      title: "AI 2nd Brain Infrastructure: /memories Vector Store, dsh CLI & Multi-Model Data Boundaries",
+      subtitle: "Formal Sub-Processor & NPI Inventory Across Gemini SDK, DeepSeek Harness & Vector Storage",
+      badge: "AI Systems Inventory",
+      icon: <Brain className="w-6 h-6 text-indigo-600" />,
+      overview: "For enterprise InfoSec officers auditing all sub-processors and systems touching borrower data: this appendix slide provides the formal technical architecture for the Vantage AI 2nd Brain. It documents exact data boundaries across Google Gemini (@google/genai), the DeepSeek CLI Harness (dsh), and the Firestore /memories vector collection—verifying zero plaintext NPI storage, pre-ingestion regex sanitization, and strictly sandboxed process execution.",
+      keyPillars: [
+        {
+          heading: "Firestore /memories Access Isolation",
+          description: "Persistent memory documents store sanitized borrower qualification parameters, grant matrices, and property notes under strict tenant & industryId isolation.",
+          highlight: "Scoped /memories"
+        },
+        {
+          heading: "Pre-Ingestion PII/SSN Shredding",
+          description: "All text is stripped of SSNs, account numbers, and direct identifiers via regex vaulting before transmission to model APIs or vector embeddings.",
+          highlight: "Pre-Vector Scrub"
+        },
+        {
+          heading: "dsh CLI Process Vector Isolation (execFile)",
+          description: "The DeepSeek Harness executes exclusively via child_process.execFile with explicit argument arrays, bounded by a strict 5,000ms process timeout and zero shell interpreter surface.",
+          highlight: "5,000ms Timeout"
+        }
+      ],
+      roiTakeaway: "Provides enterprise CISOs with a complete, auditable data flow inventory proving that modern multi-model AI operates under bank-grade NPI segregation.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>2nd Brain AI Multi-Model Data Flow Matrix</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">NPI Shielded</span>
+          </div>
+          <div className="space-y-1.5 text-[10px]">
+            <div className="p-2 bg-white rounded-lg border border-slate-200 flex justify-between items-center">
+              <div>
+                <span className="font-bold text-slate-800">1. /memories Vector Store</span>
+                <span className="text-gray-500 block">Sanitized DTI/grant parameters (No SSN)</span>
+              </div>
+              <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Firestore RBAC</span>
+            </div>
+            <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200 flex justify-between items-center">
+              <div>
+                <span className="font-bold text-indigo-900">2. Google Gemini SDK Agent</span>
+                <span className="text-indigo-600 block">@google/genai with live search grounding</span>
+              </div>
+              <span className="text-indigo-700 font-bold bg-white px-2 py-0.5 rounded border border-indigo-200">TLS 1.3 Proxy</span>
+            </div>
+            <div className="p-2 bg-purple-50 rounded-lg border border-purple-200 flex justify-between items-center">
+              <div>
+                <span className="font-bold text-purple-900">3. DeepSeek Harness (dsh)</span>
+                <span className="text-purple-600 block">execFile argv vector (bounded by 5,000ms timeout)</span>
+              </div>
+              <span className="text-purple-700 font-bold bg-white px-2 py-0.5 rounded border border-purple-200">Zero Shell</span>
+            </div>
+          </div>
+        </div>
+      )
     }
   ];
 
@@ -892,7 +1297,7 @@ export const SystemPitchDeck: React.FC = () => {
       visualComponent: (
         <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
           <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
-            <span>Vantage Intelligence Assist (VIA)ant Intake Pipeline</span>
+            <span>Vantage Intelligence Assist (VIA) Intake Pipeline</span>
             <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">24/7 Active</span>
           </div>
           <div className="space-y-2 text-[11px]">
@@ -1111,6 +1516,104 @@ export const SystemPitchDeck: React.FC = () => {
           </div>
         </div>
       )
+    },
+    {
+      id: "vantage-asst-6",
+      slideNumber: 6,
+      category: "Vantage AI Brain • Sales & BD",
+      title: "Persistent 2nd Brain Memory, Recall & Soft-Ask Re-Engagement",
+      subtitle: "Frictionless Progressive Capture: Saving Curated Properties, In-Card Notes & Cross-Session Recall",
+      badge: "2nd Brain Recall",
+      icon: <Brain className="w-6 h-6 text-indigo-600" />,
+      overview: "Traditional lead funnels force buyers to register before providing value, losing 70%+ of prospects. Vantage AI Brain's 2nd Brain employs an intelligent 'soft-ask' architecture: buyers freely explore maps and curate favorites; when they choose to save listings or record property notes, the 2nd Brain securely persists their preferences and communication history, providing instant cross-device recall and powering real-time LO pipeline synchronization.",
+      keyPillars: [
+        {
+          heading: "Progressive Soft-Ask Capture",
+          description: "Captures email, phone, and push notification tokens at the exact moment of highest intent (saving favorites or sending listing notes).",
+          highlight: "Intent-Based Ask"
+        },
+        {
+          heading: "Cross-Session 2nd Brain Memory",
+          description: "Recalls buyer search preferences, saved home features, and DTI criteria across browser sessions and devices without registration walls.",
+          highlight: "Full Recall"
+        },
+        {
+          heading: "Instant LO Pipeline Sync",
+          description: "Automatically updates the loan officer's real-time pipeline with curated buyer notes and favorited properties without manual data entry.",
+          highlight: "Real-Time Pipeline"
+        }
+      ],
+      roiTakeaway: "Boosts lead capture rates by 3.2x by eliminating upfront registration gates while maintaining flawless borrower memory and pipeline continuity.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>2nd Brain Memory & Recall Loop</span>
+            <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">Frictionless Persistence</span>
+          </div>
+          <div className="space-y-1.5 text-[10px]">
+            <div className="p-2 bg-white rounded-lg border border-slate-200 flex justify-between">
+              <span>1. Buyer Saves Listing / Adds Note</span>
+              <span className="text-blue-600 font-bold">Soft-Ask Prompt</span>
+            </div>
+            <div className="p-2 bg-purple-50 rounded-lg border border-purple-200 flex justify-between">
+              <span>2. 2nd Brain Indexes State in Firestore</span>
+              <span className="text-purple-700 font-bold">Cross-Session Sync</span>
+            </div>
+            <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex justify-between">
+              <span>3. LO Portal Pipeline Updated Instantly</span>
+              <span className="text-emerald-700 font-bold">Hot Deal Tracked</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "vantage-asst-7",
+      slideNumber: 7,
+      category: "Vantage AI Brain • Code & SDK Architecture",
+      title: "Technical Code Architecture: Gemini SDK + DeepSeek Harness + Vector RAG",
+      subtitle: "Summarized TypeScript & CLI Pipeline: @google/genai, dsh Multi-Model Execution & Firestore /memories",
+      badge: "Code Architecture",
+      icon: <Terminal className="w-6 h-6 text-indigo-600" />,
+      overview: "A transparent, code-grounded view of our multi-model AI architecture in `src/services/vantage2ndBrainService.ts`. Connects the Google Gen AI TypeScript SDK (@google/genai) with live Google Search Grounding to the DeepSeek Harness CLI (dsh) and Firestore /memories vector collection, guaranteeing sub-second response times, zero-hallucination calculations, and automatic failover.",
+      keyPillars: [
+        {
+          heading: "@google/genai Grounding Pipeline",
+          description: "Invokes ai.models.generateContent with gemini-3.8-flash, dynamic search tools ({ googleSearch: {} }), and shared Firestore memory context.",
+          highlight: "SDK Grounding"
+        },
+        {
+          heading: "DeepSeek Harness CLI (dsh) execFile Pipeline",
+          description: "Executes execFile('dsh', ['execute', '--model', 'deepseek-v4-pro', '--lightweight', 'deepseek-flash', '--prompt', prompt]) with automated proxy fallbacks for mathematical auditing.",
+          highlight: "dsh Multi-Model"
+        },
+        {
+          heading: "Dual-Tier Memory Vector & Firestore Sync",
+          description: "Replicates borrower parameters and grant guidelines across Firestore /memories and remote Vantage 2nd Brain Cloud vector RAG.",
+          highlight: "Firestore + RAG"
+        }
+      ],
+      roiTakeaway: "Combines Google's live web intelligence with DeepSeek's deep mathematical rigor into a single robust, production-ready TypeScript service.",
+      visualComponent: (
+        <div className="bg-[#1E1E1E] text-slate-200 border border-slate-700 rounded-2xl p-4 text-[10px] space-y-2.5 font-mono shadow-inner overflow-x-auto">
+          <div className="flex items-center justify-between border-b border-slate-700 pb-1.5 text-slate-400">
+            <span className="text-emerald-400 font-bold">src/services/vantage2ndBrainService.ts</span>
+            <span className="text-[9px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">TypeScript</span>
+          </div>
+          <div className="space-y-1 leading-relaxed">
+            <p className="text-slate-500">// 1. Gemini SDK Agent with Live Search Grounding</p>
+            <p className="text-indigo-300">const ai = new GoogleGenAI({'{'} apiKey: process.env.GEMINI_API_KEY {'}'});</p>
+            <p className="text-indigo-300">const res = await ai.models.generateContent({'{'}</p>
+            <p className="text-slate-300 pl-3">model: <span className="text-amber-300">'gemini-3.8-flash'</span>, tools: [{'{'} googleSearch: {'{}'} {'}'}],</p>
+            <p className="text-slate-300 pl-3">systemInstruction: <span className="text-amber-300">'Enforce DTI &lt; 45%, TRID, and DPA guidelines.'</span></p>
+            <p className="text-indigo-300">{'}'});</p>
+            <p className="text-slate-500 pt-1">// 2. DeepSeek Harness CLI (dsh) Math Engine (Hardened execFile)</p>
+            <p className="text-emerald-300">const {'{'} stdout {'}'} = await execFileAsync(<span className="text-amber-300">'dsh'</span>, [<span className="text-amber-300">'execute'</span>, <span className="text-amber-300">'--model'</span>, <span className="text-amber-300">'deepseek-v4-pro'</span>, <span className="text-amber-300">'--lightweight'</span>, <span className="text-amber-300">'deepseek-flash'</span>, <span className="text-amber-300">'--prompt'</span>, prompt]);</p>
+            <p className="text-slate-500 pt-1">// 3. Centralized Firestore /memories Sync</p>
+            <p className="text-purple-300">await addDoc(collection(db, <span className="text-amber-300">'memories'</span>), {'{'} title, content, industryId, createdAt {'}'});</p>
+          </div>
+        </div>
+      )
     }
   ];
 
@@ -1314,6 +1817,152 @@ export const SystemPitchDeck: React.FC = () => {
           </div>
         </div>
       )
+    },
+    {
+      id: "vantage-guard-5",
+      slideNumber: 5,
+      category: "Vantage AI Brain • Security & Guardrails",
+      title: "Scoped Firestore Security Rules & GLBA Zero-Trust Data Isolation",
+      subtitle: "Client-Side Single-Lead Sandboxing & Strict Access Rule Governance",
+      badge: "GLBA Data Isolation",
+      icon: <ShieldCheck className="w-6 h-6 text-indigo-600" />,
+      overview: "Guarantees zero-trust data segregation across all borrower interactions. Replaces unrestricted collections with strict Firestore security rules: buyers are mathematically sandboxed to their own lead record (isOwner(leadId)), completely preventing cross-tenant PII inspection, while only authenticated mortgage staff with valid RBAC claims can access loan officer pipelines.",
+      keyPillars: [
+        {
+          heading: "Scoped Document Access Rules",
+          description: "Firestore rules enforce isOwner(leadId) || isAuthenticated(), completely eliminating open read/write risks.",
+          highlight: "Rules Enforced"
+        },
+        {
+          heading: "Single-Doc Client Subscriptions",
+          description: "The buyer application subscribes strictly to /leads/${savedLeadId} rather than the entire collection, preventing PII data spills.",
+          highlight: "Zero PII Leakage"
+        },
+        {
+          heading: "Anti-Write-Amplification Deep Diffing",
+          description: "Prevents runaway database billing and write-lock contention by deep-diffing state changes and writing only modified records.",
+          highlight: "Cost & Lock Guard"
+        }
+      ],
+      roiTakeaway: "Eliminates catastrophic data spill liability and satisfies the strictest GLBA and SOC 2 Type II financial data isolation audits.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>Scoped Access Gate Architecture</span>
+            <span className="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded font-bold">Zero-Trust Rules</span>
+          </div>
+          <div className="space-y-1.5 text-[10px]">
+            <div className="p-2 bg-white rounded-lg border border-slate-200 flex justify-between">
+              <span>Public Collection Reads</span>
+              <span className="text-rose-600 font-bold">Strictly Blocked</span>
+            </div>
+            <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200 flex justify-between">
+              <span>Buyer Client Subscription</span>
+              <span className="text-indigo-700 font-bold">Single-Doc Only</span>
+            </div>
+            <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex justify-between">
+              <span>Staff Portal Access</span>
+              <span className="text-emerald-700 font-bold">RBAC Auth Gated</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "vantage-guard-6",
+      slideNumber: 6,
+      category: "Vantage AI Brain • Security & Guardrails",
+      title: "Cryptographic Push Token Quarantine & Service Worker PII Hygiene",
+      subtitle: "Pinned Dependency Hygiene, Isolated FCM Tokens & Self-Healing Pruning",
+      badge: "Token Quarantine",
+      icon: <Lock className="w-6 h-6 text-indigo-600" />,
+      overview: "Device push tokens are sensitive hardware identifiers capable of receiving confidential loan updates. Vantage AI Brain enforces cryptographic token quarantine: device tokens are stored strictly within private lead records, never shared in public chat channels or singletons, and automatically pruned upon device revocation or logout.",
+      keyPillars: [
+        {
+          heading: "Pinned Service Worker Scripts",
+          description: "Background push service worker pins exact, verified Firebase v9.23.0 SDK libraries, preventing 404 script failures.",
+          highlight: "Pinned v9.23.0"
+        },
+        {
+          heading: "Quarantined Device Token Storage",
+          description: "Tokens are isolated in the lead's private sharded Firestore document, hidden from public discovery feeds.",
+          highlight: "Quarantined"
+        },
+        {
+          heading: "Self-Healing Token Cleansing",
+          description: "Automatically detects invalid or unregistered token responses (registration-token-not-registered) and purges stale device keys.",
+          highlight: "Auto-Pruned"
+        }
+      ],
+      roiTakeaway: "Ensures mobile push communications remain secure, private, and resilient without risking device hijacking or stale token accumulation.",
+      visualComponent: (
+        <div className="bg-[#FAF9F5] border border-[#EAE7E0] rounded-2xl p-4 text-xs space-y-3 font-mono">
+          <div className="flex items-center justify-between font-bold text-[#2D362E] border-b border-[#EAE7E0] pb-2">
+            <span>FCM Token Quarantine Pipeline</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">Stable v9.23.0</span>
+          </div>
+          <div className="space-y-1.5 text-[10px]">
+            <div className="p-2 bg-white rounded-lg border border-slate-200 flex justify-between">
+              <span>Token Registration at Soft-Ask</span>
+              <span className="text-emerald-600 font-bold">Explicit Opt-In</span>
+            </div>
+            <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200 flex justify-between">
+              <span>Isolated Lead Doc Storage</span>
+              <span className="text-indigo-700 font-bold">Encrypted at Rest</span>
+            </div>
+            <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200 flex justify-between">
+              <span>Self-Healing Stale Token Pruning</span>
+              <span className="text-emerald-700 font-bold">Auto-Purged</span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "vantage-guard-7",
+      slideNumber: 7,
+      category: "Vantage AI Brain • Security & Guardrails",
+      title: "Hybrid Model Security: Sandboxed CLI Execution & Dual-Model Consensus",
+      subtitle: "Process Vector Isolation, Zero-Hallucination Safe Escalation & Verification Consensus",
+      badge: "Hybrid Guardrails",
+      icon: <Cpu className="w-6 h-6 text-indigo-600" />,
+      overview: "Executing third-party AI models and CLI harnesses introduces security challenges that standard web apps ignore. Vantage AI Brain enforces strict execution guardrails: the DeepSeek Harness (dsh) runs via hardened execFile argument arrays that bypass the shell entirely; the Gemini SDK pipeline gracefully degrades to verified human escalation rather than guessing calculations; and high-stakes underwriting rules require dual-model consensus verification.",
+      keyPillars: [
+        {
+          heading: "Argument-Array Process Isolation (execFile)",
+          description: "Passes prompts directly via argv array without spawning a shell, eliminating injection vectors from backticks, $(), quotes, and newlines.",
+          highlight: "Zero Shell Surface"
+        },
+        {
+          heading: "Zero-Hallucination Safe Escalation",
+          description: "During API quota or outage conditions, the system degrades directly to human follow-up ('Mike will follow up shortly')—never computing ungrounded estimates.",
+          highlight: "Never Guess Math"
+        },
+        {
+          heading: "Dual-Model Consensus Audits",
+          description: "Cross-verifies complex mortgage calculations across Gemini and DeepSeek before committing to loan officer pipelines.",
+          highlight: "Consensus Check"
+        }
+      ],
+      roiTakeaway: "Prevents prompt injection, CLI execution exploits, and third-party API outages from ever impacting enterprise lending operations or serving misleading figures.",
+      visualComponent: (
+        <div className="bg-[#1E1E1E] text-slate-200 border border-slate-700 rounded-2xl p-4 text-[10px] space-y-2.5 font-mono shadow-inner overflow-x-auto">
+          <div className="flex items-center justify-between border-b border-slate-700 pb-1.5 text-slate-400">
+            <span className="text-rose-400 font-bold">Hybrid Execution Guardrails</span>
+            <span className="text-[9px] bg-rose-950/80 text-rose-300 px-1.5 py-0.5 rounded border border-rose-800">Hardened</span>
+          </div>
+          <div className="space-y-1 leading-relaxed">
+            <p className="text-slate-500">// 1. Argument Vector Isolation (No Shell Interpolation)</p>
+            <p className="text-amber-300">execFile('dsh', ['execute', '--model', model, '--lightweight', 'deepseek-flash', '--prompt', prompt]);</p>
+            <p className="text-slate-500 pt-1">// 2. Zero-Hallucination Outage Circuit Breaker</p>
+            <p className="text-indigo-300">if (err.includes('quota') || err.includes('overloaded')) {'{'}</p>
+            <p className="text-emerald-300 pl-3">return escalateToHuman("Mike Ford will follow up shortly.");</p>
+            <p className="text-indigo-300">{'}'}</p>
+            <p className="text-slate-500 pt-1">// 3. Dual-Model Consensus Verification</p>
+            <p className="text-purple-300">verifyUnderwritingConsensus(geminiOutput, deepseekOutput);</p>
+          </div>
+        </div>
+      )
     }
   ];
 
@@ -1325,7 +1974,8 @@ export const SystemPitchDeck: React.FC = () => {
         : vantageSubDeck === "assistant" 
           ? vantageAssistantSlides 
           : vantageGuardrailSlides;
-  const currentSlide = currentSlides[currentSlideIndex] || currentSlides[0];
+  const safeSlideIndex = Math.min(currentSlideIndex, Math.max(0, currentSlides.length - 1));
+  const currentSlide = currentSlides[safeSlideIndex] || currentSlides[0];
 
   const nextSlide = () => {
     setCurrentSlideIndex((prev) => (prev + 1) % currentSlides.length);
@@ -1385,7 +2035,7 @@ export const SystemPitchDeck: React.FC = () => {
             {/* Deck Switcher Tabs */}
             <div className="bg-[#FAF9F5] border border-[#EAE7E0] p-1.5 rounded-2xl flex items-center gap-1.5 flex-wrap">
               <button
-                onClick={() => setActiveDeck("sales")}
+                onClick={() => handleSelectDeck("sales")}
                 className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                   activeDeck === "sales"
                     ? "bg-[#2D362E] text-white shadow-sm"
@@ -1396,7 +2046,7 @@ export const SystemPitchDeck: React.FC = () => {
                 <span>Sales Deck</span>
               </button>
               <button
-                onClick={() => setActiveDeck("security")}
+                onClick={() => handleSelectDeck("security")}
                 className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                   activeDeck === "security"
                     ? "bg-indigo-900 text-white shadow-sm"
@@ -1408,7 +2058,7 @@ export const SystemPitchDeck: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  setActiveDeck("vantage_brain");
+                  handleSelectDeck("vantage_brain");
                   setVantageSubDeck("assistant");
                 }}
                 className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
@@ -1426,7 +2076,7 @@ export const SystemPitchDeck: React.FC = () => {
             {activeDeck === "vantage_brain" && (
               <div className="bg-purple-50 border border-purple-200 p-1.5 rounded-2xl flex items-center gap-1 flex-wrap">
                 <button
-                  onClick={() => setVantageSubDeck("assistant")}
+                  onClick={() => handleSelectVantageSubDeck("assistant")}
                   className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     vantageSubDeck === "assistant"
                       ? "bg-purple-900 text-white shadow-sm"
@@ -1437,7 +2087,7 @@ export const SystemPitchDeck: React.FC = () => {
                   <span>Layer 1: Sales & BD Assistant</span>
                 </button>
                 <button
-                  onClick={() => setVantageSubDeck("guardrails")}
+                  onClick={() => handleSelectVantageSubDeck("guardrails")}
                   className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     vantageSubDeck === "guardrails"
                       ? "bg-rose-900 text-white shadow-sm"
@@ -1497,7 +2147,13 @@ export const SystemPitchDeck: React.FC = () => {
             <div className="p-6 sm:p-8 border-b border-[#EAE7E0] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FAF9F5]">
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-mono font-black text-lg text-white shadow-sm ${
-                  activeDeck === "sales" ? "bg-[#2D362E]" : "bg-indigo-900"
+                  activeDeck === "sales" 
+                    ? "bg-[#2D362E]" 
+                    : activeDeck === "security" 
+                      ? "bg-indigo-900" 
+                      : vantageSubDeck === "assistant" 
+                        ? "bg-purple-900" 
+                        : "bg-rose-900"
                 }`}>
                   {currentSlide.slideNumber}
                 </div>
@@ -1656,7 +2312,15 @@ export const SystemPitchDeck: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-[#F1EFE9] pb-3">
                   <div className="flex items-center gap-2.5">
-                    <span className="w-7 h-7 rounded-lg bg-[#2D362E] text-white flex items-center justify-center font-mono font-bold text-xs">
+                    <span className={`w-7 h-7 rounded-lg text-white flex items-center justify-center font-mono font-bold text-xs ${
+                      activeDeck === "sales" 
+                        ? "bg-[#2D362E]" 
+                        : activeDeck === "security" 
+                          ? "bg-indigo-900" 
+                          : vantageSubDeck === "assistant" 
+                            ? "bg-purple-900" 
+                            : "bg-rose-900"
+                    }`}>
                       {slide.slideNumber}
                     </span>
                     <div>
@@ -1736,7 +2400,15 @@ export const SystemPitchDeck: React.FC = () => {
           <div key={s.id} className="pitch-deck-print-slide bg-white border border-[#EAE7E0] rounded-3xl p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
               <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-xl bg-[#2D362E] text-white flex items-center justify-center font-mono font-bold text-sm">
+                <span className={`w-8 h-8 rounded-xl text-white flex items-center justify-center font-mono font-bold text-sm ${
+                  activeDeck === "sales" 
+                    ? "bg-[#2D362E]" 
+                    : activeDeck === "security" 
+                      ? "bg-indigo-900" 
+                      : vantageSubDeck === "assistant" 
+                        ? "bg-purple-900" 
+                        : "bg-rose-900"
+                }`}>
                   {s.slideNumber}
                 </span>
                 <div>

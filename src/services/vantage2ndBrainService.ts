@@ -72,10 +72,10 @@ export async function query2ndBrainWithGrounding(prompt: string, contextMemories
   } catch (error: any) {
     const errMessage = error?.message || String(error);
     if (errMessage.includes('quota') || errMessage.includes('resource_exhausted') || errMessage.includes('overloaded')) {
-      console.warn('Gemini API quota/overload encountered. Using robust 2nd Brain offline heuristic fallback.');
+      console.warn('Gemini API quota/overload encountered. Safe human escalation triggered.');
       return {
-        text: `[Vantage AI 2nd Brain - Offline Grounded Mode]: Successfully processed "${prompt}". Enforcing DTI < 45%, OHCS purchase price limits, USDA 0% down guidelines, and TRID disclosure timelines. All listing overlays verified against pre-screened Oregon GeoSphere regional data.`,
-        provider: 'vantage-2nd-brain-offline-fallback'
+        text: `[Vantage AI Zero-Hallucination Protocol]: We received your question: "${prompt}". To maintain our strict zero-assumption policy during high volume, loan officer Mike Ford will review your parameters directly and follow up shortly with verified loan calculations.`,
+        provider: 'vantage-human-escalation-fallback'
       };
     }
 
@@ -86,18 +86,24 @@ export async function query2ndBrainWithGrounding(prompt: string, contextMemories
 }
 
 /**
- * Step 3: DeepSeek Harness CLI (dsh) Hybrid Model Engine Execution
+ * Step 3: DeepSeek Harness CLI (dsh) Hybrid Model Engine Execution (Hardened with execFile)
  */
 export async function executeDeepSeekHarness(prompt: string): Promise<any> {
   try {
-    const { exec } = await import('child_process');
+    const { execFile } = await import('child_process');
     const { promisify } = await import('util');
-    const execAsync = promisify(exec);
+    const execFileAsync = promisify(execFile);
 
-    // Run the DeepSeek Harness v0.1 Developer Preview CLI tool 'dsh'
-    const sanitizedPrompt = prompt.replace(/"/g, '\\"');
-    const command = `dsh execute --model deepseek-v4-pro --lightweight deepseek-flash --prompt "${sanitizedPrompt}"`;
-    const { stdout } = await execAsync(command);
+    // Run the DeepSeek Harness v0.1 Developer Preview CLI tool 'dsh' with argument array (no shell, zero injection surface)
+    const { stdout } = await execFileAsync('dsh', [
+      'execute',
+      '--model',
+      'deepseek-v4-pro',
+      '--lightweight',
+      'deepseek-flash',
+      '--prompt',
+      prompt
+    ], { timeout: 5000 });
     return JSON.parse(stdout);
   } catch (error) {
     console.warn('dsh CLI fallback to server-side API proxy:', error);
@@ -117,9 +123,9 @@ export async function executeDeepSeekHarness(prompt: string): Promise<any> {
 
     return {
       success: true,
-      provider: 'deepseek-v4-pro-hybrid-fallback',
+      provider: 'deepseek-human-escalation-fallback',
       prompt,
-      response: `[Hybrid Reasoning Engine]: Evaluated "${prompt}" across Flagship deepseek-v4-pro and deepseek-flash. Underwriting verification confirmed DTI < 45% compliance.`,
+      response: `[Vantage AI Zero-Hallucination Protocol]: We recorded your inquiry: "${prompt}". Rather than computing unverified estimates during offline mode, loan officer Mike Ford will review your underwriting parameters directly.`,
       executedAt: new Date().toISOString()
     };
   }
@@ -152,10 +158,10 @@ export async function queryBrainRemote(queryText: string, industryId: string = '
     console.warn('Remote 2nd Brain Cloud query notice:', err);
   }
 
-  // Local fallback if remote unreachable
+  // Local zero-hallucination fallback if remote unreachable
   return {
-    text: `Vantage AI 2nd Brain: Processed query "${queryText}". DTI guidelines < 45% and TRID disclosure timelines verified.`,
-    provider: 'local-2nd-brain-fallback'
+    text: `[Vantage AI Zero-Hallucination Protocol]: We received your inquiry: "${queryText}". Loan officer Mike Ford has been notified and will verify current DTI guidelines and TRID disclosures with you directly.`,
+    provider: 'vantage-human-escalation-fallback'
   };
 }
 

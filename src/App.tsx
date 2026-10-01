@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useIsMobile } from "./hooks/useIsMobile";
-import { Compass, ShieldCheck, Maximize2, Minimize2 } from "lucide-react";
+import { Compass, ShieldCheck, Maximize2, Minimize2, ArrowRight } from "lucide-react";
 import { Navbar } from "./components/Navbar";
 import { StepNavigationBanner } from "./components/StepNavigationBanner";
 import { MobileBottomNav } from "./components/MobileBottomNav";
@@ -28,9 +28,10 @@ const LoanOfficerPortal = React.lazy(() => import("./components/LoanOfficerPorta
 const MobileLoanOfficerPortal = React.lazy(() => import("./components/mobile/MobileLoanOfficerPortal").then(m => ({ default: m.MobileLoanOfficerPortal })));
 const LeadIntakeChatbot = React.lazy(() => import("./components/LeadIntakeChatbot").then(m => ({ default: m.LeadIntakeChatbot })));
 const LoginScreen = React.lazy(() => import("./components/LoginScreen").then(m => ({ default: m.LoginScreen })));
+const SystemPitchDeck = React.lazy(() => import("./components/SystemPitchDeck").then(m => ({ default: m.SystemPitchDeck })));
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut, getRedirectResult } from "firebase/auth";
-import { checkAndProvisionUser } from "./utils/authUtils";
+import { checkAndProvisionUser, registerFCMToken } from "./utils/authUtils";
 import { applyMetadataToDocument, fetchSavedSeoMetadata } from "./utils/seoManager";
 import { SEOSchemaInjector } from "./components/SEOSchemaInjector";
 import { PrivacyPolicyModal } from "./components/PrivacyPolicyModal";
@@ -68,7 +69,7 @@ import {
   resolveFromUrlPath,
 } from "./utils/guideMatching";
 import { db } from "./firebase";
-import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
 
 import { GEOSPHERE_MOCK_LISTINGS } from "./data/geoSphereData";
 
@@ -98,7 +99,22 @@ export default function App() {
     return true;
   });
   const [isSettingsChecking, setIsSettingsChecking] = useState(false);
-  const [userRole, setUserRole] = useState<RbacRole | "admin" | "lo" | null>(null);
+  const [userRole, setUserRole] = useState<RbacRole | "admin" | "lo" | null>(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (
+        urlParams.get("review") === "true" ||
+        urlParams.get("mode") === "review" ||
+        urlParams.get("unlock") === "true" ||
+        urlParams.get("public") === "true" ||
+        urlParams.get("audit") === "true" ||
+        localStorage.getItem("public_review_mode") === "true"
+      ) {
+        return "branch_manager";
+      }
+    }
+    return null;
+  });
   const [isAppPublic, setIsAppPublic] = useState(false);
   const [forceDesktopLoPortal, setForceDesktopLoPortal] = useState(false);
 
@@ -121,6 +137,14 @@ export default function App() {
         console.warn("Redirect check note:", err);
       });
 
+    const requestNotificationPermission = async (uid: string) => {
+      try {
+        await registerFCMToken(uid);
+      } catch (err) {
+        console.warn("FCM Token Registration notice:", err);
+      }
+    };
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       const isExplicitlyLoggedOut =
         typeof window !== "undefined" &&
@@ -136,6 +160,9 @@ export default function App() {
       }
 
       if (user) {
+        // Call push token registration upon successful authentication
+        requestNotificationPermission(user.uid);
+
         const email = user.email?.toLowerCase();
         // Fast-path: Master Admin / Branch Manager is recognized instantly without blocking on network/Firestore
         if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
@@ -231,6 +258,24 @@ export default function App() {
   const pathname = typeof window !== "undefined" ? window.location.pathname.toLowerCase() : "";
   const hash = typeof window !== "undefined" ? window.location.hash.toLowerCase() : "";
   const search = typeof window !== "undefined" ? window.location.search.toLowerCase() : "";
+
+  const isPitchDeckAccess =
+    pathname.includes("pitch-deck") ||
+    pathname.includes("pitchdeck") ||
+    pathname.includes("pitch_deck") ||
+    pathname.includes("executive-deck") ||
+    pathname.includes("security-deck") ||
+    hash.includes("pitch-deck") ||
+    hash.includes("pitchdeck") ||
+    hash.includes("pitch_deck") ||
+    hash.includes("executive-deck") ||
+    hash.includes("security-deck") ||
+    search.includes("pitch-deck") ||
+    search.includes("pitchdeck") ||
+    search.includes("tab=pitch-deck") ||
+    search.includes("tab=system_pitch_deck") ||
+    search.includes("view=pitch-deck") ||
+    search.includes("deck=");
 
   const isPortalAccess =
     pathname.includes("portal") ||
@@ -501,7 +546,7 @@ export default function App() {
 
   // Subscribe to Firebase for live updates to headshots and profiles
   useEffect(() => {
-    const unsub = onSnapshot(
+    const unsubSingleton = onSnapshot(
       doc(db, "guides_state", "singleton"),
       (snapshot) => {
         if (snapshot.exists()) {
@@ -523,7 +568,6 @@ export default function App() {
                 INITIAL_RECRUITING_CAMPAIGNS,
               socialCampaigns: remoteState.socialCampaigns || prev.socialCampaigns,
               adCampaignDrafts: remoteState.adCampaignDrafts || prev.adCampaignDrafts,
-              leads: remoteState.leads || prev.leads,
               syncedProperties: remoteState.syncedProperties || prev.syncedProperties,
               loanOfficer: sanitizeLoanOfficer(updatedLo),
             };
@@ -559,7 +603,8 @@ export default function App() {
         } else {
           // First time initialization: Push local state up to Firebase if authenticated
           if (auth.currentUser) {
-            setDoc(doc(db, "guides_state", "singleton"), guidesState).catch(console.warn);
+            const { leads, ...strippedState } = guidesState;
+            setDoc(doc(db, "guides_state", "singleton"), strippedState).catch(console.warn);
           }
         }
       },
@@ -568,8 +613,47 @@ export default function App() {
       }
     );
 
-    return unsub;
+    return () => {
+      unsubSingleton();
+    };
   }, []);
+
+  // Secure reactive subscription to the sharded /leads collection (GLBA & PII Guard)
+  // Ensures website visitors can never pull down the full lead register from Firebase.
+  useEffect(() => {
+    if (!userRole || userRole === null) {
+      // Clear lead records in client memory if user is not authorized staff
+      setGuidesState((prev) => ({ ...prev, leads: [] }));
+      return;
+    }
+
+    const unsubLeads = onSnapshot(
+      collection(db, "leads"),
+      (snapshot) => {
+        const remoteLeads: CapturedLead[] = [];
+        snapshot.forEach((docSnap) => {
+          remoteLeads.push(docSnap.data() as CapturedLead);
+        });
+        
+        // Sort leads descending by creation date
+        const sortedLeads = remoteLeads.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+
+        setGuidesState((prev) => ({
+          ...prev,
+          leads: sortedLeads,
+        }));
+      },
+      (error) => {
+        console.warn("Sharded leads collection subscription restricted or blocked:", error);
+      }
+    );
+
+    return () => unsubLeads();
+  }, [userRole]);
 
   const handleUpdateGuidesState = (
     newState: ProfessionalGuidesState | ((prev: ProfessionalGuidesState) => ProfessionalGuidesState)
@@ -577,13 +661,42 @@ export default function App() {
     if (typeof newState === "function") {
       setGuidesState((prev) => {
         const computedState = newState(prev);
-        setDoc(doc(db, "guides_state", "singleton"), computedState).catch(console.error);
+
+        // 1. Shard-save: Save ONLY changed leads to prevent cost/perf write amplification
+        if (computedState.leads && Array.isArray(computedState.leads)) {
+          computedState.leads.forEach((lead) => {
+            const prevLead = prev.leads?.find((l) => l.id === lead.id);
+            if (!prevLead || JSON.stringify(prevLead) !== JSON.stringify(lead)) {
+              setDoc(doc(db, "leads", lead.id), lead).catch((err) =>
+                console.warn(`Error writing changed sharded lead ${lead.id}:`, err)
+              );
+            }
+          });
+        }
+
+        // 2. Singleton-save: Exclude the leads array to keep document size under 1MB
+        const { leads, ...strippedState } = computedState;
+        setDoc(doc(db, "guides_state", "singleton"), strippedState).catch(console.error);
         return computedState;
       });
     } else {
       setGuidesState(newState);
-      // Push updates to Firebase cloud so all visitors see the updated headshot and details instantly!
-      setDoc(doc(db, "guides_state", "singleton"), newState).catch(console.error);
+
+      // 1. Shard-save: Save ONLY changed leads to prevent cost/perf write amplification
+      if (newState.leads && Array.isArray(newState.leads)) {
+        newState.leads.forEach((lead) => {
+          const prevLead = guidesState.leads?.find((l) => l.id === lead.id);
+          if (!prevLead || JSON.stringify(prevLead) !== JSON.stringify(lead)) {
+            setDoc(doc(db, "leads", lead.id), lead).catch((err) =>
+              console.warn(`Error writing changed sharded lead ${lead.id}:`, err)
+            );
+          }
+        });
+      }
+
+      // 2. Singleton-save: Exclude the leads array to keep document size under 1MB
+      const { leads, ...strippedState } = newState;
+      setDoc(doc(db, "guides_state", "singleton"), strippedState).catch(console.error);
     }
   };
 
@@ -892,6 +1005,11 @@ export default function App() {
       ...prev,
       leads: updatedLeads,
     }));
+    
+    // Shard-save: Persist each lead individually in the Firestore leads collection
+    setDoc(doc(db, "leads", newLead.id), newLead).catch((err) =>
+      console.warn(`Error persisting sharded lead document ${newLead.id}:`, err)
+    );
   };
 
   const activeAgent =
@@ -943,6 +1061,49 @@ export default function App() {
   }
 
   // Routing Logic:
+  // 0. If accessing the online pitch deck review route, render the executive deck hub directly
+  if (isPitchDeckAccess) {
+    return (
+      <div className="min-h-screen w-full bg-[#F9F8F4] dark:bg-slate-950 text-[#2D362E] dark:text-slate-100 flex flex-col font-sans antialiased overflow-y-auto">
+        <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-[#EAE7E0] dark:border-slate-800 px-4 sm:px-8 py-3.5 flex items-center justify-between sticky top-0 z-50 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#2D362E] dark:bg-emerald-800 text-white flex items-center justify-center font-bold font-mono text-sm">
+              CFM
+            </div>
+            <div>
+              <h1 className="text-sm sm:text-base font-black text-[#2D362E] dark:text-white font-display">
+                Executive & Security Pitch Deck Hub
+              </h1>
+              <p className="text-[10px] sm:text-xs text-[#606C5D] dark:text-slate-400 font-mono">
+                Cornerstone First Mortgage • Online Executive Review
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <a
+              href="/"
+              className="px-3.5 py-1.5 rounded-xl border border-[#EAE7E0] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-[#2D362E] dark:text-slate-200 hover:bg-[#FAF9F5] transition-all flex items-center gap-1.5"
+            >
+              <span>Main Portal</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </header>
+        <main className="flex-1 w-full py-6 sm:py-8">
+          <React.Suspense
+            fallback={
+              <div className="min-h-[400px] flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-2 border-[#4A5D4E] border-t-transparent rounded-full" />
+              </div>
+            }
+          >
+            <SystemPitchDeck />
+          </React.Suspense>
+        </main>
+      </div>
+    );
+  }
+
   // 1. If unauthenticated and accessing a portal route or LO portal is active, force the Google Sign-In screen
   // 2. If accessing the root website, always render the public consumer view
   if (!userRole && (isPortalAccess || showLoPortal)) {

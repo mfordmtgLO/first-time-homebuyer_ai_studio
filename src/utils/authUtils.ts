@@ -1,5 +1,6 @@
 import { db } from "../firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { getMessaging, getToken } from "firebase/messaging";
 import { normalizeRole, RbacRole } from "./rbac";
 
 const ADMIN_EMAILS = ["fordmj@gmail.com", "mford@cfmtg.com"];
@@ -93,4 +94,29 @@ export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admi
   }
 
   throw new Error("NOT_WHITELISTED");
+}
+
+/**
+ * Retrieves the cryptographic FCM Web Push token and persists it in the lead's sharded Firestore document
+ */
+export async function registerFCMToken(leadId: string) {
+  if (typeof window === "undefined" || !("Notification" in window)) return null;
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      const messaging = getMessaging();
+      const token = await getToken(messaging, {
+        vapidKey: "BF_Your_Vapid_Public_Key_Here_Change_This"
+      });
+      if (token) {
+        console.log("FCM Device Token retrieved and sharded:", token);
+        await setDoc(doc(db, "leads", leadId), { fcmToken: token }, { merge: true });
+        return token;
+      }
+    }
+  } catch (err) {
+    console.warn("registerFCMToken helper error:", err);
+  }
+  return null;
 }

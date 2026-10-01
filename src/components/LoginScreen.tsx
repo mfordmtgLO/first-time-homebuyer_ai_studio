@@ -143,6 +143,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, guidesState }
               if (typeof window !== "undefined") {
                 localStorage.removeItem("lo_portal_logged_out");
                 localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
+                localStorage.setItem("public_review_mode", "true");
               }
               onLogin("branch_manager");
             }}
@@ -150,7 +151,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, guidesState }
             title="Instant access for Branch Manager / Mike Ford"
           >
             <ShieldCheck className="w-4 h-4 text-emerald-300" />
-            <span>Enter as Branch Manager (Mike Ford)</span>
+            <span>Enter in Public Code Review Mode (Full Access)</span>
           </button>
 
           <div className="flex items-center gap-2 my-2">

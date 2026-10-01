@@ -146,8 +146,18 @@ export function applyMetadataToDocument(metadata: PublicWebsiteMetadata): void {
 
   const currentUrl = metadata.canonicalUrl || (typeof window !== "undefined" ? window.location.href.split("?")[0] : "");
 
-  // 1. Browser Title
-  if (metadata.metaTitle) {
+  // 1. Browser Title (Preserve contextual executive & security deck titles)
+  const isDeckRoute = typeof window !== "undefined" && (
+    window.location.search.includes("pitch-deck") ||
+    window.location.search.includes("pitchdeck") ||
+    window.location.search.includes("deck=") ||
+    window.location.pathname.includes("pitch-deck") ||
+    window.location.pathname.includes("security-deck") ||
+    window.location.pathname.includes("sales-deck") ||
+    window.location.hash.includes("pitch-deck")
+  );
+
+  if (metadata.metaTitle && !isDeckRoute) {
     document.title = metadata.metaTitle;
   }
 

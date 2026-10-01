@@ -1393,14 +1393,22 @@ Return JSON matching this shape:
         return res.status(400).json({ error: "prompt is required" });
       }
 
-      const { exec } = await import("child_process");
+      const { execFile } = await import("child_process");
       const { promisify } = await import("util");
-      const execAsync = promisify(exec);
+      const execFileAsync = promisify(execFile);
 
       try {
-        const sanitizedPrompt = String(prompt).replace(/"/g, '\\"');
-        const command = `dsh execute --model ${model} --lightweight deepseek-flash --prompt "${sanitizedPrompt}"`;
-        const { stdout } = await execAsync(command);
+        // Hardened: execFile with explicit argument vector avoids invoking a shell entirely,
+        // eliminating shell-injection risks from backticks, $(), quotes, and newlines.
+        const { stdout } = await execFileAsync("dsh", [
+          "execute",
+          "--model",
+          String(model),
+          "--lightweight",
+          "deepseek-flash",
+          "--prompt",
+          String(prompt)
+        ], { timeout: 5000 });
         return res.json(JSON.parse(stdout));
       } catch (cliErr) {
         console.warn("dsh CLI execution fallback:", cliErr);
@@ -1410,7 +1418,7 @@ Return JSON matching this shape:
           prompt,
           model,
           lightweightModel: "deepseek-flash",
-          response: `[DeepSeek Harness dsh Hybrid Engine]: Successfully evaluated "${prompt}" using flagship ${model} and deepseek-flash. Underwriting verification confirmed DTI < 45% compliance and TRID timing safety.`,
+          response: `[Vantage AI Zero-Hallucination Protocol]: We recorded your inquiry: "${prompt}". Rather than computing unverified estimates during offline mode, loan officer Mike Ford will review your underwriting parameters directly.`,
           executedAt: new Date().toISOString(),
         });
       }

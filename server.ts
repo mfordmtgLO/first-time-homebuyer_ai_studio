@@ -1,3 +1,9 @@
+/**
+ * BOOT REQUIREMENT: this file runs directly under `node server.ts` using
+ * Node's native type-stripping. Requires Node >= 22.18 (see package.json
+ * engines). Do not introduce enums, namespaces, or parameter properties —
+ * they are incompatible with type-stripping.
+ */
 import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";

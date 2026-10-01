@@ -241,22 +241,30 @@ function verifyWebhookHmac(
 }
 
 // Enterprise Authentication Middleware (Priority 1 Item 1 & Priority 2 Item 6)
+// PHASE 0 HARDENING: fail-closed. Missing, malformed, or unverifiable tokens are
+// rejected with 401. The legacy demo-identity degradation (demo branch_manager on
+// missing/invalid token) has been removed. Public-by-design routes are exempted
+// via the PUBLIC_API_ROUTES allowlist enforced in startServer(); every other
+// /api route flows through here.
 const authenticateUser = async (
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ) => {
+  // Idempotency: the global /api enforcement middleware may already have run
+  // this check for routes that also list authenticateUser explicitly.
+  if ((req as any).authChecked) {
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.split("Bearer ")[1] : null;
 
-  if (!token || token === "test-token" || token.length < 20) {
-    (req as any).user = {
-      uid: "demo_uid",
-      email: "fordmj@gmail.com",
-      role: "branch_manager",
-      loId: "lo-mike-ford"
-    };
-    return next();
+  if (!token) {
+    return res.status(401).json({
+      error: "Unauthorized: Missing credentials. Please sign in and retry.",
+      code: "auth/missing-token",
+    });
   }
 
   try {
@@ -291,6 +299,7 @@ const authenticateUser = async (
       role: (role || "team_lo").toLowerCase(),
       loId: loId || decodedToken.uid,
     };
+    (req as any).authChecked = true;
     next();
   } catch (error: any) {
     if (error?.code === "auth/id-token-revoked") {
@@ -300,15 +309,12 @@ const authenticateUser = async (
         code: "auth/id-token-revoked",
       });
     }
-    console.warn("JWT Verification fallback to demo user:", error?.message);
-    // Graceful fallback for preview/demo environments
-    (req as any).user = {
-      uid: "demo_uid",
-      email: "fordmj@gmail.com",
-      role: "branch_manager",
-      loId: "lo-mike-ford"
-    };
-    return next();
+    console.warn("[Zero-Trust Auth] Invalid or expired token rejected:", error?.message);
+    // PHASE 0 HARDENING: fail closed — no demo-identity fallback.
+    return res.status(401).json({
+      error: "Unauthorized: Invalid or expired credentials. Please re-authenticate.",
+      code: "auth/invalid-token",
+    });
   }
 };
 
@@ -316,6 +322,17 @@ async function startServer() {
   console.log("Starting server initialization...");
   // Mandatory Startup Security Check: Validates environment variables and cryptographic readiness
   validateEncryptionStartupConfiguration();
+
+  // PHASE 0 HARDENING: the /api/webhook/lead x-api-key check is skipped when
+  // WEBHOOK_API_KEY is unset. Refuse to boot in production without it rather
+  // than serve an unprotected lead-ingestion endpoint. In non-production the
+  // endpoint stays open but logs a loud warning on every call (see handler).
+  if (process.env.NODE_ENV === "production" && !process.env.WEBHOOK_API_KEY) {
+    throw new Error(
+      "[Security] WEBHOOK_API_KEY must be set when NODE_ENV=production. " +
+      "Refusing to start with an unprotected /api/webhook/lead endpoint."
+    );
+  }
 
   console.log("Loading knowledge base...");
   loadKnowledgeBase();
@@ -471,6 +488,77 @@ async function startServer() {
 
   app.use(express.json({ limit: "100mb" }));
 
+  // ============================================================================
+  // PHASE 0 SECURITY HARDENING: explicit public-route allowlist + fail-closed
+  // enforcement. Every /api route MUST be in exactly one category:
+  //   - public-by-design: listed below (anonymous buyer funnel, stateless
+  //     program-data lookups, or inbound third-party webhooks with their own
+  //     signature/key auth), or
+  //   - auth-required: everything else flows through authenticateUser, which
+  //     rejects missing/invalid tokens with 401 (no demo-identity fallback).
+  // Entries are "METHOD /api/path"; ":param" segments match a single path part.
+  // When adding a new /api route, add it here ONLY if it is public-by-design.
+  // ============================================================================
+  const PUBLIC_API_ROUTES: ReadonlyArray<string> = [
+    // Health / capability probes
+    "GET /api/health",
+    "GET /api/ai/diagnostics", // boolean capability flags only; called by the public chatbot
+    // Public lead-gen funnel: chatbot intake, AI copilot, property browsing,
+    // mortgage lab, market trends, share-via-email
+    "POST /api/gemini/lead-intake",
+    "POST /api/gemini/advisor",
+    "POST /api/gemini/offer-strategy",
+    "POST /api/gemini/inspection-audit",
+    "POST /api/gemini/parse-property-search",
+    "POST /api/gemini/property-compare",
+    "POST /api/gemini/mortgage-analysis",
+    "GET /api/market-news",
+    "POST /api/share/email-roadmap",
+    "POST /api/share/email-milestone-trigger",
+    "POST /api/dashboard/email-summary", // compiles summary HTML only; no mail is sent server-side
+    "POST /api/geosphere/sync", // read-only listings proxy for the buyer geomap module; no server-side writes
+    "GET /api/ads/property/:propertyId", // public ad assets rendered on buyer property cards
+    // Stateless program-data lookups (no PII); also the Phase 1 assistant surface
+    "POST /api/geoid/lookup",
+    "POST /api/geoid/batch",
+    "GET /api/nationwide/hfa-programs",
+    // Inbound third-party webhooks with their own auth (M2M key / HMAC signatures)
+    "POST /api/webhook/lead",
+    "POST /api/twilio/webhook",
+    "POST /api/big-purple-dot/webhook",
+    "POST /api/big-purple-dot/crm/webhook",
+  ];
+
+  const publicApiRoutePatterns = PUBLIC_API_ROUTES.map((entry) => {
+    const methodEnd = entry.indexOf(" ");
+    const method = entry.slice(0, methodEnd);
+    const path = entry.slice(methodEnd + 1);
+    const pattern = path
+      .split("/")
+      .map((seg) =>
+        seg.startsWith(":")
+          ? "[^/]+"
+          : seg.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      )
+      .join("/");
+    return { method, regex: new RegExp(`^${pattern}$`) };
+  });
+
+  const isPublicApiRoute = (method: string, path: string): boolean =>
+    publicApiRoutePatterns.some((p) => p.method === method && p.regex.test(path));
+
+  // Fail-closed enforcement: runs before any /api route handler. Public routes
+  // pass through; all other /api routes require a valid Firebase staff JWT.
+  app.use((req, res, next) => {
+    if (!req.path.startsWith("/api")) {
+      return next();
+    }
+    if (isPublicApiRoute(req.method, req.path)) {
+      return next();
+    }
+    return authenticateUser(req, res, next);
+  });
+
   // In-memory queue for 3rd party webhook leads
   let webhookLeadsQueue: any[] = [];
 
@@ -478,6 +566,15 @@ async function startServer() {
   app.post("/api/webhook/lead", (req, res) => {
     try {
       const apiKey = req.headers["x-api-key"] || req.headers["authorization"];
+      // PHASE 0 HARDENING: fail closed. When WEBHOOK_API_KEY is unset the check
+      // below is skipped; in production the server refuses to boot without the
+      // key (see startServer), so this branch only runs in non-production.
+      if (!process.env.WEBHOOK_API_KEY) {
+        console.warn(
+          "[Security] /api/webhook/lead called WITHOUT an API key check: " +
+          "WEBHOOK_API_KEY is not set. Set WEBHOOK_API_KEY to protect this endpoint."
+        );
+      }
       // Basic security check (Optional: In production, validate against an env var)
       if (
         process.env.WEBHOOK_API_KEY &&
@@ -519,6 +616,12 @@ async function startServer() {
   });
 
   // Internal endpoint for the React frontend to poll and clear the queue
+  // PHASE 0 HARDENING: auth-required (staff Firebase JWT via the global /api
+  // enforcement middleware). The staff JWT — not the webhook M2M key — was
+  // chosen because the only caller is the staff dashboard browser (which holds
+  // a Firebase session); handing the M2M key to browsers would leak it.
+  // FRONTEND FOLLOW-UP: src/App.tsx pollWebhookLeads must attach
+  // `Authorization: Bearer <idToken>` or it will receive 401.
   app.get("/api/data/sync/poll", (req, res) => {
     res.json({ leads: webhookLeadsQueue });
     webhookLeadsQueue = []; // clear after fetching
@@ -1288,11 +1391,16 @@ Return JSON matching this shape:
         return res.status(400).json({ error: "A valid 'query' string is required." });
       }
 
-      // Fetch context memories from shared Firestore /memories collection
+      // PHASE 0 HARDENING: fetch context memories tenant-scoped. The industryId
+      // request param is applied as a Firestore where() filter so one tenant's
+      // memories never leak into another tenant's grounded answers. When absent
+      // it defaults to "mortgage_real_estate" (the value existing /memories docs
+      // carry); Phase 1 assistant callers should pass an explicit tenant
+      // industryId. Auth is required via the global /api enforcement middleware.
       let contextMemories: string[] = [];
       try {
         const db = getAdminDb();
-        const memSnap = await db.collection("memories").limit(10).get();
+        const memSnap = await db.collection("memories").where("industryId", "==", industryId).limit(10).get();
         memSnap.forEach((doc) => {
           const data = doc.data();
           if (data && data.content) {
@@ -1346,6 +1454,9 @@ Return JSON matching this shape:
     }
   });
 
+  // PHASE 0 HARDENING: auth-required (staff Firebase JWT via the global /api
+  // enforcement middleware). Previously any anonymous caller could write to
+  // the shared /memories collection and poison grounded answers.
   app.post("/api/brain/train", async (req, res) => {
     try {
       const { title, content, tags = ["dpa", "first_time_buyer", "oregon"], industryId = "mortgage_real_estate" } = req.body || {};
@@ -4332,120 +4443,17 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     };
   }
 
-  // API Route: Direct RentCast For-Sale Listings Sync & Classification
-  app.post("/api/rentcast/sync", async (req, res) => {
-    try {
-      const { apiKey, city, state = "OR", zipCode, limit = 50 } = req.body || {};
-      const activeKey = apiKey || process.env.RENTCAST_API_KEY;
-
-      if (!activeKey) {
-        return res.status(400).json({
-          error: "RentCast API key required. Provide an API key or configure it in loan officer settings.",
-          requiresApiKey: true
-        });
-      }
-
-      const params = new URLSearchParams();
-      if (city && city.toLowerCase() !== "all") params.append("city", city);
-      params.append("state", state || "OR");
-      if (zipCode) params.append("zipCode", zipCode);
-      params.append("status", "Active");
-      params.append("limit", String(limit));
-
-      const rentcastUrl = `https://api.rentcast.io/v1/listings/sale?${params.toString()}`;
-      console.log(`[RentCast Sync] Pulling live listings from: ${rentcastUrl}`);
-
-      const response = await fetch(rentcastUrl, {
-        headers: {
-          "Accept": "application/json",
-          "X-Api-Key": activeKey
-        }
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.warn(`[RentCast Sync] API error (${response.status}):`, errorText);
-        return res.status(response.status).json({
-          error: `RentCast API returned HTTP ${response.status}: ${errorText}`,
-          status: response.status
-        });
-      }
-
-      const rentcastData = await response.json();
-      const rawListings = Array.isArray(rentcastData)
-        ? rentcastData
-        : (rentcastData.listings || rentcastData.properties || rentcastData.data || []);
-
-      const seenIds = new Set<string>();
-      const standardized = rawListings
-        .filter((item: any) => {
-          const id = item.id || item.formattedAddress || `${item.latitude}-${item.longitude}`;
-          if (!id || seenIds.has(id)) return false;
-          seenIds.add(id);
-          return true;
-        })
-        .map((item: any, idx: number) => standardizeListingItem(item, idx));
-
-      res.json({
-        success: true,
-        count: standardized.length,
-        source: "RentCast Live API (api.rentcast.io)",
-        cities: Array.from(new Set(standardized.map((l: any) => l.city).filter(Boolean))),
-        listings: standardized
-      });
-    } catch (error: any) {
-      console.error("[RentCast Sync Error]:", error);
-      res.status(500).json({ error: error.message || "Failed to sync with RentCast API" });
-    }
-  });
-
-  // API Route: GeoSphere Oregon GIS Proxy & Synchronization (Supports GeoSphere Website & RentCast)
+  // API Route: GeoSphere Oregon GIS Proxy & Synchronization (GeoSphere saved-listings snapshots)
   app.post("/api/geosphere/sync", async (req, res) => {
     try {
-      const { endpointUrl, syncToken, rentcastApiKey, city } = req.body || {};
-      
-      // If the user requested direct RentCast API sync or passed rentcastApiKey
-      if (rentcastApiKey || (endpointUrl && endpointUrl.includes("rentcast.io"))) {
-        const activeKey = rentcastApiKey || process.env.RENTCAST_API_KEY;
-        if (activeKey) {
-          const params = new URLSearchParams();
-          if (city && city.toLowerCase() !== "all") params.append("city", city);
-          params.append("state", "OR");
-          params.append("status", "Active");
-          params.append("limit", "50");
-
-          try {
-            const rcRes = await fetch(`https://api.rentcast.io/v1/listings/sale?${params.toString()}`, {
-              headers: { "Accept": "application/json", "X-Api-Key": activeKey }
-            });
-            if (rcRes.ok) {
-              const rcData = await rcRes.json();
-              const rcListings = Array.isArray(rcData) ? rcData : (rcData.listings || rcData.properties || rcData.data || []);
-              if (rcListings.length > 0) {
-                const seenIds = new Set<string>();
-                const standardized = rcListings
-                  .filter((item: any) => {
-                    const id = item.id || item.formattedAddress || `${item.latitude}-${item.longitude}`;
-                    if (!id || seenIds.has(id)) return false;
-                    seenIds.add(id);
-                    return true;
-                  })
-                  .map((item: any, idx: number) => standardizeListingItem(item, idx));
-
-                return res.json({
-                  success: true,
-                  count: standardized.length,
-                  source: "RentCast API Live Sync",
-                  cities: Array.from(new Set(standardized.map((l: any) => l.city).filter(Boolean))),
-                  listings: standardized
-                });
-              }
-            }
-          } catch (rcErr: any) {
-            console.warn("[GeoSphere Sync] Direct RentCast fetch notice:", rcErr?.message);
-          }
-        }
-      }
+      const { endpointUrl, syncToken, city } = req.body || {};
+      // PHASE 0 HARDENING (owner decision 2026-09-30): the BYOK RentCast approach
+      // is abandoned — Mike is the sole RentCast user and all pulls happen in the
+      // separate geosphere-map-oregon-ai-studio repo. The legacy direct-RentCast
+      // branch (client-passed rentcastApiKey, or server RENTCAST_API_KEY fallback
+      // when endpointUrl contained "rentcast.io") has been removed: on this public
+      // route it was an unauthenticated quota-burn vector. This proxy now only
+      // fetches the quota-safe saved-listings snapshots from the GeoSphere service.
 
       // Candidate URLs to attempt:
       // If user provided custom URL, test direct URL and REST sub-endpoints
@@ -5499,184 +5507,6 @@ Return ONLY valid JSON in this exact structure:
     } catch (err: any) {
       console.error("[GeoSphere Engine] Batch Classification Error:", err);
       res.status(500).json({ error: "Failed to batch classify coordinates." });
-    }
-  });
-
-  // API Route: GeoSphere & Website / RentCast Ingestion & Sync
-  app.post("/api/geosphere/sync", async (req, res) => {
-    try {
-      const { endpointUrl, syncToken, rentcastApiKey, city, county, state = "OR", zip, limit = 50 } = req.body || {};
-
-      let fetchedListings: any[] = [];
-      let syncSource = "geosphere_embedded";
-
-      // 1. Try fetching from custom GeoSphere website endpoint if provided
-      if (endpointUrl && typeof endpointUrl === "string" && endpointUrl.startsWith("http")) {
-        try {
-          const headers: Record<string, string> = {
-            "Accept": "application/json",
-            "User-Agent": "Manus-GeoSphere-Sync/2.0",
-          };
-          if (syncToken) {
-            headers["Authorization"] = `Bearer ${syncToken.trim()}`;
-          }
-
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 6000);
-          const response = await fetch(endpointUrl, {
-            headers,
-            signal: controller.signal
-          });
-          clearTimeout(timeout);
-
-          if (response.ok) {
-            const data = await response.json();
-            const rawList = Array.isArray(data) ? data : (data.listings || data.properties || data.data || []);
-            if (Array.isArray(rawList) && rawList.length > 0) {
-              fetchedListings = rawList;
-              syncSource = "live_geosphere_endpoint";
-            }
-          }
-        } catch (fetchErr: any) {
-          console.warn("[GeoSphere Sync] Custom endpoint fetch warning:", fetchErr?.message);
-        }
-      }
-
-      // 2. If no listings from endpoint, try direct RentCast API if API key provided or available in env
-      const activeRentcastKey = rentcastApiKey?.trim() || process.env.RENTCAST_API_KEY?.trim();
-      if (fetchedListings.length === 0 && activeRentcastKey) {
-        try {
-          const rentcastUrl = new URL("https://api.rentcast.io/v1/listings/sale");
-          rentcastUrl.searchParams.set("state", state || "OR");
-          rentcastUrl.searchParams.set("status", "Active");
-          rentcastUrl.searchParams.set("propertyType", "Single Family");
-          if (city && city !== "all") rentcastUrl.searchParams.set("city", city);
-          if (zip) rentcastUrl.searchParams.set("zipCode", zip);
-          rentcastUrl.searchParams.set("limit", String(Math.min(Number(limit) || 50, 100)));
-
-          const rcController = new AbortController();
-          const rcTimeout = setTimeout(() => rcController.abort(), 6000);
-          const rcRes = await fetch(rentcastUrl.toString(), {
-            headers: {
-              "X-Api-Key": activeRentcastKey,
-              "Accept": "application/json",
-            },
-            signal: rcController.signal,
-          });
-          clearTimeout(rcTimeout);
-
-          if (rcRes.ok) {
-            const rcData = await rcRes.json();
-            if (Array.isArray(rcData) && rcData.length > 0) {
-              fetchedListings = rcData;
-              syncSource = "live_rentcast_api";
-            }
-          }
-        } catch (rcErr: any) {
-          console.warn("[GeoSphere Sync] Direct RentCast API warning:", rcErr?.message);
-        }
-      }
-
-      // 3. Transform raw listings or use high-fidelity Oregon live pull listings
-      let mappedListings: any[] = [];
-      if (fetchedListings.length > 0) {
-        mappedListings = fetchedListings.map((item: any, idx: number) => {
-          const lat = Number(item.latitude ?? item.lat) || (44.0521 + (idx % 10) * 0.01);
-          const lng = Number(item.longitude ?? item.lng) || (-123.0868 - (idx % 10) * 0.01);
-          const pt: Point = [lng, lat];
-          const isUsda = usdaFeatures.some((f) => pointInGeometry(pt, f.geometry));
-          const isLmi = lmiFeatures.some((f) => pointInGeometry(pt, f.geometry));
-
-          const price = Number(item.price ?? item.listPrice) || 450000;
-          const countyName = item.county || item.overlayEligibility?.countyName || (city?.toLowerCase().includes("eugene") ? "Lane" : "Lane");
-          const address = item.address || item.formattedAddress || `${100 + idx} Oregon Trail Hwy`;
-          const itemCity = item.city || (city !== "all" ? city : "Junction City");
-          const itemZip = item.zipCode || item.zip || "97448";
-
-          return {
-            id: item.id || `rentcast-live-${Date.now()}-${idx}`,
-            title: item.title || `${address} Home`,
-            address,
-            city: itemCity,
-            state: item.state || "OR",
-            zip: itemZip,
-            price,
-            beds: Number(item.bedrooms ?? item.beds) || 3,
-            baths: Number(item.bathrooms ?? item.baths) || 2,
-            sqft: Number(item.squareFootage ?? item.sqft) || 1650,
-            yearBuilt: Number(item.yearBuilt) || 2018,
-            propertyType: item.propertyType || "Single Family",
-            imageUrl: Array.isArray(item.photos) && item.photos[0] ? item.photos[0] : (item.imageUrl || undefined),
-            status: "saved",
-            notes: item.notes || `RentCast for-sale listing. MLS #${item.mlsNumber || item.id || 'Live-Pull'}. ${isUsda ? 'USDA 100% Zero-Down Eligible. ' : ''}${isLmi ? 'OHCS LMI Tract Qualified.' : ''}`,
-            daysOnMarket: Number(item.daysOnMarket) || 14,
-            hoaMonthly: Number(item.hoaMonthly || item.hoa?.fee || 0),
-            propertyTaxAnnual: Number(item.propertyTaxAnnual || Math.round(price * 0.009)),
-            isFavorite: Boolean(item.isFavorite),
-            isPubliclyPublished: true,
-            syncedAt: new Date().toISOString(),
-            isLiveGeoSphere: true,
-            sourceDataset: "GeoSphere Oregon / RentCast Live Pull",
-            mlsNumber: item.mlsNumber || item.mlsId,
-            mlsName: item.mlsName || "RMLS",
-            listingAgent: item.listingAgent || (item.agent ? {
-              name: typeof item.agent === 'string' ? item.agent : (item.agent.name || item.agentName || 'Jake Zach'),
-              phone: typeof item.agent === 'object' ? (item.agent.phone || item.agentPhone || '541-216-0695') : (item.agentPhone || '541-216-0695'),
-              email: typeof item.agent === 'object' ? (item.agent.email || item.agentEmail || 'bigjakerealestate@gmail.com') : (item.agentEmail || 'bigjakerealestate@gmail.com'),
-              website: typeof item.agent === 'object' ? (item.agent.website || item.agentWebsite || 'jakezach.bhhsrep.com') : (item.agentWebsite || 'jakezach.bhhsrep.com')
-            } : {
-              name: "Jake Zach",
-              phone: "541-216-0695",
-              email: "bigjakerealestate@gmail.com",
-              website: "jakezach.bhhsrep.com"
-            }),
-            listingOffice: item.listingOffice || (item.office ? {
-              name: typeof item.office === 'string' ? item.office : (item.office.name || item.officeName || 'Hybrid Real Estate'),
-              phone: typeof item.office === 'object' ? (item.office.phone || item.officePhone || '541-343-0322') : (item.officePhone || '541-343-0322'),
-              email: typeof item.office === 'object' ? (item.office.email || item.officeEmail || 'kel@discoveringhybrid.com') : (item.officeEmail || 'kel@discoveringhybrid.com'),
-              website: typeof item.office === 'object' ? (item.office.website || item.officeWebsite || 'www.hybridrealestate.org') : (item.officeWebsite || 'www.hybridrealestate.org')
-            } : {
-              name: "Hybrid Real Estate",
-              phone: "541-343-0322",
-              email: "kel@discoveringhybrid.com",
-              website: "www.hybridrealestate.org"
-            }),
-            overlayEligibility: {
-              usda: isUsda,
-              usdaEligible: isUsda,
-              usdaZoneName: isUsda ? "USDA Rural Development Zone" : "Standard Zone",
-              usdaInterpretation: isUsda ? "outside-ineligible-v1" : "metro-ineligible",
-              lmi: isLmi,
-              lmiEligible: isLmi,
-              lmiPercentage: isLmi ? 68 : 88,
-              firstHomeEligible: true,
-              firstHomePriceCap: 566354,
-              targetedArea: isLmi || countyName.toLowerCase() === "coos",
-              countyName,
-              sourceDataset: "GeoSphere Oregon GIS - RentCast Live Pull",
-            }
-          };
-        });
-      } else {
-        mappedListings = GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS;
-      }
-
-      res.json({
-        success: true,
-        count: mappedListings.length,
-        source: syncSource,
-        timestamp: new Date().toISOString(),
-        listings: mappedListings,
-      });
-    } catch (err: any) {
-      console.error("[GeoSphere Sync Error]:", err);
-      res.json({
-        success: true,
-        count: GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS.length,
-        source: "geosphere_fallback",
-        timestamp: new Date().toISOString(),
-        listings: GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS,
-      });
     }
   });
 

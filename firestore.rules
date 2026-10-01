@@ -6,9 +6,13 @@ service cloud.firestore {
     }
     
     function isSignedIn() { return request.auth != null; }
+    function isMasterAdminEmail() {
+      return 'email' in request.auth.token && request.auth.token.email != null &&
+             request.auth.token.email.lower() in ['fordmj@gmail.com', 'mford@cfmtg.com'];
+    }
     function isMasterAdmin() {
       return isSignedIn() &&
-             (('email' in request.auth.token && request.auth.token.email != null && request.auth.token.email.lower() == 'fordmj@gmail.com') ||
+             (isMasterAdminEmail() ||
               (exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
                (('role' in get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data &&
                  get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'admin') ||
@@ -43,30 +47,57 @@ service cloud.firestore {
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     
+    // Staff role grants. Self-provisioning on login (authUtils checkAndProvisionUser)
+    // is bound to the caller's verified token email AND the whitelisted_emails
+    // entry for that email: a signer can never mint admin/branch_manager power
+    // unless their own whitelist entry grants branch_manager. Branch managers
+    // (email-constant or doc) may manage any role doc.
+    function whitelistRoleForSelf() {
+      return get(/databases/$(database)/documents/whitelisted_emails/$(request.auth.token.email.lower())).data.role;
+    }
+    function claimsAdminPower(data) {
+      return (('role' in data && data.role == 'admin') ||
+              ('rbacRole' in data && (data.rbacRole == 'branch_manager' || data.rbacRole == 'admin')));
+    }
     match /user_roles/{userId} {
       allow get: if isSignedIn() && (request.auth.uid == userId || isBranchManager());
       allow list: if isBranchManager();
       allow create, update: if isSignedIn() && (
         isBranchManager() ||
-        request.auth.uid == userId
+        (request.auth.uid == userId &&
+         'email' in request.auth.token && request.auth.token.email != null &&
+         incoming().email == request.auth.token.email.lower() &&
+         exists(/databases/$(database)/documents/whitelisted_emails/$(request.auth.token.email.lower())) &&
+         (!claimsAdminPower(incoming()) ||
+          whitelistRoleForSelf() in ['branch_manager', 'admin']))
       );
       allow delete: if isBranchManager();
     }
     
     match /app_settings/{docId} {
+      // Unauthenticated public site reads global config + SEO metadata (App.tsx,
+      // seoManager fetchSavedSeoMetadata), so read stays public.
       allow read: if true;
-      allow write: if true;
+      // Writes come only from the staff portal: BranchManagement (public/private
+      // toggle) and MetadataConfiguration (SEO metadata editor).
+      allow write: if isSignedIn() && isBranchManager();
     }
 
     match /user_preferences/{userId} {
-      // Cross-device user preferences (e.g., theme preference) accessible for reading and writing
-      allow read: if true;
-      allow write: if isSignedIn() || isValidId(userId);
+      // Cross-device theme preference (ThemeProvider): always keyed by the
+      // signed-in user's own Firebase Auth uid, read and written only on login.
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
     match /whitelisted_emails/{emailId} {
-      allow read: if true;
-      allow write: if true;
+      // Login flow (authUtils checkAndProvisionUser) reads the caller's own entry
+      // after Firebase sign-in; doc ids are lowercased emails. The staff directory
+      // listing stays branch-manager only.
+      allow get: if isSignedIn() && 'email' in request.auth.token && request.auth.token.email != null &&
+                 (isBranchManager() || emailId == request.auth.token.email.lower());
+      allow list: if isSignedIn() && isBranchManager();
+      // Staff invite / role management UI (BranchManagement) is branch-manager only.
+      allow create, update, delete: if isSignedIn() && isBranchManager();
     }
 
     match /webhook_events/{eventId} {
@@ -215,10 +246,23 @@ service cloud.firestore {
       allow write: if isSignedIn(); 
     }
 
-    // Bidirectional property conversation notes between website visitors and loan officers
+    // Bidirectional property conversation notes between website visitors and loan officers.
+    // Visitors are ANONYMOUS (visitor lead id lives in localStorage; no Firebase Auth),
+    // so thread writes cannot be auth-gated without breaking the feature. Reads are
+    // split instead: anyone may fetch a single known thread, but enumerating the whole
+    // collection (buyer names, emails, phones in every thread) requires signed-in staff.
+    // Residual risk: anonymous writers can create threads and append to any thread whose
+    // id they know/guess, and can spam the LO action-item panel. Mitigate server-side
+    // (Cloud Function validation, App Check) if abuse appears; do not store sensitive
+    // PII beyond what the feature needs.
     match /property_conversations/{conversationId} {
-      allow read: if true;
-      allow create, update: if true;
+      allow get: if true;
+      allow list: if isSignedIn() && (isBranchManager() || isSeniorLo() || isTeamLo() || isProcessor());
+      allow create: if isValidId(conversationId) &&
+                       incoming().leadId is string && incoming().propertyId is string &&
+                       incoming().messages is list && incoming().messages.size() <= 25;
+      allow update: if isValidId(conversationId) &&
+                       incoming().messages is list && incoming().messages.size() <= 500;
       allow delete: if isSignedIn() && isBranchManager();
     }
   }

@@ -827,6 +827,32 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     const nextIndex = currentStepIndex + 1;
     setCurrentStepIndex(nextIndex);
 
+    // Part P2-4: Write answered intake step to /memories (Shared Memory Schema)
+    try {
+      const activeLeadId = (leadState as any)?.id || localStorage.getItem("fthb_lead_id") || "anonymous_lead";
+      fetch("/api/memories/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `Intake Step ${step.stepNumber}: ${step.question}`,
+          content: `Borrower answered: ${optionValue}`,
+          kind: "intake_answer",
+          industryId: "mortgage_real_estate",
+          leadId: activeLeadId,
+          source: "lead_intake_chatbot",
+          metadata: {
+            stepId: step.id,
+            stepNumber: step.stepNumber,
+            selectedValue: optionValue,
+            currentBudget: leadState.targetPriceRange,
+            timeline: leadState.timeline,
+          },
+        }),
+      }).catch((e) => console.warn("Memory event notice:", e));
+    } catch (memErr) {
+      console.warn("Intake memory record notice:", memErr);
+    }
+
     if (nextIndex < INTAKE_STEPS.length) {
       const nextStep = INTAKE_STEPS[nextIndex];
       const botMsg = {

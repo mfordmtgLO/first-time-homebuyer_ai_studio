@@ -2110,16 +2110,18 @@ Return JSON matching this shape:
           }
 
           // Price range filter
-          const price = Number(item.price);
-          if (!isNaN(price)) {
-            if (numMinPrice !== null && !isNaN(numMinPrice) && price < numMinPrice) return false;
-            if (numMaxPrice !== null && !isNaN(numMaxPrice) && price > numMaxPrice) return false;
+          const price = item.price == null ? NaN : Number(item.price);
+          if (numMinPrice !== null && !isNaN(numMinPrice)) {
+            if (isNaN(price) || price < numMinPrice) return false;
+          }
+          if (numMaxPrice !== null && !isNaN(numMaxPrice)) {
+            if (isNaN(price) || price > numMaxPrice) return false;
           }
 
           // Days on market filter
           if (numMaxDom !== null && !isNaN(numMaxDom)) {
-            const dom = Number(item.daysOnMarket);
-            if (!isNaN(dom) && dom > numMaxDom) return false;
+            const dom = item.daysOnMarket == null ? NaN : Number(item.daysOnMarket);
+            if (isNaN(dom) || dom > numMaxDom) return false;
           }
 
           // Program filter: evaluated strictly against VERBATIM overlayEligibility fields from GeoSphere

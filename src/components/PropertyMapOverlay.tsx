@@ -70,7 +70,7 @@ const GeosphereHeatmap: React.FC<{
   const [heatmap, setHeatmap] = useState<google.maps.visualization.HeatmapLayer | null>(null);
 
   useEffect(() => {
-    if (!map || !window.google || !window.google.maps || !window.google.maps.visualization) return;
+    if (!map || !window.google || !window.google.maps) return;
 
     // Utilize Geosphere logic conceptually: cluster properties and amenities
     const heatmapData: any[] = [];
@@ -97,26 +97,35 @@ const GeosphereHeatmap: React.FC<{
       }
     });
 
-    const layer = new (google.maps.visualization as any).HeatmapLayer({
-      data: heatmapData,
-      map: visible ? map : null,
-      radius: 40,
-      opacity: 0.6,
-      gradient: [
-        "rgba(0, 255, 255, 0)",
-        "rgba(0, 255, 255, 1)",
-        "rgba(89, 193, 115, 1)",
-        "rgba(205, 220, 57, 1)",
-        "rgba(255, 193, 7, 1)",
-        "rgba(255, 87, 34, 1)",
-        "rgba(211, 47, 47, 1)",
-      ],
-    });
+    let layer: any = null;
+    try {
+      if (window.google.maps.visualization && (window.google.maps.visualization as any).HeatmapLayer) {
+        layer = new (window.google.maps.visualization as any).HeatmapLayer({
+          data: heatmapData,
+          map: visible ? map : null,
+          radius: 40,
+          opacity: 0.6,
+          gradient: [
+            "rgba(0, 255, 255, 0)",
+            "rgba(0, 255, 255, 1)",
+            "rgba(89, 193, 115, 1)",
+            "rgba(205, 220, 57, 1)",
+            "rgba(255, 193, 7, 1)",
+            "rgba(255, 87, 34, 1)",
+            "rgba(211, 47, 47, 1)",
+          ],
+        });
+      }
+    } catch (err) {
+      console.warn("Google Maps HeatmapLayer deprecated or unavailable in Maps API v3.65+:", err);
+    }
 
     setHeatmap(layer);
 
     return () => {
-      (layer as any).setMap(null);
+      if (layer && typeof layer.setMap === "function") {
+        layer.setMap(null);
+      }
     };
   }, [map, properties, amenities]);
 

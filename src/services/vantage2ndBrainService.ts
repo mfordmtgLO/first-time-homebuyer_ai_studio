@@ -86,52 +86,6 @@ export async function query2ndBrainWithGrounding(prompt: string, contextMemories
 }
 
 /**
- * Step 3: DeepSeek Harness CLI (dsh) Hybrid Model Engine Execution (Hardened with execFile)
- */
-export async function executeDeepSeekHarness(prompt: string): Promise<any> {
-  try {
-    const { execFile } = await import('child_process');
-    const { promisify } = await import('util');
-    const execFileAsync = promisify(execFile);
-
-    // Run the DeepSeek Harness v0.1 Developer Preview CLI tool 'dsh' with argument array (no shell, zero injection surface)
-    const { stdout } = await execFileAsync('dsh', [
-      'execute',
-      '--model',
-      'deepseek-v4-pro',
-      '--lightweight',
-      'deepseek-flash',
-      '--prompt',
-      prompt
-    ], { timeout: 5000 });
-    return JSON.parse(stdout);
-  } catch (error) {
-    console.warn('dsh CLI fallback to server-side API proxy:', error);
-    // Fallback to Express proxy route or Vantage AI Cloud endpoint
-    try {
-      const res = await fetch(`${VANTAGE_REMOTE_BASE_URL}/api/hybrid/deepseek`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, model: 'deepseek-v4-pro' })
-      });
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch (remoteErr) {
-      console.warn('Remote DeepSeek fallback error:', remoteErr);
-    }
-
-    return {
-      success: true,
-      provider: 'deepseek-human-escalation-fallback',
-      prompt,
-      response: `[Vantage AI Zero-Hallucination Protocol]: We recorded your inquiry: "${prompt}". Rather than computing unverified estimates during offline mode, loan officer Mike Ford will review your underwriting parameters directly.`,
-      executedAt: new Date().toISOString()
-    };
-  }
-}
-
-/**
  * Step 4A: REST API Direct Bridge - Query 2nd Brain Memory
  */
 export async function queryBrainRemote(queryText: string, industryId: string = 'mortgage_real_estate'): Promise<BrainQueryResult> {

@@ -4289,11 +4289,13 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
       item.addressLine1 ||
       item.address ||
       (item.formattedAddress ? item.formattedAddress.split(",")[0] : "Oregon Property");
-    const city = item.city || "Junction City";
-    const state = item.state || "OR";
-    const zip = item.zipCode || item.zip || "97448";
+    // No fabricated location defaults: unknown city/state/zip stay undefined so the
+    // UI renders source data only (downstream consumers null-check these fields).
+    const city = item.city || undefined;
+    const state = item.state || undefined;
+    const zip = item.zipCode || item.zip || undefined;
 
-    const cityKey = city.toLowerCase().trim();
+    const cityKey = (city || "").toLowerCase().trim();
     const cityDef = OREGON_CITY_DEFAULTS[cityKey] || OREGON_CITY_DEFAULTS["junction city"];
     const lat = Number(item.latitude ?? item.lat) || cityDef.lat;
     const lng = Number(item.longitude ?? item.lng) || cityDef.lng;
@@ -4308,27 +4310,20 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     else if (rawPtype.includes("multi")) propertyType = "Multi-Family";
     else if (rawPtype.includes("land")) propertyType = "Land";
 
-    let usda = Boolean(
-      item.overlayEligibility?.usda ?? item.overlayEligibility?.usdaEligible
-    );
-    let lmi = Boolean(item.overlayEligibility?.lmi ?? item.overlayEligibility?.lmiEligible);
-    const firstHome = item.overlayEligibility?.firstHome;
-    const lakeviewNational = Boolean(
-      item.overlayEligibility?.lakeviewNational ??
-      item.overlayEligibility?.lakeviewNationalEligible ??
-      true
-    );
-
-    // Dynamic spatial raycasting if coordinates exist
-    if (!isNaN(lat) && !isNaN(lng)) {
-      const point: Point = [lng, lat];
-      if (usdaFeatures.length > 0) {
-        usda = usdaFeatures.some((f) => pointInGeometry(point, f.geometry));
-      }
-      if (lmiFeatures.length > 0) {
-        lmi = lmiFeatures.some((f) => pointInGeometry(point, f.geometry));
-      }
-    }
+    // FAITHFUL PASS-THROUGH (2026-10-01): eligibility classifications come verbatim
+    // from the GeoSphere snapshot's overlayEligibility. The homebuyer backend MUST NOT
+    // recompute USDA/LMI against its own tract copies — the two repos carry duplicated
+    // tract files with inverted USDA semantics, so local raycasting overwrites correct
+    // source classifications with wrong ones. Unknown values stay undefined/false;
+    // nothing is fabricated.
+    const sourceOverlay: any = item.overlayEligibility ?? {};
+    const usda = Boolean(sourceOverlay.usda ?? sourceOverlay.usdaEligible);
+    const lmi = Boolean(sourceOverlay.lmi ?? sourceOverlay.lmiEligible);
+    const firstHome = sourceOverlay.firstHome;
+    // Preserve the source lakeviewNational screen verbatim (object or boolean) —
+    // never coerce it, never default it to true.
+    const lakeviewNational =
+      sourceOverlay.lakeviewNational ?? sourceOverlay.lakeviewNationalEligible;
 
     const estimatedRent = Number(item.estimatedRent) || Math.round(price * 0.0054);
 
@@ -4336,7 +4331,9 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
       id: item.id || `geo-${Date.now()}-${idx}`,
       title: item.formattedAddress
         ? `${item.formattedAddress.split(",")[0]} Home`
-        : `${address} - ${city}`,
+        : city
+          ? `${address} - ${city}`
+          : address,
       address,
       city,
       state,
@@ -4359,8 +4356,17 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
             ? item.imageUrl
             : undefined,
       status: "saved",
-      notes:
-        `MLS #${item.mlsNumber || item.mlsId || "273683992"}. ${usda ? "USDA 100% Financing Eligible. " : ""}${lmi ? "OHCS LMI Tract Approved. " : ""}${firstHome?.targetedAreaDetails || ""}${lakeviewNational ? " Lakeview National Eligible. " : ""}`.trim(),
+      // Notes are assembled only from real source values — no fabricated MLS number.
+      notes: [
+        item.mlsNumber || item.mlsId ? `MLS #${item.mlsNumber || item.mlsId}.` : "",
+        usda ? "USDA 100% Financing Eligible." : "",
+        lmi ? "OHCS LMI Tract Approved." : "",
+        firstHome?.targetedAreaDetails || "",
+        lakeviewNational ? "Lakeview National Eligible." : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim(),
       daysOnMarket: Number(item.daysOnMarket) || 14,
       hoaMonthly: Number(item.hoaMonthly || item.hoa?.fee || 0),
       propertyTaxAnnual: Number(item.propertyTaxAnnual || Math.round(price * 0.009)),
@@ -4371,78 +4377,153 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
       sourceDataset: "GeoSphere Oregon GIS & RentCast",
       mlsNumber: item.mlsNumber || item.mlsId,
       mlsName: item.mlsName || "RMLS",
-      listingAgent: item.listingAgent || (item.agent ? {
-        name: typeof item.agent === "string" ? item.agent : (item.agent.name || item.agentName || "Jake Zach"),
-        phone: typeof item.agent === "object" ? (item.agent.phone || item.agentPhone || "5412160695") : (item.agentPhone || "5412160695"),
-        email: typeof item.agent === "object" ? (item.agent.email || item.agentEmail || "bigjakerealestate@gmail.com") : (item.agentEmail || "bigjakerealestate@gmail.com"),
-        website: typeof item.agent === "object" ? (item.agent.website || item.agentWebsite || "jakezach.bhhsrep.com") : (item.agentWebsite || "jakezach.bhhsrep.com")
-      } : (item.agentName ? {
-        name: item.agentName,
-        phone: item.agentPhone || "5412160695",
-        email: item.agentEmail || "bigjakerealestate@gmail.com",
-        website: item.agentWebsite || "jakezach.bhhsrep.com"
-      } : undefined)),
-      listingOffice: item.listingOffice || (item.office ? {
-        name: typeof item.office === "string" ? item.office : (item.office.name || item.officeName || item.brokerage || "Hybrid Real Estate"),
-        phone: typeof item.office === "object" ? (item.office.phone || item.officePhone || "5413430322") : (item.officePhone || "5413430322"),
-        email: typeof item.office === "object" ? (item.office.email || item.officeEmail || "kel@discoveringhybrid.com") : (item.officeEmail || "kel@discoveringhybrid.com"),
-        website: typeof item.office === "object" ? (item.office.website || item.officeWebsite || "www.hybridrealestate.org") : (item.officeWebsite || "www.hybridrealestate.org")
-      } : (item.brokerage || item.officeName ? {
-        name: item.brokerage || item.officeName,
-        phone: item.officePhone || "5413430322",
-        email: item.officeEmail || "kel@discoveringhybrid.com",
-        website: item.officeWebsite || "www.hybridrealestate.org"
-      } : undefined)),
+      // Pass through real listing agent/office only. Never inject fallback contacts —
+      // a missing agent stays missing; the dashboard's agent-roster enrichment runs
+      // client-side in GeoSphereSyncHub.
+      listingAgent:
+        item.listingAgent ||
+        (typeof item.agent === "string" ? { name: item.agent } : item.agent) ||
+        (item.agentName
+          ? {
+              name: item.agentName,
+              phone: item.agentPhone,
+              email: item.agentEmail,
+              website: item.agentWebsite,
+            }
+          : undefined) ||
+        undefined,
+      listingOffice:
+        item.listingOffice ||
+        (typeof item.office === "string" ? { name: item.office } : item.office) ||
+        (item.brokerage || item.officeName
+          ? {
+              name: item.brokerage || item.officeName,
+              phone: item.officePhone,
+              email: item.officeEmail,
+              website: item.officeWebsite,
+            }
+          : undefined) ||
+        undefined,
       overlayEligibility: {
+        // Verbatim source object, spread first: carries every program screen GeoSphere
+        // classified (usda, lmi, firstHome, lakeviewNational, fhfaCountyLimit,
+        // calhfaMyHome, idahoMrbTaxExempt) exactly as produced upstream. The explicit
+        // keys below only normalize naming — they never invent values.
+        ...sourceOverlay,
         usda,
         usdaEligible: usda,
         usdaZoneName:
-          item.overlayEligibility?.usdaInterpretation || "USDA Rural Eligible Area",
-        usdaInterpretation:
-          item.overlayEligibility?.usdaInterpretation || "outside-ineligible-v1",
+          sourceOverlay.usdaInterpretation || "USDA Rural Eligible Area",
+        usdaInterpretation: sourceOverlay.usdaInterpretation,
         lmi,
         lmiEligible: lmi,
-        lmiLevel: item.overlayEligibility?.lmiLevel || (lmi ? "Moderate" : undefined),
-        lmiPercentage: item.overlayEligibility?.lmiPercentage || (lmi ? 72 : undefined),
+        lmiLevel: sourceOverlay.lmiLevel,
+        lmiPercentage: sourceOverlay.lmiPercentage,
         lmiCensusTract:
-          item.overlayEligibility?.tract?.geoid ||
-          item.overlayEligibility?.lmiCensusTract ||
-          firstHome?.targetedAreaDetails ||
-          "Census tracts 0015.00, 0021.03",
-        firstHomeEligible: Boolean(firstHome?.available ?? true),
+          sourceOverlay.tract?.geoid || sourceOverlay.lmiCensusTract,
+        firstHomeEligible: Boolean(firstHome?.available),
         firstHomePriceCap:
-          firstHome?.priceLimit || item.overlayEligibility?.firstHomePriceCap || 566354,
+          firstHome?.priceLimit ?? sourceOverlay.firstHomePriceCap,
         targetedArea:
           firstHome?.areaType === "targeted" ||
-          Boolean(item.overlayEligibility?.targetedArea),
+          Boolean(sourceOverlay.targetedArea),
         countyName:
-          item.county || firstHome?.county || item.overlayEligibility?.countyName || "Lane",
+          item.county || firstHome?.county || sourceOverlay.countyName,
         sourceDataset: "GeoSphere Oregon GIS",
         lakeviewNational,
-        lakeviewNationalEligible: lakeviewNational,
+        lakeviewNationalEligible:
+          typeof lakeviewNational === "object"
+            ? Boolean(lakeviewNational?.available)
+            : Boolean(lakeviewNational),
         firstHome: firstHome
           ? {
+              ...firstHome,
               available: Boolean(firstHome.available),
               priceEligible:
                 firstHome.priceEligible !== undefined
                   ? firstHome.priceEligible
-                  : price <= (firstHome.priceLimit || 566354),
+                  : firstHome.priceLimit !== undefined
+                    ? price <= firstHome.priceLimit
+                    : undefined,
               lmiEligible: Boolean(firstHome.lmiEligible ?? lmi),
               areaType: firstHome.areaType || "non_targeted",
-              priceLimit: firstHome.priceLimit || 566354,
-              county: firstHome.county || item.county || "Lane",
-              targetedAreaDetails:
-                firstHome.targetedAreaDetails || "Lane County purchase limits apply.",
+              priceLimit: firstHome.priceLimit,
+              county: firstHome.county || item.county,
+              targetedAreaDetails: firstHome.targetedAreaDetails,
             }
           : undefined,
       },
     };
   }
 
+  // ---------------------------------------------------------------------------
+  // GeoSphere sync hardening (2026-10-01):
+  //  1. SSRF fix — custom endpointUrl is restricted to known GeoSphere deployment
+  //     hosts and the two snapshot export paths. Anything else => 400.
+  //  2. First NON-EMPTY snapshot wins — an HTTP 200 with zero listings no longer
+  //     masks the populated deployments behind it.
+  //  3. The sync token is real now: server GEOSPHERE_SYNC_TOKEN env takes
+  //     precedence, request-body syncToken is the fallback. When a token is
+  //     available the token-gated /api/saved-listings export is tried first per
+  //     host; the public /api/map-saved-listings remains the fallback.
+  //  4. Honest failure contract — 502 with per-endpoint diagnostics, no fabricated
+  //     counts, no phantom "embedded database". All three frontend consumers fall
+  //     back to embedded GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS on non-OK.
+  // ---------------------------------------------------------------------------
+  const GEOSPHERE_SYNC_HOSTS = new Set([
+    "geosphere-map-oregon-ai-studio.vercel.app",
+    "geosphere-map-oregon.vercel.app",
+    "geosphere-map-oregon.ai.studio",
+  ]);
+  const GEOSPHERE_SNAPSHOT_PATHS = new Set([
+    "/api/map-saved-listings",
+    "/api/saved-listings",
+  ]);
+
+  function resolveCustomSyncUrl(raw: unknown): string | null {
+    if (typeof raw !== "string" || !raw.trim()) return null;
+    try {
+      const u = new URL(raw.trim());
+      if (u.protocol !== "https:") return null;
+      u.username = "";
+      u.password = "";
+      u.hash = "";
+      if (!GEOSPHERE_SYNC_HOSTS.has(u.hostname.toLowerCase())) return null;
+      const cleanPath = u.pathname.replace(/\/+$/, "") || "/";
+      if (!GEOSPHERE_SNAPSHOT_PATHS.has(cleanPath)) return null;
+      u.pathname = cleanPath;
+      // Snapshot exports take no parameters (the service ignores ?area= and
+      // always returns all pulls), so query strings are dropped.
+      u.search = "";
+      return u.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  function extractRawListings(data: any): any[] {
+    if (!data) return [];
+    if (Array.isArray(data.pulls)) {
+      const out: any[] = [];
+      for (const pull of data.pulls) {
+        const items = pull.overlaySets?.all || pull.listings || [];
+        if (Array.isArray(items)) out.push(...items);
+      }
+      return out;
+    }
+    if (Array.isArray(data.listings)) return data.listings;
+    if (Array.isArray(data.properties)) return data.properties;
+    if (Array.isArray(data.savedListings)) return data.savedListings;
+    if (Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data.results)) return data.results;
+    if (Array.isArray(data)) return data;
+    return [];
+  }
+
   // API Route: GeoSphere Oregon GIS Proxy & Synchronization (GeoSphere saved-listings snapshots)
   app.post("/api/geosphere/sync", async (req, res) => {
     try {
-      const { endpointUrl, syncToken, city } = req.body || {};
+      const { endpointUrl, syncToken: bodySyncToken, city } = req.body || {};
       // PHASE 0 HARDENING (owner decision 2026-09-30): the BYOK RentCast approach
       // is abandoned — Mike is the sole RentCast user and all pulls happen in the
       // separate geosphere-map-oregon-ai-studio repo. The legacy direct-RentCast
@@ -4451,86 +4532,165 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
       // route it was an unauthenticated quota-burn vector. This proxy now only
       // fetches the quota-safe saved-listings snapshots from the GeoSphere service.
 
-      // Candidate URLs to attempt:
-      // If user provided custom URL, test direct URL and REST sub-endpoints
-      const candidateUrls: string[] = [];
-      if (endpointUrl && endpointUrl.trim()) {
-        const cleanEndpoint = endpointUrl.trim().replace(/\/$/, "");
-        candidateUrls.push(cleanEndpoint);
-        if (!cleanEndpoint.endsWith("/api/map-saved-listings")) {
-          candidateUrls.push(`${cleanEndpoint}/api/map-saved-listings`);
+      // Resolve the candidate hosts. A custom endpointUrl must be an allowed
+      // GeoSphere snapshot endpoint (SSRF guard); otherwise the known deployments
+      // are tried, populated ones first.
+      let candidateHosts: string[];
+      let customPath: string | null = null;
+      if (typeof endpointUrl === "string" && endpointUrl.trim()) {
+        const resolved = resolveCustomSyncUrl(endpointUrl);
+        if (!resolved) {
+          return res.status(400).json({
+            success: false,
+            error:
+              "endpointUrl is not an allowed GeoSphere snapshot endpoint.",
+            allowedHosts: Array.from(GEOSPHERE_SYNC_HOSTS),
+            allowedPaths: Array.from(GEOSPHERE_SNAPSHOT_PATHS),
+          });
         }
-        if (!cleanEndpoint.endsWith("/api/listings")) {
-          candidateUrls.push(`${cleanEndpoint}/api/listings`);
-        }
-        if (!cleanEndpoint.endsWith("/api/properties")) {
-          candidateUrls.push(`${cleanEndpoint}/api/properties`);
-        }
+        const parsed = new URL(resolved);
+        candidateHosts = [parsed.hostname];
+        customPath = parsed.pathname;
       } else {
-        candidateUrls.push("https://geosphere-map-oregon.ai.studio/api/map-saved-listings");
-        candidateUrls.push("https://geosphere-map-oregon.vercel.app/api/map-saved-listings");
+        candidateHosts = [
+          "geosphere-map-oregon-ai-studio.vercel.app",
+          "geosphere-map-oregon.vercel.app",
+          "geosphere-map-oregon.ai.studio",
+        ];
       }
 
-      const headers: Record<string, string> = {
-        "User-Agent": "Loan-Officer-Homebuyer-Sync-Agent/1.0",
-        Accept: "application/json",
-      };
-      if (syncToken) {
-        headers["x-geosphere-sync-token"] = syncToken;
+      // Server-configured token takes precedence; the request-body token is a
+      // fallback for staff-dashboard testing. Add the SAME GEOSPHERE_SYNC_TOKEN
+      // value to this service's environment (Cloud Run) that the GeoSphere
+      // deployment uses, otherwise only the public export can be reached.
+      const envToken = (process.env.GEOSPHERE_SYNC_TOKEN || "").trim();
+      const syncToken =
+        envToken ||
+        (typeof bodySyncToken === "string" ? bodySyncToken.trim() : "");
+      const tokenSource = envToken ? "server-env" : syncToken ? "request-body" : "none";
+
+      if (customPath === "/api/saved-listings" && !syncToken) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "The requested endpoint is the token-gated /api/saved-listings export, but no sync token is configured.",
+        });
       }
 
-      let response: any = null;
-      let usedUrl = candidateUrls[0];
+      // Build the fetch plan: gated export first per host (when a token exists),
+      // then the public snapshot. First NON-EMPTY snapshot wins.
+      const candidates: Array<{ url: string; authMode: "gated" | "public" }> = [];
+      for (const host of candidateHosts) {
+        if (customPath) {
+          candidates.push({
+            url: `https://${host}${customPath}`,
+            authMode: customPath === "/api/saved-listings" ? "gated" : "public",
+          });
+        } else {
+          if (syncToken) {
+            candidates.push({
+              url: `https://${host}/api/saved-listings`,
+              authMode: "gated",
+            });
+          }
+          candidates.push({
+            url: `https://${host}/api/map-saved-listings`,
+            authMode: "public",
+          });
+        }
+      }
 
-      for (const testUrl of candidateUrls) {
+      const attempts: Array<{
+        url: string;
+        authMode: string;
+        ok: boolean;
+        status?: number;
+        listingsFound: number;
+        note?: string;
+      }> = [];
+      let winner: { url: string; authMode: string; data: any } | null = null;
+
+      for (const cand of candidates) {
+        const headers: Record<string, string> = {
+          "User-Agent": "Loan-Officer-Homebuyer-Sync-Agent/1.0",
+          Accept: "application/json",
+        };
+        if (cand.authMode === "gated") headers["x-geosphere-sync-token"] = syncToken;
         try {
-          const r = await fetch(testUrl, { method: "GET", headers });
-          if (r.ok) {
-            response = r;
-            usedUrl = testUrl;
+          const r = await fetch(cand.url, {
+            method: "GET",
+            headers,
+            signal: AbortSignal.timeout(15000),
+          });
+          if (!r.ok) {
+            attempts.push({
+              url: cand.url,
+              authMode: cand.authMode,
+              ok: false,
+              status: r.status,
+              listingsFound: 0,
+            });
+            continue;
+          }
+          let data: any = null;
+          try {
+            data = await r.json();
+          } catch {
+            attempts.push({
+              url: cand.url,
+              authMode: cand.authMode,
+              ok: true,
+              status: r.status,
+              listingsFound: 0,
+              note: "response was not valid JSON",
+            });
+            continue;
+          }
+          const raw = extractRawListings(data);
+          attempts.push({
+            url: cand.url,
+            authMode: cand.authMode,
+            ok: true,
+            status: r.status,
+            listingsFound: raw.length,
+          });
+          // First NON-EMPTY snapshot wins: an HTTP 200 with zero listings is not
+          // a success and must not mask the populated deployments behind it.
+          if (raw.length > 0) {
+            winner = { url: cand.url, authMode: cand.authMode, data };
             break;
           }
         } catch (fetchErr: any) {
-          console.warn(`[GeoSphere Sync] Candidate endpoint (${testUrl}) notice:`, fetchErr?.message);
+          const note =
+            fetchErr?.name === "TimeoutError"
+              ? "fetch timed out after 15s"
+              : fetchErr?.message || "fetch failed";
+          attempts.push({
+            url: cand.url,
+            authMode: cand.authMode,
+            ok: false,
+            listingsFound: 0,
+            note,
+          });
+          console.warn(`[GeoSphere Sync] Candidate endpoint (${cand.url}) notice:`, note);
         }
       }
 
-      // If remote endpoints failed, fall back gracefully to embedded high-fidelity database
-      if (!response || !response.ok) {
-        console.info(`[GeoSphere Sync] Remote website returned non-200. Serving verified Oregon GIS & RentCast database.`);
-        // Return 200 with embedded listings flag so frontend never crashes or goes blank
-        return res.json({
-          success: true,
-          count: 20,
-          usedFallback: true,
-          endpointTested: usedUrl,
-          message: `GeoSphere Oregon website endpoint tested (${usedUrl}). Loaded 20 live RentCast property listings across Junction City / Lane County.`,
-          listings: []
+      if (!winner) {
+        return res.status(502).json({
+          success: false,
+          count: 0,
+          usedFallback: false,
+          tokenSource,
+          attempts,
+          message:
+            "All GeoSphere snapshot endpoints failed or returned zero listings. No listings were synced.",
+          listings: [],
         });
       }
 
-      const data: any = await response.json();
-
-      // Extract listings from all possible structures (pulls, overlaySets, raw array, properties, data, results)
-      let rawListings: any[] = [];
-      if (data && Array.isArray(data.pulls)) {
-        data.pulls.forEach((pull: any) => {
-          const items = pull.overlaySets?.all || pull.listings || [];
-          rawListings.push(...items);
-        });
-      } else if (data && Array.isArray(data.listings)) {
-        rawListings = data.listings;
-      } else if (data && Array.isArray(data.properties)) {
-        rawListings = data.properties;
-      } else if (data && Array.isArray(data.savedListings)) {
-        rawListings = data.savedListings;
-      } else if (data && Array.isArray(data.data)) {
-        rawListings = data.data;
-      } else if (data && Array.isArray(data.results)) {
-        rawListings = data.results;
-      } else if (Array.isArray(data)) {
-        rawListings = data;
-      }
+      const data = winner.data;
+      const rawListings = extractRawListings(data);
 
       // Deduplicate and transform into standardized PropertyListing format
       const seenIds = new Set<string>();
@@ -4543,14 +4703,34 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
         })
         .map((item: any, idx: number) => standardizeListingItem(item, idx));
 
+      // The long-accepted (but previously ignored) city filter, now honored.
+      const cityFilter =
+        typeof city === "string" && city.trim() ? city.trim().toLowerCase() : "";
+      const filtered = cityFilter
+        ? standardized.filter((l: any) =>
+            (l.city || "").toLowerCase().includes(cityFilter)
+          )
+        : standardized;
+
       res.json({
         success: true,
-        count: standardized.length,
+        count: filtered.length,
         pullsCount: data.pulls?.length || 1,
-        usedUrl,
+        usedUrl: winner.url,
+        authMode: winner.authMode,
+        tokenSource,
         generatedAt: data.generatedAt || new Date().toISOString(),
-        cities: Array.from(new Set(standardized.map((l: any) => l.city).filter(Boolean))),
-        listings: standardized,
+        cities: Array.from(
+          new Set(filtered.map((l: any) => l.city).filter(Boolean))
+        ),
+        attempts: attempts.map((a) => ({
+          url: a.url,
+          authMode: a.authMode,
+          ok: a.ok,
+          status: a.status,
+          listingsFound: a.listingsFound,
+        })),
+        listings: filtered,
       });
     } catch (error: any) {
       console.error("GeoSphere sync error:", error);

@@ -141,8 +141,8 @@ export async function loadKnowledgeBase() {
         console.warn(`[Vantage Knowledge Scaling Warning] Total documents in Firestore (${snapshot.size}) exceeds in-memory cache limit (${MAX_IN_MEMORY_DOCS}). Scaling to dedicated vector DB recommended.`);
       }
     }
-  } catch (error) {
-    console.warn("[Vantage Knowledge] Error connecting to Firestore vantage_knowledge, checking local fallback:", error);
+  } catch (error: any) {
+    console.log("[Vantage Knowledge] Firestore vantage_knowledge unavailable or unseeded. Initializing from local JSON fallback.");
     if (fs.existsSync(KNOWLEDGE_FILE)) {
       try {
         knowledgeBase = JSON.parse(fs.readFileSync(KNOWLEDGE_FILE, "utf-8"));

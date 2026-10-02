@@ -65,7 +65,13 @@ export const AICopilot: React.FC<AICopilotProps> = ({
 
   useEffect(() => {
     fetch("/api/ai/diagnostics")
-      .then((res) => res.json())
+      .then(async (res) => {
+        const contentType = res.headers.get("content-type") || "";
+        if (!res.ok || !contentType.includes("application/json")) {
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
         if (data && data.activeProvider) {
           setAiProvider(data.activeProvider);

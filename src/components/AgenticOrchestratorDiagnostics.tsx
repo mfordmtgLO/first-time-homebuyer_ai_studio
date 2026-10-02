@@ -43,7 +43,11 @@ export function AgenticOrchestratorDiagnostics() {
 
   const fetchAiDiagnostics = useCallback(async () => {
     const res = await fetch('/api/ai/diagnostics');
-    if (!res.ok) throw new Error('Failed to fetch AI diagnostics');
+    const contentType = res.headers.get("content-type") || "";
+    if (!res.ok || !contentType.includes("application/json")) {
+      const text = await res.text();
+      throw new Error(text || 'Failed to fetch AI diagnostics');
+    }
     return res.json();
   }, []);
 

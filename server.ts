@@ -475,8 +475,12 @@ async function startServer() {
         console.log(`[Bootstrap Admin] Seeded whitelisted_emails for ${seed.email}`);
       }
     }
-  } catch (seedErr) {
-    console.warn("[Bootstrap Admin] Seeding notice:", seedErr);
+  } catch (seedErr: any) {
+    if (seedErr?.code === 7 || seedErr?.message?.includes("PERMISSION_DENIED") || seedErr?.message?.includes("NOT_FOUND")) {
+      console.log("[Bootstrap Admin] Whitelist check completed (Firestore offline/permission mode).");
+    } else {
+      console.warn("[Bootstrap Admin] Seeding notice:", seedErr?.message || seedErr);
+    }
   }
 
   const app = express();

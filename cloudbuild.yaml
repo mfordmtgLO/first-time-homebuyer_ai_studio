@@ -5,7 +5,8 @@ steps:
     args: ['push', 'gcr.io/$PROJECT_ID/fthb-enterprise:$COMMIT_SHA']
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/fthb-enterprise:latest']
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    - name: 'gcr.io/cloud-builders/gcloud'
+
     args:
       - 'run'
       - 'deploy'

@@ -4,7 +4,7 @@
  * engines). Do not introduce enums, namespaces, or parameter properties —
  * they are incompatible with type-stripping.
  * 
- * GitHub CI/CD Hook Test Timestamp: 2026-10-01T17:17:00Z
+ * GitHub CI/CD Hook Test Timestamp: 2026-10-01T19:15:00Z
  */
 import express from "express";
 import helmet from "helmet";
@@ -8834,6 +8834,7 @@ Disallow: /
   // Vite middleware in dev, static serving in prod
   const isProduction =
     process.env.NODE_ENV === "production" ||
+    fs.existsSync(path.join(process.cwd(), "dist")) ||
     (typeof __filename !== "undefined" && __filename.endsWith(".cjs")) ||
     !fs.existsSync(path.join(process.cwd(), "server.ts"));
 

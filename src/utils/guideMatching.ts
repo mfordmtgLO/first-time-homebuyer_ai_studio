@@ -347,7 +347,7 @@ export function resolveFromUrlPath(
   // 2. Check for Loan Officer in segments
   let matchedLo: LoanOfficerProfile | undefined;
   for (const seg of rawSegments) {
-    if (seg === "portal" || seg === "admin" || seg === "lo" || seg === "api" || seg === "assets") continue;
+    if (seg === "portal" || seg === "admin" || seg === "lo" || seg === "api" || seg === "assets" || seg === "dashboard" || seg === "backend" || seg === "command-center") continue;
     const lo = findMatchingLoanOfficer(seg, loanOfficers);
     if (lo) {
       matchedLo = lo;
@@ -358,7 +358,7 @@ export function resolveFromUrlPath(
   // 3. Check for Agent in segments
   let matchedAgent: RealEstateAgentProfile | undefined;
   for (const seg of rawSegments) {
-    if (seg === "portal" || seg === "admin" || seg === "agent" || seg === "api" || seg === "assets") continue;
+    if (seg === "portal" || seg === "admin" || seg === "agent" || seg === "api" || seg === "assets" || seg === "dashboard" || seg === "backend" || seg === "command-center") continue;
     const ag = findMatchingAgent(seg, agents);
     if (ag) {
       matchedAgent = ag;

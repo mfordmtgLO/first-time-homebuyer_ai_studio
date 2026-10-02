@@ -38,7 +38,8 @@ import {
   ArrowRight,
   Copy,
   Megaphone,
-  Users
+  Users,
+  Zap
 } from "lucide-react";
 import { PropertyListing, ProfessionalGuidesState, AdCampaignDraft } from "../types";
 import { SyncPropertyToBpdCrmModal } from "./SyncPropertyToBpdCrmModal";

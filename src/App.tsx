@@ -87,6 +87,11 @@ export default function App() {
     | { source?: string; intent?: "chat_listings" | "blueprint_download" | "buying_power" }
     | undefined
   >(undefined);
+  const [globalToast, setGlobalToast] = useState<string | null>(null);
+  const triggerGlobalToast = (msg: string) => {
+    setGlobalToast(msg);
+    setTimeout(() => setGlobalToast(null), 3500);
+  };
 
   // Authentication & Site Visibility State
   const [isAuthChecking, setIsAuthChecking] = useState<boolean>(() => {
@@ -1565,7 +1570,7 @@ export default function App() {
                           onUpdateGuidesState={handleUpdateGuidesState}
                           properties={properties}
                           setProperties={setProperties}
-                          onTriggerToast={(msg) => console.log(msg)}
+                          onTriggerToast={triggerGlobalToast}
                           onNavigateToAdsPortal={() => {
                             setLoPortalInitialTab("ad_campaigns");
                             setShowLoPortal(true);
@@ -1764,6 +1769,14 @@ export default function App() {
 
       {/* AI Error Whisperer & IT Code Fix Widget */}
       <ErrorWhispererWidget />
+
+      {/* Global Toast Notification Banner */}
+      {globalToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#2D362E] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500/30 animate-in fade-in slide-in-from-bottom-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span className="text-xs font-bold">{globalToast}</span>
+        </div>
+      )}
     </div>
     </>
   );

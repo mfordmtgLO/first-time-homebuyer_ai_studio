@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { db } from "../firebase";
-import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { db, auth } from "../firebase";
+import { collection, getDocs, doc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { 
   Building, 
   UserPlus, 
@@ -212,36 +212,28 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
     setSelectedRole("team_lo");
 
     try {
-      await setDoc(doc(db, "whitelisted_emails", email), {
-        email,
-        role: selectedRole,
-        notes: newUserRecord.notes,
-        addedBy: newUserRecord.addedBy,
-        addedAt: serverTimestamp()
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/admin/roles/assign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email,
+          rbacRole: selectedRole,
+          assignedLoId: newUserRecord.assignedLoId,
+        }),
       });
-
-      // Append immutable compliance audit log
-      logSensitiveAssetAccess({
-        actorEmail: "fordmj@gmail.com",
-        actorName: "Mike Ford",
-        actorRole: "branch_manager",
-        actionType: "whitelist_member",
-        actionLabel: "Authorized Employee & Whitelisted RBAC Role",
-        assetCategory: "rbac_admin",
-        assetName: `Whitelisted User: ${email}`,
-        targetAssetId: `whitelist_${email}`,
-        status: "granted",
-        severity: "low",
-        ipAddress: "TLS 1.3 Enterprise Enclave",
-        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Branch Portal",
-        details: `Granted ${roleDisplayName} permissions to ${email}. Notes: ${newUserRecord.notes || "None"}.`,
-        rbacPolicyRule: "RBAC-RULE-BM-WHITELIST: Branch Manager user delegation."
-      }).catch(err => console.warn("Audit logging notice:", err));
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to authorize employee");
+      }
 
       showFeedback(`✅ ${email} authorized as ${roleDisplayName}`);
     } catch (err: any) {
-      console.warn("Firestore whitelisting sync notice:", err);
-      showFeedback(`✅ ${email} authorized as ${roleDisplayName}`);
+      console.warn("API whitelisting sync notice:", err);
+      showFeedback(`❌ ${err.message || "Failed to authorize employee"}`);
     } finally {
       setIsAdding(false);
     }
@@ -260,43 +252,53 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
     showFeedback(`Updated ${email} role to ${roleName}`);
 
     try {
-      await setDoc(doc(db, "whitelisted_emails", email), {
-        role: newRole,
-        updatedAt: serverTimestamp(),
-        updatedBy: "Mike Ford (Branch Manager)"
-      }, { merge: true });
-
-      logSensitiveAssetAccess({
-        actorEmail: "fordmj@gmail.com",
-        actorName: "Mike Ford",
-        actorRole: "branch_manager",
-        actionType: "modify_role",
-        actionLabel: "Modified Employee RBAC Role",
-        assetCategory: "rbac_admin",
-        assetName: `Whitelisted User: ${email}`,
-        targetAssetId: `whitelist_${email}`,
-        status: "granted",
-        severity: "low",
-        ipAddress: "TLS 1.3 Enterprise Enclave",
-        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Branch Portal",
-        details: `Updated role for ${email} to ${roleName}.`,
-        rbacPolicyRule: "RBAC-RULE-BM-ROLE-CHANGE: Branch Manager privilege modification."
-      }).catch(err => console.warn("Audit logging notice:", err));
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/admin/roles/assign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email,
+          rbacRole: newRole,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update role");
+      }
     } catch (err: any) {
-      console.warn("Error syncing role to Firestore:", err);
+      console.warn("Error syncing role via API:", err);
+      showFeedback(`❌ ${err.message || "Failed to update role"}`);
     }
   };
 
   
   const handleToggleLock = async (email: string, currentLockState: boolean) => {
     try {
-      await updateDoc(doc(db, "whitelisted_emails", email), {
-        isLockedOut: !currentLockState
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/admin/roles/lock", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email,
+          isLockedOut: !currentLockState,
+        }),
       });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to toggle lock state");
+      }
+
       setUsers(prev => prev.map(u => u.email === email ? { ...u, isLockedOut: !currentLockState } : u));
       showFeedback(!currentLockState ? `Locked out ${email}` : `Restored access for ${email}`);
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Error toggling lock state:", err);
+      showFeedback(`❌ ${err.message || "Failed to toggle lock state"}`);
     }
   };
 
@@ -316,7 +318,19 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
     showFeedback(`Revoked authorization for ${email}`);
 
     try {
-      await deleteDoc(doc(db, "whitelisted_emails", email));
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/admin/roles/revoke", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to revoke user");
+      }
 
       logSensitiveAssetAccess({
         actorEmail: "fordmj@gmail.com",

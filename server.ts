@@ -8862,6 +8862,181 @@ Disallow: /
     res.send(STRICT_ROBOTS_TXT);
   });
 
+  // ============================================================================
+  // SaaS ADMIN ROLE-ASSIGNMENT & IMMUTABLE AUDIT LEDGER API (S1, S2)
+  // ============================================================================
+
+  async function verifyBranchManager(req: express.Request, res: express.Response): Promise<boolean> {
+    const user = (req as any).user;
+    if (!user) {
+      res.status(401).json({ error: "Unauthorized: Missing authentication context." });
+      return false;
+    }
+    const userRole = String(user.role || "").toLowerCase();
+    if (userRole === "branch_manager" || userRole === "admin" || userRole === "master_admin") {
+      return true;
+    }
+    try {
+      const db = getAdminDb();
+      const userDoc = await db.collection("user_roles").doc(user.uid).get();
+      if (userDoc.exists) {
+        const data = userDoc.data();
+        const role = String(data?.rbacRole || data?.role || "").toLowerCase();
+        if (role === "branch_manager" || role === "admin" || role === "master_admin") {
+          return true;
+        }
+      }
+    } catch (err) {
+      console.warn("[BranchManager Verify] DB lookup notice:", err);
+    }
+    res.status(403).json({ error: "Forbidden: Requires Branch Manager or Administrator privileges." });
+    return false;
+  }
+
+  // S1: POST /api/admin/roles/assign
+  app.post("/api/admin/roles/assign", authenticateUser, async (req, res) => {
+    try {
+      if (!(await verifyBranchManager(req, res))) return;
+
+      const { email, rbacRole, assignedLoId } = req.body;
+      if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return res.status(400).json({ error: "Invalid or missing target email address." });
+      }
+
+      const validRoles = ["branch_manager", "senior_lo", "team_lo", "processor", "compliance_auditor"];
+      if (!rbacRole || !validRoles.includes(rbacRole)) {
+        return res.status(400).json({ error: `Invalid rbacRole. Must be one of: ${validRoles.join(", ")}` });
+      }
+
+      const targetEmail = email.trim().toLowerCase();
+      const callerEmail = (req as any).user?.email ? (req as any).user.email.trim().toLowerCase() : "";
+
+      const db = getAdminDb();
+      const whitelistedRef = db.collection("whitelisted_emails");
+
+      // Last-branch_manager safety rail
+      const existingDoc = await whitelistedRef.doc(targetEmail).get();
+      if (existingDoc.exists && existingDoc.data()?.role === "branch_manager" && rbacRole !== "branch_manager") {
+        const allBmSnapshot = await whitelistedRef.where("role", "==", "branch_manager").get();
+        if (allBmSnapshot.size <= 1) {
+          return res.status(400).json({ error: "Safety Rail Violation: Cannot demote the last remaining branch manager." });
+        }
+      }
+
+      // Self-demotion safety rail
+      if (callerEmail && targetEmail === callerEmail && rbacRole !== "branch_manager" && rbacRole !== "admin") {
+        return res.status(400).json({ error: "Safety Rail Violation: Cannot self-demote. Self role changes require another branch manager." });
+      }
+
+      const rosterData = {
+        email: targetEmail,
+        role: rbacRole,
+        assignedLoId: assignedLoId ? String(assignedLoId).trim() : null,
+        updatedBy: (req as any).user?.email || (req as any).user?.uid || "system",
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      await whitelistedRef.doc(targetEmail).set(rosterData, { merge: true });
+
+      // Stamp immutable compliance audit ledger
+      await recordComplianceAuditLog(
+        "ROLE_GRANTED",
+        {
+          targetEmail,
+          rbacRole,
+          assignedLoId: assignedLoId || null,
+          grantedBy: (req as any).user?.email || (req as any).user?.uid,
+        },
+        (req as any).user?.email
+      );
+
+      res.json({ success: true, email: targetEmail, role: rbacRole, assignedLoId: assignedLoId || null });
+    } catch (err: any) {
+      console.error("[Role Assign API] Error:", err);
+      res.status(500).json({ error: err.message || "Failed to assign role." });
+    }
+  });
+
+  // S2: POST /api/admin/roles/revoke
+  app.post("/api/admin/roles/revoke", authenticateUser, async (req, res) => {
+    try {
+      if (!(await verifyBranchManager(req, res))) return;
+
+      const { email } = req.body;
+      if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return res.status(400).json({ error: "Invalid or missing target email address." });
+      }
+
+      const targetEmail = email.trim().toLowerCase();
+      const callerEmail = (req as any).user?.email ? (req as any).user.email.trim().toLowerCase() : "";
+
+      if (callerEmail && targetEmail === callerEmail) {
+        return res.status(400).json({ error: "Safety Rail Violation: Cannot self-revoke access." });
+      }
+
+      const db = getAdminDb();
+      const whitelistedRef = db.collection("whitelisted_emails");
+      const targetDoc = await whitelistedRef.doc(targetEmail).get();
+
+      if (targetDoc.exists && targetDoc.data()?.role === "branch_manager") {
+        const allBmSnapshot = await whitelistedRef.where("role", "==", "branch_manager").get();
+        if (allBmSnapshot.size <= 1) {
+          return res.status(400).json({ error: "Safety Rail Violation: Cannot revoke access for the last remaining branch manager." });
+        }
+      }
+
+      // Delete the whitelist document to enforce immediate revocation of entry (fail-closed re-provisioning)
+      await whitelistedRef.doc(targetEmail).delete();
+
+      await recordComplianceAuditLog(
+        "ROLE_REVOKED",
+        {
+          targetEmail,
+          revokedBy: (req as any).user?.email || (req as any).user?.uid,
+        },
+        (req as any).user?.email
+      );
+
+      res.json({ success: true, email: targetEmail, revoked: true });
+    } catch (err: any) {
+      console.error("[Role Revoke API] Error:", err);
+      res.status(500).json({ error: err.message || "Failed to revoke role." });
+    }
+  });
+
+  // Dedicated Lockout Endpoint
+  app.post("/api/admin/roles/lock", authenticateUser, async (req, res) => {
+    try {
+      if (!(await verifyBranchManager(req, res))) return;
+
+      const { email, isLockedOut } = req.body;
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Invalid or missing email address." });
+      }
+
+      const targetEmail = email.trim().toLowerCase();
+      const db = getAdminDb();
+      const docRef = db.collection("whitelisted_emails").doc(targetEmail);
+
+      await docRef.set({ isLockedOut: !!isLockedOut, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+
+      await recordComplianceAuditLog(
+        "ROLE_LOCK_TOGGLED",
+        {
+          targetEmail,
+          isLockedOut: !!isLockedOut,
+          toggledBy: (req as any).user?.email || (req as any).user?.uid,
+        },
+        (req as any).user?.email
+      );
+
+      res.json({ success: true, email: targetEmail, isLockedOut: !!isLockedOut });
+    } catch (err: any) {
+      console.error("[Role Lock API] Error:", err);
+      res.status(500).json({ error: err.message || "Failed to toggle lock state." });
+    }
+  });
+
   // Unmatched /api routes return 404 JSON (prevents Vite dev SPA fallback from returning index.html)
   app.all("/api/*", (req, res) => {
     res.status(404).json({ error: `Not found: ${req.method} ${req.path}` });

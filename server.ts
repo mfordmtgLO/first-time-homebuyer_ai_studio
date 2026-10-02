@@ -375,33 +375,49 @@ const authenticateUser = async (
     // Priority 2 Item 6: Enforce token revocation check (checkRevoked: true)
     const decodedToken = await getAuth().verifyIdToken(token, true);
 
-    // Priority 1 Item 1: Extract role and loId from custom claims or server-side user_roles record
+    // Priority 1 Item 1: Extract role and loId from custom claims or server-side whitelist/roles record (H1 & M3)
     let role = (decodedToken as any).role || (decodedToken as any).rbacRole;
-    let loId = (decodedToken as any).loId;
+    let assignedLoId: string | undefined = undefined;
 
-    // Server-side fallback lookup if custom claims are not yet written to token
-    if (!role || !loId) {
-      if (decodedToken.email && decodedToken.email.toLowerCase() === "fordmj@gmail.com") {
-        role = "branch_manager";
-        loId = "lo-mike-ford";
-      } else {
-        try {
-          const userDoc = await getAdminDb().collection("user_roles").doc(decodedToken.uid).get();
-          if (userDoc.exists) {
-            const data = userDoc.data();
-            role = data?.rbacRole || data?.role || "team_lo";
-            loId = data?.loId || decodedToken.uid;
+    const emailLower = decodedToken.email ? decodedToken.email.toLowerCase() : "";
+    if (emailLower) {
+      try {
+        const db = getAdminDb();
+        const whitelistDoc = await db.collection("whitelisted_emails").doc(emailLower).get();
+        if (whitelistDoc.exists) {
+          const wData = whitelistDoc.data();
+          if (wData?.role) {
+            role = role || wData.role;
           }
-        } catch (dbErr) {
-          console.warn("[Zero-Trust Auth] user_roles lookup notice:", dbErr);
+          if (wData?.assignedLoId) {
+            assignedLoId = wData.assignedLoId;
+          }
         }
+      } catch (e) {
+        console.warn("[Zero-Trust Auth] whitelisted_emails lookup notice:", e);
       }
     }
+
+    if (!role) {
+      try {
+        const userDoc = await getAdminDb().collection("user_roles").doc(decodedToken.uid).get();
+        if (userDoc.exists) {
+          const data = userDoc.data();
+          role = data?.rbacRole || data?.role || "team_lo";
+        }
+      } catch (dbErr) {
+        console.warn("[Zero-Trust Auth] user_roles lookup notice:", dbErr);
+      }
+    }
+
+    // Bootstrap admins resolve via whitelisted_emails like everyone else; no code hardcodes.
+    // Fallback order for loId: whitelisted_emails.assignedLoId -> decodedToken.uid (NEVER user_roles.loId).
+    const resolvedLoId = assignedLoId || decodedToken.uid;
 
     (req as any).user = {
       ...decodedToken,
       role: (role || "team_lo").toLowerCase(),
-      loId: loId || decodedToken.uid,
+      loId: resolvedLoId,
     };
     (req as any).authChecked = true;
     next();
@@ -437,6 +453,31 @@ async function startServer() {
 
   console.log("Loading knowledge base...");
   loadKnowledgeBase();
+
+  // M3: Single Source of Truth Bootstrap Admin Seeding
+  try {
+    const db = getAdminDb();
+    const adminSeeds = [
+      { email: "fordmj@gmail.com", role: "branch_manager", assignedLoId: "lo-mike-ford" },
+      { email: "mford@cfmtg.com", role: "branch_manager", assignedLoId: "lo-mford" },
+    ];
+    for (const seed of adminSeeds) {
+      const docRef = db.collection("whitelisted_emails").doc(seed.email);
+      const docSnap = await docRef.get();
+      if (!docSnap.exists) {
+        await docRef.set({
+          email: seed.email,
+          role: seed.role,
+          assignedLoId: seed.assignedLoId,
+          createdAt: new Date().toISOString(),
+          seededByServer: true,
+        });
+        console.log(`[Bootstrap Admin] Seeded whitelisted_emails for ${seed.email}`);
+      }
+    }
+  } catch (seedErr) {
+    console.warn("[Bootstrap Admin] Seeding notice:", seedErr);
+  }
 
   const app = express();
   app.set("trust proxy", 1);
@@ -1503,19 +1544,12 @@ Return JSON matching this shape:
   // VANTAGE AI 2ND BRAIN HYBRID ENGINE & REST BRIDGE ENDPOINTS (PHASE 2 HARDENED)
   // ============================================================================
 
+  // M2: Full RBAC vocabulary: branch_manager, senior_lo, team_lo, processor, compliance_auditor, admin.
+  // Staff roles (tenant-wide query access): admin, branch_manager, m2m_service.
+  // senior_lo maintains middle-tier scoping; compliance_auditor gets explicit read-only staff treatment via carve-out.
   const STAFF_ROLES = new Set([
     "branch_manager",
-    "sales_manager",
-    "senior_lo",
-    "team_lo",
-    "processor",
-    "mktg_ads_creator",
-    "loa",
-    "it_manager",
-    "peer_tester",
-    "master_admin",
     "admin",
-    "loan_officer",
     "m2m_service",
   ]);
 
@@ -1773,7 +1807,9 @@ Return JSON matching this shape:
       const limitCount = Math.min(Number(req.query.limit) || 20, 100);
       const db = getAdminDb();
       const user = (req as any).user;
-      const isStaff = isStaffUser(user);
+      const userRole = String(user?.role || "").toLowerCase();
+      // compliance_auditor gets explicit read-only staff treatment on memories per InfoSec compliance mandate
+      const isStaff = isStaffUser(user) || userRole === "compliance_auditor";
 
       let snap;
       if (isStaff) {

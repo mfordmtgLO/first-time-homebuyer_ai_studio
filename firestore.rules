@@ -69,7 +69,12 @@ service cloud.firestore {
          incoming().email == request.auth.token.email.lower() &&
          exists(/databases/$(database)/documents/whitelisted_emails/$(request.auth.token.email.lower())) &&
          (!claimsAdminPower(incoming()) ||
-          whitelistRoleForSelf() in ['branch_manager', 'admin']))
+          whitelistRoleForSelf() in ['branch_manager', 'admin']) &&
+         (request.method == 'create' ? 
+           (!('loId' in incoming()) && !('customPermissions' in incoming())) : 
+           ((!('loId' in incoming()) || incoming().loId == resource.data.loId) && 
+            (!('customPermissions' in incoming()) || incoming().customPermissions == resource.data.customPermissions)))
+        )
       );
       allow delete: if isBranchManager();
     }

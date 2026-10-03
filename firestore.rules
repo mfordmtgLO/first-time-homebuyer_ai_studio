@@ -234,6 +234,15 @@ service cloud.firestore {
       allow update: if (isSignedIn() && (isBranchManager() || isSeniorLo() || isTeamLo() || isProcessor())) || (request.auth.uid == leadId);
       allow delete: if isSignedIn() && isBranchManager();
     }
+
+    match /lead_curations/{leadId} {
+      // Branch Managers/Admins can read/list all; buyers can read only their own.
+      allow get: if isSignedIn() && (isBranchManager() || request.auth.uid == leadId);
+      allow list: if isSignedIn() && isBranchManager();
+      // Only Branch Managers can marry/unmarry listings (write/create/delete).
+      allow create, update, delete: if isSignedIn() && isBranchManager();
+    }
+
     match /loan_officers/{loId} { 
       allow read: if true; 
       allow write: if isSignedIn(); 

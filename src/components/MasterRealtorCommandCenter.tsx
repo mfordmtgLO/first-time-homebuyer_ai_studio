@@ -90,6 +90,11 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<"roster" | "recruiting" | "pairings" | "cobranding" | "campaigns">(initialSubTab);
 
+  // Get Unified Master Agent Roster (100% complete agent pool) — declared first to prevent TDZ
+  const masterAgentRoster = useMemo(() => {
+    return getUnifiedMasterAgentRoster(guidesState);
+  }, [guidesState]);
+
   // Multi-State Architecture Filter (Default: OR)
   const [selectedState, setSelectedState] = useState<string>("OR");
 
@@ -134,11 +139,6 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
   // CSV Export Modal States
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
   const [exportInitialMode, setExportInitialMode] = useState<ExportMode>("filtered");
-
-  // Get Unified Master Agent Roster (100% complete agent pool)
-  const masterAgentRoster = useMemo(() => {
-    return getUnifiedMasterAgentRoster(guidesState);
-  }, [guidesState]);
 
   // Origin for co-branding links
   let origin = typeof window !== "undefined" ? window.location.origin : "https://homereadypdx.com";

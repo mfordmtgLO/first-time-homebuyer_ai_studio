@@ -1,13 +1,20 @@
 # Lead-Curation Workflow — Acceptance Test Results & Compliance Audit
 
 **Project**: First-Time Homebuyer AI Studio Portal  
-**Branch**: `review/lead-curation`  
+**Target Environment / Branch**: `main` (Verified at commit `9723505` and subsequent updates)  
 **Specification**: Prompt A (Mike's Curation Console — "Marry the Listings to the Lead")  
 **Compliance Standard**: GLBA / Zero-Trust / RBAC PII Guardrails  
 
 ---
 
-### Acceptance Criteria & Verification Matrix (A1 – A7)
+### Branch / Deployment Traceability Note & Discrepancy Clarification
+* **Prior Doc Discrepancy**: A prior iteration of this document named the branch `review/lead-curation`. That branch was a prompt-suggested feature branch name that was never created because the AI Studio container execution environment mounts directly against the live application build pipeline running on `main`.
+* **Root Cause of Discrepancy**: The previous test report echoed the planned branch name from the initial task brief rather than validating the actual git repository state (`main` at commit `9723505`).
+* **Enforced Policy**: All test-result records strictly reflect the real deployment branch (`main`) and live commit hash.
+
+---
+
+### Acceptance Criteria & Verification Matrix (A1 – A8)
 
 | Test ID | Test Scenario | Status | Compliance Verification |
 | :--- | :--- | :--- | :--- |
@@ -18,6 +25,7 @@
 | **A5** | **Un-Marry Action**<br>Un-marrying deletes `lead_curations/{leadId}` and returns `leadCurationRequest.status` to `"requested"`. | **PASS** | Document removed from Firestore. Lead request status reset to `"requested"`. Audit ledger logs `LEAD_LISTINGS_UNMARRIED`. Verified in `server.ts` (`/api/leads/curate/unmarry`). |
 | **A6** | **Server-Side Invalid Listing ID Rejection**<br>Attempting to marry with invented/fabricated listing ID is rejected with HTTP 400 Bad Request. | **PASS** | `validPoolIds` validation against `curated_listings` candidate pool. Reject returned without echoing raw attacker input to logs/response. |
 | **A7** | **Buyer Push Notification Hook (FCM)**<br>Marrying listings triggers buyer notification path: "Mike Ford curated N homes for you". | **PASS** | Server-side push intent logged with buyer email and curated count: `[Buyer Push Notification Hook] FCM Push notification dispatched for buyer`. No cross-buyer PII leakage. |
+| **A8** | **Nested Object Non-Destructive Merge (City & Intake Survival)**<br>Marry and Unmarry read existing `leadCurationRequest` before writing back to Firestore. Original intake metadata (`city`, `priceRange`, `source`, `requestedAt`) is fully preserved rather than wiped by shallow `{ merge: true }`. | **PASS** | Verified in `server.ts` (`/api/leads/curate/marry` & `/api/leads/curate/unmarry`). `city` remains intact across multiple marry/unmarry cycles and correctly populates queue filters. |
 
 ---
 
@@ -32,8 +40,8 @@
 3. **`server.ts`**:
    - `GET /api/leads/curate/queue`: Returns curation queue with backfill support and auditor PII masking.
    - `GET /api/leads/curate/listings`: Serves candidate pool from canonical `curated_listings` collection.
-   - `POST /api/leads/curate/marry`: Validates listing IDs against pool, writes `lead_curations/{leadId}`, updates lead status to `pushed`, logs FCM push, and stamps `branch_audit_logs`.
-   - `POST /api/leads/curate/unmarry`: Deletes curation doc, resets lead status to `requested`, and stamps `branch_audit_logs`.
+   - `POST /api/leads/curate/marry`: Non-destructively updates `leadCurationRequest`, validates listing IDs against pool, writes `lead_curations/{leadId}`, logs FCM push, and stamps `branch_audit_logs`.
+   - `POST /api/leads/curate/unmarry`: Non-destructively resets `leadCurationRequest.status` to `requested` while preserving `city`/`priceRange`/`source`, deletes curation doc, and stamps `branch_audit_logs`.
 4. **`src/components/CurationQueue.tsx`**:
    - Full Lead Curation Console UI with queue metrics, search/status filters, auditor notices, interactive Listing Picker modal with verbatim program filters, personalized buyer note input, and marry/un-marry triggers.
 5. **`src/components/LoanOfficerPortal.tsx` & `LoanOfficerSidebar.tsx`**:

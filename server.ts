@@ -9242,18 +9242,38 @@ Disallow: /
         }
       }
 
-      // Fetch lead details for normalization
+      // Fetch lead details for normalization and retrieve existing leadCurationRequest to preserve original intake fields
       let leadName = "Valued Homebuyer";
       let leadEmail = "";
+      let existingCurationRequest: any = null;
+      let existingLeadData: any = null;
+
       try {
-        const leadDoc = await db.collection("leads").doc(leadId).get();
+        const leadDoc = await db.collection("leads").doc(cleanLeadId).get();
         if (leadDoc.exists) {
-          const lData = leadDoc.data();
-          leadName = lData?.fullName || lData?.name || leadName;
-          leadEmail = lData?.email || "";
+          existingLeadData = leadDoc.data();
+          leadName = existingLeadData?.fullName || existingLeadData?.name || leadName;
+          leadEmail = existingLeadData?.email || "";
+          existingCurationRequest = existingLeadData?.leadCurationRequest || null;
         }
       } catch (e) {
         console.warn("[Marry API] Lead lookup notice:", e);
+      }
+
+      // Check fallback from notes if leadCurationRequest was not yet structured
+      if (!existingCurationRequest && existingLeadData) {
+        const hasUrgentNote = typeof existingLeadData.notes === "string" && (
+          existingLeadData.notes.includes("[URGENT ACTION REQUIRED]: Lead requested a curated list") ||
+          existingLeadData.notes.includes("requested a curated list of low/no down payment homes")
+        );
+        if (hasUrgentNote) {
+          existingCurationRequest = {
+            city: existingLeadData.preferredLocations || existingLeadData.taggedCityArea || existingLeadData.desiredPurchaseLocation || "Oregon",
+            priceRange: existingLeadData.targetPriceRange || null,
+            source: "chatbot",
+            requestedAt: existingLeadData.createdAt || nowIso,
+          };
+        }
       }
 
       const cleanLeadId = leadId.trim();
@@ -9280,14 +9300,18 @@ Disallow: /
       // Write single lead_curations document (re-marry replaces!)
       await db.collection("lead_curations").doc(cleanLeadId).set(curationPayload);
 
-      // Update lead document status to "pushed"
+      // Deep-merge leadCurationRequest: preserve city, priceRange, source, requestedAt, and update status/pushedAt/curatedCount
+      const mergedLeadCurationRequest = {
+        ...(existingCurationRequest || {}),
+        status: "pushed",
+        pushedAt: nowIso,
+        curatedCount: listingIds.length,
+      };
+
+      // Update lead document status to "pushed" while guaranteeing non-destructive preservation of intake fields
       try {
         await db.collection("leads").doc(cleanLeadId).set({
-          leadCurationRequest: {
-            status: "pushed",
-            pushedAt: nowIso,
-            curatedCount: listingIds.length,
-          }
+          leadCurationRequest: mergedLeadCurationRequest,
         }, { merge: true });
       } catch (e) {
         console.warn("[Marry API] Lead status update notice:", e);
@@ -9345,13 +9369,45 @@ Disallow: /
       // Delete the curation document
       await db.collection("lead_curations").doc(cleanLeadId).delete();
 
-      // Return leadCurationRequest to "requested"
+      // Read existing lead document first to preserve city, priceRange, source, requestedAt, etc.
+      let existingCurationRequest: any = null;
+      let existingLeadData: any = null;
+
+      try {
+        const leadDoc = await db.collection("leads").doc(cleanLeadId).get();
+        if (leadDoc.exists) {
+          existingLeadData = leadDoc.data();
+          existingCurationRequest = existingLeadData?.leadCurationRequest || null;
+        }
+      } catch (e) {
+        console.warn("[Unmarry API] Lead lookup notice:", e);
+      }
+
+      if (!existingCurationRequest && existingLeadData) {
+        const hasUrgentNote = typeof existingLeadData.notes === "string" && (
+          existingLeadData.notes.includes("[URGENT ACTION REQUIRED]: Lead requested a curated list") ||
+          existingLeadData.notes.includes("requested a curated list of low/no down payment homes")
+        );
+        if (hasUrgentNote) {
+          existingCurationRequest = {
+            city: existingLeadData.preferredLocations || existingLeadData.taggedCityArea || existingLeadData.desiredPurchaseLocation || "Oregon",
+            priceRange: existingLeadData.targetPriceRange || null,
+            source: "chatbot",
+            requestedAt: existingLeadData.createdAt || new Date().toISOString(),
+          };
+        }
+      }
+
+      const mergedLeadCurationRequest = {
+        ...(existingCurationRequest || {}),
+        status: "requested",
+        unmarriedAt: new Date().toISOString(),
+      };
+
+      // Return leadCurationRequest to "requested" while preserving city, priceRange, source, requestedAt
       try {
         await db.collection("leads").doc(cleanLeadId).set({
-          leadCurationRequest: {
-            status: "requested",
-            unmarriedAt: new Date().toISOString(),
-          }
+          leadCurationRequest: mergedLeadCurationRequest,
         }, { merge: true });
       } catch (e) {
         console.warn("[Unmarry API] Lead update notice:", e);

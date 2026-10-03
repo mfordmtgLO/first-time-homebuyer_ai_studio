@@ -143,6 +143,7 @@ import { SourceBreakdownReportModal } from "./SourceBreakdownReportModal";
 import { BatchLeadRecommendations } from "./BatchLeadRecommendations";
 import { DailyMorningBriefing } from "./DailyMorningBriefing";
 import { TaskManagementPanel } from "./TaskManagementPanel";
+import { CurationQueue } from "./CurationQueue";
 import { AgenticOrchestratorDiagnostics } from "./AgenticOrchestratorDiagnostics";
 import { subscribeToIncomingAds, SyncedAdAsset } from "../services/adAssetSync";
 import { subscribeToAllPropertyActionItems } from "../services/propertyConversationService";
@@ -2890,6 +2891,28 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
               </button>
 
               <button
+                data-tab-id="curation"
+                onClick={() => setActiveTab("curation")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                  activeTab === "curation"
+                    ? "bg-emerald-800 text-white shadow-xs ring-2 ring-emerald-500/50"
+                    : "bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100"
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <span>Lead Curation Console</span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    activeTab === "curation"
+                      ? "bg-white/25 text-white"
+                      : "bg-emerald-200 text-emerald-900 font-bold"
+                  }`}
+                >
+                  Marry
+                </span>
+              </button>
+
+              <button
                 data-tab-id="ai_ad_generator"
                 onClick={() => setActiveTab("ai_ad_generator")}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer shadow-xs ${
@@ -3590,28 +3613,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 />
 
                 {/* Curation Task Management Queue */}
-                <TaskManagementPanel
-                  leads={guidesState.leads || []}
-                  properties={properties}
-                  agents={guidesState.agentRoster || []}
-                  loanOfficer={currentLo}
-                  onOpenSmsMessaging={(lead) => setSmsModalLead(lead)}
-                  onOpenEmailOutreach={(lead) => {
-                    setInitialOutreachLeadId(lead.id);
-                    setShowEmailOutreachModal(true);
-                  }}
-                  onUpdateLead={(updatedLead) => {
-                    const currentLeads = guidesState.leads || [];
-                    const updated = currentLeads.map((l) =>
-                      l.id === updatedLead.id ? updatedLead : l
-                    );
-                    onUpdateGuidesState({
-                      ...guidesState,
-                      leads: updated,
-                    });
-                  }}
-                  onTriggerToast={triggerToast}
-                />
+                <CurationQueue />
 
                 {/* Google Workspace Operations & Status Unified Card */}
                 <WorkspaceStatusWidget
@@ -8264,6 +8266,14 @@ Mike Ford`;
                 onTriggerToast={triggerToast}
                 onNavigateToAdsPortal={() => setActiveTab("ad_campaigns")}
                 onNavigateToFthbPipeline={() => setActiveTab("fthb_pipeline")}
+              />
+            )}
+
+            {/* Tab: Lead Curation Console & Marry to Lead */}
+            {(activeTab === "curation" || (activeTab as string) === "lead_curation") && (
+              <CurationQueue
+                userRole={userRole}
+                onTriggerToast={triggerToast}
               />
             )}
 

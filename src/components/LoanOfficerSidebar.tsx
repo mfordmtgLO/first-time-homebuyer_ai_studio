@@ -35,6 +35,7 @@ import { canAccessLoRecruiting, canAccessAgentRecruiting, isProcessorRole } from
 
 export type TabId =
   | "leads"
+  | "curation"
   | "master_lead_journey"
   | "compliance_audit"
   | "master_role_manager"
@@ -143,6 +144,13 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
           icon: <Inbox className="w-4 h-4" />,
           badge: `${guidesState.leads?.length || 0}`,
           badgeColor: "bg-[#4A5D4E]/15 text-[#2D362E]",
+        },
+        {
+          id: "curation",
+          label: "Lead Curation Console",
+          icon: <Sparkles className="w-4 h-4 text-emerald-600" />,
+          badge: "Marry",
+          badgeColor: "bg-emerald-100 text-emerald-800 font-bold",
         },
         {
           id: "master_lead_journey",

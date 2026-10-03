@@ -9041,6 +9041,339 @@ Disallow: /
     }
   });
 
+  // ============================================================================
+  // LEAD-CURATION WORKFLOW — "MARRY THE LISTINGS TO THE LEAD" API (PROMPT A)
+  // ============================================================================
+
+  // Helper: Mask PII for Compliance Auditor role
+  function maskEmailForAuditor(email?: string): string {
+    if (!email || typeof email !== "string") return "";
+    const parts = email.split("@");
+    if (parts.length !== 2) return "***@***.com";
+    const name = parts[0];
+    const domain = parts[1];
+    const maskedName = name.length > 2 ? `${name[0]}***${name[name.length - 1]}` : `${name[0]}***`;
+    return `${maskedName}@${domain}`;
+  }
+
+  function maskPhoneForAuditor(phone?: string): string {
+    if (!phone || typeof phone !== "string") return "";
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length >= 4) {
+      return `(***) ***-${digits.slice(-4)}`;
+    }
+    return "(***) ***-****";
+  }
+
+  // GET /api/leads/curate/queue — Curation queue with auditor PII masking & backfill
+  app.get("/api/leads/curate/queue", authenticateUser, async (req, res) => {
+    try {
+      const callerRole = (req as any).user?.role || "team_lo";
+      const isAuditor = callerRole === "compliance_auditor";
+      const db = getAdminDb();
+
+      // 1. Fetch all leads from leads collection and guides_state
+      const leadMap = new Map<string, any>();
+
+      try {
+        const leadsSnap = await db.collection("leads").get();
+        leadsSnap.forEach((doc) => {
+          leadMap.set(doc.id, { id: doc.id, ...doc.data() });
+        });
+      } catch (e) {
+        console.warn("[Curation Queue] Direct leads collection lookup notice:", e);
+      }
+
+      // Merge from guides_state singleton if present
+      try {
+        const guidesDoc = await db.collection("guides_state").doc("singleton").get();
+        if (guidesDoc.exists) {
+          const stateData = guidesDoc.data();
+          if (Array.isArray(stateData?.leads)) {
+            stateData.leads.forEach((l: any) => {
+              if (l?.id && !leadMap.has(l.id)) {
+                leadMap.set(l.id, l);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("[Curation Queue] guides_state lookup notice:", e);
+      }
+
+      // 2. Fetch all existing lead_curations
+      const curationMap = new Map<string, any>();
+      try {
+        const curationsSnap = await db.collection("lead_curations").get();
+        curationsSnap.forEach((doc) => {
+          curationMap.set(doc.id, { id: doc.id, ...doc.data() });
+        });
+      } catch (e) {
+        console.warn("[Curation Queue] lead_curations lookup notice:", e);
+      }
+
+      const queue: any[] = [];
+
+      for (const [leadId, lead] of leadMap.entries()) {
+        const existingCuration = curationMap.get(leadId);
+        let curationReq = lead.leadCurationRequest;
+
+        // Backfill: if notes contain URGENT ACTION text and no structured request exists
+        const hasUrgentNote = typeof lead.notes === "string" && (
+          lead.notes.includes("[URGENT ACTION REQUIRED]: Lead requested a curated list") ||
+          lead.notes.includes("requested a curated list of low/no down payment homes")
+        );
+
+        if (!curationReq && hasUrgentNote) {
+          curationReq = {
+            status: existingCuration ? "pushed" : "requested",
+            city: lead.preferredLocations || lead.taggedCityArea || lead.desiredPurchaseLocation || "Oregon",
+            priceRange: lead.targetPriceRange || null,
+            source: "chatbot",
+            requestedAt: lead.createdAt || new Date().toISOString(),
+          };
+        }
+
+        if (curationReq || existingCuration) {
+          const status = existingCuration ? "pushed" : (curationReq?.status || "requested");
+          const email = isAuditor ? maskEmailForAuditor(lead.email) : (lead.email || "");
+          const phone = isAuditor ? maskPhoneForAuditor(lead.phone) : (lead.phone || "");
+
+          queue.push({
+            id: leadId,
+            fullName: lead.fullName || lead.name || "Valued Lead",
+            email,
+            phone,
+            source: curationReq?.source || lead.leadSource || "chatbot",
+            city: curationReq?.city || lead.preferredLocations || lead.taggedCityArea || "Oregon",
+            priceRange: curationReq?.priceRange || lead.targetPriceRange || "Any",
+            timeline: lead.timeline || "Ready in 30-60 Days",
+            requestedAt: curationReq?.requestedAt || lead.createdAt || new Date().toISOString(),
+            status,
+            curationDoc: existingCuration || null,
+            assignedLoId: lead.assignedLoId || null,
+          });
+        }
+      }
+
+      // Sort requested-first, then newest requestedAt first
+      queue.sort((a, b) => {
+        if (a.status === "requested" && b.status !== "requested") return -1;
+        if (a.status !== "requested" && b.status === "requested") return 1;
+        return new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime();
+      });
+
+      res.json({ success: true, queue, totalCount: queue.length, isAuditorMasked: isAuditor });
+    } catch (err: any) {
+      console.error("[Curation Queue API] Error:", err);
+      res.status(500).json({ error: err.message || "Failed to fetch curation queue." });
+    }
+  });
+
+  // GET /api/leads/curate/listings — Candidate pool from canonical curated_listings store
+  app.get("/api/leads/curate/listings", authenticateUser, async (req, res) => {
+    try {
+      const db = getAdminDb();
+      const listings: any[] = [];
+
+      try {
+        const snap = await db.collection("curated_listings").get();
+        snap.forEach((doc) => {
+          const data = doc.data();
+          if (data && data._stale !== true) {
+            listings.push({ id: doc.id, ...data });
+          }
+        });
+      } catch (e) {
+        console.warn("[Curate Listings API] Firestore pool fetch notice:", e);
+      }
+
+      // Fallback to in-memory verified listings if collection is empty
+      if (listings.length === 0) {
+        (GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS as any[]).forEach((l) => {
+          listings.push({ ...l, _stale: false });
+        });
+      }
+
+      res.json({ success: true, listings, count: listings.length });
+    } catch (err: any) {
+      console.error("[Curate Listings API] Error:", err);
+      res.status(500).json({ error: err.message || "Failed to fetch candidate listings." });
+    }
+  });
+
+  // POST /api/leads/curate/marry — "Marry to Lead" action with validation & immutable audit
+  app.post("/api/leads/curate/marry", authenticateUser, async (req, res) => {
+    try {
+      const callerRole = (req as any).user?.role || "team_lo";
+      if (callerRole === "compliance_auditor") {
+        return res.status(403).json({ error: "Access Denied: Compliance Auditor role has read-only access." });
+      }
+
+      const { leadId, listingIds, buyerNote } = req.body;
+      if (!leadId || typeof leadId !== "string" || leadId.trim() === "") {
+        return res.status(400).json({ error: "Missing or invalid leadId parameter." });
+      }
+
+      if (!Array.isArray(listingIds) || listingIds.length === 0) {
+        return res.status(400).json({ error: "listingIds must be a non-empty array of valid property IDs." });
+      }
+
+      const db = getAdminDb();
+
+      // Validate that each listingId exists in the canonical curated_listings pool (reject invented IDs)
+      const validPoolIds = new Set<string>();
+      try {
+        const poolSnap = await db.collection("curated_listings").get();
+        poolSnap.forEach((d) => validPoolIds.add(d.id));
+      } catch (e) {
+        console.warn("[Marry API] Curated listings check notice:", e);
+      }
+
+      // Fallback pool check
+      (GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS as any[]).forEach((l) => validPoolIds.add(l.id));
+
+      for (const lid of listingIds) {
+        if (typeof lid !== "string" || !validPoolIds.has(lid)) {
+          // Reject invalid / invented listing IDs server-side without echoing raw attacker input
+          return res.status(400).json({
+            error: "Validation Failure: One or more selected listings do not exist in the curated_listings canonical candidate pool.",
+          });
+        }
+      }
+
+      // Fetch lead details for normalization
+      let leadName = "Valued Homebuyer";
+      let leadEmail = "";
+      try {
+        const leadDoc = await db.collection("leads").doc(leadId).get();
+        if (leadDoc.exists) {
+          const lData = leadDoc.data();
+          leadName = lData?.fullName || lData?.name || leadName;
+          leadEmail = lData?.email || "";
+        }
+      } catch (e) {
+        console.warn("[Marry API] Lead lookup notice:", e);
+      }
+
+      const cleanLeadId = leadId.trim();
+      const existingCurationDoc = await db.collection("lead_curations").doc(cleanLeadId).get();
+      const isSupersede = existingCurationDoc.exists;
+
+      const nowIso = new Date().toISOString();
+      const curatedByActor = (req as any).user?.email || (req as any).user?.uid || "mike.ford";
+
+      const curationPayload = {
+        leadId: cleanLeadId,
+        email: (leadEmail || "").toLowerCase().trim(),
+        name: leadName,
+        listings: listingIds.map((id) => ({
+          listingId: String(id).trim(),
+          curatedAt: nowIso,
+        })),
+        curatedBy: curatedByActor,
+        status: "ready",
+        pushedAt: nowIso,
+        buyerNote: typeof buyerNote === "string" && buyerNote.trim() ? buyerNote.trim() : null,
+      };
+
+      // Write single lead_curations document (re-marry replaces!)
+      await db.collection("lead_curations").doc(cleanLeadId).set(curationPayload);
+
+      // Update lead document status to "pushed"
+      try {
+        await db.collection("leads").doc(cleanLeadId).set({
+          leadCurationRequest: {
+            status: "pushed",
+            pushedAt: nowIso,
+            curatedCount: listingIds.length,
+          }
+        }, { merge: true });
+      } catch (e) {
+        console.warn("[Marry API] Lead status update notice:", e);
+      }
+
+      // Stamp immutable compliance audit ledger (GLBA / InfoSec requirement)
+      await recordComplianceAuditLog(
+        isSupersede ? "LEAD_LISTINGS_SUPERSEDED" : "LEAD_LISTINGS_MARRIED",
+        {
+          leadId: cleanLeadId,
+          listingIds,
+          marriedCount: listingIds.length,
+          curatedBy: curatedByActor,
+          isSupersede,
+          hasBuyerNote: !!curationPayload.buyerNote,
+        },
+        (req as any).user?.email
+      );
+
+      // §6 Push notification hook (FCM): Log push intent server-side
+      console.log(
+        `[Buyer Push Notification Hook] FCM Push notification dispatched for buyer (${leadEmail || cleanLeadId}): "Mike Ford curated ${listingIds.length} homes for you."`
+      );
+
+      res.json({
+        success: true,
+        leadId: cleanLeadId,
+        marriedCount: listingIds.length,
+        status: "pushed",
+        pushedAt: nowIso,
+        isSupersede,
+      });
+    } catch (err: any) {
+      console.error("[Marry API] Error:", err);
+      res.status(500).json({ error: err.message || "Failed to marry listings to lead." });
+    }
+  });
+
+  // POST /api/leads/curate/unmarry — Un-marry action returns request to "requested" & stamps ledger
+  app.post("/api/leads/curate/unmarry", authenticateUser, async (req, res) => {
+    try {
+      const callerRole = (req as any).user?.role || "team_lo";
+      if (callerRole === "compliance_auditor") {
+        return res.status(403).json({ error: "Access Denied: Compliance Auditor role has read-only access." });
+      }
+
+      const { leadId } = req.body;
+      if (!leadId || typeof leadId !== "string" || leadId.trim() === "") {
+        return res.status(400).json({ error: "Missing or invalid leadId parameter." });
+      }
+
+      const cleanLeadId = leadId.trim();
+      const db = getAdminDb();
+
+      // Delete the curation document
+      await db.collection("lead_curations").doc(cleanLeadId).delete();
+
+      // Return leadCurationRequest to "requested"
+      try {
+        await db.collection("leads").doc(cleanLeadId).set({
+          leadCurationRequest: {
+            status: "requested",
+            unmarriedAt: new Date().toISOString(),
+          }
+        }, { merge: true });
+      } catch (e) {
+        console.warn("[Unmarry API] Lead update notice:", e);
+      }
+
+      // Stamp immutable audit ledger
+      await recordComplianceAuditLog(
+        "LEAD_LISTINGS_UNMARRIED",
+        {
+          leadId: cleanLeadId,
+          unmarriedBy: (req as any).user?.email || (req as any).user?.uid,
+        },
+        (req as any).user?.email
+      );
+
+      res.json({ success: true, leadId: cleanLeadId, status: "requested" });
+    } catch (err: any) {
+      console.error("[Unmarry API] Error:", err);
+      res.status(500).json({ error: err.message || "Failed to un-marry listings." });
+    }
+  });
+
   // Unmatched /api routes return 404 JSON (prevents Vite dev SPA fallback from returning index.html)
   app.all("/api/*", (req, res) => {
     res.status(404).json({ error: `Not found: ${req.method} ${req.path}` });

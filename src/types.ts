@@ -1,3 +1,22 @@
+export interface LeadCurationRequest {
+  status: "requested" | "curated" | "pushed" | "viewed";
+  city: string;
+  priceRange: string | null;
+  source: "chatbot" | "web" | "facebook" | "plugin-chat";
+  requestedAt: string; // ISO timestamp
+}
+
+export interface LeadCurationDoc {
+  leadId: string;
+  email: string;
+  name: string;
+  listings: { listingId: string; curatedAt: string }[];
+  curatedBy: string;
+  status: "ready";
+  pushedAt: string;
+  buyerNote: string | null;
+}
+
 export interface FinancialProfile {
   annualIncome: number;
   monthlyDebt: number;
@@ -870,6 +889,8 @@ export interface CapturedLead {
   bpdCrmUploadedAt?: string;
   bpdCrmLeadId?: string;
   bpdCrmSyncStatus?: 'uploaded' | 'pending' | 'failed';
+  
+  leadCurationRequest?: LeadCurationRequest;
 }
 
 export interface RecruitingCampaignStep {

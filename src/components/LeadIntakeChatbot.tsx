@@ -1085,6 +1085,13 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           ? "hot"
           : "warm",
       status: "new",
+      leadCurationRequest: initialIntent === "chat_listings" ? {
+        status: "requested",
+        city: leadState.preferredLocations || "Unknown",
+        priceRange: leadState.targetPriceRange || null,
+        source: "chatbot",
+        requestedAt: new Date().toISOString()
+      } : undefined,
       notes:
         (initialIntent === "chat_listings"
           ? "[URGENT ACTION REQUIRED]: Lead requested a curated list of low/no down payment homes in their desired city. Generate and send a property list via the SMS Hub or Email Outreach!\n\n"

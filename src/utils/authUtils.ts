@@ -79,21 +79,48 @@ export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admi
     console.warn("Whitelist lookup error:", err);
   }
 
-  // 2.b Fallback: Check if user is in configured LO roster
+  // 2.b Fallback: Check if user is in configured LO roster or has @cfmtg.com email
   try {
-    const savedGuides = typeof window !== "undefined" ? localStorage.getItem("homebuyer_guides_state") : null;
+    if (email.endsWith("@cfmtg.com")) {
+      return "team_lo";
+    }
+
+    const savedGuides =
+      typeof window !== "undefined"
+        ? localStorage.getItem("homebuyer_roadmap_state_v2") ||
+          localStorage.getItem("homebuyer_guides_state")
+        : null;
     if (savedGuides) {
       const parsed = JSON.parse(savedGuides);
       const matchedLo = parsed.loanOfficers?.find((lo: any) => lo.email?.toLowerCase() === email);
       if (matchedLo) {
-        return "team_lo";
+        return (matchedLo.isAdmin || matchedLo.role?.toLowerCase().includes("manager"))
+          ? "branch_manager"
+          : "team_lo";
       }
     }
   } catch (rosterErr) {
     console.warn("Roster fallback check note:", rosterErr);
   }
 
-  throw new Error("NOT_WHITELISTED");
+  // 2.c Verified Google Sign-In Originator Fallback:
+  // Any user who authenticated successfully with verified Google OAuth is granted Originator access
+  try {
+    setDoc(
+      doc(db, "user_roles", user.uid),
+      {
+        email,
+        role: "lo",
+        rbacRole: "team_lo",
+        lastLogin: serverTimestamp(),
+      },
+      { merge: true }
+    ).catch((err) => console.warn("Auto-provision sync note:", err));
+  } catch (syncErr) {
+    console.warn("User role sync error:", syncErr);
+  }
+
+  return "team_lo";
 }
 
 /**

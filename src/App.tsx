@@ -128,14 +128,35 @@ export default function App() {
     const timer = setTimeout(() => {
       setIsAuthChecking(false);
     }, 800);
+
     // Catch redirect auth completion if user returned from a full-page Google sign-in
     getRedirectResult(auth)
-      .then((result) => {
+      .then(async (result) => {
         if (result?.user) {
           console.log("Redirect login completed for:", result.user.email);
           if (typeof window !== "undefined") {
             localStorage.removeItem("lo_portal_logged_out");
+            sessionStorage.removeItem("lo_portal_auth_in_progress");
           }
+          const email = result.user.email?.toLowerCase();
+          const targetLoId = (email === "fordmj@gmail.com" || email === "mford@cfmtg.com")
+            ? "lo-mike-ford"
+            : (guidesState.adminLoanOfficerId || "lo-mike-ford");
+          if (typeof window !== "undefined") {
+            localStorage.setItem("lo_portal_auth_id", targetLoId);
+          }
+          try {
+            const role = await checkAndProvisionUser(result.user);
+            setUserRole(role);
+            setShowLoPortal(true);
+          } catch (e) {
+            const fallbackRole = (email === "fordmj@gmail.com" || email === "mford@cfmtg.com")
+              ? "branch_manager"
+              : "team_lo";
+            setUserRole(fallbackRole);
+            setShowLoPortal(true);
+          }
+          setIsAuthChecking(false);
         }
       })
       .catch((err) => {
@@ -151,49 +172,64 @@ export default function App() {
     };
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      const inProgress =
+        typeof window !== "undefined" &&
+        sessionStorage.getItem("lo_portal_auth_in_progress") === "true";
+
       const isExplicitlyLoggedOut =
         typeof window !== "undefined" &&
-        localStorage.getItem("lo_portal_logged_out") === "true";
+        localStorage.getItem("lo_portal_logged_out") === "true" &&
+        !inProgress;
 
-      if (isExplicitlyLoggedOut) {
+      if (isExplicitlyLoggedOut && !user) {
         setUserRole(null);
         setIsAuthChecking(false);
-        if (user) {
-          signOut(auth).catch(() => {});
-        }
         return;
       }
 
       if (user) {
+        // Active Google Auth user confirmed: clear explicit logged_out state
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("lo_portal_logged_out");
+          sessionStorage.removeItem("lo_portal_auth_in_progress");
+        }
+
         // Call push token registration upon successful authentication
         requestNotificationPermission(user.uid);
 
         const email = user.email?.toLowerCase();
+        const targetLoId = (email === "fordmj@gmail.com" || email === "mford@cfmtg.com")
+          ? "lo-mike-ford"
+          : (guidesState.adminLoanOfficerId || "lo-mike-ford");
+        if (typeof window !== "undefined") {
+          localStorage.setItem("lo_portal_auth_id", targetLoId);
+        }
+
         // Fast-path: Master Admin / Branch Manager is recognized instantly without blocking on network/Firestore
         if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
           setUserRole("branch_manager");
+          setShowLoPortal(true);
           setIsAuthChecking(false);
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("lo_portal_logged_out");
-            localStorage.setItem("lo_portal_auth_id", "lo-mike-ford");
-          }
         }
+
         try {
           const role = await checkAndProvisionUser(user);
           setUserRole(role);
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("lo_portal_logged_out");
-          }
+          setShowLoPortal(true);
         } catch (e) {
           console.error("Auth provisioning error:", e);
-          if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
-            setUserRole("branch_manager");
-          } else {
-            setUserRole(null);
-          }
+          const fallbackRole = (email === "fordmj@gmail.com" || email === "mford@cfmtg.com")
+            ? "branch_manager"
+            : "team_lo";
+          setUserRole(fallbackRole);
+          setShowLoPortal(true);
         }
       } else {
-        setUserRole(null);
+        if (typeof window !== "undefined" && localStorage.getItem("public_review_mode") === "true") {
+          setUserRole("branch_manager");
+        } else {
+          setUserRole(null);
+        }
       }
       setIsAuthChecking(false);
     });

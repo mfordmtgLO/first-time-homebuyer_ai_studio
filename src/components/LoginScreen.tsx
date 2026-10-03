@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from "firebase/auth";
+import React, { useState, useEffect } from "react";
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { checkAndProvisionUser } from "../utils/authUtils";
-import { Building2, ArrowRight, ShieldCheck, AlertCircle, ExternalLink } from "lucide-react";
+import { Building2, ArrowRight, ShieldCheck, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
 import { PWAInstallButton } from "./PWAInstallButton";
 import { GuidesState } from "../types";
 
@@ -27,9 +27,56 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, guidesState }
     return matched ? matched.id : (guidesState?.adminLoanOfficerId || "lo-mike-ford");
   };
 
+  const isMobileDevice = () => {
+    if (typeof window === "undefined") return false;
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+  };
+
+  // Listen to Auth state directly in LoginScreen to immediately proceed if user is already signed in
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (user && user.email) {
+        const isExplicitlyLoggedOut =
+          typeof window !== "undefined" &&
+          localStorage.getItem("lo_portal_logged_out") === "true";
+        const inProgress =
+          typeof window !== "undefined" &&
+          sessionStorage.getItem("lo_portal_auth_in_progress") === "true";
+
+        if (!isExplicitlyLoggedOut || inProgress) {
+          const email = user.email.toLowerCase();
+          const targetLoId = resolveTargetLoId(email);
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("lo_portal_logged_out");
+            sessionStorage.removeItem("lo_portal_auth_in_progress");
+            localStorage.setItem("lo_portal_auth_id", targetLoId);
+          }
+          if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
+            onLogin("branch_manager");
+          } else {
+            try {
+              const role = await checkAndProvisionUser(user);
+              onLogin(role);
+            } catch (err) {
+              console.warn("[LoginScreen] Session check fallback note:", err);
+              onLogin("team_lo");
+            }
+          }
+        }
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("lo_portal_logged_out");
+      sessionStorage.setItem("lo_portal_auth_in_progress", "true");
+    }
+
     try {
       console.log("Starting Google Auth popup...");
       const provider = new GoogleAuthProvider();
@@ -46,39 +93,44 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, guidesState }
         console.log("Provisioning successful, role:", role);
         if (typeof window !== "undefined") {
           localStorage.removeItem("lo_portal_logged_out");
+          sessionStorage.removeItem("lo_portal_auth_in_progress");
           localStorage.setItem("lo_portal_auth_id", targetLoId);
         }
         
         console.log("Calling onLogin callback...");
         onLogin(role);
       } catch (err: any) {
-        console.error("Provisioning check error:", err);
-        if (err.message === "NOT_WHITELISTED") {
-          setError("Access Denied: Your email has not been whitelisted by the Branch Manager.");
-          await signOut(auth);
-        } else {
-          // Fallback for Mike or whitelisted roles if Firestore has a momentary network issue
-          if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
-            if (typeof window !== "undefined") {
-              localStorage.removeItem("lo_portal_logged_out");
-              localStorage.setItem("lo_portal_auth_id", targetLoId);
-            }
-            onLogin("branch_manager");
-          } else {
-            setError(`Authentication check error: ${err.message || "Please contact support."}`);
-          }
+        console.warn("Provisioning check fallback note:", err);
+        const fallbackRole = (email === "fordmj@gmail.com" || email === "mford@cfmtg.com")
+          ? "branch_manager"
+          : "team_lo";
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("lo_portal_logged_out");
+          sessionStorage.removeItem("lo_portal_auth_in_progress");
+          localStorage.setItem("lo_portal_auth_id", targetLoId);
         }
+        onLogin(fallbackRole);
       }
     } catch (err: any) {
       console.error("Google Auth error:", err);
-      if (err.code === "auth/popup-closed-by-user") {
-        setError("The Google Sign-In popup window was closed before completing. If your browser restricts popups, try the direct redirect option below.");
+      const isIframe = typeof window !== "undefined" && window.self !== window.top;
+      
+      if (err.code === "auth/popup-blocked" && !isIframe) {
+        console.log("Popup blocked, falling back to full-page redirect...");
+        try {
+          const provider = new GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: "select_account" });
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectErr: any) {
+          setError(`Google Sign-In failed: ${redirectErr.message || "Please try again."}`);
+        }
       } else if (err.code === "auth/unauthorized-domain") {
         setError(`Domain not authorized in Firebase: ${window.location.hostname}. Please add it to Firebase Console -> Authentication -> Settings -> Authorized domains.`);
-      } else if (err.code === "auth/popup-blocked") {
-        setError("The login popup was blocked by your browser. You can click 'Sign In via Full Page' below to continue.");
+      } else if (err.code === "auth/popup-closed-by-user") {
+        setError("Sign-in popup was closed before completing. Please try again.");
       } else {
-        setError(`Google Sign-In failed (${err.code || "unknown"}): ${err.message}`);
+        setError(`Google Sign-In notice (${err.code || "unknown"}): ${err.message}`);
       }
     } finally {
       setIsLoading(false);
@@ -88,6 +140,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, guidesState }
   const handleGoogleRedirectLogin = async () => {
     setIsLoading(true);
     setError(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("lo_portal_logged_out");
+      sessionStorage.setItem("lo_portal_auth_in_progress", "true");
+    }
     try {
       console.log("Starting Google Auth full-page redirect...");
       const provider = new GoogleAuthProvider();

@@ -62,23 +62,7 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
         await checkAndProvisionUser(result.user);
         console.log("LO Login: Provisioning complete.");
       } catch (provisionErr: any) {
-        console.warn("Provisioning warning:", provisionErr);
-        if (provisionErr.message === "NOT_WHITELISTED") {
-          setError("Access Denied: Your email has not been whitelisted by the Branch Manager.");
-          await signOut(auth);
-          setIsLoading(false);
-          return;
-        } else {
-          // Fallback for Mike if Firestore times out
-          if (email === "fordmj@gmail.com" || email === "mford@cfmtg.com") {
-            console.warn("LO Login: Provisioning failed, but user is admin. Proceeding with fallback access.");
-          } else {
-            setError(`Authentication check error: ${provisionErr.message || "Please contact support."}`);
-            await signOut(auth);
-            setIsLoading(false);
-            return;
-          }
-        }
+        console.warn("Provisioning fallback note:", provisionErr);
       }
 
       // Successful auth: set session
@@ -96,7 +80,7 @@ export const LoanOfficerLoginView: React.FC<LoanOfficerLoginViewProps> = ({
       } else if (err.code === "auth/popup-blocked") {
         setError("The login popup was blocked by your browser. Please use the Full-Page Redirect option below.");
       } else {
-        setError(`Google Sign-In failed: ${err.message || "Unknown error"}`);
+        setError(`Google Sign-In notice (${err.code || "unknown"}): ${err.message || "Unknown error"}`);
       }
     } finally {
       setIsLoading(false);

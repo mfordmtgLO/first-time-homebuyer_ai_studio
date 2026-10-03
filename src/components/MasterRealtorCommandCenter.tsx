@@ -88,7 +88,10 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
   onOpenScrapeModal,
   onOpenEmailOutreachModal
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<"roster" | "recruiting" | "pairings" | "cobranding" | "campaigns">(initialSubTab);
+  const validSubTabs = ["roster", "recruiting", "pairings", "cobranding", "campaigns"];
+  const [activeSubTab, setActiveSubTab] = useState<"roster" | "recruiting" | "pairings" | "cobranding" | "campaigns">(() => {
+    return (validSubTabs.includes(initialSubTab as any) ? initialSubTab : "roster") as any;
+  });
 
   // Get Unified Master Agent Roster (100% complete agent pool) — declared first to prevent TDZ
   const masterAgentRoster = useMemo(() => {

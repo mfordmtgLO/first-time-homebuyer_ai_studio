@@ -243,7 +243,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
     if (typeof window !== "undefined" && localStorage.getItem("lo_portal_logged_out") === "true") {
       return;
     }
-    if (!authenticatedLoId && userRole && auth.currentUser) {
+    if (!authenticatedLoId && userRole) {
       const currentEmail = auth.currentUser?.email?.toLowerCase();
       if (currentEmail) {
         const matched = guidesState.loanOfficers.find(l => l.email?.toLowerCase() === currentEmail);
@@ -254,7 +254,8 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           localStorage.setItem("lo_portal_auth_id", resolvedId);
         }
       } else {
-        const resolvedId = guidesState.adminLoanOfficerId || "lo-mike-ford";
+        const stored = typeof window !== "undefined" ? localStorage.getItem("lo_portal_auth_id") : null;
+        const resolvedId = stored || guidesState.adminLoanOfficerId || "lo-mike-ford";
         setAuthenticatedLoId(resolvedId);
         setManagedLoId(resolvedId);
         if (typeof window !== "undefined") {

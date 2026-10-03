@@ -810,7 +810,7 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
               properties={properties}
               userRole={userRole}
               onTriggerToast={showToast}
-              initialSubTab="overview"
+              initialSubTab="roster"
               onOpenScrapeModal={() => setShowScrapeRealtorModal(true)}
             />
           </div>

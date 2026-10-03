@@ -83,8 +83,13 @@ export async function loadKnowledgeBase() {
     const db = getFirestoreDb();
     const knowledgeCol = db.collection("vantage_knowledge");
     
-    // Read from Firestore (capped at MAX_IN_MEMORY_DOCS)
-    const snapshot = await knowledgeCol.limit(MAX_IN_MEMORY_DOCS + 1).get();
+    // Read from Firestore (capped at MAX_IN_MEMORY_DOCS) with a 2.5s timeout guard to prevent Cloud Run probe deadlocks
+    const fetchPromise = knowledgeCol.limit(MAX_IN_MEMORY_DOCS + 1).get();
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Firestore knowledge read timeout (falling back to local JSON)")), 2500)
+    );
+
+    const snapshot = await Promise.race([fetchPromise, timeoutPromise]);
     
     if (snapshot.empty) {
       console.log("[Vantage Knowledge] Firestore vantage_knowledge collection is empty. Checking legacy JSON seed...");

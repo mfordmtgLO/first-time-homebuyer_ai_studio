@@ -454,38 +454,52 @@ async function startServer() {
   console.log("Loading knowledge base...");
   loadKnowledgeBase();
 
-  // M3: Single Source of Truth Bootstrap Admin Seeding
-  try {
-    const db = getAdminDb();
-    const adminSeeds = [
-      { email: "fordmj@gmail.com", role: "branch_manager", assignedLoId: "lo-mike-ford" },
-      { email: "mford@cfmtg.com", role: "branch_manager", assignedLoId: "lo-mford" },
-    ];
-    for (const seed of adminSeeds) {
-      const docRef = db.collection("whitelisted_emails").doc(seed.email);
-      const docSnap = await docRef.get();
-      if (!docSnap.exists) {
-        await docRef.set({
-          email: seed.email,
-          role: seed.role,
-          assignedLoId: seed.assignedLoId,
-          createdAt: new Date().toISOString(),
-          seededByServer: true,
-        });
-        console.log(`[Bootstrap Admin] Seeded whitelisted_emails for ${seed.email}`);
-      }
-    }
-  } catch (seedErr: any) {
-    if (seedErr?.code === 7 || seedErr?.message?.includes("PERMISSION_DENIED") || seedErr?.message?.includes("NOT_FOUND")) {
-      console.log("[Bootstrap Admin] Whitelist check completed (Firestore offline/permission mode).");
-    } else {
-      console.warn("[Bootstrap Admin] Seeding notice:", seedErr?.message || seedErr);
-    }
-  }
-
   const app = express();
   app.set("trust proxy", 1);
   const PORT = process.env.PORT || 3000;
+
+  // Immediate TCP & HTTP Health Probe Endpoints (Crucial for Cloud Run startup probes)
+  app.get(["/healthz", "/_health", "/health", "/api/health"], (_req, res) => {
+    res.status(200).json({ status: "healthy", timestamp: new Date().toISOString() });
+  });
+
+  // M3: Single Source of Truth Bootstrap Admin Seeding (Background Asynchronous Task)
+  // Non-blocking so server immediately binds to port 3000 and passes Cloud Run TCP probes
+  setImmediate(async () => {
+    try {
+      const db = getAdminDb();
+      const adminSeeds = [
+        { email: "fordmj@gmail.com", role: "branch_manager", assignedLoId: "lo-mike-ford" },
+        { email: "mford@cfmtg.com", role: "branch_manager", assignedLoId: "lo-mford" },
+      ];
+      for (const seed of adminSeeds) {
+        try {
+          const seedPromise = (async () => {
+            const docRef = db.collection("whitelisted_emails").doc(seed.email);
+            const docSnap = await docRef.get();
+            if (!docSnap.exists) {
+              await docRef.set({
+                email: seed.email,
+                role: seed.role,
+                assignedLoId: seed.assignedLoId,
+                createdAt: new Date().toISOString(),
+                seededByServer: true,
+              });
+              console.log(`[Bootstrap Admin] Seeded whitelisted_emails for ${seed.email}`);
+            }
+          })();
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout")), 2000)
+          );
+          await Promise.race([seedPromise, timeoutPromise]);
+        } catch (e: any) {
+          console.log(`[Bootstrap Admin] Whitelist check for ${seed.email} completed (offline or timeout):`, e?.message || e);
+        }
+      }
+    } catch (seedErr: any) {
+      console.log("[Bootstrap Admin] Seeding note:", seedErr?.message || seedErr);
+    }
+  });
 
   // Priority 3 Item 8: Strict Origin Whitelist
   const ALLOWED_ORIGINS = [
@@ -9442,6 +9456,11 @@ Disallow: /
     (typeof __filename !== "undefined" && __filename.endsWith(".cjs")) ||
     !fs.existsSync(path.join(process.cwd(), "server.ts"));
 
+  // Bind and listen on port 3000 immediately so Cloud Run TCP startup probes succeed on attempt 1
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Manus Homebuyer Server running on http://0.0.0.0:${PORT} [mode=${isProduction ? "production" : "development"}]`);
+  });
+
   if (!isProduction) {
     const vite = await createViteServer({
       server: {
@@ -9492,10 +9511,6 @@ Disallow: /
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Manus Homebuyer Server running on http://0.0.0.0:${PORT}`);
-  });
 }
 
 startServer().catch((err) => {

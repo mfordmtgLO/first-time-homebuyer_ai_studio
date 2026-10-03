@@ -104,6 +104,21 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
   const [newPairLoId, setNewPairLoId] = useState<string>(currentLo.id);
   const [newPairAgentId, setNewPairAgentId] = useState<string>("");
   const [newPairTag, setNewPairTag] = useState<string>("realtor-partner");
+  const [pairingError, setPairingError] = useState<string | null>(null);
+
+  // Auto-default agent selection when modal opens
+  useEffect(() => {
+    if (showAddPairingModal && !newPairAgentId && masterAgentRoster.length > 0) {
+      setNewPairAgentId(masterAgentRoster[0].id);
+    }
+  }, [showAddPairingModal, masterAgentRoster, newPairAgentId]);
+
+  const openNewPairingModal = (agentId?: string) => {
+    setNewPairLoId(currentLo.id || guidesState.loanOfficers[0]?.id || "");
+    setNewPairAgentId(agentId || masterAgentRoster[0]?.id || "");
+    setPairingError(null);
+    setShowNewPairingModal(true);
+  };
 
   // New Agent Modal
   const [showAddAgentModal, setShowAddAgentModal] = useState(false);
@@ -189,14 +204,28 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
 
   const handleCreatePairing = (e: React.FormEvent) => {
     e.preventDefault();
+    setPairingError(null);
+    onTriggerToast("Validating pairing inputs…");
+
     const targetAgentId = newPairAgentId || masterAgentRoster[0]?.id;
     if (!targetAgentId) {
-      onTriggerToast("Please select a Realtor agent partner to pair.");
+      const errMsg = "Please select a Realtor agent partner to pair.";
+      setPairingError(errMsg);
+      onTriggerToast(`⚠️ ${errMsg}`);
       return;
     }
 
-    const lo = guidesState.loanOfficers.find((l) => l.id === newPairLoId) || currentLo;
+    const lo = guidesState.loanOfficers.find((l) => l.id === newPairLoId) || currentLo || guidesState.loanOfficers[0];
     const agent = masterAgentRoster.find((a) => a.id === targetAgentId) || masterAgentRoster[0];
+
+    if (!lo || !agent) {
+      const errMsg = "Could not find selected Loan Officer or Realtor Agent profile.";
+      setPairingError(errMsg);
+      onTriggerToast(`⚠️ ${errMsg}`);
+      return;
+    }
+
+    onTriggerToast("Creating pairing…");
 
     const newPairing: LOPairing = {
       id: `pair-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -211,12 +240,14 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
       totalLeads: 0
     };
 
-    onUpdateGuidesState({
-      ...guidesState,
-      pairings: [newPairing, ...(guidesState.pairings || [])]
-    });
+    onTriggerToast("Saving…");
 
-    onTriggerToast(`✅ Successfully created LO + Agent Pairing: ${newPairing.title}`);
+    onUpdateGuidesState((prev) => ({
+      ...prev,
+      pairings: [newPairing, ...(prev.pairings || [])]
+    }));
+
+    onTriggerToast(`Done! Created pairing for ${newPairing.title}`);
     setShowNewPairingModal(false);
   };
 
@@ -326,7 +357,7 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
 
             <button
               type="button"
-              onClick={() => setShowNewPairingModal(true)}
+              onClick={() => openNewPairingModal()}
               className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold rounded-xl shadow-sm flex items-center gap-2 transition-all cursor-pointer"
             >
               <LinkIcon className="w-4 h-4 text-amber-300" />
@@ -676,10 +707,7 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
 
                     <button
                       type="button"
-                      onClick={() => {
-                        setNewPairAgentId(agent.id);
-                        setShowNewPairingModal(true);
-                      }}
+                      onClick={() => openNewPairingModal(agent.id)}
                       className="px-3 py-1.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
                     >
                       <LinkIcon className="w-3.5 h-3.5 text-amber-200" />
@@ -773,7 +801,7 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
 
               <button
                 type="button"
-                onClick={() => setShowNewPairingModal(true)}
+                onClick={() => openNewPairingModal()}
                 className="px-5 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
               >
                 <LinkIcon className="w-4 h-4 text-amber-200" />
@@ -918,7 +946,10 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
                 </label>
                 <select
                   value={newPairAgentId}
-                  onChange={(e) => setNewPairAgentId(e.target.value)}
+                  onChange={(e) => {
+                    setNewPairAgentId(e.target.value);
+                    if (pairingError) setPairingError(null);
+                  }}
                   className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs font-bold text-[#2D362E]"
                 >
                   {masterAgentRoster.map((agent) => (
@@ -927,6 +958,12 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
                     </option>
                   ))}
                 </select>
+                {pairingError && (
+                  <p className="mt-1.5 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-1.5 animate-in fade-in flex items-center gap-1.5">
+                    <span>⚠️</span>
+                    <span>{pairingError}</span>
+                  </p>
+                )}
               </div>
 
               <div>

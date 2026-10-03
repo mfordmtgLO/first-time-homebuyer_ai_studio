@@ -703,12 +703,31 @@ export default function App() {
   const handleUpdateGuidesState = (
     newState: ProfessionalGuidesState | ((prev: ProfessionalGuidesState) => ProfessionalGuidesState)
   ) => {
+    const saveSingleton = (stateToSave: ProfessionalGuidesState) => {
+      const { leads, ...strippedState } = stateToSave;
+      try {
+        const payloadJson = JSON.stringify(strippedState);
+        const payloadSize = typeof Blob !== "undefined" ? new Blob([payloadJson]).size : Buffer.byteLength(payloadJson, "utf8");
+        if (payloadSize > 900 * 1024) {
+          console.warn(`[Firestore Payload Warning] guides_state/singleton size is ${(payloadSize / 1024).toFixed(1)}KB, approaching 1MB cap.`);
+          triggerGlobalToast("⚠️ Warning: Dashboard state size is approaching the 1MB limit. Please shard or archive old data.");
+        }
+        setDoc(doc(db, "guides_state", "singleton"), strippedState).catch((err) => {
+          console.error("[Firestore Singleton Save Error]:", err);
+          triggerGlobalToast("Couldn't save — please retry. If this persists, contact support.");
+        });
+      } catch (err) {
+        console.error("[Firestore Singleton Serialization Error]:", err);
+        triggerGlobalToast("Couldn't save — please retry. If this persists, contact support.");
+      }
+    };
+
     if (typeof newState === "function") {
       setGuidesState((prev) => {
         const computedState = newState(prev);
 
-        // 1. Shard-save: Queue changed leads into batch processing mechanism
-        if (computedState.leads && Array.isArray(computedState.leads)) {
+        // 1. Shard-save: Only run O(n) lead deep-diff if leads array reference actually changed
+        if (computedState.leads && Array.isArray(computedState.leads) && computedState.leads !== prev.leads) {
           computedState.leads.forEach((lead) => {
             const prevLead = prev.leads?.find((l) => l.id === lead.id);
             if (!prevLead || JSON.stringify(prevLead) !== JSON.stringify(lead)) {
@@ -717,16 +736,13 @@ export default function App() {
           });
         }
 
-        // 2. Singleton-save: Exclude the leads array to keep document size under 1MB
-        const { leads, ...strippedState } = computedState;
-        setDoc(doc(db, "guides_state", "singleton"), strippedState).catch(console.error);
+        // 2. Singleton-save: Exclude the leads array with pre-flight size guard and error toast
+        saveSingleton(computedState);
         return computedState;
       });
     } else {
-      setGuidesState(newState);
-
-      // 1. Shard-save: Queue changed leads into batch processing mechanism
-      if (newState.leads && Array.isArray(newState.leads)) {
+      // 1. Shard-save: Only run O(n) lead deep-diff if leads array reference actually changed
+      if (newState.leads && Array.isArray(newState.leads) && newState.leads !== guidesState.leads) {
         newState.leads.forEach((lead) => {
           const prevLead = guidesState.leads?.find((l) => l.id === lead.id);
           if (!prevLead || JSON.stringify(prevLead) !== JSON.stringify(lead)) {
@@ -735,9 +751,9 @@ export default function App() {
         });
       }
 
-      // 2. Singleton-save: Exclude the leads array to keep document size under 1MB
-      const { leads, ...strippedState } = newState;
-      setDoc(doc(db, "guides_state", "singleton"), strippedState).catch(console.error);
+      setGuidesState(newState);
+      // 2. Singleton-save with pre-flight size guard and error toast
+      saveSingleton(newState);
     }
   };
 
@@ -1772,7 +1788,7 @@ export default function App() {
 
       {/* Global Toast Notification Banner */}
       {globalToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#2D362E] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500/30 animate-in fade-in slide-in-from-bottom-3">
+        <div className="fixed bottom-6 right-6 z-[9999] bg-[#2D362E] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500/30 animate-in fade-in slide-in-from-bottom-3 pointer-events-auto">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
           <span className="text-xs font-bold">{globalToast}</span>
         </div>

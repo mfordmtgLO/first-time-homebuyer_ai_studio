@@ -67,7 +67,7 @@ export const BatchLeadRecommendations: React.FC<BatchLeadRecommendationsProps> =
     recommendations.push({
       id: "rec_hot_outreach",
       title: `Batch Follow-Up: ${hotUncontacted.length} High-Intent Uncontacted Leads`,
-      description: `Target ${hotUncontacted.map(l => l.fullName).join(", ")} with immediate pre-approval readiness & DPA grant eligibility email outreach.`,
+      description: `Target ${hotUncontacted.map(l => l?.fullName || "Client").join(", ")} with immediate pre-approval readiness & DPA grant eligibility email outreach.`,
       category: "hot_outreach",
       matchingLeadIds: hotUncontacted.map(l => l.id),
       actionLabel: `Batch Send Pre-Approval Email (${hotUncontacted.length})`,
@@ -158,7 +158,7 @@ export const BatchLeadRecommendations: React.FC<BatchLeadRecommendationsProps> =
                 id: `log-rec-hot-${Date.now()}-${l.id}`,
                 stageName: "Smart Recommendation: Hot Lead Pre-Approval Follow-Up",
                 templateName: "Pre-Approval & DPA Grant Audit",
-                emailSubject: `Pre-Approval & Oregon DPA Grant Readiness for ${l.fullName}`,
+                emailSubject: `Pre-Approval & Oregon DPA Grant Readiness for ${l?.fullName || "Client"}`,
                 sentAt: nowIso,
                 status: "sent" as const
               }

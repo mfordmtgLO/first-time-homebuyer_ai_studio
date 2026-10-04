@@ -432,7 +432,7 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
 
       const rows = allLeads.map(l => [
         l.id,
-        l.fullName,
+        l?.fullName || "Client",
         l.email,
         l.phone,
         l.status,

@@ -403,7 +403,7 @@ export const DailyMorningBriefing: React.FC<DailyMorningBriefingProps> = ({
                         <div className="flex flex-wrap gap-1">
                           {match.matchedLeads.map(l => (
                             <span key={l.id} className="bg-white/15 text-white px-2 py-0.5 rounded text-[10px] font-medium">
-                              {l.fullName}
+                              {l?.fullName || "Client"}
                             </span>
                           ))}
                         </div>

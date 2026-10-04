@@ -88,11 +88,11 @@ export const SmsComplianceDashboard: React.FC<SmsComplianceDashboardProps> = ({
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matchName = l.fullName.toLowerCase().includes(q);
-      const matchPhone = l.phone.toLowerCase().includes(q);
-      const matchEmail = l.email.toLowerCase().includes(q);
-      const matchSource = (l.smsConsentSource || "").toLowerCase().includes(q);
-      const matchCity = (l.taggedCityArea || l.preferredLocations || "").toLowerCase().includes(q);
+      const matchName = (l?.fullName || "").toLowerCase().includes(q);
+      const matchPhone = (l?.phone || "").toLowerCase().includes(q);
+      const matchEmail = (l?.email || "").toLowerCase().includes(q);
+      const matchSource = (l?.smsConsentSource || "").toLowerCase().includes(q);
+      const matchCity = (l?.taggedCityArea || l?.preferredLocations || "").toLowerCase().includes(q);
       return matchName || matchPhone || matchEmail || matchSource || matchCity;
     }
 
@@ -146,7 +146,7 @@ export const SmsComplianceDashboard: React.FC<SmsComplianceDashboardProps> = ({
                 id: `log-auth-${Date.now()}-${l.id}`,
                 stageName: "TCPA SMS Compliance Opt-in Request",
                 templateName: "Request SMS Authorization Invite",
-                emailSubject: bulkSubject.replace("{Buyer_Name}", l.fullName),
+                emailSubject: bulkSubject.replace("{Buyer_Name}", l?.fullName || "Client"),
                 sentAt: nowIso,
                 status: "sent" as const
               }

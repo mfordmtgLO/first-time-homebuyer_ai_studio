@@ -729,7 +729,7 @@ export const TaskManagementPanel: React.FC<TaskManagementPanelProps> = ({
                   <option value="">Select a lead...</option>
                   {leads.map(l => (
                     <option key={l.id} value={l.id}>
-                      {l.fullName} ({l.taggedCityArea || l.preferredLocations || "Oregon"})
+                      {l?.fullName || "Client"} ({l?.taggedCityArea || l?.preferredLocations || "Oregon"})
                     </option>
                   ))}
                 </select>

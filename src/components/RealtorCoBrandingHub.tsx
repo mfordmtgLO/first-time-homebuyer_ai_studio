@@ -668,7 +668,7 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
               type="button"
               onClick={() => copyToClipboard(
                 `Hi ${selectedAgent?.name?.split(" ")[0]}! Here is our current joint pipeline update:\n` +
-                partnerLeads.map(l => `• ${l.fullName} (${l.targetPriceRange || "$450k"}) - Status: ${l.status || "Pre-Approved"}`).join("\n") +
+                partnerLeads.map(l => `• ${l?.fullName || "Client"} (${l?.targetPriceRange || "$450k"}) - Status: ${l?.status || "Pre-Approved"}`).join("\n") +
                 `\nLet's catch up this week! - ${currentLo.name}`,
                 "pipeline_digest"
               )}

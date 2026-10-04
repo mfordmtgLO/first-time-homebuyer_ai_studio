@@ -76,11 +76,11 @@ export const LeadScenarioSearch: React.FC<LeadScenarioSearchProps> = ({
         {selectedLead ? (
           <div className="flex items-center gap-3 bg-white px-3.5 py-2 rounded-xl border border-emerald-400 shadow-xs">
             <div className="w-8 h-8 rounded-full bg-emerald-700 text-white flex items-center justify-center font-serif text-xs font-bold shrink-0">
-              {selectedLead.fullName.split(" ").map(n => n[0]).slice(0, 2).join("")}
+              {(selectedLead.fullName || "Client").split(" ").map(n => n[0]).slice(0, 2).join("")}
             </div>
             <div className="text-left">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-[#2D362E]">{selectedLead.fullName}</span>
+                <span className="text-xs font-bold text-[#2D362E]">{selectedLead.fullName || "Client"}</span>
                 <span 
                   className="inline-flex items-center gap-1 text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300"
                   title="Scenario engine is actively linked to this borrower"
@@ -117,7 +117,7 @@ export const LeadScenarioSearch: React.FC<LeadScenarioSearchProps> = ({
                     onClick={() => handleSelect(l)}
                     className="px-2 py-1 text-[10px] font-bold rounded-lg bg-white border border-[#EAE7E0] hover:border-emerald-500 text-[#4A5D4E] hover:bg-emerald-50 transition-colors cursor-pointer"
                   >
-                    + {l.fullName.split(" ")[0]}
+                    + {(l.fullName || "Client").split(" ")[0]}
                   </button>
                 ))}
               </div>
@@ -157,11 +157,11 @@ export const LeadScenarioSearch: React.FC<LeadScenarioSearchProps> = ({
                         className="w-full text-left p-2.5 hover:bg-[#FAF9F5] rounded-xl transition-all flex items-start gap-3 border border-transparent hover:border-[#EAE7E0]"
                       >
                         <div className="w-7 h-7 rounded-full bg-[#4A5D4E] text-white flex items-center justify-center font-serif text-xs font-bold shrink-0 mt-0.5">
-                          {lead.fullName.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                          {(lead.fullName || "Client").split(" ").map(n => n[0]).slice(0, 2).join("")}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1">
-                            <span className="text-xs font-bold text-[#2D362E] truncate">{lead.fullName}</span>
+                            <span className="text-xs font-bold text-[#2D362E] truncate">{lead.fullName || "Client"}</span>
                             <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#F1EFE9] text-[#4A5D4E] font-medium shrink-0">
                               {lead.status.toUpperCase()}
                             </span>

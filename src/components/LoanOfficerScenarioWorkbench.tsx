@@ -386,7 +386,7 @@ export const LoanOfficerScenarioWorkbench: React.FC<LoanOfficerScenarioWorkbench
             >
               <BookmarkPlus className="w-4 h-4 text-[#D4A373]" />
               <span>
-                {selectedLead ? `Save Scenario to ${selectedLead.fullName.split(" ")[0]}` : "Select Lead to Save"}
+                {selectedLead ? `Save Scenario to ${(selectedLead.fullName || "Client").split(" ")[0]}` : "Select Lead to Save"}
               </span>
             </button>
           </div>
@@ -752,9 +752,9 @@ export const LoanOfficerScenarioWorkbench: React.FC<LoanOfficerScenarioWorkbench
           ) : (
             <div className="bg-[#FAF9F5] rounded-2xl border border-dashed border-[#DEDAD2] p-8 text-center space-y-2">
               <BookmarkPlus className="w-8 h-8 text-[#9A9488] mx-auto opacity-70" />
-              <div className="text-xs font-bold text-[#2D362E]">No Saved Scenarios for {selectedLead.fullName} Yet</div>
+              <div className="text-xs font-bold text-[#2D362E]">No Saved Scenarios for {selectedLead?.fullName || "Client"} Yet</div>
               <p className="text-[11px] text-[#606C5D] max-w-md mx-auto">
-                Adjust the sliders above to model a mortgage payment or 2-1 buydown, then click &quot;Save Scenario to {selectedLead.fullName.split(" ")[0]}&quot; to persist calculations and generate ready-made outreach drafts.
+                Adjust the sliders above to model a mortgage payment or 2-1 buydown, then click &quot;Save Scenario to {(selectedLead?.fullName || "Client").split(" ")[0]}&quot; to persist calculations and generate ready-made outreach drafts.
               </p>
             </div>
           )}

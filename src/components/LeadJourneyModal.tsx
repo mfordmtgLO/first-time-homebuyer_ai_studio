@@ -144,7 +144,7 @@ export const LeadJourneyModal: React.FC<LeadJourneyModalProps> = ({
         <div className="bg-[#2D362E] text-white p-5 sm:p-6 shrink-0 flex items-start justify-between border-b border-white/10">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-2xl bg-[#4A5D4E] border border-white/20 text-white flex items-center justify-center font-serif font-bold text-lg shadow-sm shrink-0">
-              {lead.fullName.split(" ").map(n => n[0]).slice(0, 2).join("")}
+              {(lead.fullName || "Client").split(" ").map(n => n[0]).slice(0, 2).join("")}
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">

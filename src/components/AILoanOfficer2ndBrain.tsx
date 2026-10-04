@@ -742,7 +742,7 @@ How can I assist your pipeline today? You can select any active borrower from yo
                           className={`inline-flex items-center gap-1 hover:underline font-semibold cursor-pointer ml-2 ${savedId === msg.id ? 'text-emerald-600' : 'text-[#C18C5D]'}`}
                         >
                           {savedId === msg.id ? <Check className="w-3 h-3" /> : <FileCheck className="w-3 h-3" />}
-                          <span>{savedId === msg.id ? "Saved to CRM Notes" : `Save to ${activeLead.fullName.split(" ")[0]}'s CRM Notes`}</span>
+                          <span>{savedId === msg.id ? "Saved to CRM Notes" : `Save to ${(activeLead?.fullName || "Client").split(" ")[0]}'s CRM Notes`}</span>
                         </button>
                       )}
 

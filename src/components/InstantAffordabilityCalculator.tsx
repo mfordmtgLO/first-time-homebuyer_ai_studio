@@ -320,7 +320,7 @@ export const InstantAffordabilityCalculator: React.FC<InstantAffordabilityCalcul
               className="px-4 py-2.5 bg-[#4A5D4E] hover:bg-[#38463B] text-white font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer"
             >
               <BookmarkPlus className="w-4 h-4 text-[#D4A373]" />
-              <span>Save Scenario to {selectedLead.fullName.split(" ")[0]}</span>
+              <span>Save Scenario to {(selectedLead.fullName || "Client").split(" ")[0]}</span>
             </button>
           )}
         </div>

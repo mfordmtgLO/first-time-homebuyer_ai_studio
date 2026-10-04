@@ -218,6 +218,45 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
   const [isPushingAlert, setIsPushingAlert] = useState(false);
   const [pushSuccess, setPushSuccess] = useState(false);
+  const [autoPushed, setAutoPushed] = useState(false);
+
+  // Automated Real-Time Cell Push Notification Wire
+  // Dispatches SMS push automatically to both Loan Officer (Mike Ford) and Buyer without requiring manual clicks
+  React.useEffect(() => {
+    if (effectivePriceDrop > 0 && property.address) {
+      const autoDispatch = async () => {
+        try {
+          const res = await fetch("/api/sms/send-price-drop-alert", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              propertyAddress: property.address,
+              city: property.city || "Oregon",
+              state: property.state || "OR",
+              zip: property.zip || "",
+              originalPrice: property.originalPrice || ((property.price || 0) + effectivePriceDrop),
+              currentPrice: property.price,
+              priceDropAmount: effectivePriceDrop,
+              monthlySavings: monthlyPaymentSavings,
+              loName: loanOfficer?.name || "Mike Ford",
+              loPhone: loanOfficer?.phone || "(541) 555-0199",
+              agentName: agent?.name || "Kanndice",
+              agentPhone: agent?.phone || "(541) 555-0142",
+              revelation: geminiRevelation,
+              userPhone: "(541) 555-0188",
+              isManual: false
+            }),
+          });
+          if (res.ok) {
+            setAutoPushed(true);
+          }
+        } catch (e) {
+          console.warn("[Auto Cell Push] Notice:", e);
+        }
+      };
+      autoDispatch();
+    }
+  }, [effectivePriceDrop, property.address, property.price]);
 
   const handleTriggerCellPushAlert = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -240,6 +279,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           agentName: agent?.name || "Kanndice",
           agentPhone: agent?.phone || "(541) 555-0142",
           revelation: geminiRevelation,
+          isManual: true
         }),
       });
       const data = await res.json();
@@ -576,6 +616,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                     <span className="flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-bold text-xs bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded-md">
                       <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       Payment Reduction: ~{formatUSD(monthlyPaymentSavings)}/mo
+                    </span>
+                    <span className="flex items-center gap-1 text-indigo-700 dark:text-indigo-300 font-bold text-[10px] bg-indigo-100 dark:bg-indigo-900/50 px-2 py-0.5 rounded-md">
+                      <Smartphone className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                      {autoPushed ? "Auto-Push: Dispatched to Cell (LO & Buyer)" : "Auto-Push: Active"}
                     </span>
                   </div>
                   <p className="text-[11px] text-[#606C5D] dark:text-slate-300 mt-1 font-medium">

@@ -5536,11 +5536,19 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     }
   }
 
-  function extractRawListings(data: any): any[] {
+  function extractRawListings(data: any, areas?: string[]): any[] {
     if (!data) return [];
+    const targetAreas = Array.isArray(areas) && areas.length > 0 
+      ? areas.map(a => String(a).trim().toLowerCase()) 
+      : [];
+
     if (Array.isArray(data.pulls)) {
       const out: any[] = [];
       for (const pull of data.pulls) {
+        const pullArea = String(pull.area || "").trim().toLowerCase();
+        if (targetAreas.length > 0 && !targetAreas.includes(pullArea)) {
+          continue;
+        }
         const items = pull.overlaySets?.all || pull.listings || [];
         if (Array.isArray(items)) out.push(...items);
       }
@@ -5555,10 +5563,228 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     return [];
   }
 
+  // Helper to fetch saved listings data from GeoSphere endpoints
+  async function fetchGeoSphereSavedListings(reqBody?: any) {
+    const { endpointUrl, syncToken: bodySyncToken } = reqBody || {};
+    let candidateHosts: string[];
+    let customPath: string | null = null;
+    if (typeof endpointUrl === "string" && endpointUrl.trim()) {
+      const resolved = resolveCustomSyncUrl(endpointUrl);
+      if (resolved) {
+        const parsed = new URL(resolved);
+        candidateHosts = [parsed.hostname];
+        customPath = parsed.pathname;
+      } else {
+        candidateHosts = ["geosphere-map-oregon-ai-studio.vercel.app", "geosphere-map-oregon.vercel.app", "geosphere-map-oregon.ai.studio"];
+      }
+    } else {
+      candidateHosts = ["geosphere-map-oregon-ai-studio.vercel.app", "geosphere-map-oregon.vercel.app", "geosphere-map-oregon.ai.studio"];
+    }
+
+    const envToken = (process.env.GEOSPHERE_SYNC_TOKEN || "").trim();
+    const syncToken = envToken || (typeof bodySyncToken === "string" ? bodySyncToken.trim() : "");
+
+    const candidates: Array<{ url: string; authMode: "gated" | "public" }> = [];
+    for (const host of candidateHosts) {
+      if (customPath) {
+        candidates.push({
+          url: `https://${host}${customPath}`,
+          authMode: customPath === "/api/saved-listings" ? "gated" : "public",
+        });
+      } else {
+        if (syncToken) {
+          candidates.push({ url: `https://${host}/api/saved-listings`, authMode: "gated" });
+        }
+        candidates.push({ url: `https://${host}/api/map-saved-listings`, authMode: "public" });
+      }
+    }
+
+    for (const cand of candidates) {
+      const headers: Record<string, string> = {
+        "User-Agent": "Loan-Officer-Homebuyer-Sync-Agent/1.0",
+        Accept: "application/json",
+      };
+      if (cand.authMode === "gated") headers["x-geosphere-sync-token"] = syncToken;
+      try {
+        const r = await fetch(cand.url, { method: "GET", headers, signal: AbortSignal.timeout(12000) });
+        if (r.ok) {
+          const data = await r.json();
+          if (data && (Array.isArray(data.pulls) || Array.isArray(data.savedListings) || Array.isArray(data.listings))) {
+            return data;
+          }
+        }
+      } catch {
+        // try next
+      }
+    }
+    return null;
+  }
+
+  // API Route: GET /api/geosphere/folders (Metadata only, cached 5 min)
+  app.get("/api/geosphere/folders", async (req, res) => {
+    try {
+      const data = await fetchGeoSphereSavedListings(req.query);
+      if (!data || !Array.isArray(data.pulls)) {
+        return res.json({ success: true, folders: [], pendingRequests: [] });
+      }
+
+      const folders = data.pulls.map((pull: any) => ({
+        area: pull.area || "Unknown",
+        count: pull.count || (pull.overlaySets?.all || pull.listings || []).length,
+        savedAt: pull.savedAt || new Date().toISOString(),
+        snapshotId: pull.snapshotId || `snap_${Date.now()}`,
+      }));
+
+      let pendingRequests: any[] = [];
+      try {
+        const db = getAdminDb();
+        const reqSnap = await db.collection("rentcast_pull_requests").where("status", "==", "pending").get();
+        const nowIso = new Date().toISOString();
+
+        const batch = db.batch();
+        let updatedCount = 0;
+
+        reqSnap.docs.forEach((docSnap) => {
+          const reqData = docSnap.data();
+          const reqCity = String(reqData.city || "").trim().toLowerCase();
+          const reqKind = reqData.kind || "new_city";
+          const reqCreatedAt = new Date(reqData.createdAt || nowIso).getTime();
+
+          const matchingFolder = folders.find((f: any) => String(f.area || "").trim().toLowerCase() === reqCity);
+
+          let isReady = false;
+          if (matchingFolder) {
+            if (reqKind === "new_city") {
+              isReady = true;
+            } else if (reqKind === "refresh") {
+              const folderSavedAt = new Date(matchingFolder.savedAt || nowIso).getTime();
+              if (folderSavedAt > reqCreatedAt) {
+                isReady = true;
+              }
+            }
+          }
+
+          if (isReady && matchingFolder) {
+            const docRef = db.collection("rentcast_pull_requests").doc(docSnap.id);
+            batch.update(docRef, {
+              status: "fulfilled",
+              fulfilledAt: nowIso,
+              fulfilledFolderArea: matchingFolder.area,
+              updatedAt: nowIso,
+            });
+            updatedCount++;
+            pendingRequests.push({ ...reqData, status: "fulfilled", fulfilledFolderArea: matchingFolder.area });
+          } else {
+            pendingRequests.push(reqData);
+          }
+        });
+
+        if (updatedCount > 0) {
+          await batch.commit();
+        }
+      } catch (evalErr) {
+        console.warn("[RentCast Requests] Readiness check evaluation warning:", evalErr);
+      }
+
+      res.setHeader("Cache-Control", "public, max-age=300");
+      res.json({ success: true, folders, pendingRequests });
+    } catch (err: any) {
+      console.warn("[GeoSphere Folders] Error fetching folders:", err);
+      res.json({ success: false, folders: [], pendingRequests: [], error: err.message });
+    }
+  });
+
+  // API Route: POST /api/geosphere/request-pull
+  app.post("/api/geosphere/request-pull", async (req, res) => {
+    try {
+      const { city, state, kind, loId, loName } = req.body || {};
+      const cleanCity = String(city || "").trim();
+      const cleanState = String(state || "").trim();
+      const cleanKind = kind === "refresh" ? "refresh" : "new_city";
+
+      if (!cleanCity || !/^[a-zA-Z\s\-]{2,50}$/.test(cleanCity)) {
+        return res.status(400).json({ error: "Invalid city name. Requires 2+ characters (letters, spaces, hyphens only)." });
+      }
+      if (!cleanState) {
+        return res.status(400).json({ error: "State is required." });
+      }
+
+      const activeLoId = loId || req.body.loId || "lo-mike-ford";
+      const activeLoName = loName || req.body.loName || "Loan Officer";
+
+      const db = getAdminDb();
+      const requestsRef = db.collection("rentcast_pull_requests");
+
+      const openSnap = await requestsRef
+        .where("requestedBy.loId", "==", activeLoId)
+        .where("status", "==", "pending")
+        .get();
+
+      if (openSnap.size >= 5) {
+        return res.status(400).json({ error: "Rate limit reached: Maximum 5 open pending pull requests allowed per Loan Officer." });
+      }
+
+      const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const nowIso = new Date().toISOString();
+
+      const newReq = {
+        id: requestId,
+        city: cleanCity,
+        state: cleanState,
+        kind: cleanKind,
+        requestedBy: { loId: activeLoId, loName: activeLoName },
+        status: "pending",
+        createdAt: nowIso,
+        auditStamped: true,
+      };
+
+      await requestsRef.doc(requestId).set(newReq);
+      console.log(`[RentCast Pull Request] RentCast ${cleanKind === 'refresh' ? 'REFRESH' : 'pull'} requested: ${cleanCity}, ${cleanState} by ${activeLoName}`);
+
+      res.json({ success: true, request: newReq });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to submit pull request" });
+    }
+  });
+
+  // API Route: GET /api/geosphere/pull-requests
+  app.get("/api/geosphere/pull-requests", async (req, res) => {
+    try {
+      const db = getAdminDb();
+      const snap = await db.collection("rentcast_pull_requests").orderBy("createdAt", "desc").limit(100).get();
+      const requests = snap.docs.map(d => d.data());
+      res.json({ success: true, requests });
+    } catch (err: any) {
+      res.json({ success: true, requests: [] });
+    }
+  });
+
+  // API Route: POST /api/geosphere/pull-request/:id/decline
+  app.post("/api/geosphere/pull-request/:id/decline", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { declineNote } = req.body || {};
+      const db = getAdminDb();
+      const docRef = db.collection("rentcast_pull_requests").doc(id);
+      const docSnap = await docRef.get();
+      if (!docSnap.exists) {
+        return res.status(404).json({ error: "Pull request not found." });
+      }
+      await docRef.update({
+        status: "declined",
+        declineNote: declineNote || "Declined by Master Admin",
+        updatedAt: new Date().toISOString(),
+      });
+      res.json({ success: true, id, status: "declined" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to decline pull request" });
+    }
+  });
+
   // API Route: GeoSphere Oregon GIS Proxy & Synchronization (GeoSphere saved-listings snapshots)
   app.post("/api/geosphere/sync", async (req, res) => {
     try {
-      const { endpointUrl, syncToken: bodySyncToken, city } = req.body || {};
+      const { endpointUrl, syncToken: bodySyncToken, city, areas } = req.body || {};
       // PHASE 0 HARDENING (owner decision 2026-09-30): the BYOK RentCast approach
       // is abandoned — Mike is the sole RentCast user and all pulls happen in the
       // separate geosphere-map-oregon-ai-studio repo. The legacy direct-RentCast
@@ -5725,7 +5951,7 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
       }
 
       const data = winner.data;
-      const rawListings = extractRawListings(data);
+      const rawListings = extractRawListings(data, areas);
 
       // Deduplicate and transform into standardized PropertyListing format
       const seenIds = new Set<string>();

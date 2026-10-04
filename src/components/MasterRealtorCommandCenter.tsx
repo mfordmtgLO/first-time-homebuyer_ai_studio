@@ -88,6 +88,9 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
   onOpenScrapeModal,
   onOpenEmailOutreachModal
 }) => {
+  const safeGuidesState = guidesState || { loanOfficers: [], agentRoster: [], pairings: [] };
+  const safeCurrentLo = currentLo || safeGuidesState.loanOfficers?.[0] || { id: "lo-mike-ford", name: "Mike Ford" };
+
   const validSubTabs = ["roster", "recruiting", "pairings", "cobranding", "campaigns"];
   const [activeSubTab, setActiveSubTab] = useState<"roster" | "recruiting" | "pairings" | "cobranding" | "campaigns">(() => {
     return (validSubTabs.includes(initialSubTab as any) ? initialSubTab : "roster") as any;
@@ -95,8 +98,8 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
 
   // Get Unified Master Agent Roster (100% complete agent pool) — declared first to prevent TDZ
   const masterAgentRoster = useMemo(() => {
-    return getUnifiedMasterAgentRoster(guidesState);
-  }, [guidesState]);
+    return getUnifiedMasterAgentRoster(safeGuidesState);
+  }, [safeGuidesState]);
 
   // Multi-State Architecture Filter (Default: OR)
   const [selectedState, setSelectedState] = useState<string>("OR");
@@ -109,7 +112,7 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
   // Pairing State
   const [selectedPairingLoId, setSelectedPairingLoId] = useState<string>("all");
   const [showAddPairingModal, setShowNewPairingModal] = useState(false);
-  const [newPairLoId, setNewPairLoId] = useState<string>(currentLo.id);
+  const [newPairLoId, setNewPairLoId] = useState<string>(safeCurrentLo.id || "lo-mike-ford");
   const [newPairAgentId, setNewPairAgentId] = useState<string>("");
   const [newPairTag, setNewPairTag] = useState<string>("realtor-partner");
   const [pairingError, setPairingError] = useState<string | null>(null);
@@ -122,7 +125,7 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
   }, [showAddPairingModal, masterAgentRoster, newPairAgentId]);
 
   const openNewPairingModal = (agentId?: string) => {
-    setNewPairLoId(currentLo.id || guidesState.loanOfficers[0]?.id || "");
+    setNewPairLoId(safeCurrentLo.id || safeGuidesState.loanOfficers?.[0]?.id || "lo-mike-ford");
     setNewPairAgentId(agentId || masterAgentRoster[0]?.id || "");
     setPairingError(null);
     setShowNewPairingModal(true);
@@ -218,7 +221,7 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
       return;
     }
 
-    const lo = guidesState.loanOfficers.find((l) => l.id === newPairLoId) || currentLo || guidesState.loanOfficers[0];
+    const lo = safeGuidesState.loanOfficers?.find((l) => l.id === newPairLoId) || safeCurrentLo || safeGuidesState.loanOfficers?.[0] || { id: "lo-mike-ford", name: "Mike Ford" };
     const agent = masterAgentRoster.find((a) => a.id === targetAgentId) || masterAgentRoster[0];
 
     if (!lo || !agent) {

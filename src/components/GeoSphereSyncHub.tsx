@@ -165,6 +165,139 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   const [isForceSyncing, setIsForceSyncing] = useState<boolean>(false);
   const [syncError, setSyncError] = useState<boolean>(false);
 
+  // Selective City-Folder Sync & RentCast Pull Requests State
+  const [geosphereFolders, setGeosphereFolders] = useState<Array<{ area: string; count: number; savedAt: string; snapshotId: string }>>([]);
+  const [selectedFolderAreas, setSelectedFolderAreas] = useState<string[]>([]);
+  const [selectAllFolders, setSelectAllFolders] = useState<boolean>(true);
+  const [pullRequests, setPullRequests] = useState<any[]>([]);
+  const [requestCityInput, setRequestCityInput] = useState<string>("");
+  const [requestStateInput, setRequestStateInput] = useState<string>("OR");
+  const [isRequestingPull, setIsRequestingPull] = useState<boolean>(false);
+  const [isFetchingFolders, setIsFetchingFolders] = useState<boolean>(false);
+
+  const fetchFoldersAndRequests = async () => {
+    setIsFetchingFolders(true);
+    try {
+      const res = await fetch("/api/geosphere/folders");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.folders)) {
+          setGeosphereFolders(json.folders);
+          if (selectedFolderAreas.length === 0) {
+            setSelectedFolderAreas(json.folders.map((f: any) => f.area));
+          }
+        }
+        if (json.success && Array.isArray(json.pendingRequests)) {
+          setPullRequests(json.pendingRequests);
+        }
+      }
+      const reqRes = await fetch("/api/geosphere/pull-requests");
+      if (reqRes.ok) {
+        const reqJson = await reqRes.json();
+        if (reqJson.success && Array.isArray(reqJson.requests)) {
+          setPullRequests(reqJson.requests);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch GeoSphere folders:", err);
+    } finally {
+      setIsFetchingFolders(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFoldersAndRequests();
+  }, []);
+
+  const handleSyncSelectedFolders = async () => {
+    setIsFetching(true);
+    try {
+      const areasToSync = selectAllFolders ? undefined : selectedFolderAreas;
+      const res = await fetch("/api/geosphere/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpointUrl: customEndpointUrl.trim() || undefined,
+          syncToken: customSyncToken.trim() || undefined,
+          areas: areasToSync,
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.listings && Array.isArray(json.listings)) {
+          persistListings(json.listings, `Successfully synced ${json.listings.length} listings from selected GeoSphere folders.`);
+        }
+      } else {
+        onTriggerToast("Sync failed. Please check endpoint and sync token.");
+      }
+    } catch (err: any) {
+      onTriggerToast(`Sync error: ${err.message}`);
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  const handleAdminRequestPull = async (cityOverride?: string, stateOverride?: string, kindOverride?: "new_city" | "refresh") => {
+    const city = (cityOverride !== undefined ? cityOverride : requestCityInput).trim();
+    const state = (stateOverride !== undefined ? stateOverride : requestStateInput).trim();
+
+    if (!city || !/^[a-zA-Z\s\-]{2,50}$/.test(city)) {
+      onTriggerToast("Invalid city name. Requires 2+ characters (letters, spaces, hyphens only).");
+      return;
+    }
+    if (!state) {
+      onTriggerToast("State is required.");
+      return;
+    }
+
+    const existingFolder = geosphereFolders.find(f => f.area.toLowerCase() === city.toLowerCase());
+    const kind = kindOverride || (existingFolder ? "refresh" : "new_city");
+
+    setIsRequestingPull(true);
+    try {
+      const res = await fetch("/api/geosphere/request-pull", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          city,
+          state,
+          kind,
+          loId: currentLo?.id || "lo-mike-ford",
+          loName: currentLo?.name || "Loan Officer",
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          onTriggerToast(`✅ RentCast ${kind === 'refresh' ? 'refresh' : 'pull'} requested for ${city}, ${state}!`);
+          setRequestCityInput("");
+          fetchFoldersAndRequests();
+        }
+      } else {
+        const errJson = await res.json();
+        onTriggerToast(errJson.error || "Failed to submit pull request.");
+      }
+    } catch (err: any) {
+      onTriggerToast(`Request error: ${err.message}`);
+    } finally {
+      setIsRequestingPull(false);
+    }
+  };
+
+  const getFolderAgeString = (savedAt: string) => {
+    try {
+      const diffMs = Date.now() - new Date(savedAt).getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays <= 0) return "saved today";
+      if (diffDays === 1) return "saved yesterday";
+      return `saved ${diffDays} days ago`;
+    } catch {
+      return "recently saved";
+    }
+  };
+
   const fetchFirestoreCount = async () => {
     try {
       setSyncError(false);
@@ -1397,6 +1530,218 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
                 <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
                 <span>{isFetching ? "Syncing..." : "⚡ Click Sync to Ingest Now"}</span>
               </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* City-Folder Picker (Selective Sync) & Admin RentCast Pull Requests Hub */}
+      <div className="bg-white rounded-3xl p-6 border border-[#EAE7E0] shadow-sm space-y-6 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#EAE7E0] pb-5">
+          <div>
+            <h3 className="font-serif font-bold text-xl text-[#2D362E] flex items-center gap-2">
+              <FolderKanban className="w-5 h-5 text-[#4A5D4E]" />
+              <span>GeoSphere City-Folder Picker & RentCast Pull Requests</span>
+            </h3>
+            <p className="text-xs text-[#606C5D] mt-1">
+              Select specific city folders for selective sync or request new/refreshed RentCast pulls from Mike Ford.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={fetchFoldersAndRequests}
+              disabled={isFetchingFolders}
+              className="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-[#2D362E] text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isFetchingFolders ? "animate-spin" : ""}`} />
+              <span>Refresh Folders</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSyncSelectedFolders}
+              disabled={isFetching || geosphereFolders.length === 0}
+              className="px-4 py-2 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{isFetching ? "Syncing..." : `Sync Selected (${selectAllFolders ? geosphereFolders.length : selectedFolderAreas.length})`}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Folder Selection Area */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-[#2D362E] uppercase tracking-wider flex items-center gap-2">
+              <CheckSquare className="w-4 h-4 text-emerald-600" />
+              <span>Available GeoSphere City Folders ({geosphereFolders.length})</span>
+            </label>
+            <label className="text-xs font-semibold text-[#4A5D4E] flex items-center gap-1.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={selectAllFolders}
+                onChange={(e) => {
+                  setSelectAllFolders(e.target.checked);
+                  if (e.target.checked) {
+                    setSelectedFolderAreas(geosphereFolders.map(f => f.area));
+                  }
+                }}
+                className="rounded accent-[#4A5D4E] w-4 h-4 cursor-pointer"
+              />
+              <span>Select All Folders (Import Everything)</span>
+            </label>
+          </div>
+
+          {geosphereFolders.length === 0 ? (
+            <div className="p-8 text-center bg-[#FAF9F5] rounded-2xl border border-dashed border-[#EAE7E0] text-xs text-[#606C5D]">
+              {isFetchingFolders ? "Loading GeoSphere city folders..." : "No city folders currently available from GeoSphere snapshot endpoint. Try refreshing or check endpoint URL."}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {geosphereFolders.map(folder => {
+                const isChecked = selectAllFolders || selectedFolderAreas.includes(folder.area);
+                const matchedReq = pullRequests.find(r => r.city.toLowerCase() === folder.area.toLowerCase() && r.status === "fulfilled");
+                const isRefreshed = matchedReq?.kind === "refresh";
+
+                return (
+                  <div
+                    key={folder.snapshotId || folder.area}
+                    className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-2.5 ${
+                      isChecked ? "bg-emerald-50/40 border-emerald-300 shadow-2xs" : "bg-white border-[#EAE7E0]"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <label className="flex items-start gap-2.5 cursor-pointer flex-1">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            setSelectAllFolders(false);
+                            if (e.target.checked) {
+                              setSelectedFolderAreas(prev => [...prev, folder.area]);
+                            } else {
+                              setSelectedFolderAreas(prev => prev.filter(a => a !== folder.area));
+                            }
+                          }}
+                          className="rounded accent-[#4A5D4E] mt-0.5 w-4 h-4 cursor-pointer"
+                        />
+                        <div>
+                          <div className="font-bold text-sm text-[#2D362E] flex items-center gap-1.5">
+                            <span>{folder.area}</span>
+                            {matchedReq && (
+                              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-amber-500 text-white animate-pulse">
+                                {isRefreshed ? `${folder.area} refreshed — ${folder.count} listings` : `${folder.area} is ready`}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-[#606C5D] font-mono mt-0.5">
+                            {folder.count} listings • <span className="text-stone-500">{getFolderAgeString(folder.savedAt)}</span>
+                          </p>
+                        </div>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleAdminRequestPull(folder.area, "OR", "refresh")}
+                        className="text-[10px] font-bold text-[#4A5D4E] hover:underline px-2 py-1 rounded bg-stone-100 hover:bg-stone-200 cursor-pointer shrink-0"
+                        title="Request RentCast Refresh for this city folder"
+                      >
+                        Request Refresh
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Admin API Request Form (New City Pull or Refresh) */}
+        <div className="pt-4 border-t border-[#EAE7E0] space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-[#2D362E] uppercase tracking-wider flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-600" />
+              <span>Admin API Request (New City RentCast Pull or Refresh)</span>
+            </h4>
+            <span className="text-[11px] text-[#606C5D]">Requests are routed to Mike Ford (GeoSphere Administrator)</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-[11px] font-bold text-[#606C5D] block mb-1">City Name</label>
+              <input
+                type="text"
+                placeholder="e.g. Baker City"
+                value={requestCityInput}
+                onChange={(e) => setRequestCityInput(e.target.value)}
+                className="w-full text-xs px-3 py-2.5 rounded-xl bg-white border border-[#EAE7E0] focus:ring-1 focus:ring-[#4A5D4E] outline-none text-[#2D362E]"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-[#606C5D] block mb-1">State</label>
+              <select
+                value={requestStateInput}
+                onChange={(e) => setRequestStateInput(e.target.value)}
+                className="w-full text-xs px-3 py-2.5 rounded-xl bg-white border border-[#EAE7E0] focus:ring-1 focus:ring-[#4A5D4E] outline-none text-[#2D362E] cursor-pointer"
+              >
+                <option value="OR">Oregon (OR)</option>
+                <option value="WA">Washington (WA)</option>
+                <option value="CA">California (CA)</option>
+                <option value="ID">Idaho (ID)</option>
+                <option value="AZ">Arizona (AZ)</option>
+                <option value="TX">Texas (TX)</option>
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={() => handleAdminRequestPull()}
+                disabled={isRequestingPull || !requestCityInput.trim()}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#2D362E] hover:bg-[#4A5D4E] disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-300" />
+                <span>
+                  {geosphereFolders.some(f => f.area.toLowerCase() === requestCityInput.trim().toLowerCase())
+                    ? "Request Refresh"
+                    : "Admin API Request"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Active Pull Requests Queue / Status */}
+        {pullRequests.length > 0 && (
+          <div className="pt-4 border-t border-[#EAE7E0] space-y-3">
+            <h4 className="text-xs font-bold text-[#2D362E] uppercase tracking-wider">Active RentCast Pull Requests ({pullRequests.length})</h4>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {pullRequests.map(req => (
+                <div key={req.id} className="p-3 rounded-xl bg-stone-50 border border-[#EAE7E0] flex items-center justify-between text-xs gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`w-2 h-2 rounded-full ${req.status === 'fulfilled' ? 'bg-emerald-500' : req.status === 'declined' ? 'bg-red-500' : 'bg-amber-500 animate-pulse'}`} />
+                    <div>
+                      <strong className="text-[#2D362E]">{req.city}, {req.state}</strong>
+                      <span className="text-stone-500 ml-2 font-mono text-[11px]">({req.kind === 'refresh' ? 'Refresh' : 'New City'})</span>
+                      <div className="text-[10px] text-stone-500">Requested by {req.requestedBy?.loName || "LO"} • Status: <strong className="uppercase">{req.status}</strong></div>
+                    </div>
+                  </div>
+                  {req.status === 'pending' && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await fetch(`/api/geosphere/pull-request/${req.id}/decline`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ declineNote: "Declined by Admin" }),
+                        });
+                        fetchFoldersAndRequests();
+                      }}
+                      className="text-[10px] text-red-600 hover:underline font-bold cursor-pointer"
+                    >
+                      Decline
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}

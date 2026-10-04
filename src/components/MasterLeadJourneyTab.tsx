@@ -501,7 +501,7 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({
                           
                           <button 
                             onClick={() => {
-                              const script = `Hi ${lead.fullName.split(' ')[0]},\n\nI saw you were looking at ${lead.propertyType || 'homes'} around ${lead.targetPriceRange || 'your target budget'}. Based on your file, you may qualify for a zero-down program. Do you have 5 minutes to connect with me and ${lead.assignedAgent || 'my partner agent'} today?\n\n- ${loanOfficer.name}`;
+                              const script = `Hi ${(lead?.fullName || 'Client').split(' ')[0]},\n\nI saw you were looking at ${lead.propertyType || 'homes'} around ${lead.targetPriceRange || 'your target budget'}. Based on your file, you may qualify for a zero-down program. Do you have 5 minutes to connect with me and ${lead.assignedAgent || 'my partner agent'} today?\n\n- ${loanOfficer.name}`;
                               alert(`Generated Smart Script (copied to clipboard):\n\n${script}`);
                             }}
                             className="w-full mt-2 bg-[#4A5D4E] hover:bg-[#2D362E] text-white py-1.5 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1"
@@ -528,13 +528,13 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({
                           </div>
                           
                           <div className="text-[10px] text-indigo-900/80 mb-2 leading-relaxed">
-                            Use <strong>Ask GeoSphere</strong> to curate a custom property list based on LMI grants and their budget. Sync pins directly to {lead.fullName.split(' ')[0]}'s personal Google Maps app for high retention.
+                            Use <strong>Ask GeoSphere</strong> to curate a custom property list based on LMI grants and their budget. Sync pins directly to {(lead?.fullName || 'Client').split(' ')[0]}'s personal Google Maps app for high retention.
                           </div>
 
                           <div className="flex flex-col gap-1.5">
                             <button 
                               onClick={() => {
-                                const q = prompt(`Enter a natural language search for ${lead.fullName.split(' ')[0]} (e.g. "homes under $450k near St. Johns with 0% down grant"):`);
+                                const q = prompt(`Enter a natural language search for ${(lead?.fullName || 'Client').split(' ')[0]} (e.g. "homes under $450k near St. Johns with 0% down grant"):`);
                                 if (q) {
                                   alert(`Ask GeoSphere parsed: "${q}"\n\nCross-referencing Rentcast API and Census Tract LMI boundaries...\n\nFound 6 matches.`);
                                   onUpdateLead({ 
@@ -561,7 +561,7 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({
                                       direction: 'outbound',
                                       timestamp: new Date().toISOString(),
                                       agentId: 'lo_system',
-                                      content: `Hi ${lead.fullName.split(' ')[0]}, I curated ${lead.curatedPropertyIds?.length} properties for you using our AI map search. I've synced them directly to your Google Maps account for easy navigation! Let me and ${lead.assignedAgent || 'my partner agent'} know which ones you want to tour.`,
+                                      content: `Hi ${(lead?.fullName || 'Client').split(' ')[0]}, I curated ${lead.curatedPropertyIds?.length} properties for you using our AI map search. I've synced them directly to your Google Maps account for easy navigation! Let me and ${lead.assignedAgent || 'my partner agent'} know which ones you want to tour.`,
                                       metadata: { subject: "Your Custom Google Maps Property Tour is Ready!" }
                                     };
                                     
@@ -580,7 +580,7 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({
                             {/* Price Drop Simulation */}
                             <button
                                 onClick={() => {
-                                    alert(`Firebase Cloud Function Triggered: A $15,000 price drop was detected on a saved property via Rentcast API.\n\nAn automated Google Maps Mobile Push Notification and Email have been dispatched to ${lead.fullName.split(' ')[0]}. The LO dashboard and Property Tracker are now updated.`);
+                                    alert(`Firebase Cloud Function Triggered: A $15,000 price drop was detected on a saved property via Rentcast API.\n\nAn automated Google Maps Mobile Push Notification and Email have been dispatched to ${(lead?.fullName || 'Client').split(' ')[0]}. The LO dashboard and Property Tracker are now updated.`);
 
                                     if (properties && setProperties && properties.length > 0) {
                                         const pToUpdate = properties[0];
@@ -602,7 +602,7 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({
                                         direction: 'inbound',
                                         timestamp: new Date().toISOString(),
                                         agentId: 'lo_system',
-                                        content: `Firebase Cloud Function: $15,000 price drop detected on saved property. Automated Google Maps Push Notification & Email dispatched to ${lead.fullName.split(' ')[0]}.`,
+                                        content: `Firebase Cloud Function: $15,000 price drop detected on saved property. Automated Google Maps Push Notification & Email dispatched to ${(lead?.fullName || 'Client').split(' ')[0]}.`,
                                         metadata: { subject: "Automated Price Drop Alert" }
                                     };
                                     

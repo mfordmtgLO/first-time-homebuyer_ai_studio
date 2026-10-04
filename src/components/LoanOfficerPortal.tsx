@@ -9761,7 +9761,7 @@ Mike Ford`;
             <div className="bg-[#4A5D4E] p-4 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center font-bold text-sm">
-                  {viewingTranscriptLead.fullName
+                  {(viewingTranscriptLead.fullName || "Client")
                     .split(" ")
                     .map((n) => n[0])
                     .slice(0, 2)
@@ -9769,7 +9769,7 @@ Mike Ford`;
                 </div>
                 <div>
                   <h3 className="font-bold text-sm">
-                    {viewingTranscriptLead.fullName} • AI Chat Transcript
+                    {viewingTranscriptLead.fullName || "Client"} • AI Chat Transcript
                   </h3>
                   <p className="text-[11px] text-white/80">
                     {viewingTranscriptLead.leadSource} •{" "}

@@ -48,7 +48,7 @@ export function generateScenarioDrafts({
   draftRealtorEmailSubject: string;
   draftRealtorEmailBody: string;
 } {
-  const firstName = lead.fullName.split(" ")[0] || lead.fullName;
+  const firstName = (lead?.fullName || "there").split(" ")[0] || "there";
   const loName = loanOfficer?.name || "Mike Ford";
   const loNmls = loanOfficer?.nmlsId || "NMLS #288455";
   const loPhone = loanOfficer?.phone || "(541) 729-0819";

@@ -145,9 +145,9 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
     return leads.filter((lead) => {
       const matchesSearch =
         !leadSearch ||
-        lead.fullName.toLowerCase().includes(leadSearch.toLowerCase()) ||
-        lead.email.toLowerCase().includes(leadSearch.toLowerCase()) ||
-        lead.phone.includes(leadSearch) ||
+        (lead.fullName || "").toLowerCase().includes(leadSearch.toLowerCase()) ||
+        (lead.email || "").toLowerCase().includes(leadSearch.toLowerCase()) ||
+        (lead.phone || "").includes(leadSearch) ||
         (lead.preferredLocations && lead.preferredLocations.toLowerCase().includes(leadSearch.toLowerCase()));
 
       if (!matchesSearch) return false;
@@ -457,7 +457,7 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
                       <div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <h4 className="font-bold text-sm text-[#2D362E]">
-                            {lead.fullName}
+                            {lead.fullName || "Prospective Buyer"}
                           </h4>
                           {lead.intentScore === "hot" && (
                             <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5">
@@ -519,7 +519,7 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
                       )}
                       {lead.phone && (
                         <a
-                          href={`sms:${lead.phone}?body=Hi ${encodeURIComponent(lead.fullName.split(" ")[0])}, this is Mike Ford with Cornerstone First Mortgage. I received your homebuyer scenario and would love to help you review loan options and grants!`}
+                          href={`sms:${lead.phone}?body=Hi ${encodeURIComponent((lead.fullName || "there").split(" ")[0])}, this is Mike Ford with Cornerstone First Mortgage. I received your homebuyer scenario and would love to help you review loan options and grants!`}
                           className="flex-1 min-h-[44px] flex items-center justify-center gap-1.5 bg-[#FAF9F5] border border-[#EAE7E0] hover:bg-[#F1EFE9] text-[#2D362E] rounded-xl text-xs font-bold transition-transform active:scale-95"
                         >
                           <MessageSquare className="w-3.5 h-3.5 text-[#4A5D4E]" />
@@ -938,7 +938,7 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
                   Gemini AI Strategy Dossier
                 </span>
                 <h3 className="text-lg font-serif font-bold text-[#2D362E]">
-                  {showAiDossierModal.fullName}
+                  {showAiDossierModal.fullName || "Buyer Dossier"}
                 </h3>
               </div>
               <button
@@ -984,7 +984,7 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
                 className="w-full py-3 bg-[#4A5D4E] hover:bg-[#38463B] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2"
               >
                 <Phone className="w-3.5 h-3.5" />
-                <span>Call {showAiDossierModal.fullName} Now</span>
+                <span>Call {showAiDossierModal.fullName || "Buyer"} Now</span>
               </a>
             </div>
           </div>

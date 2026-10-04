@@ -59,6 +59,16 @@ export const GEOSPHERE_DATASETS: GeoSphereDatasetOption[] = [
     itemCount: 58
   },
   {
+    id: "cottage_grove",
+    name: "Cottage Grove Saved Listings Folder (63 Properties)",
+    category: "lane",
+    description: "Upstream GeoSphere RentCast pull for Cottage Grove saved by Mike Ford (Admin). Full USDA Rural 0% Down, OHCS Flex Lending & FirstHome Targeted qualifiers.",
+    badge: "Cottage Grove Live (63)",
+    badgeColor: "bg-teal-900 text-white",
+    sourceUrl: `${GEOSPHERE_CLOUD_RUN_URL}/api/map-saved-listings?area=cottage-grove`,
+    itemCount: 63
+  },
+  {
     id: "deschutes",
     name: "Central Oregon & Cascades / Deschutes (35 Properties)",
     category: "deschutes",

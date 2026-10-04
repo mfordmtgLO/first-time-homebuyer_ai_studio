@@ -447,6 +447,32 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "propertyId", "updatedAt"]
+    },
+    "PriceDropAlert": {
+      "title": "PriceDropAlert",
+      "description": "Price drop notification and estimated monthly mortgage payment savings",
+      "type": "object",
+      "properties": {
+        "alertId": { "type": "string" },
+        "propertyAddress": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "zip": { "type": "string" },
+        "originalPrice": { "type": "number" },
+        "currentPrice": { "type": "number" },
+        "priceDropAmount": { "type": "number" },
+        "monthlySavings": { "type": "number" },
+        "revelation": { "type": "string" },
+        "loName": { "type": "string" },
+        "loPhone": { "type": "string" },
+        "agentName": { "type": "string" },
+        "agentPhone": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "smsPayload": { "type": "string" },
+        "pushedAt": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["alertId", "propertyAddress", "priceDropAmount"]
     }
   },
   "firestore": {
@@ -509,6 +535,10 @@
     "user_preferences/{userId}": {
       "schema": { "$ref": "#/entities/UserPreference" },
       "description": "Cross-device user interface preferences including light/dark theme preference"
+    },
+    "price_drop_alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/PriceDropAlert" },
+      "description": "Real-time MLS price drop alerts with monthly mortgage payment reduction estimates wired to cell push notifications"
     }
   }
 }

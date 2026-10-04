@@ -296,11 +296,6 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
           )}
 
           {visibleProperties.map(property => {
-            const loanAmount = property.price ? property.price * 0.965 : 0;
-            const monthlyPI = loanAmount ? calculateMonthlyPI(loanAmount, 6.5, 30) : 0;
-            const totalEstimatedMonthly = property.price
-              ? monthlyPI + ((property.propertyTaxAnnual || 0) / 12) + (property.hoaMonthly || 0) + 120
-              : null;
             const badges = getListingOverlayBadges(property);
             const hasPhoto = hasAuthenticPropertyPhoto(property);
             const priceLimitInfo = getPropertyOhcsPriceLimit(
@@ -497,33 +492,18 @@ export const CuratedHomesSection: React.FC<CuratedHomesSectionProps> = ({
 
                   {/* Financial Overview & Action CTA */}
                   <div className="pt-3 border-t border-[#EAE7E0] space-y-3">
-                    {totalEstimatedMonthly != null ? (
-                      <div className="flex items-center justify-between text-xs bg-[#FAF9F5] p-2.5 rounded-xl border border-[#EAE7E0]/60">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Est. Monthly</span>
-                          <strong className="text-[#2D362E] font-serif font-bold text-sm">
-                            {formatUSD(Math.round(totalEstimatedMonthly))}<span className="text-[10px] font-normal text-[#606C5D]">/mo</span>
-                          </strong>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Annual Tax</span>
-                          <span className="text-[#2D362E] font-bold">{formatUSD(property.propertyTaxAnnual)}/yr</span>
-                        </div>
+                    <div className="flex items-center justify-between text-xs bg-[#FAF9F5] p-2.5 rounded-xl border border-[#EAE7E0]/60">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Price Status</span>
+                        <strong className="text-[#2D362E] font-serif font-bold text-sm">
+                          {property.price ? formatUSD(property.price) : "Price on Request"}
+                        </strong>
                       </div>
-                    ) : (
-                      <div className="flex items-center justify-between text-xs bg-[#FAF9F5] p-2.5 rounded-xl border border-[#EAE7E0]/60">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Price Status</span>
-                          <strong className="text-[#2D362E] font-serif font-bold text-sm">
-                            Price unavailable
-                          </strong>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Annual Tax</span>
-                          <span className="text-[#2D362E] font-bold">{formatUSD(property.propertyTaxAnnual)}</span>
-                        </div>
+                      <div className="text-right">
+                        <span className="text-[10px] uppercase font-bold text-[#606C5D] block">Annual Tax</span>
+                        <span className="text-[#2D362E] font-bold">{formatUSD(property.propertyTaxAnnual)}/yr</span>
                       </div>
-                    )}
+                    </div>
 
                     {/* 1-Click Zillow & Down Payment Aid Action Row */}
                     <div className="flex items-center justify-between gap-2 pt-1">

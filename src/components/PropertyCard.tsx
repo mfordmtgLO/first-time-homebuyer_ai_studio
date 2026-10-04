@@ -23,7 +23,9 @@ import {
   Bus,
   TreePine,
   Calculator,
-  Megaphone
+  Megaphone,
+  Smartphone,
+  Check
 } from "lucide-react";
 import { PropertyListing, FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -35,8 +37,11 @@ import {
   getListingOverlayBadges,
   getZillowUrl
 } from "../utils/overlayClassification";
+import { 
+  calculatePriceDropMonthlySavings, 
+  generatePriceDropGeminiRevelation 
+} from "../utils/propertyMapUtils";
 import { getPropertyOhcsPriceLimit } from "../utils/ohcsPurchaseLimits";
-import { calculateEstimatedMarketValue } from "../utils/marketValueUtils";
 import { PropertyNotesThread } from "./PropertyNotesThread";
 import { PropertyLinkedAds } from "./ai/PropertyLinkedAds";
 
@@ -161,6 +166,7 @@ export interface PropertyCardProps {
   agent?: RealEstateAgentProfile;
   origin?: string;
   onOpenLoanOfficerContact?: () => void;
+  onOpenPriceDropAlertOutreach?: (property: PropertyListing) => void;
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -180,7 +186,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   loanOfficer,
   agent,
   origin,
-  onOpenLoanOfficerContact
+  onOpenLoanOfficerContact,
+  onOpenPriceDropAlertOutreach
 }) => {
   // Swipeable carousel state powered by Framer Motion drag gestures
   const images = getPropertyImageGallery(property);
@@ -194,7 +201,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const estMonthly = estPI + Math.round(property.propertyTaxAnnual / 12) + Math.round(profile.annualHomeInsurance / 12) + property.hoaMonthly;
 
   const badges = getListingOverlayBadges(property);
-  const marketVal = calculateEstimatedMarketValue(property.id, property.price);
   const walk = calculateMockWalkScore(property.address, property.city, property.zip, property.walkScore);
   const school = calculateMockSchoolScore(property.address, property.city, property.zip);
   const priceInfo = getPropertyOhcsPriceLimit(
@@ -204,6 +210,47 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
     property.overlayEligibility?.lmiCensusTract || property.overlayEligibility?.geoid,
     property.overlayEligibility?.targetedArea
   );
+
+  // Price Drop & Payment Reduction Calculations
+  const effectivePriceDrop = property.priceDropAmount || ((property.originalPrice && property.price && property.originalPrice > property.price) ? property.originalPrice - property.price : 0);
+  const monthlyPaymentSavings = calculatePriceDropMonthlySavings(effectivePriceDrop, profile.interestRate || 6.5);
+  const geminiRevelation = generatePriceDropGeminiRevelation(property, monthlyPaymentSavings);
+
+  const [isPushingAlert, setIsPushingAlert] = useState(false);
+  const [pushSuccess, setPushSuccess] = useState(false);
+
+  const handleTriggerCellPushAlert = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsPushingAlert(true);
+    try {
+      const res = await fetch("/api/sms/send-price-drop-alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyAddress: property.address,
+          city: property.city || "Oregon",
+          state: property.state || "OR",
+          zip: property.zip || "",
+          originalPrice: property.originalPrice || ((property.price || 0) + effectivePriceDrop),
+          currentPrice: property.price,
+          priceDropAmount: effectivePriceDrop,
+          monthlySavings: monthlyPaymentSavings,
+          loName: loanOfficer?.name || "Mike Ford",
+          loPhone: loanOfficer?.phone || "(541) 555-0199",
+          agentName: agent?.name || "Kanndice",
+          agentPhone: agent?.phone || "(541) 555-0142",
+          revelation: geminiRevelation,
+        }),
+      });
+      const data = await res.json();
+      setPushSuccess(true);
+      setTimeout(() => setPushSuccess(false), 5000);
+    } catch (err) {
+      console.warn("Push alert trigger notice:", err);
+    } finally {
+      setIsPushingAlert(false);
+    }
+  };
 
   // Carousel navigation handlers with direction tracking for fluid transitions
   const paginate = (newDirection: number) => {
@@ -334,7 +381,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/35 pointer-events-none" />
 
           {/* Status & Property Type Badges */}
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+          <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 z-10 max-w-[70%]">
+            {property.priceDropAmount && property.priceDropAmount > 0 && (
+              <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-red-600 text-white shadow-md flex items-center gap-1 animate-pulse border border-red-400/40">
+                <Flame className="w-3 h-3 text-amber-300" />
+                <span>PRICE DROP -{formatUSD(property.priceDropAmount)}</span>
+              </span>
+            )}
             <span
               className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shadow-xs backdrop-blur-md ${
                 property.status === "offered"
@@ -458,19 +511,32 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           {/* Bottom Indicators & Price Tag */}
           <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between text-white z-10 pointer-events-none">
             <div className="pointer-events-auto">
-              <span className="text-lg sm:text-xl font-bold drop-shadow-sm font-serif">{formatUSD(property.price)}</span>
-              <span className="text-[10px] sm:text-[11px] text-white/90 ml-1.5">(${Math.round(property.price / property.sqft)}/sqft)</span>
+              {property.originalPrice && property.originalPrice > property.price && (
+                <div className="text-[11px] text-white/80 line-through font-semibold drop-shadow-xs">
+                  Was {formatUSD(property.originalPrice)}
+                </div>
+              )}
+              <div className="flex items-baseline gap-1">
+                <span className="text-lg sm:text-xl font-bold drop-shadow-sm font-serif">{formatUSD(property.price)}</span>
+                <span className="text-[10px] sm:text-[11px] text-white/90 ml-1">(${Math.round(property.price / property.sqft)}/sqft)</span>
+              </div>
             </div>
 
             <div className="flex flex-col items-end gap-1.5 sm:gap-2">
-              {property.priceDropAmount ? (
-                <span className="text-[10px] sm:text-xs font-bold text-white bg-red-600/90 px-2 py-0.5 rounded-md shadow-2xs backdrop-blur-xs flex items-center gap-1 animate-pulse">
-                  <Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                  <span className="hidden sm:inline">Price Drop: </span>-{formatUSD(property.priceDropAmount)}
-                </span>
+              {effectivePriceDrop > 0 ? (
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[10px] sm:text-xs font-bold text-white bg-red-600/95 px-2.5 py-0.5 rounded-lg shadow-sm backdrop-blur-xs flex items-center gap-1.5 animate-pulse">
+                    <Flame className="w-3 h-3 text-amber-300" />
+                    <span>Price Drop: -{formatUSD(effectivePriceDrop)}</span>
+                  </span>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-emerald-100 bg-emerald-800/90 px-2 py-0.5 rounded-md shadow-2xs backdrop-blur-xs flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5 text-emerald-300" />
+                    <span>Save ~{formatUSD(monthlyPaymentSavings)}/mo</span>
+                  </span>
+                </div>
               ) : (
                 <span className="text-[10px] sm:text-xs font-semibold text-white bg-[#4A5D4E]/90 px-2 py-0.5 rounded-md shadow-2xs backdrop-blur-xs">
-                  Est. {formatUSD(estMonthly)}<span className="hidden sm:inline">/mo</span>
+                  {property.daysOnMarket !== undefined ? `${property.daysOnMarket} Days on Market` : "Active Listing"}
                 </span>
               )}
 
@@ -498,6 +564,81 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         {/* BODY CONTENT */}
         <div className="p-3 sm:p-5 space-y-3 sm:space-y-4">
+          {effectivePriceDrop > 0 && (
+            <div className="bg-gradient-to-r from-red-50 via-rose-50 to-amber-50 dark:from-red-950/40 dark:via-rose-950/30 dark:to-amber-950/20 border-2 border-red-200 dark:border-red-800/60 rounded-2xl p-3.5 space-y-3 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="flex items-center gap-1 text-red-700 dark:text-red-400 font-extrabold text-xs bg-red-100 dark:bg-red-900/50 px-2 py-0.5 rounded-md">
+                      <Flame className="w-3.5 h-3.5 text-red-600 animate-pulse" />
+                      Price Drop: -{formatUSD(effectivePriceDrop)}
+                    </span>
+                    <span className="flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-bold text-xs bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded-md">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      Payment Reduction: ~{formatUSD(monthlyPaymentSavings)}/mo
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#606C5D] dark:text-slate-300 mt-1 font-medium">
+                    {property.originalPrice ? `Reduced from ${formatUSD(property.originalPrice)} down to ${formatUSD(property.price)}` : `New asking price: ${formatUSD(property.price)}`}
+                  </p>
+                </div>
+
+                {/* Quick Action Buttons for LO & Plugin Users */}
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleTriggerCellPushAlert}
+                    disabled={isPushingAlert}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+                      pushSuccess 
+                        ? "bg-emerald-600 text-white" 
+                        : "bg-slate-900 hover:bg-slate-800 text-white active:scale-95"
+                    }`}
+                    title="Send immediate cell phone push notification & SMS alert to Loan Officer Mike Ford & plugin user"
+                  >
+                    {pushSuccess ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-200" />
+                        <span>Push Alert Sent!</span>
+                      </>
+                    ) : isPushingAlert ? (
+                      <span>Wiring SMS Push...</span>
+                    ) : (
+                      <>
+                        <Smartphone className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Push Alert to Cell</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenPriceDropAlertOutreach?.(property);
+                    }}
+                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-xl text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                    title="Send or preview dual-agent price drop alert draft for this specific property address"
+                  >
+                    <Megaphone className="w-3.5 h-3.5" />
+                    <span>Outreach Hub</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Gemini / Muse Revelation Strategy Note Card */}
+              <div className="bg-white/90 dark:bg-slate-900/90 border border-red-200/80 dark:border-red-900/40 rounded-xl p-2.5 text-xs text-[#2D362E] dark:text-slate-200 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400 text-[11px] uppercase tracking-wide">
+                  <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Gemini / Muse Strategic Revelation</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-[#4A5D4E] dark:text-slate-300">
+                  {geminiRevelation}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div>
             <div className="flex justify-between items-start gap-2">
               <div className="min-w-0">
@@ -510,13 +651,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 </p>
               </div>
               <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border shadow-2xs ${
-                property.status === 'Active' 
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                  : property.status === 'Pending'
-                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                property.status === 'under_contract' || property.status === 'Pending' || property.status === 'pending'
+                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800' 
+                  : property.status === 'passed' || property.status === 'off_market' || property.status === 'archived'
+                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
+                  : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
               }`}>
-                {property.status}
+                {property.status === 'under_contract' || property.status === 'Pending' || property.status === 'pending'
+                  ? 'Pending' 
+                  : property.status === 'passed' || property.status === 'off_market' || property.status === 'archived'
+                  ? 'Off-Market' 
+                  : property.status || 'Active'}
               </span>
             </div>
 
@@ -618,19 +763,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               >
                 <Footprints className="w-2.5 h-2.5 shrink-0 opacity-80" />
                 <span>Walk Score {walk.score}</span>
-              </span>
-              <span 
-                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 shadow-2xs cursor-help whitespace-nowrap ${
-                  marketVal.condition === 'underpriced' 
-                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                    : marketVal.condition === 'overpriced'
-                    ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                    : 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
-                }`}
-                title={`AI Estimated Market Value: ${formatUSD(marketVal.estimatedValue)} (${marketVal.variancePct}% vs list price based on recent neighborhood sales)`}
-              >
-                <Sparkles className="w-2.5 h-2.5 shrink-0" />
-                <span>Est. Value {formatUSD(marketVal.estimatedValue)}</span>
               </span>
               
               {hasAmenity(property.id, "grocery") && (
@@ -844,6 +976,21 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 mt-2">
+          {property.priceDropAmount && property.priceDropAmount > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenPriceDropAlertOutreach?.(property);
+              }}
+              className="flex-1 py-2 px-1 sm:px-2.5 rounded-xl bg-red-600 hover:bg-red-700 active:scale-95 text-white text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-colors border border-red-500 shadow-sm cursor-pointer"
+              title="Generate and send dual-agent price drop alert draft for this specific property address"
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-300 animate-pulse shrink-0" />
+              <span className="truncate">Price Drop Alert</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={(e) => {

@@ -286,5 +286,10 @@ service cloud.firestore {
                        incoming().messages is list && incoming().messages.size() <= 500;
       allow delete: if isSignedIn() && isBranchManager();
     }
+
+    match /price_drop_alerts/{alertId} {
+      allow read: if true;
+      allow write: if isSignedIn() || isValidId(alertId);
+    }
   }
 }

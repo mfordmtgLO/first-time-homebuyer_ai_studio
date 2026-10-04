@@ -1,5 +1,4 @@
 import { PropertyListing, FinancialProfile } from "../types";
-import { calculateMonthlyPI } from "./mortgageMath";
 import { isUsdaEligible, isLmiEligible, isTargetedArea } from "./overlayClassification";
 
 export interface GeoCoordinate {
@@ -364,36 +363,27 @@ export function calculateHomebuyingReadiness(
   const price = property.price != null && !isNaN(Number(property.price))
     ? Number(property.price)
     : (profile.targetPrice || 350000);
-  const loanAmt = Math.max(0, price - profile.downPaymentSavings);
-  const estPI = calculateMonthlyPI(loanAmt, profile.interestRate, profile.loanTermYears);
-  const monthlyTaxes = property.propertyTaxAnnual != null && !isNaN(Number(property.propertyTaxAnnual))
-    ? Math.round(Number(property.propertyTaxAnnual) / 12)
-    : Math.round((price * 0.009) / 12);
-  const monthlyInsurance = Math.round(profile.annualHomeInsurance / 12);
-  const hoa = property.hoaMonthly || 0;
-  const totalMonthly = estPI + monthlyTaxes + monthlyInsurance + hoa;
-
-  const targetMax = profile.targetMaxMonthlyPayment || 3200;
-  const savingsVsTarget = targetMax - totalMonthly;
-  const isBudgetFit = totalMonthly <= targetMax;
+  const targetPrice = profile.targetPrice || 450000;
+  const priceDiff = targetPrice - price;
+  const isBudgetFit = price <= targetPrice * 1.1;
 
   let score = 70; // baseline
   const positiveFactors: string[] = [];
   const cautionFactors: string[] = [];
 
-  // 1. Monthly Payment Affordability (35 pts)
-  if (savingsVsTarget >= 300) {
+  // 1. Purchase Price & Budget Fit (35 pts) - Handles fallbacks gracefully
+  if (price <= targetPrice) {
     score += 20;
-    positiveFactors.push(`Monthly payment is $${savingsVsTarget.toLocaleString()} below your maximum budget cap.`);
-  } else if (savingsVsTarget >= 0) {
-    score += 12;
-    positiveFactors.push(`Comfortably within your $${targetMax.toLocaleString()}/mo approved target payment.`);
-  } else if (savingsVsTarget >= -150) {
-    score -= 8;
-    cautionFactors.push(`Payment stretches $${Math.abs(savingsVsTarget).toLocaleString()}/mo above your target cap.`);
+    positiveFactors.push(`List price ($${price.toLocaleString()}) is within your target purchase budget.`);
+  } else if (price <= targetPrice * 1.05) {
+    score += 10;
+    positiveFactors.push(`List price is within 5% of your target purchase price.`);
+  } else if (price <= targetPrice * 1.15) {
+    score -= 5;
+    cautionFactors.push(`List price exceeds target budget by $${Math.abs(priceDiff).toLocaleString()}.`);
   } else {
-    score -= 22;
-    cautionFactors.push(`High payment: exceeds target monthly budget by $${Math.abs(savingsVsTarget).toLocaleString()}/mo.`);
+    score -= 15;
+    cautionFactors.push(`Higher price tier: $${Math.abs(priceDiff).toLocaleString()} above target.`);
   }
 
   // 2. Loan Program / Down Payment Overlays (20 pts)
@@ -486,4 +476,40 @@ export function calculateHomebuyingReadiness(
     monthlySavingsVsTarget: savingsVsTarget,
     isBudgetFit
   };
+}
+
+/**
+ * Calculates estimated monthly mortgage payment savings resulting from a purchase price reduction.
+ * Standard formula: Loan amount reduction (96.5% standard LTV) * 30-year fixed amortization factor (benchmark ~6.5%) + Oregon property tax reduction (~1.1%/yr)
+ */
+export function calculatePriceDropMonthlySavings(priceDropAmount?: number | null, annualRatePct: number = 6.5): number {
+  if (!priceDropAmount || priceDropAmount <= 0) return 0;
+  // Principal & Interest monthly savings on 96.5% standard loan
+  const loanDrop = priceDropAmount * 0.965;
+  const monthlyRate = (annualRatePct / 100) / 12;
+  const n = 360;
+  const piSavings = loanDrop * (monthlyRate * Math.pow(1 + monthlyRate, n)) / (Math.pow(1 + monthlyRate, n) - 1);
+  // Property tax savings estimate (~1.1% in Oregon)
+  const taxSavings = (priceDropAmount * 0.011) / 12;
+  return Math.max(25, Math.round(piSavings + taxSavings));
+}
+
+/**
+ * Generates an actionable Gemini/Muse strategic revelation for listings with price cuts.
+ */
+export function generatePriceDropGeminiRevelation(
+  listing: PropertyListing,
+  monthlySavings?: number
+): string {
+  const drop = listing.priceDropAmount || (listing.originalPrice && listing.price ? listing.originalPrice - listing.price : 0);
+  const savings = monthlySavings || calculatePriceDropMonthlySavings(drop);
+  const dom = listing.daysOnMarket || 12;
+  
+  if (drop >= 20000) {
+    return `🔥 High-Impact Revelation: Major $${drop.toLocaleString()} price cut yields an estimated ~$${savings}/mo monthly payment reduction. Motivated seller indicator (${dom} DOM) — prime opportunity to submit a competitive opening offer or ask for 2-1 buydown seller credits!`;
+  }
+  if (drop > 0) {
+    return `💡 Gemini/Muse Strategic Revelation: $${drop.toLocaleString()} price reduction saves ~$${savings}/mo on monthly debt service, expanding your pre-qualification comfort zone. Coordinate with your co-branded agent to act quickly.`;
+  }
+  return `✨ Strategy Note: Stable pricing with verified MLS data.`;
 }

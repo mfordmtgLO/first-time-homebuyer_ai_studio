@@ -31,6 +31,8 @@ import {
   MessageSquare,
   PersonStanding,
   Clock,
+  Smartphone,
+  Check
 } from "lucide-react";
 import { PropertyListing, FinancialProfile, PropertyConversation } from "../types";
 import { subscribeToPropertyConversation } from "../services/propertyConversationService";
@@ -41,6 +43,7 @@ import {
   getNearbyAmenities,
   calculateHomebuyingReadiness,
   calculateHaversineDistance,
+  calculatePriceDropMonthlySavings,
   OREGON_CITY_COORDINATES,
   OREGON_SCHOOL_DISTRICTS,
   KEY_OREGON_AMENITIES,
@@ -1042,6 +1045,26 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                             {property.distanceFromCenter} mi away
                           </span>
                         </div>
+
+                        {/* Price Drop & Monthly Payment Reduction Alert Tag */}
+                        {(() => {
+                          const pDrop = property.priceDropAmount || ((property.originalPrice && property.price && property.originalPrice > property.price) ? property.originalPrice - property.price : 0);
+                          const pSavings = calculatePriceDropMonthlySavings(pDrop);
+                          if (pDrop <= 0) return null;
+                          return (
+                            <div className="flex items-center gap-1.5 flex-wrap py-0.5">
+                              <span className="text-[9px] font-extrabold text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/60 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                <Flame className="w-2.5 h-2.5 text-red-600 animate-pulse" />
+                                Drop: -{formatUSD(pDrop)}
+                              </span>
+                              <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
+                                Save ~{formatUSD(pSavings)}/mo
+                              </span>
+                            </div>
+                          );
+                        })()}
+
                         <h4
                           className="font-serif font-bold text-xs text-[#2D362E] truncate"
                           title={property.title}
@@ -1061,7 +1084,7 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                           {formatUSD(property.price)}
                         </span>
                         <span className="text-[10px] text-[#606C5D]">
-                          est. ${property.readiness.monthlyPaymentEstimate.toLocaleString()}/mo
+                          {property.daysOnMarket !== undefined ? `${property.daysOnMarket}d DOM` : "Verified Active"}
                         </span>
                       </div>
                     </div>
@@ -1283,12 +1306,30 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
                         </div>
 
                         <div className="space-y-0.5">
+                          {(() => {
+                            const infoDrop = activeSelectedProperty.priceDropAmount || ((activeSelectedProperty.originalPrice && activeSelectedProperty.price && activeSelectedProperty.originalPrice > activeSelectedProperty.price) ? activeSelectedProperty.originalPrice - activeSelectedProperty.price : 0);
+                            const infoSavings = calculatePriceDropMonthlySavings(infoDrop);
+                            if (infoDrop <= 0) return null;
+                            return (
+                              <div className="flex items-center justify-between gap-1 bg-red-50 dark:bg-red-950/50 p-1.5 rounded-lg border border-red-200 dark:border-red-900/50 mb-1">
+                                <span className="text-[10px] font-extrabold text-red-700 dark:text-red-300 flex items-center gap-1">
+                                  <Flame className="w-3 h-3 text-red-600 animate-pulse" />
+                                  Drop: -{formatUSD(infoDrop)}
+                                </span>
+                                <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                  <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
+                                  Save ~{formatUSD(infoSavings)}/mo
+                                </span>
+                              </div>
+                            );
+                          })()}
+
                           <div className="flex items-center justify-between">
                             <span className="font-serif font-bold text-sm text-[#4A5D4E]">
                               {formatUSD(activeSelectedProperty.price)}
                             </span>
                             <span className="text-[10px] text-[#606C5D]">
-                              est. {activeSelectedProperty.readiness?.monthlyPaymentEstimate ? `$${activeSelectedProperty.readiness.monthlyPaymentEstimate.toLocaleString()}/mo` : "—"}
+                              {activeSelectedProperty.daysOnMarket !== undefined ? `${activeSelectedProperty.daysOnMarket}d on Market` : "Active Listing"}
                             </span>
                           </div>
                           <h4 className="font-serif font-bold text-xs leading-tight">

@@ -92,7 +92,7 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
             </h1>
 
             <p className="text-base sm:text-lg text-[#606C5D] max-w-2xl leading-relaxed">
-              Find out what you can truly afford, uncover state Down Payment Assistance (DPA) programs from $0 down, and test real monthly mortgage scenarios across <strong className="text-[#2D362E] font-bold">Steps 1–4</strong> with zero guesswork and zero sales pressure.
+              Find out what you can truly afford, uncover state Down Payment Assistance (DPA) programs from $0 down, and explore your comprehensive homebuying roadmap across <strong className="text-[#2D362E] font-bold">Steps 1–4</strong> with zero guesswork and zero sales pressure.
             </p>
 
             {/* Ask GeoSphere Maps Search */}
@@ -356,8 +356,8 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
 
               <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[#EAE7E0]">
                 <div>
-                  <span className="text-[#9A9488] block text-[11px] mb-0.5">Est. Monthly (P&I+Tax+Ins):</span>
-                  <span className="text-[#2D362E] font-bold">{formatUSD(breakdown.totalMonthly)}/mo</span>
+                  <span className="text-[#9A9488] block text-[11px] mb-0.5">Purchasing Power:</span>
+                  <span className="text-[#2D362E] font-bold">{formatUSD(breakdown.maxSafePriceConservative)}</span>
                 </div>
                 <div>
                   <span className="text-[#9A9488] block text-[11px] mb-0.5">Back-End DTI:</span>
@@ -384,10 +384,10 @@ export const HeroWebsite: React.FC<HeroWebsiteProps> = ({
             </div>
 
             <button
-              onClick={onOpenCalculator}
+              onClick={onOpenRoadmap}
               className="w-full py-2.5 rounded-lg bg-[#4A5D4E] hover:bg-[#38463B] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
             >
-              <span>Explore Detailed Amortization & Taxes</span>
+              <span>Explore 10-Step Homebuying Roadmap</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

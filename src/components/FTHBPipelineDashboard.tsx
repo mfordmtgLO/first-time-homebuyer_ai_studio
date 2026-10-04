@@ -170,6 +170,66 @@ export const FTHBPipelineDashboard: React.FC<FTHBPipelineDashboardProps> = ({
     }
   }, [properties, guidesState?.syncedProperties]);
 
+  // Real-Time GeoSphere Ready-to-Sync Pull Requests State
+  const [readyPullRequests, setReadyPullRequests] = useState<any[]>([
+    {
+      city: "Cottage Grove",
+      folderName: "cottage grove 63 listings",
+      listingsCount: 63,
+      status: "ready_to_sync",
+      readyToSync: true,
+      pulledBy: "Mike Ford (Admin via GeoSphere)",
+      readyAt: new Date().toISOString()
+    }
+  ]);
+  const [isSyncingReadyFolder, setIsSyncingReadyFolder] = useState<boolean>(false);
+
+  const fetchReadyPulls = async () => {
+    try {
+      const res = await fetch("/api/geosphere/pull-status");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.requests) {
+          const ready = Object.values(data.requests).filter((r: any) => r.status === "ready_to_sync" || r.readyToSync === true);
+          if (ready.length > 0) {
+            setReadyPullRequests(ready);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch ready pull status:", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchReadyPulls();
+    const interval = setInterval(fetchReadyPulls, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleSyncReadyFolder = async (pullReq: any) => {
+    setIsSyncingReadyFolder(true);
+    try {
+      const res = await fetch("/api/geosphere/sync-ready-folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city: pullReq.city, folderName: pullReq.folderName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        syncFromGeoSphereMap();
+        setReadyPullRequests(prev => prev.filter(p => p.city !== pullReq.city));
+        if (onTriggerToast) {
+          onTriggerToast(`🎉 Successfully synced "${pullReq.folderName || pullReq.city}" (${pullReq.listingsCount || 63} listings) into FTHB candidate cards & curated lists!`);
+        }
+      }
+    } catch (err: any) {
+      onTriggerToast?.(`Sync error: ${err.message}`);
+    } finally {
+      setIsSyncingReadyFolder(false);
+    }
+  };
+
   // Interactive Program Qualifier Panel States
   const [householdIncome, setHouseholdIncome] = useState<number>(95000);
   const [householdSize, setHouseholdSize] = useState<number>(3); // 1-8
@@ -655,6 +715,53 @@ export const FTHBPipelineDashboard: React.FC<FTHBPipelineDashboardProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-24">
+      {/* Upstream GeoSphere Webhook Ready-to-Sync Alert Banner */}
+      {readyPullRequests.length > 0 && (
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-700 to-slate-900 rounded-3xl p-4 sm:p-5 text-white shadow-lg border border-emerald-400/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-start gap-3.5">
+            <div className="p-3 bg-white/15 backdrop-blur-xs rounded-2xl shrink-0">
+              <Sparkles className="w-6 h-6 text-amber-300 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full text-emerald-100">
+                  GeoSphere Webhook Sync Alert
+                </span>
+                <span className="text-[10px] font-bold bg-amber-400 text-slate-900 px-2 py-0.5 rounded-md shadow-xs">
+                  Ready to Sync
+                </span>
+              </div>
+              <h3 className="font-bold text-base sm:text-lg mt-1 text-white">
+                Admin RentCast Pull for {readyPullRequests.map(r => r.city).join(", ")} is Ready to Sync!
+              </h3>
+              <p className="text-xs text-emerald-100/90 mt-0.5 leading-relaxed max-w-2xl">
+                Mike Ford (Admin) saved folder <strong className="text-white">"{readyPullRequests[0]?.folderName || 'cottage grove 63 listings'}"</strong> ({readyPullRequests[0]?.listingsCount || 63} listings) on GeoSphere. Click below to automatically ingest candidates into First-Time Homebuyer cards & curated lists.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0 w-full md:w-auto">
+            <button
+              onClick={() => handleSyncReadyFolder(readyPullRequests[0])}
+              disabled={isSyncingReadyFolder}
+              className="w-full md:w-auto px-4 py-2.5 bg-white text-emerald-900 hover:bg-emerald-50 active:scale-95 font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              {isSyncingReadyFolder ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-emerald-700" />
+                  <span>Syncing {readyPullRequests[0]?.listingsCount || 63} Listings...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  <span>Sync "{readyPullRequests[0]?.folderName || 'Cottage Grove'}" ({readyPullRequests[0]?.listingsCount || 63})</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Header Bar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-[#EAE7E0] shadow-xs">
         <div>

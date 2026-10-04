@@ -273,8 +273,8 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
                   <strong className="text-[#2D362E]">{formatUSD(profile.downPaymentSavings)}</strong>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-[#606C5D]">Est. Loan Rate:</span>
-                  <strong className="text-[#2D362E]">{profile.interestRate}% ({profile.loanTermYears}yr Fixed)</strong>
+                  <span className="text-[#606C5D]">Status:</span>
+                  <strong className="text-[#4A5D4E]">Pre-Screening Audit</strong>
                 </div>
               </div>
             </div>
@@ -355,8 +355,8 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
 
                       <div className="sm:text-right bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0] shrink-0">
                         <div className="text-2xl font-serif font-bold text-[#4A5D4E]">{formatUSD(property.price)}</div>
-                        <div className="text-xs font-bold text-[#2D362E]">Est. {formatUSD(totalMonthly)}/month</div>
-                        <div className="text-[10px] text-[#606C5D]">${pricePerSqft}/sqft • {property.daysOnMarket || 0} Days on Market</div>
+                        <div className="text-xs font-bold text-[#2D362E]">{pricePerSqft > 0 ? `$${pricePerSqft}/sqft` : "Residential"}</div>
+                        <div className="text-[10px] text-[#606C5D]">{property.daysOnMarket || 0} Days on Market</div>
                       </div>
                     </div>
 
@@ -369,15 +369,15 @@ export const PropertyReportModal: React.FC<PropertyReportModalProps> = ({
                       </div>
 
                       <div className="bg-[#FAF9F5] p-2.5 rounded-xl border border-[#EAE7E0]">
-                        <span className="text-[10px] text-[#9A9488] font-bold uppercase block">Monthly Out-of-Pocket</span>
-                        <span className="font-bold text-[#4A5D4E]">P&I: {formatUSD(estPI)}</span>
-                        <span className="text-[11px] text-[#606C5D] block">Tax: {formatUSD(propTax)} | Ins: {formatUSD(homeIns)}</span>
+                        <span className="text-[10px] text-[#9A9488] font-bold uppercase block">Property Tax & Escrows</span>
+                        <span className="font-bold text-[#4A5D4E]">Tax: {formatUSD(property.propertyTaxAnnual)}/yr</span>
+                        <span className="text-[11px] text-[#606C5D] block">Est. Tax: ~${propTax}/mo</span>
                       </div>
 
                       <div className="bg-[#FAF9F5] p-2.5 rounded-xl border border-[#EAE7E0]">
-                        <span className="text-[10px] text-[#9A9488] font-bold uppercase block">HOA & Taxes</span>
+                        <span className="text-[10px] text-[#9A9488] font-bold uppercase block">HOA & Association</span>
                         <span className="font-bold text-[#2D362E]">{property.hoaMonthly > 0 ? `${formatUSD(property.hoaMonthly)}/mo HOA` : "No HOA"}</span>
-                        <span className="text-[11px] text-[#606C5D] block">Tax: {formatUSD(property.propertyTaxAnnual)}/yr</span>
+                        <span className="text-[11px] text-[#606C5D] block">Single Family Residence</span>
                       </div>
 
                       <div className="bg-[#FAF9F5] p-2.5 rounded-xl border border-[#EAE7E0]">

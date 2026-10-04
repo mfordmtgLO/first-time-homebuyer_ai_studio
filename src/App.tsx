@@ -1615,6 +1615,8 @@ export default function App() {
                         onOpenScorecard={(prop) => setScorecardProperty(prop)}
                         onOpenNewModal={() => setShowNewPropertyModal(true)}
                         onAskAiAboutProperty={handleAskAiAboutProperty}
+                        userRole={userRole}
+                        isStaffOrLo={showLoPortal || (userRole !== null && userRole !== "borrower")}
                       />
                     )}
 

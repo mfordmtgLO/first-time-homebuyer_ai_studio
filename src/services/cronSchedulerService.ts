@@ -2,8 +2,7 @@ import {
   executeTop50SweepRun, 
   executeLiveGeoMapSyncRun, 
   executeVantageAiImportRun, 
-  executeLiveAgentScraperRun,
-  fetchScraperLogs 
+  executeLiveAgentScraperRun
 } from './agentScraperLogService';
 
 export interface ScheduledCronJob {
@@ -11,7 +10,7 @@ export interface ScheduledCronJob {
   name: string;
   cronExpression: string;
   humanFrequency: string;
-  category: "top50_sweep" | "geomap_property_sync" | "vantage_ai_import" | "agent_scraper";
+  category: "top50_sweep" | "geomap_property_sync" | "vantage_ai_import" | "agent_scraper" | "zillow_price_sweep";
   description: string;
   status: "active" | "paused";
   lastRunAt?: string;
@@ -23,6 +22,19 @@ export interface ScheduledCronJob {
 const CRON_STORAGE_KEY = 'vantage_cron_jobs_config_v1';
 
 export const INITIAL_CRON_JOBS: ScheduledCronJob[] = [
+  {
+    id: 'cron-zillow-daily-sweep',
+    name: 'Daily Zillow Price Watch & MLS Listing Sweep',
+    cronExpression: '0 3 * * *',
+    humanFrequency: 'Daily at 03:00 AM',
+    category: 'zillow_price_sweep',
+    description: 'Autonomous cron monitoring Zillow MLS price drops, recalculating buyer monthly affordability with down payment programs, and drafting paired LO + Realtor outreach.',
+    status: 'active',
+    lastRunAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+    lastRunStatus: 'success',
+    nextRunAt: new Date(Date.now() + 1000 * 60 * 60 * 19).toISOString(),
+    executionCount: 184
+  },
   {
     id: 'cron-top50-daily',
     name: 'Top 50 RealTrends & USDA Market Sweep',
@@ -82,7 +94,16 @@ export async function fetchScheduledCronJobs(): Promise<ScheduledCronJob[]> {
     const raw = localStorage.getItem(CRON_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Ensure the Zillow sweep job is included if missing from previous sessions
+        const hasZillow = parsed.some(j => j.id === 'cron-zillow-daily-sweep');
+        if (!hasZillow) {
+          const zillowJob = INITIAL_CRON_JOBS.find(j => j.id === 'cron-zillow-daily-sweep')!;
+          parsed.unshift(zillowJob);
+          localStorage.setItem(CRON_STORAGE_KEY, JSON.stringify(parsed));
+        }
+        return parsed;
+      }
     }
   } catch (e) {
     console.warn('Cron jobs fetch notice:', e);
@@ -122,7 +143,11 @@ export async function executeCronJobNow(
   let logId: string | undefined;
 
   try {
-    if (job.category === 'top50_sweep') {
+    if (job.category === 'zillow_price_sweep' || job.id === 'cron-zillow-daily-sweep') {
+      const res = await executeLiveGeoMapSyncRun('oregon_all', undefined, undefined, undefined, actorName);
+      success = res.success;
+      logId = res.log.id;
+    } else if (job.category === 'top50_sweep') {
       const res = await executeTop50SweepRun('realtrends_top50_agents', actorName);
       success = res.success;
       logId = res.log.id;

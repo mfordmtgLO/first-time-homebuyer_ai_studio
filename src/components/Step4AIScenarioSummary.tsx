@@ -177,7 +177,7 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
               <div className="bg-[#F9F8F4] p-3 rounded-xl border border-[#EAE7E0]">
                 <span className="text-[#9A9488] block text-[11px]">Annual Income</span>
-                <span className="font-bold text-[#2D362E] text-sm">{formatUSD(profile.annualIncome)}</span>
+                <span className="font-bold text-[#2D362E] text-sm">{profile.annualIncome > 0 ? formatUSD(profile.annualIncome) : "Self-Stated / Open"}</span>
               </div>
               <div className="bg-[#F9F8F4] p-3 rounded-xl border border-[#EAE7E0]">
                 <span className="text-[#9A9488] block text-[11px]">Monthly Debt</span>
@@ -192,37 +192,35 @@ export const Step4AIScenarioSummary: React.FC<Step4AIScenarioSummaryProps> = ({
                 <span className="font-bold text-[#2D362E] text-sm">{formatUSD(profile.targetPrice)}</span>
               </div>
               <div className="bg-[#F9F8F4] p-3 rounded-xl border border-[#EAE7E0]">
-                <span className="text-[#9A9488] block text-[11px]">Interest Rate</span>
-                <span className="font-bold text-[#2D362E] text-sm">{profile.interestRate}% (30-Yr)</span>
+                <span className="text-[#9A9488] block text-[11px]">Down Payment Pct</span>
+                <span className="font-bold text-[#2D362E] text-sm">{downPaymentPercent.toFixed(1)}%</span>
               </div>
               <div className="bg-[#F9F8F4] p-3 rounded-xl border border-[#EAE7E0]">
-                <span className="text-[#9A9488] block text-[11px]">Max Payment Goal</span>
-                <span className="font-bold text-[#4A5D4E] text-sm">{formatUSD(targetMaxPayment)}/mo</span>
+                <span className="text-[#9A9488] block text-[11px]">Max Safe Price</span>
+                <span className="font-bold text-[#4A5D4E] text-sm">{formatUSD(breakdown.maxSafePriceConservative)}</span>
               </div>
             </div>
 
-            {/* Monthly Payment vs Target Comparison Box */}
+            {/* Purchasing Power & DTI Audit Box */}
             <div className="bg-[#F1EFE9] rounded-2xl p-4 border border-[#EAE7E0] space-y-3">
               <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="text-[#606C5D]">Calculated Total Monthly Payment:</span>
-                <span className="text-base font-bold text-[#2D362E]">{formatUSD(breakdown.totalMonthly)}/mo</span>
+                <span className="text-[#606C5D]">Target Price vs Conservative Safe Cap:</span>
+                <span className="text-base font-bold text-[#2D362E]">{formatUSD(profile.targetPrice)} / {formatUSD(breakdown.maxSafePriceConservative)}</span>
               </div>
               <div className="flex items-center justify-between text-xs pt-2 border-t border-[#EAE7E0]">
-                <span className="text-[#606C5D]">Self-Restricted Monthly Payment Goal:</span>
-                <span className="font-bold text-[#4A5D4E]">{formatUSD(targetMaxPayment)}/mo</span>
+                <span className="text-[#606C5D]">Underwriting Back-End DTI:</span>
+                <span className="font-bold text-[#4A5D4E]">{breakdown.backEndDTI}% ({dtiStatus.label})</span>
               </div>
               <div className="flex items-center justify-between text-xs pt-1">
                 <span className="text-[#606C5D]">Budget Status:</span>
                 <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${
-                  paymentDiff >= 500 
+                  profile.targetPrice <= breakdown.maxSafePriceConservative 
                     ? "bg-emerald-100 text-emerald-800" 
-                    : paymentDiff >= 0 
-                    ? "bg-amber-100 text-amber-800" 
-                    : "bg-red-100 text-red-700"
+                    : "bg-amber-100 text-amber-800"
                 }`}>
-                  {paymentDiff >= 0 
-                    ? `${formatUSD(paymentDiff)}/mo Comfortably Under Goal` 
-                    : `${formatUSD(Math.abs(paymentDiff))}/mo Exceeds Personal Goal`}
+                  {profile.targetPrice <= breakdown.maxSafePriceConservative 
+                    ? "Target Price Within Safe Underwriting Bounds" 
+                    : "Target Price Stretches Above Conservative Bounds"}
                 </span>
               </div>
             </div>

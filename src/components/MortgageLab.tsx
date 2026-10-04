@@ -68,6 +68,7 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
       setActiveTab(initialTab);
     }
   }, [initialTab]);
+  const [hypotheticalRate, setHypotheticalRate] = useState<number>(profile.interestRate || 6.5);
   const [extraPrincipal, setExtraPrincipal] = useState<number>(150);
   const [currentRent, setCurrentRent] = useState<number>(2100);
   const [appreciationRate, setAppreciationRate] = useState<number>(3.8);
@@ -83,7 +84,7 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
   const breakdown = calculateMortgageBreakdown(profile);
   const amortizationData = calculateAmortizationCurve(
     breakdown.loanAmount,
-    profile.interestRate,
+    hypotheticalRate,
     profile.loanTermYears,
     extraPrincipal
   );
@@ -95,12 +96,12 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
     currentRent,
     3.0,
     2.0,
-    profile.interestRate
+    hypotheticalRate
   );
 
-  // 2-1 Rate Buydown Calculations
+  // 2-1 Rate Buydown Calculations with User-Entered Hypothetical Interest Rate
   const loanAmount = Math.max(0, profile.targetPrice - profile.downPaymentSavings);
-  const fullRate = profile.interestRate || 6.5;
+  const fullRate = hypotheticalRate || 6.5;
   const year1Rate = Math.max(0.1, Number((fullRate - 2.0).toFixed(3)));
   const year2Rate = Math.max(0.1, Number((fullRate - 1.0).toFixed(3)));
 
@@ -297,6 +298,19 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
         </div>
       </div>
 
+      {/* Prominent Illustration Disclaimer Banner */}
+      <div className="bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/80 rounded-2xl p-4 sm:p-5 flex items-start gap-3 shadow-xs">
+        <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="space-y-1 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+          <strong className="font-extrabold uppercase tracking-wide block text-amber-950 dark:text-amber-100">
+            ⚠️ Hypothetical Educational Simulation — For Illustration Purposes Only
+          </strong>
+          <p>
+            This 2-1 rate buydown calculator is an interactive educational tool using user-entered hypothetical interest rates for mathematical comparison only. This is <strong>not</strong> an official loan estimate, interest rate quote, rate lock, or commitment to lend. Actual interest rates, payment amounts, closing costs, and borrower eligibility depend upon full underwriting verification, borrower credit profile, down payment, loan program, and property appraisal.
+          </p>
+        </div>
+      </div>
+
       {/* Tab 0: 2-1 Temporary Interest Rate Buydown Calculator */}
       {activeTab === "buydown" && (
         <div className="space-y-6">
@@ -324,7 +338,7 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
                 </p>
               </div>
 
-              {/* Financial Inputs Summary */}
+              {/* Financial Inputs Summary with User-Editable Hypothetical Rate */}
               <div className="space-y-3 bg-[#FAF9F5] p-4 rounded-xl border border-[#EAE7E0] text-xs">
                 <div className="flex justify-between items-center text-[#606C5D]">
                   <span>Purchase Price:</span>
@@ -339,8 +353,20 @@ export const MortgageLab: React.FC<MortgageLabProps> = ({
                   <span className="font-bold text-[#4A5D4E]">{formatUSD(loanAmount)}</span>
                 </div>
                 <div className="flex justify-between items-center text-[#606C5D] border-t border-[#EAE7E0] pt-2">
-                  <span>Permanent Note Rate:</span>
-                  <span className="font-bold text-[#2D362E]">{fullRate}% Fixed (30 Years)</span>
+                  <span>Hypothetical Note Rate (User Input):</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      step="0.125"
+                      min="1.0"
+                      max="15.0"
+                      value={hypotheticalRate}
+                      onChange={(e) => setHypotheticalRate(Math.max(1, Number(e.target.value) || 6.5))}
+                      className="w-16 px-1.5 py-0.5 text-right font-bold text-[#2D362E] bg-white border border-[#DEDAD2] rounded text-xs focus:outline-none focus:border-[#4A5D4E]"
+                      title="Enter any hypothetical interest rate for illustration"
+                    />
+                    <span className="font-bold text-[#2D362E]">%</span>
+                  </div>
                 </div>
               </div>
 

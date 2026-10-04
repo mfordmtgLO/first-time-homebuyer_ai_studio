@@ -116,12 +116,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   // All Public & Interactive Roadmap Navigation Items
   const allNavItems: NavItem[] = [
     { id: "hero", label: "Home / Overview", shortLabel: "Overview", icon: Home, mode: "website" },
-    { id: "calculator", label: "Step 1: Calculate Buying Power", shortLabel: "Step 1: Buying Power", icon: Calculator, mode: "website" },
+    { id: "calculator", label: "Step 1: Budget & Buying Power", shortLabel: "Step 1: Buying Power", icon: Calculator, mode: "website" },
     { id: "roadmap", label: "Step 2: Explore Roadmap", shortLabel: "Step 2: Roadmap", icon: Compass, mode: "website" },
     { id: "properties", label: `Step 3: Browse Homes (${savedCount})`, shortLabel: `Homes (${savedCount})`, icon: Building, mode: "dashboard" },
     { id: "step4_ai_plan", label: "Step 4: AI Plan & Guides", shortLabel: "Step 4: AI Plan", icon: Sparkles, badge: "AI Plan", mode: "dashboard", highlight: true },
     { id: "grants", label: "Down Payment Assistance (DPA) Finder", shortLabel: "DPA Finder", icon: Award, mode: "dashboard" },
-    { id: "mortgagelab", label: "Mortgage Lab & PITI", shortLabel: "Mortgage Lab", icon: TrendingUp, mode: "dashboard" },
+    { id: "mortgagelab", label: "2-1 Rate Buydown Calculator", shortLabel: "2-1 Buydown", icon: Percent, mode: "dashboard" },
     { id: "ai_copilot", label: "AI Advisor Copilot", shortLabel: "AI Advisor", icon: Sparkles, badge: "Gemini 3.7", mode: "dashboard" },
     { id: "escrow", label: "Closing & Escrow Tracker", shortLabel: "Closing Tracker", icon: ShieldCheck, mode: "dashboard" },
     { id: "geomap", label: "GeoMap / GeoSphere & RentCast Sync", shortLabel: "GeoMap / GIS Sync", icon: Globe, badge: "GIS Sync", mode: "dashboard" },
@@ -201,184 +201,21 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="hidden md:block bg-[#F1EFE9] dark:bg-slate-900 px-3 sm:px-6 py-1.5 text-xs text-[#606C5D] dark:text-slate-400 border-b border-[#EAE7E0] dark:border-slate-800 relative z-50 transition-colors duration-200">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           
-          {/* Left section: Arrow Trend + Horizon Selection + 1-Year Benchmark Match */}
+          {/* Left section: Guided Roadmap Steps & DPA Assistance Status */}
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            
-            {/* Directional Trend Pill with Dynamic Arrow Up / Down */}
-            <div 
-              className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer select-none ${
-                rateTrend.direction === "down"
-                  ? "bg-[#EBF3ED] text-[#2F5738] border border-[#C2DEC8]"
-                  : rateTrend.direction === "up"
-                  ? "bg-[#FDF0E6] text-[#91461A] border border-[#F6D0B5]"
-                  : "bg-white text-[#606C5D] border border-[#EAE7E0]"
-              }`}
-              onClick={() => setShowTrendDetails((prev) => !prev)}
-              title="Click to view detailed interest rate trend analysis"
-            >
-              {rateTrend.direction === "down" ? (
-                <div className="flex items-center gap-1">
-                  <ArrowDownRight className="w-4 h-4 text-[#2F5738] animate-pulse" />
-                  <span>Rate Trend: Easing {rateTrend.diffBasisPoints !== 0 ? `(${rateTrend.diffBasisPoints} bps)` : ""} ↓</span>
-                </div>
-              ) : rateTrend.direction === "up" ? (
-                <div className="flex items-center gap-1">
-                  <ArrowUpRight className="w-4 h-4 text-[#91461A]" />
-                  <span>Rate Trend: Rising {rateTrend.diffBasisPoints !== 0 ? `(+${rateTrend.diffBasisPoints} bps)` : ""} ↑</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <Minus className="w-4 h-4 text-[#606C5D]" />
-                  <span>Rate Trend: Stable →</span>
-                </div>
-              )}
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-[#EBF3ED] text-[#2F5738] border border-[#C2DEC8] shadow-2xs select-none">
+              <Compass className="w-3.5 h-3.5 text-[#2F5738]" />
+              <span>4-Step First-Time Homebuyer Guided System</span>
             </div>
 
-            {/* Time Horizon Selection Buttons (1 Week, 90 Days, 6 Months) */}
-            <div className="flex items-center bg-white p-0.5 rounded-lg border border-[#DEDAD2] shadow-2xs">
-              <span className="text-[10px] font-bold text-[#9A9488] px-1.5 uppercase hidden sm:inline">Horizon:</span>
-              {(
-                [
-                  { id: "1w", label: "1 Week", short: "1W" },
-                  { id: "90d", label: "90 Days", short: "90D" },
-                  { id: "6m", label: "6 Months", short: "6M" },
-                ] as const
-              ).map((h) => {
-                const isSelected = trendHorizon === h.id;
-                return (
-                  <button
-                    key={h.id}
-                    type="button"
-                    onClick={() => setTrendHorizon(h.id)}
-                    className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-[#4A5D4E] text-white shadow-xs"
-                        : "text-[#606C5D] hover:text-[#2D362E] hover:bg-[#F1EFE9]"
-                    }`}
-                    title={`Analyze rate momentum over the last ${h.label}`}
-                  >
-                    <span className="hidden sm:inline">{h.label}</span>
-                    <span className="sm:hidden">{h.short}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* 1-Year Benchmark Comparison Highlight Data Point */}
-            <div className="relative">
-              {rateTrend.isOneYearHigh ? (
-                <button
-                  type="button"
-                  onClick={() => setShowTrendDetails((prev) => !prev)}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#C18C5D]/15 text-[#C18C5D] font-bold text-[11px] border border-[#C18C5D]/30 hover:bg-[#C18C5D]/25 transition-colors cursor-pointer"
-                  title="Highest rate peak observed in the most recent 12 months"
-                >
-                  <Zap className="w-3 h-3 text-[#C18C5D]" />
-                  <span>1-Yr High Benchmark</span>
-                  <Info className="w-3 h-3 text-[#C18C5D]/70 ml-0.5" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowTrendDetails((prev) => !prev)}
-                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white hover:bg-[#FAF9F5] text-[#2D362E] text-[11px] font-semibold border border-[#DEDAD2] transition-colors shadow-2xs group cursor-pointer"
-                  title="Click to view full 1-year historical benchmark rate comparison"
-                >
-                  <Calendar className="w-3 h-3 text-[#4A5D4E] group-hover:scale-110 transition-transform" />
-                  <span className="text-[#606C5D]">
-                    Last Matched Level:{" "}
-                    <strong className="text-[#4A5D4E] font-bold underline decoration-dotted">
-                      {rateTrend.lastMatchedDateFormatted || "Dec 15, 2025"}
-                    </strong>
-                  </span>
-                  <Info className="w-3 h-3 text-[#9A9488]" />
-                </button>
-              )}
-
-              {/* Detailed Trend & Historical Match Popover Card */}
-              {showTrendDetails && (
-                <div 
-                  ref={trendPopoverRef}
-                  className="absolute left-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl p-4 shadow-xl border border-[#DEDAD2] text-[#2D362E] z-50 animate-in fade-in zoom-in-95 duration-150"
-                >
-                  <div className="flex items-start justify-between pb-2 border-b border-[#EAE7E0]">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm ${
-                        rateTrend.direction === "down"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : rateTrend.direction === "up"
-                          ? "bg-amber-100 text-amber-900"
-                          : "bg-stone-100 text-stone-700"
-                      }`}>
-                        {rateTrend.direction === "down" ? "↓" : rateTrend.direction === "up" ? "↑" : "→"}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-xs text-[#2D362E]">
-                          Mortgage Rate Momentum ({rateTrend.horizonLabel})
-                        </h4>
-                        <p className="text-[11px] text-[#606C5D]">
-                          vs. {rateTrend.horizonLabel} Ago ({rateTrend.comparisonDateFormatted})
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowTrendDetails(false)}
-                      className="p-1 rounded-lg text-[#9A9488] hover:text-[#2D362E] hover:bg-[#F1EFE9] cursor-pointer"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="py-3 space-y-2.5 text-xs">
-                    <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#EAE7E0]">
-                      <div className="font-bold text-[#4A5D4E] flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-[#C18C5D]" />
-                          <span>{rateTrend.directionLabel}</span>
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#9A9488] bg-white px-2 py-0.5 rounded border border-[#EAE7E0]">
-                          {rateTrend.horizonLabel} Horizon
-                        </span>
-                      </div>
-                      <p className="text-[#606C5D] text-[11px] leading-relaxed">
-                        {rateTrend.insight}
-                      </p>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-white border border-[#EAE7E0] space-y-1.5">
-                      <div className="flex items-center gap-1.5 font-bold text-[#2D362E] text-[11px]">
-                        <Clock className="w-3.5 h-3.5 text-[#606C5D]" />
-                        <span>1-Year Historical Context:</span>
-                      </div>
-                      {rateTrend.isOneYearHigh ? (
-                        <p className="text-[11px] text-[#91461A] leading-relaxed font-medium">
-                          Today's benchmark is near the peak level observed in the most recent 12 months. Consider negotiating seller concessions to fund a 2-1 buydown.
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-[#4A5D4E] leading-relaxed font-medium">
-                          Today's benchmark is <strong>not</strong> the 1-year high. Interest rates last matched this current level on <strong>{rateTrend.lastMatchedDateFormatted}</strong>.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowTrendDetails(false);
-                        handleNavClick("mortgagelab", "dashboard");
-                      }}
-                      className="text-[11px] font-bold text-[#4A5D4E] hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <TrendingUp className="w-3 h-3" />
-                      <span>Test in Mortgage Lab →</span>
-                    </button>
-                    <span className="text-[10px] text-[#9A9488]">Calculated on 30-Yr Benchmark</span>
-                  </div>
-                </div>
-              )}
+            <div className="hidden lg:flex items-center gap-1 text-[11px] text-[#606C5D]">
+              <span className="px-2 py-0.5 rounded bg-white border border-[#EAE7E0] font-semibold">1: Budget</span>
+              <span>→</span>
+              <span className="px-2 py-0.5 rounded bg-white border border-[#EAE7E0] font-semibold">2: Roadmap</span>
+              <span>→</span>
+              <span className="px-2 py-0.5 rounded bg-white border border-[#EAE7E0] font-semibold">3: Homes</span>
+              <span>→</span>
+              <span className="px-2 py-0.5 rounded bg-white border border-[#EAE7E0] font-semibold">4: AI Plan</span>
             </div>
 
             {/* Top Bar DPA / Status Quick Link */}

@@ -1101,6 +1101,14 @@ export default function App() {
 
   const handleSaveLead = (newLead: CapturedLead) => {
     const currentLeads = guidesState.leads || [];
+    // Prevent duplicate lead entries by ID or email
+    const exists = currentLeads.some(
+      (l) =>
+        l.id === newLead.id ||
+        (newLead.email && l.email?.toLowerCase() === newLead.email.toLowerCase())
+    );
+    if (exists) return;
+
     const updatedLeads = [newLead, ...currentLeads];
     setGuidesState((prev) => ({
       ...prev,

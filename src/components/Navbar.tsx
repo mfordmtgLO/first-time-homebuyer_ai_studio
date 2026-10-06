@@ -33,7 +33,8 @@ import {
   Maximize2,
   Minimize2,
   ExternalLink,
-  Video
+  Video,
+  Percent
 } from "lucide-react";
 import { FinancialProfile } from "../types";
 import { formatUSD } from "../utils/mortgageMath";

@@ -2802,6 +2802,51 @@ Return JSON matching this shape:
     const effectiveSavings = monthlySavings || Math.max(25, Math.round(Number(priceDropAmount) * 0.007));
     const smsPayload = `🚨 AUTOMATED PRICE DROP ALERT: ${propertyAddress} reduced by $${Number(priceDropAmount).toLocaleString()} down to $${Number(currentPrice).toLocaleString()}! Estimated monthly payment savings: ~$${Number(effectiveSavings).toLocaleString()}/mo. Mike Ford (LO) & Kanndice (Agent) are ready to prepare a purchase offer. View: https://ais-pre-h5e42vrshqrry7uiwwuhmv-427099073161.us-east5.run.app`;
 
+    // Real Twilio Telecom Carrier Dispatch Check
+    let liveCarrierStatus = "staged_sandbox_simulation";
+    const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+    const twilioAuth = process.env.TWILIO_AUTH_TOKEN;
+    const twilioFrom = process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_PHONE_NUMBER;
+
+    // Check if live Twilio credentials and valid non-555 phone numbers are present
+    const isMockPhone = (p: string) => !p || p.includes("555-01") || p.includes("55501");
+    if (twilioSid && twilioAuth && twilioFrom && (!isMockPhone(loPhone) || !isMockPhone(userPhone))) {
+      try {
+        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
+        const authHeader = "Basic " + Buffer.from(`${twilioSid}:${twilioAuth}`).toString("base64");
+        
+        const targetNumber = !isMockPhone(loPhone) ? loPhone : userPhone;
+        const cleanTo = targetNumber.replace(/\D/g, "");
+        const formattedTo = cleanTo.length === 10 ? `+1${cleanTo}` : cleanTo.startsWith("1") ? `+${cleanTo}` : cleanTo;
+
+        const params = new URLSearchParams();
+        params.append("To", formattedTo);
+        params.append("From", twilioFrom);
+        params.append("Body", smsPayload);
+
+        const twilioRes = await fetch(twilioUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": authHeader,
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: params.toString()
+        });
+
+        if (twilioRes.ok) {
+          liveCarrierStatus = "delivered";
+          console.log(`[TWILIO LIVE DISPATCH] SMS successfully transmitted via Twilio carrier to ${formattedTo}!`);
+        } else {
+          const errText = await twilioRes.text();
+          console.warn("[Twilio API] Carrier dispatch response error:", errText);
+          liveCarrierStatus = "failed_carrier_rejected";
+        }
+      } catch (err: any) {
+        console.warn("[Twilio API] Network dispatch error:", err.message);
+        liveCarrierStatus = "failed_network_exception";
+      }
+    }
+
     const alertRecord = {
       alertId,
       propertyAddress,
@@ -2822,10 +2867,11 @@ Return JSON matching this shape:
       isAutomated: true,
       triggerSource,
       pushedAt: new Date().toISOString(),
-      status: "delivered",
+      status: liveCarrierStatus,
+      isLiveTwilioCarrierDispatched: liveCarrierStatus === "delivered",
       recipients: [
-        { role: "loan_officer", name: loName, phone: loPhone, status: "delivered", deliveredAt: new Date().toISOString() },
-        { role: "buyer_plugin_user", phone: userPhone, status: "delivered", deliveredAt: new Date().toISOString() }
+        { role: "loan_officer", name: loName, phone: loPhone, status: liveCarrierStatus, deliveredAt: new Date().toISOString() },
+        { role: "buyer_plugin_user", phone: userPhone, status: liveCarrierStatus, deliveredAt: new Date().toISOString() }
       ]
     };
 
@@ -2844,12 +2890,13 @@ Return JSON matching this shape:
       loPhone,
       userPhone,
       triggerSource,
-      status: "delivered"
+      deliveryMode: liveCarrierStatus,
+      isLiveTwilioCarrier: liveCarrierStatus === "delivered"
     });
 
-    console.log(`[AUTOMATED CELL PUSH DISPATCHED] Real-time SMS dispatched automatically to Loan Officer (${loName}: ${loPhone}) and Buyer (${userPhone}) for ${propertyAddress}. Price drop: -$${priceDropAmount} (Save ~$${effectiveSavings}/mo).`);
+    console.log(`[CELL PUSH DISPATCHED] Record logged. Mode: ${liveCarrierStatus}. LO (${loName}: ${loPhone}), Buyer (${userPhone}) for ${propertyAddress}. Price drop: -$${priceDropAmount}.`);
 
-    return { success: true, alertId, isAutomated: true, alertRecord };
+    return { success: true, alertId, isAutomated: true, liveCarrierStatus, alertRecord };
   }
 
   // Cell Phone Push & SMS Price Drop Instant Alert Wire (Handles both automated & manual requests)
@@ -10154,17 +10201,26 @@ Disallow: /
     });
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(
-      express.static(distPath, {
-        setHeaders: (res, filePath) => {
-          if (filePath.endsWith("index.html") || filePath.endsWith("sw.js")) {
-            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-            res.setHeader("Pragma", "no-cache");
-            res.setHeader("Expires", "0");
-          }
-        },
-      })
-    );
+    const publicPath = path.join(process.cwd(), "public");
+
+    if (fs.existsSync(publicPath)) {
+      app.use(express.static(publicPath));
+    }
+
+    if (fs.existsSync(distPath)) {
+      app.use(
+        express.static(distPath, {
+          setHeaders: (res, filePath) => {
+            if (filePath.endsWith("index.html") || filePath.endsWith("sw.js")) {
+              res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+              res.setHeader("Pragma", "no-cache");
+              res.setHeader("Expires", "0");
+            }
+          },
+        })
+      );
+    }
+
     app.get("*", (req, res, next) => {
       if (req.originalUrl.startsWith("/api")) {
         return next();
@@ -10174,7 +10230,17 @@ Disallow: /
         "Pragma": "no-cache",
         "Expires": "0",
       });
-      res.sendFile(path.join(distPath, "index.html"));
+
+      const distIndexPath = path.join(distPath, "index.html");
+      const rootIndexPath = path.resolve(process.cwd(), "index.html");
+
+      if (fs.existsSync(distIndexPath)) {
+        return res.sendFile(distIndexPath);
+      } else if (fs.existsSync(rootIndexPath)) {
+        return res.sendFile(rootIndexPath);
+      } else {
+        return res.status(200).send("<!DOCTYPE html><html><head><title>First-Time Homebuyer Platform</title></head><body><div id='root'>Loading First-Time Homebuyer Platform...</div></body></html>");
+      }
     });
   }
 }

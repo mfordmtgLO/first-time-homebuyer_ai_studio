@@ -4293,30 +4293,29 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                 {(() => {
                   const allLeads = guidesState.leads || [];
                   const filtered = allLeads.filter((lead) => {
+                    if (!lead) return false;
+                    const nameStr = String(lead.fullName || lead.name || "").toLowerCase();
+                    const emailStr = String(lead.email || "").toLowerCase();
+                    const phoneStr = String(lead.phone || "").toLowerCase();
+                    const prefLocStr = String(lead.preferredLocations || "").toLowerCase();
+                    const taggedCityStr = String(lead.taggedCityArea || "").toLowerCase();
+                    const pathTagStr = String(lead.leadPathTag || "").toLowerCase();
+                    const campaignStr = String(lead.sourceCampaignName || "").toLowerCase();
+                    const propAddrStr = String(lead.sourcePropertyAddress || "").toLowerCase();
+                    const sourceStr = String(lead.leadSource || "").toLowerCase();
+                    const queryStr = (leadSearchQuery || "").toLowerCase();
+
                     const matchQuery =
-                      !leadSearchQuery ||
-                      lead.fullName.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
-                      lead.email.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
-                      lead.phone.toLowerCase().includes(leadSearchQuery.toLowerCase()) ||
-                      lead.preferredLocations
-                        .toLowerCase()
-                        .includes(leadSearchQuery.toLowerCase()) ||
-                      (lead.taggedCityArea &&
-                        lead.taggedCityArea
-                          .toLowerCase()
-                          .includes(leadSearchQuery.toLowerCase())) ||
-                      (lead.leadPathTag &&
-                        lead.leadPathTag.toLowerCase().includes(leadSearchQuery.toLowerCase())) ||
-                      (lead.sourceCampaignName &&
-                        lead.sourceCampaignName
-                          .toLowerCase()
-                          .includes(leadSearchQuery.toLowerCase())) ||
-                      (lead.sourcePropertyAddress &&
-                        lead.sourcePropertyAddress
-                          .toLowerCase()
-                          .includes(leadSearchQuery.toLowerCase())) ||
-                      (lead.leadSource &&
-                        lead.leadSource.toLowerCase().includes(leadSearchQuery.toLowerCase()));
+                      !queryStr ||
+                      nameStr.includes(queryStr) ||
+                      emailStr.includes(queryStr) ||
+                      phoneStr.includes(queryStr) ||
+                      prefLocStr.includes(queryStr) ||
+                      taggedCityStr.includes(queryStr) ||
+                      pathTagStr.includes(queryStr) ||
+                      campaignStr.includes(queryStr) ||
+                      propAddrStr.includes(queryStr) ||
+                      sourceStr.includes(queryStr);
 
                     let matchStatus =
                       leadStatusFilter === "all" || lead.status === leadStatusFilter;
@@ -4664,16 +4663,18 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                       <td className="py-4 px-4 align-top">
                                         <div className="flex items-start gap-3">
                                           <div className="w-9 h-9 rounded-xl bg-[#4A5D4E] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs mt-0.5">
-                                            {lead.fullName
-                                              .split(" ")
-                                              .map((n) => n[0])
+                                            {String(lead.fullName || lead.name || "Client")
+                                              .trim()
+                                              .split(/\s+/)
+                                              .filter(Boolean)
+                                              .map((n) => n[0] || "")
                                               .slice(0, 2)
-                                              .join("")}
+                                              .join("") || "CL"}
                                           </div>
                                           <div className="space-y-1">
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                               <span className="font-bold text-sm text-[#2D362E]">
-                                                {lead.fullName}
+                                                {lead.fullName || lead.name || "Valued Client"}
                                               </span>
                                               <JourneyPhaseLabel status={lead.status} />
                                               <OutreachHistoryBadge lead={lead} compact={true} />
@@ -5257,16 +5258,18 @@ Best regards,`,
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#EAE7E0]">
                                   <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-2xl bg-[#4A5D4E] text-white flex items-center justify-center font-bold text-sm shadow-2xs">
-                                      {lead.fullName
-                                        .split(" ")
-                                        .map((n) => n[0])
+                                      {String(lead.fullName || lead.name || "Client")
+                                        .trim()
+                                        .split(/\s+/)
+                                        .filter(Boolean)
+                                        .map((n) => n[0] || "")
                                         .slice(0, 2)
-                                        .join("")}
+                                        .join("") || "CL"}
                                     </div>
                                     <div>
                                       <div className="flex items-center gap-2 flex-wrap">
                                         <h4 className="font-bold text-base text-[#2D362E]">
-                                          {lead.fullName}
+                                          {lead.fullName || lead.name || "Valued Client"}
                                         </h4>
                                         <JourneyPhaseLabel status={lead.status} />
                                         <OutreachHistoryBadge lead={lead} compact={true} />
@@ -9761,15 +9764,17 @@ Mike Ford`;
             <div className="bg-[#4A5D4E] p-4 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center font-bold text-sm">
-                  {(viewingTranscriptLead.fullName || "Client")
-                    .split(" ")
-                    .map((n) => n[0])
+                  {String(viewingTranscriptLead.fullName || viewingTranscriptLead.name || "Client")
+                    .trim()
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .map((n) => n[0] || "")
                     .slice(0, 2)
-                    .join("")}
+                    .join("") || "CL"}
                 </div>
                 <div>
                   <h3 className="font-bold text-sm">
-                    {viewingTranscriptLead.fullName || "Client"} • AI Chat Transcript
+                    {viewingTranscriptLead.fullName || viewingTranscriptLead.name || "Client"} • AI Chat Transcript
                   </h3>
                   <p className="text-[11px] text-white/80">
                     {viewingTranscriptLead.leadSource} •{" "}

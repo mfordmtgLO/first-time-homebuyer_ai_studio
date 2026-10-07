@@ -1120,7 +1120,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
         {
           id: `sms-init-${Date.now()}`,
           direction: "outbound",
-          text: `Hi ${contactForm.fullName.split(" ")[0]}! This is ${loanOfficer.name} with ${loanOfficer.company || "Guild Mortgage"}. Thank you for completing your Oregon Homebuyer Blueprint! We sent your custom DPA grant calculation details to ${contactForm.email}.`,
+          text: `Hi ${(contactForm.fullName || "there").split(" ")[0]}! This is ${loanOfficer.name} with ${loanOfficer.company || "Guild Mortgage"}. Thank you for completing your Oregon Homebuyer Blueprint! We sent your custom DPA grant calculation details to ${contactForm.email}.`,
           timestamp: new Date().toISOString(),
           status: "delivered",
         },
@@ -1145,7 +1145,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     const botConfirmMsg = {
       id: `bot-confirm-${Date.now()}`,
       sender: "advisor" as const,
-      text: `🎉 Congratulations ${contactForm.fullName.split(" ")[0]}! Your Prequalification Blueprint has been generated and dispatched to ${loanOfficer.name}. You can also schedule a direct 1-on-1 strategy call below!`,
+      text: `🎉 Congratulations ${(contactForm.fullName || "there").split(" ")[0]}! Your Prequalification Blueprint has been generated and dispatched to ${loanOfficer.name}. You can also schedule a direct 1-on-1 strategy call below!`,
       time: "Just now",
     };
     setMessages((prev) => [...prev, botConfirmMsg]);

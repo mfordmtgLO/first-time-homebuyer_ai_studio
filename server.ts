@@ -18,6 +18,12 @@ import { loadKnowledgeBase, searchKnowledge, addDocumentToKnowledge, buildMuseCo
 import { searchLiveRegistry, scrapeAgentUrlDirectly } from "./liveWebSearch.ts";
 import { handleIncomingTwilioWebhook } from "./src/services/smsSyncService.ts";
 import { GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS } from "./src/data/junctionCityLiveListings.ts";
+import {
+  diffAndMergeListings,
+  normalizeAddress,
+  getConversationDocId,
+  calculatePriceDropMonthlySavings,
+} from "./src/services/geosphereIngestionService.ts";
 
 // Enterprise Encryption Vault Setup (Zero-Trust Security Architecture)
 // In production, MASTER_ENCRYPTION_KEY can be configured via Cloud Secrets / Environment.
@@ -2639,36 +2645,392 @@ Return JSON matching this shape:
     }
   });
 
-  // 1-Click Sync Endpoint for Ready-to-Sync Saved Listing Folders
+  // ============================================================================
+  // REAL GEOSPHERE SNAPSHOT INGESTION & SMART PRICE-DROP DIFF ENGINE
+  // ============================================================================
   app.post("/api/geosphere/sync-ready-folder", async (req, res) => {
     try {
-      const { city, folderName } = req.body || {};
+      const { city, folderName, listings: providedListings, endpointUrl, syncToken } = req.body || {};
       const cleanCity = String(city || "Cottage Grove").trim();
       const cityKey = cleanCity.toLowerCase().replace(/[^a-z0-9]/g, "-");
       const db = getAdminDb();
 
-      // Update pull request status to synced
-      try {
-        await db.collection("city_pull_requests").doc(cityKey).set({
-          status: "synced",
-          syncedToFthb: true,
-          syncedAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (e) {
-        console.warn("[Sync Ready Folder] Firestore notice:", e);
+      // 1. Fetch fresh snapshot for the city
+      let incomingRaw: any[] = [];
+      if (Array.isArray(providedListings) && providedListings.length > 0) {
+        incomingRaw = providedListings;
+      } else {
+        const snapshotData = await fetchGeoSphereSavedListings({ endpointUrl, syncToken });
+        if (!snapshotData) {
+          return res.status(502).json({
+            success: false,
+            error: `GeoSphere snapshot service unreachable or returned no listings for ${cleanCity}. Dashboard state unchanged.`,
+            city: cleanCity,
+          });
+        }
+
+        let foundItems: any[] = [];
+        if (Array.isArray(snapshotData.pulls)) {
+          const matchingPull = snapshotData.pulls.find((p: any) => {
+            const area = String(p.area || "").trim().toLowerCase();
+            return (
+              area === cleanCity.toLowerCase() ||
+              (folderName && String(folderName).toLowerCase().includes(area))
+            );
+          });
+          if (matchingPull) {
+            foundItems = matchingPull.overlaySets?.all || matchingPull.listings || [];
+          }
+        }
+
+        if (foundItems.length === 0) {
+          const allRaw = extractRawListings(snapshotData);
+          foundItems = allRaw.filter((item: any) => {
+            const c = String(item.city || "").trim().toLowerCase();
+            const addr = String(item.address || item.formattedAddress || "").toLowerCase();
+            return c === cleanCity.toLowerCase() || addr.includes(cleanCity.toLowerCase());
+          });
+        }
+
+        if (foundItems.length === 0) {
+          return res.status(502).json({
+            success: false,
+            error: `No listings found for city "${cleanCity}" in GeoSphere snapshot. Dashboard state unchanged.`,
+            city: cleanCity,
+          });
+        }
+
+        incomingRaw = foundItems;
       }
 
-      await recordComplianceAuditLog("GEOSPHERE_FOLDER_SYNCED_TO_FTHB", {
+      // Standardize incoming listings
+      const incomingStandardized = incomingRaw
+        .map((item: any, idx: number) => standardizeListingItem(item, idx))
+        .filter((item: any) => Boolean(item.address));
+
+      // 2. Fetch existing dashboard listings for this city
+      const curatedSnap = await db.collection("curated_listings").get();
+      const existingCityListings: any[] = [];
+      curatedSnap.forEach((docSnap) => {
+        const d = docSnap.data();
+        const docCity = String(d.city || d.cityNorm || "").trim().toLowerCase();
+        const docAddr = String(d.address || "").toLowerCase();
+        if (
+          docCity === cleanCity.toLowerCase() ||
+          docAddr.includes(cleanCity.toLowerCase())
+        ) {
+          existingCityListings.push({ id: docSnap.id, ...d });
+        }
+      });
+
+      // 3. Query buyer context for tiered alerts (curations, favorites, leads)
+      const curationsSnap = await db.collection("lead_curations").get();
+      const curatedListingIds = new Set<string>();
+      const curatedAddresses = new Set<string>();
+      const curationByListing = new Map<string, any>();
+      curationsSnap.forEach((d) => {
+        const cData = d.data();
+        const items = Array.isArray(cData.listings) ? cData.listings : [];
+        items.forEach((item: any) => {
+          const lid = String(item.listingId || item.id || "");
+          if (lid) {
+            curatedListingIds.add(lid);
+            curationByListing.set(lid, cData);
+          }
+          if (item.address) {
+            const n = normalizeAddress(item.address);
+            curatedAddresses.add(n);
+            curationByListing.set(n, cData);
+          }
+        });
+      });
+
+      // 4. Query delivered alert IDs for idempotency
+      const alertsSnap = await db.collection("price_drop_alerts").get();
+      const deliveredAlertIds = new Set<string>();
+      alertsSnap.forEach((d) => {
+        const aData = d.data();
+        if (aData.status === "delivered" || d.id.startsWith("auto_pda_")) {
+          deliveredAlertIds.add(d.id);
+        }
+      });
+
+      // Fetch primary leads for fallback thread association
+      const leadsSnap = await db.collection("leads").limit(10).get();
+      const allLeads = leadsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const defaultLead = allLeads[0] || {
+        id: "lead-active",
+        name: "First-Time Homebuyer",
+        email: "",
+      };
+
+      // 5. Execute Diff and Merge
+      const diffResult = diffAndMergeListings({
+        cleanCity,
+        existingListings: existingCityListings,
+        incomingListings: incomingStandardized,
+        curatedListingIds,
+        curatedAddresses,
+        deliveredAlertIds,
+      });
+
+      // 6. Persist to Firestore
+      let batch = db.batch();
+      let opCount = 0;
+      const batchPromises: Promise<any>[] = [];
+
+      // Save updated listings
+      for (const updated of diffResult.updatedListings) {
+        const ref = db.collection("curated_listings").doc(updated.id);
+        batch.set(ref, updated, { merge: true });
+        opCount++;
+        if (opCount >= 400) {
+          batchPromises.push(batch.commit());
+          batch = db.batch();
+          opCount = 0;
+        }
+      }
+
+      // Save inserted new candidate listings
+      for (const inserted of diffResult.insertedListings) {
+        const ref = db.collection("curated_listings").doc(inserted.id);
+        batch.set(ref, inserted);
+        opCount++;
+        if (opCount >= 400) {
+          batchPromises.push(batch.commit());
+          batch = db.batch();
+          opCount = 0;
+        }
+      }
+
+      // Flag absent listings
+      for (const flagged of diffResult.flaggedListings) {
+        const ref = db.collection("curated_listings").doc(flagged.id);
+        batch.update(ref, {
+          status: "no_longer_active",
+          flagReason: "absent from latest RentCast pull",
+          flaggedAbsentAt: flagged.flaggedAbsentAt,
+          updatedAt: flagged.updatedAt,
+        });
+        opCount++;
+        if (opCount >= 400) {
+          batchPromises.push(batch.commit());
+          batch = db.batch();
+          opCount = 0;
+        }
+      }
+
+      if (opCount > 0) {
+        batchPromises.push(batch.commit());
+      }
+      await Promise.all(batchPromises);
+
+      // 7. Deliver in-app thread messages and action items (EXISTING property_conversations)
+      const nowIso = new Date().toISOString();
+      for (const alert of diffResult.alertsToDeliver) {
+        const matchingDocId =
+          diffResult.updatedListings.find(
+            (l) => normalizeAddress(l.address) === normalizeAddress(alert.address)
+          )?.id || alert.address;
+
+        const targetCuration =
+          curationByListing.get(matchingDocId) ||
+          curationByListing.get(normalizeAddress(alert.address));
+
+        const targetLeadId = targetCuration?.leadId || defaultLead.id || "lead-active";
+        const targetLeadName =
+          targetCuration?.name || defaultLead.name || defaultLead.fullName || "First-Time Homebuyer";
+        const targetLeadEmail = targetCuration?.email || defaultLead.email || "";
+
+        const convId = getConversationDocId(matchingDocId, targetLeadId);
+        const convRef = db.collection("property_conversations").doc(convId);
+        const convSnap = await convRef.get();
+
+        const newMsgId = `msg_alert_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const newActionId = `action_alert_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+        const alertMessage = {
+          id: newMsgId,
+          sender: "system",
+          senderName: "Price Drop Monitor",
+          senderRole: "System Alert",
+          text: alert.threadMessage,
+          timestamp: nowIso,
+          messageType: "note",
+          actionItemId: newActionId,
+          tier: alert.tier,
+          priceDropAmount: alert.priceDropAmount,
+          savings: alert.savings,
+          newPrice: alert.newPrice,
+        };
+
+        const alertActionItem = {
+          id: newActionId,
+          conversationId: convId,
+          propertyId: matchingDocId,
+          propertyAddress: alert.address,
+          propertyPrice: alert.newPrice,
+          propertyCity: cleanCity,
+          leadId: targetLeadId,
+          leadName: targetLeadName,
+          leadEmail: targetLeadEmail,
+          questionText: alert.actionItemText,
+          questionCategory: "financing",
+          status: "pending",
+          priority: alert.actionItemPriority,
+          tier: alert.tier,
+          createdAt: nowIso,
+          alertSource: "geosphere_sync_diff",
+        };
+
+        if (convSnap.exists) {
+          const convData = convSnap.data() || {};
+          const msgs = Array.isArray(convData.messages)
+            ? [...convData.messages, alertMessage]
+            : [alertMessage];
+          const actions = Array.isArray(convData.pendingActionItems)
+            ? [...convData.pendingActionItems, alertActionItem]
+            : [alertActionItem];
+          await convRef.set(
+            {
+              messages: msgs,
+              pendingActionItems: actions,
+              hasPendingActionItem: true,
+              notes: alert.tierCopy,
+              updatedAt: nowIso,
+            },
+            { merge: true }
+          );
+        } else {
+          await convRef.set({
+            id: convId,
+            propertyId: matchingDocId,
+            propertyAddress: alert.address,
+            propertyPrice: alert.newPrice,
+            propertyCity: cleanCity,
+            leadId: targetLeadId,
+            leadName: targetLeadName,
+            leadEmail: targetLeadEmail,
+            messages: [alertMessage],
+            pendingActionItems: [alertActionItem],
+            hasPendingActionItem: true,
+            notes: alert.tierCopy,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+          });
+        }
+
+        // Record in price_drop_alerts ONLY after note actually written to thread
+        await db
+          .collection("price_drop_alerts")
+          .doc(alert.alertId)
+          .set(
+            {
+              alertId: alert.alertId,
+              propertyAddress: alert.address,
+              city: cleanCity,
+              previousPrice: alert.originalPrice,
+              currentPrice: alert.newPrice,
+              priceDropAmount: alert.priceDropAmount,
+              monthlySavings: alert.savings,
+              tier: alert.tier,
+              status: "delivered", // Delivered via in-app property notes thread
+              deliveryChannel: "in_app_property_thread",
+              deliveredAt: nowIso,
+              conversationId: convId,
+              actionItemId: newActionId,
+              isDuplicate: false,
+              cardNote: alert.tierCopy,
+              threadMessage: alert.threadMessage,
+            },
+            { merge: true }
+          );
+      }
+
+      // 8. Update guides_state singleton if present so frontend listeners get real-time state
+      try {
+        const guidesDoc = await db.collection("guides_state").doc("singleton").get();
+        if (guidesDoc.exists) {
+          const gData = guidesDoc.data() || {};
+          const prevSynced: any[] = Array.isArray(gData.syncedProperties)
+            ? gData.syncedProperties
+            : [];
+          const updatedSynced = prevSynced.map((p: any) => {
+            const match = diffResult.updatedListings.find(
+              (u) => normalizeAddress(u.address) === normalizeAddress(p.address)
+            );
+            return match || p;
+          });
+          const insertedToSynced = diffResult.insertedListings.filter(
+            (ins) => !updatedSynced.some((p: any) => normalizeAddress(p.address) === normalizeAddress(ins.address))
+          );
+          await db
+            .collection("guides_state")
+            .doc("singleton")
+            .set(
+              {
+                syncedProperties: [...updatedSynced, ...insertedToSynced],
+                lastSyncedAt: nowIso,
+              },
+              { merge: true }
+            );
+        }
+      } catch (gErr) {
+        console.warn("[Sync Ready Folder] guides_state singleton notice:", gErr);
+      }
+
+      // 9. Update pull request status
+      try {
+        await db.collection("city_pull_requests").doc(cityKey).set(
+          {
+            status: "synced",
+            syncedToFthb: true,
+            syncedAt: nowIso,
+            updatedCount: diffResult.counts.updated,
+            insertedCount: diffResult.counts.inserted,
+            flaggedCount: diffResult.counts.flagged,
+            priceDropsCount: diffResult.counts.priceDropsCount,
+          },
+          { merge: true }
+        );
+      } catch (prErr) {
+        console.warn("[Sync Ready Folder] city_pull_requests notice:", prErr);
+      }
+
+      // 10. Immutable Compliance Audit Log with real counts
+      await recordComplianceAuditLog("GEOSPHERE_FOLDER_INGESTED", {
         city: cleanCity,
         folderName: folderName || `${cleanCity} listings`,
-        syncedAt: new Date().toISOString()
+        updated: diffResult.counts.updated,
+        inserted: diffResult.counts.inserted,
+        flagged: diffResult.counts.flagged,
+        priceDropsCount: diffResult.counts.priceDropsCount,
+        priceDrops: diffResult.priceDrops.map((d) => ({
+          address: d.address,
+          originalPrice: d.originalPrice,
+          newPrice: d.newPrice,
+          priceDropAmount: d.priceDropAmount,
+          savings: d.savings,
+          tier: d.tier,
+          alertQueued: d.alertQueued,
+        })),
+        syncedAt: nowIso,
       });
+
+      console.log(
+        `[GEOSPHERE INGESTION COMPLETE] City: ${cleanCity}. Updated: ${diffResult.counts.updated}, Inserted: ${diffResult.counts.inserted}, Flagged: ${diffResult.counts.flagged}, Price Drops: ${diffResult.counts.priceDropsCount}.`
+      );
 
       return res.json({
         success: true,
-        message: `Successfully synced "${folderName || cleanCity}" into First-Time Homebuyer Dashboard and property candidate listings!`,
+        message: `Successfully synced "${folderName || cleanCity}": ${diffResult.counts.updated} updated, ${diffResult.counts.inserted} inserted, ${diffResult.counts.flagged} flagged, ${diffResult.counts.priceDropsCount} price drops detected.`,
         city: cleanCity,
-        syncedAt: new Date().toISOString()
+        folderName: folderName || `${cleanCity} listings`,
+        updated: diffResult.counts.updated,
+        inserted: diffResult.counts.inserted,
+        flagged: diffResult.counts.flagged,
+        priceDrops: diffResult.priceDrops,
+        syncedAt: nowIso,
       });
     } catch (err: any) {
       console.error("[Sync Ready Folder] Error:", err);

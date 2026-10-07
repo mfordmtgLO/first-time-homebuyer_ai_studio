@@ -216,7 +216,6 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
         production12MoUnits: calculatedUnits,
         recruitmentStatus: "Not Contacted",
         enrichmentStatus: "enriched",
-        realTrendsVerified: false,
         realTrendsRank: null,
         isLiveGrounded: true,
         liveSourceDomain: sourceDomain
@@ -252,7 +251,6 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
         sourceUrl: sourceLink,
         verifyLicenseUrl,
         recruitmentStatus: "Not Contacted",
-        realTrendsVerified: false,
         realTrendsRank: null,
         isLiveGrounded: true,
         liveSourceDomain: sourceDomain
@@ -377,7 +375,6 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
         production12MoUnits: null,
         recruitmentStatus: "Not Contacted",
         enrichmentStatus: "enriched",
-        realTrendsVerified: false,
         realTrendsRank: null,
         isLiveGrounded: true,
         liveSourceDomain: link.domain
@@ -408,7 +405,6 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
         sourceUrl: link.url,
         verifyLicenseUrl,
         recruitmentStatus: "Not Contacted",
-        realTrendsVerified: false,
         realTrendsRank: null,
         isLiveGrounded: true,
         liveSourceDomain: link.domain
@@ -502,8 +498,7 @@ Return a valid JSON array of up to 50 candidates. Each object MUST have:
   "websiteUrl": "Profile or website URL or null",
   "sourceUrl": "Direct grounded web URL where found",
   "bio": "Brief accurate professional summary or null",
-  "realTrendsRank": "Accolade or rank string if confirmed, else null",
-  "realTrendsVerified": true/false (true ONLY if confirmed by published source)
+  "realTrendsRank": "Accolade or rank string if confirmed, else null"
 }
 Output strictly valid JSON (an array of objects).`
         : `You are an honest real estate recruiting research analyst.
@@ -531,8 +526,7 @@ Return a valid JSON array of up to 50 candidates. Each object MUST have:
   "websiteUrl": "Profile or website URL or null",
   "sourceUrl": "Direct grounded web URL where found",
   "bio": "Brief accurate professional summary or null",
-  "realTrendsRank": "Accolade or rank string if confirmed, else null",
-  "realTrendsVerified": true/false (true ONLY if confirmed by published source)
+  "realTrendsRank": "Accolade or rank string if confirmed, else null"
 }
 Output strictly valid JSON (an array of objects).`;
 
@@ -629,7 +623,7 @@ Output strictly valid JSON (an array of objects).`;
                 : (cleanLicense ? "https://rea.oregon.gov/" : "https://rea.oregon.gov/");
 
               const confirmedRank = typeof c.rank === "number" ? c.rank : null;
-              const isVerifiedBySource = Boolean(c.sourceUrl && (c.realTrendsVerified || confirmedRank !== null));
+              const isVerifiedBySource = Boolean(c.sourceUrl && confirmedRank !== null);
 
               formatted.push({
                 id: `${type === "lo" ? "lo" : "ag"}-gemini-${Date.now()}-${idx}`,
@@ -640,6 +634,8 @@ Output strictly valid JSON (an array of objects).`;
                 nmlsId: cleanLicense,
                 nmlsNumber: cleanLicense,
                 licenseNumber: cleanLicense,
+                licenseStatus: cleanLicense ? "reported_not_verified" : "unverified",
+                volumeStatus: vol !== null ? "reported" : "unreported",
                 city: c.city || city || null,
                 county: county ? `${county} County` : null,
                 state: c.state || state || "OR",
@@ -663,9 +659,9 @@ Output strictly valid JSON (an array of objects).`;
                 listingUnits12Mo: (units != null && bUnits != null) ? Math.max(0, units - bUnits) : null,
                 buysideSharePct: c.buysideSharePct != null ? Number(c.buysideSharePct) : null,
                 rank: confirmedRank,
+                rankVerified: isVerifiedBySource,
                 recruitmentStatus: "Not Contacted",
                 enrichmentStatus: "enriched",
-                realTrendsVerified: isVerifiedBySource,
                 realTrendsRank: c.realTrendsRank || (confirmedRank ? (type === "lo" ? `Scotsman Guide #${confirmedRank}` : `RealTrends America's Best #${confirmedRank}`) : null),
                 isLiveGrounded: true,
                 liveSourceDomain: c.sourceUrl ? "RealTrends / Industry Source" : "Google Search Grounded",
@@ -975,23 +971,23 @@ Output strictly valid JSON.`;
 
   const effectiveBrokerage = isKanndice 
     ? "Keller Williams Realty Portland Central" 
-    : (geminiProfile?.brokerage || geminiProfile?.company || detectedBrokerage || brokerageHint || (/kw\.com|kellerwilliams/i.test(cleanUrl) ? "Keller Williams Realty" : "Premier Real Estate"));
+    : (geminiProfile?.brokerage || geminiProfile?.company || detectedBrokerage || brokerageHint || (/kw\.com|kellerwilliams/i.test(cleanUrl) ? "Keller Williams Realty" : "Real Estate Brokerage"));
 
   const effectiveLicense = isKanndice 
     ? "201209811" 
-    : (geminiProfile?.licenseNumber || "201209811");
+    : (geminiProfile?.licenseNumber || null);
 
   const effectiveEmail = isKanndice 
     ? "kanndice@kw.com" 
-    : (geminiProfile?.email || mailtoLinks[0] || `${effectiveName.toLowerCase().replace(/\s+/g, ".")}@${effectiveBrokerage.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`);
+    : (geminiProfile?.email || mailtoLinks[0] || null);
 
   const effectivePhone = isKanndice 
     ? "(503) 799-3060" 
-    : (geminiProfile?.phone || telLinks[0] || "(503) 555-0199");
+    : (geminiProfile?.phone || telLinks[0] || null);
 
   let rawHeadshot = isKanndice
-    ? (ogImage || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400")
-    : (geminiProfile?.headshotUrl || ogImage || detectedImgs[0] || pickAvatar(effectiveName, 1));
+    ? (ogImage || null)
+    : (geminiProfile?.headshotUrl || ogImage || detectedImgs[0] || null);
 
   if (rawHeadshot && !rawHeadshot.startsWith("http")) {
     try {
@@ -1002,9 +998,9 @@ Output strictly valid JSON.`;
   }
   const effectiveHeadshot = rawHeadshot;
 
-  const effectiveYears = isKanndice ? 12 : (Number(geminiProfile?.yearsExperience) || 12);
-  const effectiveVol = isKanndice ? 18500000 : (Number(geminiProfile?.production12MoVolume) || 21500000);
-  const effectiveUnits = isKanndice ? 32 : (Number(geminiProfile?.production12MoUnits) || 38);
+  const effectiveYears = isKanndice ? 12 : (Number(geminiProfile?.yearsExperience) || null);
+  const effectiveVol = isKanndice ? 18500000 : (Number(geminiProfile?.production12MoVolume) || null);
+  const effectiveUnits = isKanndice ? 32 : (Number(geminiProfile?.production12MoUnits) || null);
   const effectiveCity = isKanndice ? "Portland" : (geminiProfile?.city || "Portland");
 
   const resultCard = {
@@ -1020,7 +1016,7 @@ Output strictly valid JSON.`;
     headshotUrl: effectiveHeadshot,
     bio: isKanndice 
       ? "Principal Real Estate Broker with Keller Williams Realty Portland Central with 12+ years of client advocacy, specialized buyer representation, and deep knowledge of Oregon first-time homebuyer programs."
-      : (geminiProfile?.bio || ogDescription || `Experienced real estate professional with ${effectiveBrokerage} serving ${effectiveCity}, Oregon and surrounding communities.`),
+      : (geminiProfile?.bio || ogDescription || `Real estate professional with ${effectiveBrokerage} serving ${effectiveCity}, Oregon and surrounding communities.`),
     specialties: geminiProfile?.specialties || ["Buyer Representation", "First-Time Homebuyers", "Down Payment Assistance", "Listing Negotiation"],
     marketAreas: geminiProfile?.marketAreas || [`${effectiveCity} Metro`, "Willamette Valley", "Oregon Statewide"],
     agentType: geminiProfile?.agentType || "buyer_agent",
@@ -1031,16 +1027,14 @@ Output strictly valid JSON.`;
     experienceYears: effectiveYears,
     production12MoVolume: effectiveVol,
     production12MoUnits: effectiveUnits,
-    buysideUnits12Mo: Math.round(effectiveUnits * 0.72),
-    buysideVolume12Mo: Math.round(effectiveVol * 0.72),
-    buysideSharePct: 72,
-    activeListingsCount: 6,
+    buysideUnits12Mo: effectiveUnits ? Math.round(effectiveUnits * 0.72) : null,
+    buysideVolume12Mo: effectiveVol ? Math.round(effectiveVol * 0.72) : null,
+    buysideSharePct: effectiveUnits ? 72 : null,
+    activeListingsCount: 0,
     websiteUrl: cleanUrl,
     sourceUrl: cleanUrl,
     deepScrapedFromUrl: true,
     deepScrapedAt: new Date().toISOString(),
-    realTrendsVerified: true,
-    realTrendsRank: "Verified Workplace Bio Page",
     isLiveGrounded: true,
     liveSourceDomain: domain
   };

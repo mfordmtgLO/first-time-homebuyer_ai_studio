@@ -1960,7 +1960,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
                       <input
                         type="tel"
                         required
-                        placeholder="(503) 555-0199"
+                        placeholder="e.g. (503) 282-5626"
                         value={contactForm.phone}
                         onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
                         className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"

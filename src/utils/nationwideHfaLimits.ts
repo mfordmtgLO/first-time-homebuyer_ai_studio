@@ -508,7 +508,7 @@ export function getNationwideHfaDetails(
     agencyName: `${name} Housing Finance Agency`,
     agencyAcronym: `${code}HFA`,
     agencyWebsite: `https://${code.toLowerCase()}housing.gov`,
-    agencyPhone: "(800) 555-4687",
+    agencyPhone: null, // Sourced from specific state housing finance authority
     avgPropertyTaxRate: 0.010,
     avgHomeInsuranceRate: 1400,
     conformingBaselineLimit: 806495,

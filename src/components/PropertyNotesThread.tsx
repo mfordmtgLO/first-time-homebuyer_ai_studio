@@ -510,7 +510,7 @@ export const PropertyNotesThread: React.FC<PropertyNotesThreadProps> = ({
                   {smsOptIn && (
                     <input 
                       type="tel"
-                      placeholder="Mobile Phone (e.g., 503-555-0199)"
+                      placeholder="Mobile Phone (e.g., 503-282-5626)"
                       value={optInPhone}
                       onChange={(e) => setOptInPhone(e.target.value)}
                       className="w-full bg-white border border-[#EAE7E0] rounded-lg px-2.5 py-1.5 text-xs text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"

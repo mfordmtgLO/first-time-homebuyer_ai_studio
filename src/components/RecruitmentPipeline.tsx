@@ -284,33 +284,10 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
           onUpdateGuidesState(prev => {
             const updated = prev.agentRoster.map(ag => {
               if (ag.id === agentToUpdate.id) {
-                const hash = ag.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-                const units = Number(ag.production12MoUnits) || ((hash % 42) + 22);
-                const volume = Number(ag.production12MoVolume) || (((hash % 28) + 14) * 1000000);
-                const buysidePct = Number(ag.buysideSharePct) || (58 + (hash % 24));
-                const buysideUnits = Math.round(units * (buysidePct / 100));
-                const buysideVolume = Math.round(volume * (buysidePct / 100));
-
                 return {
                   ...ag,
                   enrichmentStatus: 'enriched' as const,
-                  realTrendsVerified: true,
-                  realTrendsRank: ag.realTrendsRank || `RealTrends America's Best #${(hash % 70) + 15} - Oregon (Top 1.5% Producer)`,
-                  realTrendsYear: 2025,
-                  realTrendsSides: units,
-                  realTrendsVolume: volume,
-                  realTrendsUnits: units,
-                  production12MoUnits: units,
-                  production12MoVolume: volume,
-                  buysideSharePct: buysidePct,
-                  buysideUnits12Mo: buysideUnits,
-                  buysideVolume12Mo: buysideVolume,
-                  listingUnits12Mo: Math.max(0, units - buysideUnits),
-                  listingVolume12Mo: Math.max(0, volume - buysideVolume),
-                  licenseStates: ['OR', 'WA'],
-                  marketAreas: ['Portland Metro', 'Willamette Valley', 'Clark County'],
-                  experienceYears: Number(ag.experienceYears) || ((hash % 12) + 4),
-                  yearsExperience: Number(ag.yearsExperience) || ((hash % 12) + 4),
+                  rankVerified: Boolean(ag.rankVerified),
                   lastSweepSyncedAt: new Date().toISOString()
                 };
               }

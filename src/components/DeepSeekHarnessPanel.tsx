@@ -6,8 +6,8 @@ export const DeepSeekHarnessPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [cronJobs, setCronJobs] = useState<Array<{ id: string; name: string; cron: string; status: string; lastRun?: string }>>([
-    { id: 'job-1', name: 'daily-mortgage-rate-monitor', cron: '0 8 * * *', status: 'Active (Unattended)', lastRun: 'Today at 08:00 AM' },
-    { id: 'job-2', name: 'fha-va-guideline-sync', cron: '0 6 * * 1', status: 'Active (Unattended)', lastRun: 'Monday at 06:00 AM' }
+    { id: 'job-1', name: 'daily-mortgage-rate-monitor', cron: '0 8 * * *', status: 'Active', lastRun: 'Today at 08:00 AM' },
+    { id: 'job-2', name: 'fha-va-guideline-sync', cron: '0 6 * * 1', status: 'Active', lastRun: 'Monday at 06:00 AM' }
   ]);
   const [newJobName, setNewJobName] = useState('');
   const [newJobCron, setNewJobCron] = useState('0 9 * * *');
@@ -40,7 +40,7 @@ export const DeepSeekHarnessPanel: React.FC = () => {
       id: `job-${Date.now()}`,
       name: newJobName.trim(),
       cron: newJobCron,
-      status: 'Active (Unattended)',
+      status: 'Active',
       lastRun: 'Just registered'
     };
     setCronJobs([newJob, ...cronJobs]);

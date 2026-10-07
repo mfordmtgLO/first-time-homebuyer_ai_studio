@@ -490,8 +490,8 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       isFavorite: false,
       isPubliclyPublished: true,
       syncedAt: new Date().toISOString(),
-      notes: `[Zillow Discovered Active Listing]: Discovered on live market sweep for ${city}. Days on Market: ${t.dom}d. Pending RentCast admin API pull.`,
-      mlsNumber: `MLS#${98000000 + idx * 1111}`,
+      notes: `Discovered active listing for ${city}. Days on Market: ${t.dom}d. Pending RentCast live data pull.`,
+      mlsNumber: undefined,
       mlsName: "RMLS",
       zillowUrl: `https://www.zillow.com/homes/${encodeURIComponent(t.address + ', ' + city + ', OR')}_rb/`,
       overlayEligibility: {
@@ -682,80 +682,24 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       let statusChangesCount = 0;
       const reducedList: PropertyListing[] = [];
 
-      // Loop through EVERY property listing address to perform individual MLS & Zillow checks
-      const updatedProperties = properties.map((p, index) => {
+      // Maintain honest property tracking state without mathematical fabrication
+      const updatedProperties = properties.map((p) => {
         const currentPrice = p.price || 425000;
         const originalPrice = p.originalPrice || (p.priceDropAmount ? currentPrice + p.priceDropAmount : currentPrice);
-        const addressSeed = (p.address || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) + index * 11;
-
-        // 1. Update Days on Market (DOM)
-        const currentDom = p.daysOnMarket !== undefined ? p.daysOnMarket : 14;
-        const newDom = currentDom + 7;
-
-        // 2. Verify Listing Status on MLS (active vs pending vs off_market/passed)
-        let newStatus: PropertyListing['status'] = p.status || 'saved';
-        let statusChanged = false;
-        const statusSeed = addressSeed % 11;
-        if (statusSeed === 7 && p.status !== 'under_contract') {
-          newStatus = 'under_contract'; // Verified Pending on MLS
-          statusChanged = true;
-          statusChangesCount++;
-        } else if (statusSeed === 9 && p.status !== 'passed') {
-          newStatus = 'passed'; // Verified Off-Market / Archived
-          statusChanged = true;
-          statusChangesCount++;
-        }
-
-        // 3. Real Sales Price Check against live Zillow / MLS
-        let drop = p.priceDropAmount || 0;
-        if (drop === 0) {
-          const qualifiesForDrop = (addressSeed % 2 === 0) || (index % 3 === 0);
-          if (qualifiesForDrop) {
-            const dropRatio = 0.025 + ((addressSeed % 30) / 1000); // 2.5% to 5.5% realistic MLS price adjustment
-            drop = Math.round((originalPrice * dropRatio) / 500) * 500;
-            if (drop < 7500) drop = 8500;
-            if (drop > 30000) drop = 27500;
-          }
-        }
-
-        const newPrice = drop > 0 ? Math.max(100000, originalPrice - drop) : currentPrice;
-        const oldLoanAmt = Math.max(0, originalPrice - downPayment);
-        const newLoanAmt = Math.max(0, newPrice - downPayment);
-        const oldPI = calculateMonthlyPI(oldLoanAmt, rate, term);
-        const newPI = calculateMonthlyPI(newLoanAmt, rate, term);
-        const monthlySavings = Math.max(35, oldPI - newPI);
+        const drop = p.priceDropAmount || 0;
 
         if (drop > 0) {
+          const oldLoanAmt = Math.max(0, originalPrice - downPayment);
+          const newLoanAmt = Math.max(0, (p.price || currentPrice) - downPayment);
+          const oldPI = calculateMonthlyPI(oldLoanAmt, rate, term);
+          const newPI = calculateMonthlyPI(newLoanAmt, rate, term);
+          const monthlySavings = Math.max(35, oldPI - newPI);
           totalSavingsAccumulator += monthlySavings;
           if (drop > maxSingleDrop) maxSingleDrop = drop;
+          reducedList.push(p);
         }
 
-        const currentNotes = p.notes || "";
-        const cleanNotes = currentNotes.replace(/\[Zillow.*?\]/gs, "").replace(/\[MLS.*?\]/gs, "").trim();
-        let auditNote = "";
-        if (drop > 0) {
-          auditNote += `[Zillow & MLS Verified Price Drop for ${p.address}]: Listing reduced by ${formatUSD(drop)} (from ${formatUSD(originalPrice)} to ${formatUSD(newPrice)}). Monthly mortgage savings: ~${formatUSD(monthlySavings)}/mo. `;
-        }
-        if (statusChanged) {
-          auditNote += `[MLS Status Update]: Status changed to ${newStatus === 'under_contract' ? 'Pending / Under Contract' : 'Off-Market / Archived'}. `;
-        }
-        auditNote += `[Zillow Live Sweep]: Verified live on market. Days on Market updated to ${newDom}d.`;
-
-        const updatedListing: PropertyListing = {
-          ...p,
-          originalPrice,
-          price: newPrice,
-          priceDropAmount: drop > 0 ? drop : 0,
-          priceDropDate: drop > 0 ? new Date().toISOString() : p.priceDropDate,
-          daysOnMarket: newDom,
-          status: newStatus,
-          notes: `${cleanNotes ? cleanNotes + "\n" : ""}${auditNote}`.trim(),
-        };
-
-        if (drop > 0) {
-          reducedList.push(updatedListing);
-        }
-        return updatedListing;
+        return p;
       });
 
       setProperties(updatedProperties);

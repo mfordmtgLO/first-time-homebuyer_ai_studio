@@ -3636,9 +3636,9 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
     res.json({
       success: true,
       jobs: [
-        { id: "cron-geomap-sync", name: "GeoMap Saved Property & RentCast Live Sync", cron: "0 4 * * *", status: "Active (Unattended)" },
-        { id: "cron-vantage-ai-import", name: "Vantage AI Studio Co-Branded Campaign Ingestion", cron: "0 6 * * *", status: "Active (Unattended)" },
-        { id: "cron-realtor-roster-audit", name: "Realtor Roster Compliance & Gap Resolution Audit", cron: "0 8 * * 1", status: "Active (Unattended)" }
+        { id: "cron-geomap-sync", name: "GeoMap Saved Property & RentCast Live Sync", cron: "0 4 * * *", status: "active" },
+        { id: "cron-vantage-ai-import", name: "Vantage AI Studio Co-Branded Campaign Ingestion", cron: "0 6 * * *", status: "active" },
+        { id: "cron-realtor-roster-audit", name: "Realtor Roster Compliance & Gap Resolution Audit", cron: "0 8 * * 1", status: "active" }
       ]
     });
   });
@@ -8983,7 +8983,7 @@ Return ONLY valid JSON in this exact structure:
         if (base) {
           return {
             ...c,
-            realTrendsVerified: base.verified,
+            rankVerified: Boolean(base.verified),
             realTrendsRank: base.rank,
             realTrendsVolume: base.volume12Mo,
             realTrendsUnits: base.units12Mo,
@@ -8999,7 +8999,7 @@ Return ONLY valid JSON in this exact structure:
 
         return {
           ...c,
-          realTrendsVerified: false,
+          rankVerified: false,
           realTrendsRank: null,
           realTrendsVolume: c.production12MoVolume != null ? Number(c.production12MoVolume) : null,
           realTrendsUnits: c.production12MoUnits != null ? Number(c.production12MoUnits) : null,
@@ -9078,10 +9078,10 @@ Return ONLY valid JSON in this exact structure:
         return {
           ...c,
           enrichmentStatus: "enriched" as const,
-          realTrendsVerified: Boolean(c.realTrendsVerified),
+          rankVerified: Boolean(c.rankVerified),
           realTrendsRank: c.realTrendsRank || null,
           lastSweepSyncedAt: new Date().toISOString(),
-          sweepStatus: c.realTrendsVerified ? "verified" : "unverified",
+          sweepStatus: c.rankVerified ? "verified" : "unverified",
         };
       });
 
@@ -9353,8 +9353,7 @@ Return ONLY valid JSON in this exact structure:
             listingUnits12Mo: lUnits,
             rank: typeof c.rank === "number" ? c.rank : null,
             accoladeRank: c.realTrendsRank || c.accoladeRank || (typeof c.rank === "number" ? `#${c.rank}` : null),
-            accoladeVerified: Boolean(c.realTrendsVerified && c.sourceUrl),
-            realTrendsVerified: Boolean(c.realTrendsVerified && c.sourceUrl),
+            rankVerified: Boolean(confirmedRank !== null && c.sourceUrl),
             sourceUrl: c.sourceUrl || null,
             verifyLicenseUrl,
             source: "active_pipeline",
@@ -9410,8 +9409,7 @@ Return a valid JSON array of up to ${Math.min(totalNeeded, 50)} candidates. Form
   "production12MoVolume": number or null (dollar volume e.g. 42000000, only if stated in source, else null),
   "production12MoUnits": number or null (closed units count, only if stated in source, else null),
   "sourceUrl": "Direct URL of the page where the ranking was published",
-  "accoladeRank": "Official accolade string or null (e.g. 'Scotsman Guide Top Originator #14' if stated, else null)",
-  "realTrendsVerified": true/false (true ONLY if confirmed by published Scotsman Guide or RealTrends source)
+  "accoladeRank": "Official accolade string or null (e.g. 'Scotsman Guide Top Originator #14' if stated, else null)"
 }
 Output strictly valid JSON (an array of objects).`
             : `You are an honest real estate recruiting research analyst.
@@ -9436,8 +9434,7 @@ Return a valid JSON array of up to ${Math.min(totalNeeded, 50)} candidates. Form
   "buysideVolume12Mo": number or null,
   "buysideSharePct": number or null,
   "sourceUrl": "Direct URL of the page where the ranking was published",
-  "accoladeRank": "Official accolade string or null (e.g. 'RealTrends America's Best #8' if stated, else null)",
-  "realTrendsVerified": true/false (true ONLY if confirmed by published RealTrends source)
+  "accoladeRank": "Official accolade string or null (e.g. 'RealTrends America's Best #8' if stated, else null)"
 }
 Output strictly valid JSON (an array of objects).`;
 
@@ -9524,7 +9521,7 @@ Output strictly valid JSON (an array of objects).`;
                     : (cleanLicense ? "https://rea.oregon.gov/" : "https://rea.oregon.gov/");
 
                   const confirmedRank = typeof c.rank === "number" ? c.rank : null;
-                  const isVerifiedBySource = Boolean(c.sourceUrl && (c.realTrendsVerified || confirmedRank !== null));
+                  const isVerifiedBySource = Boolean(c.sourceUrl && confirmedRank !== null);
 
                   organicCandidates.push({
                     id: `top50-sweep-${targetState}-${type}-${Date.now()}-${idx}`,
@@ -9535,6 +9532,8 @@ Output strictly valid JSON (an array of objects).`;
                     city: c.city || null,
                     state: targetState,
                     licenseOrNmls: cleanLicense,
+                    licenseStatus: cleanLicense ? ("reported_not_verified" as const) : ("unverified" as const),
+                    volumeStatus: vol !== null ? ("reported" as const) : ("unreported" as const),
                     email: c.email && c.email.includes("@") ? c.email : null,
                     phone: c.phone && !c.phone.includes("555") ? c.phone : null,
                     headshotUrl: null, // Guardrail: Initials avatar until real headshot provided; never stranger stock photo
@@ -9548,8 +9547,7 @@ Output strictly valid JSON (an array of objects).`;
                     listingUnits12Mo: (units != null && bUnits != null) ? Math.max(0, units - bUnits) : null,
                     rank: confirmedRank,
                     accoladeRank: c.accoladeRank || (confirmedRank ? (type === "loan_officer" ? `Scotsman Guide Top Originator #${confirmedRank}` : `RealTrends America's Best #${confirmedRank}`) : null),
-                    accoladeVerified: isVerifiedBySource,
-                    realTrendsVerified: isVerifiedBySource,
+                    rankVerified: isVerifiedBySource,
                     sourceUrl: c.sourceUrl || "https://www.realtrends.com/americas-best/",
                     verifyLicenseUrl,
                     source: "organic_web_sweep",
@@ -9627,11 +9625,46 @@ Output strictly valid JSON (an array of objects).`;
 
         return {
           ...cand,
+          licenseStatus: cand.licenseOrNmls ? ("reported_not_verified" as const) : ("unverified" as const),
+          volumeStatus: cand.production12MoVolume != null ? ("reported" as const) : ("unreported" as const),
           previousRank,
           rankDelta,
           isNewEntry,
         };
       });
+
+      // Compute honest per-field sweep statistics
+      const perFieldNotReported = {
+        rank: top50.filter(c => c.rank == null).length,
+        licenseOrNmls: top50.filter(c => !c.licenseOrNmls).length,
+        email: top50.filter(c => !c.email).length,
+        phone: top50.filter(c => !c.phone).length,
+        company: top50.filter(c => !c.company).length,
+        city: top50.filter(c => !c.city).length,
+        production12MoVolume: top50.filter(c => c.production12MoVolume == null).length,
+        production12MoUnits: top50.filter(c => c.production12MoUnits == null).length,
+        buysideVolume12Mo: top50.filter(c => c.buysideVolume12Mo == null).length,
+        buysideUnits12Mo: top50.filter(c => c.buysideUnits12Mo == null).length,
+        yearsExperience: top50.filter(c => c.yearsExperience == null).length,
+      };
+
+      const perFieldFound = {
+        rank: top50.filter(c => c.rank != null).length,
+        licenseOrNmls: top50.filter(c => Boolean(c.licenseOrNmls)).length,
+        email: top50.filter(c => Boolean(c.email)).length,
+        phone: top50.filter(c => Boolean(c.phone)).length,
+        company: top50.filter(c => Boolean(c.company)).length,
+        city: top50.filter(c => Boolean(c.city)).length,
+        production12MoVolume: top50.filter(c => c.production12MoVolume != null).length,
+        production12MoUnits: top50.filter(c => c.production12MoUnits != null).length,
+        buysideVolume12Mo: top50.filter(c => c.buysideVolume12Mo != null).length,
+        buysideUnits12Mo: top50.filter(c => c.buysideUnits12Mo != null).length,
+        yearsExperience: top50.filter(c => c.yearsExperience != null).length,
+      };
+
+      const totalFieldsCount = top50.length * Object.keys(perFieldFound).length;
+      const totalFieldsFound = Object.values(perFieldFound).reduce((a, b) => a + b, 0);
+      const totalFieldsNotReported = Object.values(perFieldNotReported).reduce((a, b) => a + b, 0);
 
       res.json({
         success: true,
@@ -9641,6 +9674,14 @@ Output strictly valid JSON (an array of objects).`;
         activeCount: top50.filter(c => c.inActivePipeline).length,
         organicCount: top50.filter(c => !c.inActivePipeline).length,
         timestamp: new Date().toISOString(),
+        runSummary: {
+          candidatesCount: top50.length,
+          fieldsReturnedByGemini: totalFieldsFound,
+          notReportedCount: totalFieldsNotReported,
+          totalFieldsTracked: totalFieldsCount,
+          perFieldFound,
+          perFieldNotReported
+        },
         results: top50
       });
     } catch (err: any) {

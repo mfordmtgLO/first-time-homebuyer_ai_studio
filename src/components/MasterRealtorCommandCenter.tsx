@@ -1062,7 +1062,7 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
                 <label className="block text-xs font-bold text-[#7D8877] uppercase mb-1">Phone Number</label>
                 <input
                   type="text"
-                  placeholder="(503) 555-0188"
+                  placeholder="e.g. (503) 282-5626"
                   value={newAgentPhone}
                   onChange={(e) => setNewAgentPhone(e.target.value)}
                   className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E]"

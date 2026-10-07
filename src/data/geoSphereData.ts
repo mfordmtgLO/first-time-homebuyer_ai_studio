@@ -8609,7 +8609,7 @@ export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
     "listingAgent": {
       "id": "agent-kendra-martinez",
       "name": "Kendra Martinez",
-      "phone": "(541) 555-0245",
+      "phone": "(541) 555-0245", // Sample demo fixture phone
       "email": "kendra@centraloregonliving.com",
       "website": "https://centraloregonliving.com"
     },
@@ -8673,7 +8673,7 @@ export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
     "listingAgent": {
       "id": "agent-colton-hayes",
       "name": "Colton Hayes",
-      "phone": "(541) 555-0319",
+      "phone": "(541) 555-0319", // Sample demo fixture phone
       "email": "colton@highdesertcascades.com",
       "website": "https://highdesertcascades.com"
     },
@@ -10610,7 +10610,7 @@ export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
     "listingAgent": {
       "id": "agent-marcus-vance",
       "name": "Marcus Vance",
-      "phone": "(503) 555-0177",
+      "phone": "(503) 555-0177", // Sample demo fixture phone
       "email": "marcus@willametteheritage.com",
       "website": "https://willametteheritage.com"
     },
@@ -10676,7 +10676,7 @@ export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
     "listingAgent": {
       "id": "agent-sarah-jenkins",
       "name": "Sarah Jenkins",
-      "phone": "(503) 555-0144",
+      "phone": "(503) 555-0144", // Sample demo fixture phone
       "email": "sarah.jenkins@cascadevalleyre.com",
       "website": "https://cascadevalleyre.com"
     },
@@ -10797,7 +10797,7 @@ export const GEOSPHERE_MOCK_LISTINGS: PropertyListing[] = [
     "listingAgent": {
       "id": "agent-jessica-miller",
       "name": "Jessica Miller",
-      "phone": "(503) 555-0288",
+      "phone": "(503) 555-0288", // Sample demo fixture phone
       "email": "jessica@midvalleyproperties.com",
       "website": "https://midvalleyproperties.com"
     },

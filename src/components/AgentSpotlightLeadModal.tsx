@@ -266,18 +266,24 @@ export const AgentSpotlightLeadModal: React.FC<AgentSpotlightLeadModalProps> = (
         {/* Agent Profile Co-Banner */}
         <div className="bg-[#FAF9F5] border-b border-[#EAE7E0] px-5 sm:px-6 py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img
-              src={agent.headshotUrl || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80"}
-              alt={agent.name}
-              className="w-11 h-11 rounded-2xl object-cover border-2 border-[#C18C5D] shadow-xs shrink-0"
-            />
+            {agent.headshotUrl ? (
+              <img
+                src={agent.headshotUrl}
+                alt={agent.name}
+                className="w-11 h-11 rounded-2xl object-cover border-2 border-[#C18C5D] shadow-xs shrink-0"
+              />
+            ) : (
+              <div className="w-11 h-11 rounded-2xl bg-emerald-800 text-white font-bold flex items-center justify-center border-2 border-[#C18C5D] shadow-xs shrink-0 text-sm">
+                {(agent.name || "A").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+              </div>
+            )}
             <div className="text-xs">
               <div className="font-bold text-[#2D362E] flex items-center gap-1.5">
                 <span>{agent.name}</span>
                 <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded">Active MLS</span>
               </div>
               <div className="text-[#606C5D] text-[11px]">
-                {agent.title} • Lic #{agent.licenseNumber || "20123984"}
+                {agent.title} • Lic #{agent.licenseNumber || "Verified"}
               </div>
             </div>
           </div>
@@ -420,7 +426,7 @@ export const AgentSpotlightLeadModal: React.FC<AgentSpotlightLeadModalProps> = (
                       <input
                         type="tel"
                         required
-                        placeholder="(503) 555-0199"
+                        placeholder="e.g. (503) 282-5626"
                         value={cellPhone}
                         onChange={(e) => setCellPhone(e.target.value)}
                         className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:border-[#4A5D4E] focus:bg-white"
@@ -560,11 +566,17 @@ export const AgentSpotlightLeadModal: React.FC<AgentSpotlightLeadModalProps> = (
                         className="bg-[#FAF9F5] rounded-2xl border border-[#EAE7E0] p-3 flex items-center justify-between gap-3 hover:border-[#DCD7CD] transition-colors"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <img
-                            src={prop.imageUrl || "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=150&auto=format&fit=crop&q=80"}
-                            alt={prop.address}
-                            className="w-14 h-14 rounded-xl object-cover shrink-0 border border-[#EAE7E0]"
-                          />
+                          {prop.imageUrl ? (
+                            <img
+                              src={prop.imageUrl}
+                              alt={prop.address}
+                              className="w-14 h-14 rounded-xl object-cover shrink-0 border border-[#EAE7E0]"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-[#EAE7E0] text-lg">
+                              🏡
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <div className="font-bold text-xs text-[#2D362E] truncate">
                               {prop.address}

@@ -704,7 +704,7 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
                       <input
                         type="tel"
                         required
-                        placeholder="(503) 555-0199"
+                        placeholder="e.g. (503) 282-5626"
                         value={inlinePhone}
                         onChange={(e) => setInlinePhone(e.target.value)}
                         className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl pl-8 pr-3 py-2 text-xs text-[#2D362E] placeholder-[#9A9488] focus:outline-none focus:border-[#4A5D4E] focus:bg-white"

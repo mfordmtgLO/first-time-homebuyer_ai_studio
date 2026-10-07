@@ -832,7 +832,7 @@ export const MetadataConfiguration: React.FC<MetadataConfigurationProps> = ({
                       type="text"
                       value={metadata.phone || ""}
                       onChange={(e) => updateField("phone", e.target.value)}
-                      placeholder="(503) 555-0192"
+                      placeholder="(503) 282-5626"
                       className="w-full px-3 py-2 rounded-xl border border-[#EAE7E0] bg-[#FAF9F5] text-xs text-[#2D362E]"
                     />
                   </div>
@@ -882,7 +882,7 @@ export const MetadataConfiguration: React.FC<MetadataConfigurationProps> = ({
                         "@type": ["FinancialService", "MortgageBroker"],
                         "name": metadata.businessName || "Cascade Financial Mortgage - Mike Ford Team",
                         "description": metadata.metaDescription,
-                        "telephone": metadata.phone || "(503) 555-0192",
+                        "telephone": metadata.phone || "(503) 282-5626",
                         "address": {
                           "@type": "PostalAddress",
                           "addressLocality": metadata.city || "Portland",

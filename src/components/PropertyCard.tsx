@@ -239,11 +239,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               priceDropAmount: effectivePriceDrop,
               monthlySavings: monthlyPaymentSavings,
               loName: loanOfficer?.name || "Mike Ford",
-              loPhone: loanOfficer?.phone || "(541) 555-0199",
-              agentName: agent?.name || "Kanndice",
-              agentPhone: agent?.phone || "(541) 555-0142",
+              loPhone: loanOfficer?.phone || null,
+              agentName: agent?.name || "Kanndice McLean",
+              agentPhone: agent?.phone || null,
               revelation: geminiRevelation,
-              userPhone: "(541) 555-0188",
+              userPhone: null,
               isManual: false
             }),
           });
@@ -275,9 +275,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           priceDropAmount: effectivePriceDrop,
           monthlySavings: monthlyPaymentSavings,
           loName: loanOfficer?.name || "Mike Ford",
-          loPhone: loanOfficer?.phone || "(541) 555-0199",
-          agentName: agent?.name || "Kanndice",
-          agentPhone: agent?.phone || "(541) 555-0142",
+          loPhone: loanOfficer?.phone || null,
+          agentName: agent?.name || "Kanndice McLean",
+          agentPhone: agent?.phone || null,
           revelation: geminiRevelation,
           isManual: true
         }),

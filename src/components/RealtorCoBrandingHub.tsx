@@ -260,7 +260,7 @@ export const RealtorCoBrandingHub: React.FC<RealtorCoBrandingHubProps> = ({
                 type="text"
                 value={newAgentPhone}
                 onChange={(e) => setNewAgentPhone(e.target.value)}
-                placeholder="(503) 555-0188"
+                placeholder="(503) 282-5626"
                 className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs text-[#2D362E]"
               />
             </div>

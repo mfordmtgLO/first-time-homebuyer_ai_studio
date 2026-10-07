@@ -313,7 +313,7 @@ export const INITIAL_SCRAPER_LOGS: AgentScraperLogEntry[] = [
     scrapedData: {
       name: "Sarah Jenkins",
       email: "sarah.jenkins@cascadehassonsir.com",
-      phone: "(503) 555-0194",
+      phone: "(503) 555-0194", // Sample demo fixture phone
       licenseNumber: "OR-201208941",
       nmlsId: "", // Missing NMLS
       brokerage: "Cascade Hasson Sotheby's International Realty",
@@ -370,7 +370,7 @@ export const INITIAL_SCRAPER_LOGS: AgentScraperLogEntry[] = [
     scrapedData: {
       name: "Marcus Vance",
       email: "marcus@summitpacificre.com",
-      phone: "(541) 555-0182",
+      phone: "(541) 555-0182", // Sample demo fixture phone
       licenseNumber: "OR-201403219",
       nmlsId: "NMLS# 1948201",
       brokerage: "Summit Pacific Real Estate",
@@ -406,7 +406,7 @@ export const INITIAL_SCRAPER_LOGS: AgentScraperLogEntry[] = [
     scrapedData: {
       name: "Elena Rostova",
       email: "elena@urbannestpdx.com",
-      phone: "(503) 555-0144",
+      phone: "(503) 555-0144", // Sample demo fixture phone
       licenseNumber: "201809112",
       nmlsId: "",
       brokerage: "Urban Nest Realty",

@@ -695,7 +695,7 @@ export const AgentSyncActivityLog: React.FC<AgentSyncActivityLogProps> = ({
                           ? 'bg-emerald-950 text-emerald-300 border-emerald-800' 
                           : 'bg-slate-700 text-slate-400 border-slate-600'
                       }`}>
-                        {job.status === 'active' ? 'Active (Unattended)' : 'Paused'}
+                        {job.status === 'active' ? 'Active Scheduled' : 'Paused'}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-300 leading-relaxed">

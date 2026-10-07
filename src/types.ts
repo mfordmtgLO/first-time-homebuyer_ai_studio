@@ -482,7 +482,7 @@ export interface LoanOfficerProfile {
   bigPurpleDotStatus?: 'synced' | 'pending' | 'error' | 'not_synced';
   bigPurpleDotLastSynced?: string;
   bigPurpleDotNotes?: string;
-  realTrendsVerified?: boolean;
+  rankVerified?: boolean;
   realTrendsRank?: string;
   realTrendsVolume?: number;
   realTrendsUnits?: number;
@@ -560,7 +560,7 @@ export interface RealEstateAgentProfile {
   bigPurpleDotStatus?: 'synced' | 'pending' | 'error' | 'not_synced';
   bigPurpleDotLastSynced?: string;
   bigPurpleDotNotes?: string;
-  realTrendsVerified?: boolean;
+  rankVerified?: boolean;
   realTrendsRank?: string;
   realTrendsSides?: number;
   realTrendsVolume?: number;
@@ -588,6 +588,8 @@ export interface Top50Candidate {
   city?: string | null;
   state?: string | null;
   licenseOrNmls?: string | null;
+  licenseStatus?: 'reported_not_verified' | 'verified' | 'unverified';
+  volumeStatus?: 'reported' | 'unreported';
   email?: string | null;
   phone?: string | null;
   headshotUrl?: string | null;
@@ -600,8 +602,7 @@ export interface Top50Candidate {
   listingVolume12Mo?: number | null;
   listingUnits12Mo?: number | null;
   accoladeRank?: string | null;
-  accoladeVerified: boolean;
-  realTrendsVerified?: boolean;
+  rankVerified?: boolean;
   sourceUrl?: string | null;
   verifyLicenseUrl?: string | null;
   source: 'active_pipeline' | 'organic_web_sweep' | 'organic_sweep';

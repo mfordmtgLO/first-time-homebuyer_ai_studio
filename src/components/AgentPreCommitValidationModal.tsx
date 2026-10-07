@@ -446,7 +446,7 @@ export const AgentPreCommitValidationModal: React.FC<AgentPreCommitValidationMod
                         </label>
                         <input
                           type="tel"
-                          placeholder="(503) 555-0199"
+                          placeholder="e.g. (503) 282-5626"
                           value={agent.phone || ""}
                           onChange={(e) => handleUpdateField(index, 'phone', e.target.value)}
                           className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-xl px-2.5 py-1.5 text-xs text-[#2D362E] focus:outline-none focus:border-emerald-600"

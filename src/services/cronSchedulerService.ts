@@ -19,8 +19,6 @@ export interface ScheduledCronJob {
   executionCount: number;
 }
 
-const CRON_STORAGE_KEY = 'vantage_cron_jobs_config_v1';
-
 export const INITIAL_CRON_JOBS: ScheduledCronJob[] = [
   {
     id: 'cron-zillow-daily-sweep',
@@ -76,40 +74,25 @@ export const INITIAL_CRON_JOBS: ScheduledCronJob[] = [
   }
 ];
 
+let inMemoryCronJobs: ScheduledCronJob[] = [...INITIAL_CRON_JOBS];
+
 export async function fetchScheduledCronJobs(): Promise<ScheduledCronJob[]> {
   try {
-    const raw = localStorage.getItem(CRON_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Ensure the Zillow sweep job is included if missing from previous sessions
-        const hasZillow = parsed.some(j => j.id === 'cron-zillow-daily-sweep');
-        if (!hasZillow) {
-          const zillowJob = INITIAL_CRON_JOBS.find(j => j.id === 'cron-zillow-daily-sweep')!;
-          parsed.unshift(zillowJob);
-          localStorage.setItem(CRON_STORAGE_KEY, JSON.stringify(parsed));
-        }
-        return parsed;
+    const res = await fetch("/api/harness/cron/jobs");
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.jobs) && data.jobs.length > 0) {
+        return data.jobs;
       }
     }
   } catch (e) {
-    console.warn('Cron jobs fetch notice:', e);
+    // fallback to in-memory jobs
   }
-
-  try {
-    localStorage.setItem(CRON_STORAGE_KEY, JSON.stringify(INITIAL_CRON_JOBS));
-  } catch (e) {
-    console.warn('Storage setItem notice:', e);
-  }
-  return INITIAL_CRON_JOBS;
+  return [...inMemoryCronJobs];
 }
 
 export async function saveScheduledCronJobs(jobs: ScheduledCronJob[]): Promise<void> {
-  try {
-    localStorage.setItem(CRON_STORAGE_KEY, JSON.stringify(jobs));
-  } catch (e) {
-    console.warn('Cron jobs save notice:', e);
-  }
+  inMemoryCronJobs = [...jobs];
 }
 
 /**

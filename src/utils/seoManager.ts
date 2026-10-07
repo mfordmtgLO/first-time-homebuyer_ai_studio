@@ -28,7 +28,7 @@ export const DEFAULT_SEO_METADATA: PublicWebsiteMetadata = {
   enableStructuredData: true,
   businessName: "Cascade Financial Mortgage - Mike Ford Team",
   nmlsId: "NMLS #123456",
-  phone: "(503) 555-0192",
+  phone: "(503) 282-5626",
   city: "Portland",
   state: "OR",
   postalCode: "97201",
@@ -227,7 +227,7 @@ export function applyMetadataToDocument(metadata: PublicWebsiteMetadata): void {
       "name": metadata.businessName || "Cascade Financial Mortgage - Mike Ford Team",
       "description": metadata.metaDescription,
       "url": currentUrl,
-      "telephone": metadata.phone || "(503) 555-0192",
+      "telephone": metadata.phone || "(503) 282-5626",
       "priceRange": "$$",
       "address": {
         "@type": "PostalAddress",

@@ -1133,7 +1133,7 @@ export const ScrapeRealtorModal: React.FC<ScrapeRealtorModalProps> = ({
                             </label>
                             <input
                               type="tel"
-                              placeholder="(503) 555-0199"
+                              placeholder="e.g. (503) 282-5626"
                               value={p.phone || ""}
                               onChange={(e) => handleUpdateCardField(actualIndex, 'phone', e.target.value)}
                               className="w-full bg-white border border-[#EAE7E0] rounded-xl px-2.5 py-1.5 text-xs text-[#2D362E] focus:outline-none focus:border-emerald-600 font-medium"

@@ -1,0 +1,104 @@
+# =============================================================================
+# FABRICATION GUARD — paste into .github/workflows/fabrication-guard.yml
+# via the GitHub web editor (Add file > Create new file), full-file paste.
+# Install on EVERY repo: first-time-homebuyer_ai_studio, geosphere-map-oregon-ai-studio,
+# fthb-house-finder, Vantage-AI-Studio. Same file works on all four —
+# patterns that don't match simply don't fire.
+#
+# What it does: on every push to main, scans for the fabrication markers
+# Kendo's audits have caught (invented MLS numbers, address-hash "sweeps",
+# hardcoded "verified" labels, fictional 555 phones, nonexistent model names,
+# localStorage cron theater, stock-photo headshots on real people).
+# If any marker is found, the check FAILS and GitHub emails you.
+#
+# Cost: $0. No AI, no API keys, no memberships. Plain text search.
+# Note: AI Studio writes straight to main (no PRs), so this runs AFTER
+# merge as detection — it cannot block AI Studio's own writes.
+# =============================================================================
+
+name: Fabrication Guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  detect-fabrication:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for fabrication markers
+        run: |
+          FAIL=0
+          report() { # $1=file $2=line $3=message
+            echo "::error file=$1,line=$2::$3"
+            FAIL=1
+          }
+
+          # -- 1. Fake MLS numbers (sequential invented identifiers) --
+          # (data/ and *.json excluded: numeric substrings occur naturally in
+          # coordinates/GEOIDs — the fabrication lived in component code)
+          while IFS=: read -r f l _; do
+            report "$f" "$l" "FABRICATION: invented MLS number pattern (98000000+). MLS numbers must come from a real listing source."
+          done < <(rg -n --no-heading "98000000" --glob '!**/*.md' --glob '!**/*.test.*' --glob '!**/data/**' --glob '!*.json' --glob '!**/*.json' --glob '!**/*.geojson' --glob '!**/*.csv' --glob '!**/fabrication-guard.yml' . || true)
+
+          # -- 2. Address-hash "sweep" math (DOM/status/price invented from address string) --
+          while IFS=: read -r f l _; do
+            report "$f" "$l" "FABRICATION: addressSeed-derived market data. DOM/status/price must come from a real API response, never a string hash."
+          done < <(rg -n --no-heading "addressSeed" --glob '!**/*.md' --glob '!**/*.test.*' --glob '!**/data/**' . || true)
+
+          # -- 3. Fake "verified" labels on invented data --
+          while IFS=: read -r f l _; do
+            report "$f" "$l" "FABRICATION: hardcoded 'Verified' label. 'Verified' may only appear when a named source confirms the fact."
+          done < <(rg -n --no-heading "\[Zillow[^]]*Verified|Verified.*Zillow|Zillow.*Live Sweep" --glob '!**/*.md' --glob '!**/*.test.*' . || true)
+
+          # -- 4. Fictional 555 phone numbers in production code --
+          # (lines explicitly marked sample/demo/template/mock are excluded —
+          # labeled demo fixtures are honest; unmarked 555s are not)
+          while IFS=: read -r f l _; do
+            report "$f" "$l" "FABRICATION: 555 fictional phone number in production code. Real numbers only, or null."
+          done < <(rg -n --no-heading "555-" --glob '!**/*.md' --glob '!**/*.test.*' --glob '!**/fabrication-guard.yml' src server.ts api 2>/dev/null | rg -v -i "sample|demo|template|example|fixture|mock" || true)
+
+          # -- 5. Nonexistent model names --
+          while IFS=: read -r f l _; do
+            report "$f" "$l" "FABRICATION: 'gemini-3.0' was never a released model. Use a real model ID (e.g. gemini-2.5-flash, gemini-3.8-flash)."
+          done < <(rg -n --no-heading "gemini-3\.0" --glob '!**/*.md' --glob '!**/fabrication-guard.yml' . || true)
+
+          # -- 6. Hardcoded verification flags --
+          while IFS=: read -r f l _; do
+            report "$f" "$l" "FABRICATION: hardcoded verification flag. Must be false/null unless a named source confirms the fact."
+          done < <(rg -n --no-heading "accoladeVerified:\s*true|realTrendsVerified:\s*true" --glob '!**/*.md' --glob '!**/*.test.*' . || true)
+
+          # -- 7. Random data in sweep/recruiting paths --
+          while IFS=: read -r f l _; do
+            report "$f" "$l" "FABRICATION: Math.random() in a sweep/recruiting path. Production figures must come from a source, never randomness."
+          done < <(rg -n --no-heading "Math\.random\(\)" --glob '*Candidate*' --glob '*Recruit*' --glob '*Sweep*' --glob '*Lead*' --glob '!**/*.test.*' . || true)
+
+          # -- 8. localStorage cron theater (fake scheduler with no backend job) --
+          while IFS=: read -r f l _; do
+            report "$f" "$l" "SUSPECT: localStorage inside a cron/scheduler file. Schedules must be real (Cloud Scheduler + authenticated endpoint), not UI state."
+          done < <(rg -n --no-heading -i "localStorage" --glob '*cron*' --glob '*Cron*' --glob '*Schedul*' --glob '!**/*.test.*' . || true)
+
+          # -- 9. Stock-photo headshots wired to candidate profiles --
+          while IFS=: read -r f l _; do
+            report "$f" "$l" "FABRICATION: stock photo URL in candidate/profile code. Real headshots only; otherwise use initials avatar."
+          done < <(rg -n --no-heading "images\.unsplash\.com" --glob '*Candidate*' --glob '*Recruit*' --glob '*Profile*' --glob '*Leaderboard*' --glob '!**/*.test.*' . || true)
+
+          # -- 10. Hardcoded fake schedule timestamps --
+          while IFS=: read -r f l _; do
+            report "$f" "$l" "FABRICATION: hardcoded schedule timestamp. Last-run times must come from the actual execution clock."
+          done < <(rg -n --no-heading "10:20 PM PST" --glob '!**/*.md' --glob '!**/*.test.*' . || true)
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo ""
+            echo "FABRICATION GUARD FAILED: one or more fabrication markers found above."
+            echo "Rule: real data or honest failure. Remove the flagged code or replace it with a real source."
+            exit 1
+          fi
+          echo "Fabrication Guard passed: no markers found."

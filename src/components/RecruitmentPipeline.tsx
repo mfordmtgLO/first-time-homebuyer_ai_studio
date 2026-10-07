@@ -12,6 +12,7 @@ import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 import { CandidateSearchModal } from "./CandidateSearchModal";
 import { TopBusinessPartnersCard } from "./TopBusinessPartnersCard";
 import { Top50RecruitLeaderboard } from "./Top50RecruitLeaderboard";
+import { ProfileCardWall } from "./ProfileCardWall";
 import { canAccessLoRecruiting, canAccessBpdRecruit } from "../utils/rbac";
 import { auth } from "../firebase";
 import { 
@@ -71,8 +72,8 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
   // Category switch: Loan Officer recruits vs Real Estate Agent recruits
   const [pipelineType, setPipelineType] = useState<"loan_officers" | "real_estate_agents">(canManageLoRecruits ? "loan_officers" : "real_estate_agents");
   
-  // View mode: Active Pipeline Kanban vs Top 50 Production Leaderboard
-  const [viewMode, setViewMode] = useState<"kanban" | "top50">("kanban");
+  // View mode: Active Pipeline Kanban vs Top 50 Production Leaderboard vs Profile Card Wall
+  const [viewMode, setViewMode] = useState<"kanban" | "top50" | "card_wall">("kanban");
   
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -243,7 +244,7 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
                   yearsExperience: (hash % 15) + 3,
                   production12MoVolume: ((hash % 20) + 10) * 1000000,
                   production12MoUnits: (hash % 40) + 20,
-                  licenseStates: ['CA', 'OR', 'WA', 'TX', 'AZ'].sort(() => 0.5 - Math.random()).slice(0, (hash % 3) + 1),
+                  licenseStates: [lo.state || 'OR'],
                   topRealtorPartners: [
                     { name: "John Smith", company: "Keller Williams", volume: ((hash % 5) + 2) * 1000000 },
                     { name: "Sarah Jenkins", company: "Cascade Valley", volume: ((hash % 4) + 1) * 1000000 },
@@ -368,7 +369,7 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
               yearsExperience: (hash % 15) + 3,
               production12MoVolume: ((hash % 20) + 10) * 1000000,
               production12MoUnits: (hash % 40) + 20,
-              licenseStates: ['CA', 'OR', 'WA', 'TX', 'AZ'].sort(() => 0.5 - Math.random()).slice(0, (hash % 3) + 1),
+              licenseStates: [lo.state || 'OR'],
               topRealtorPartners: [
                 { name: "John Smith", company: "Keller Williams", volume: ((hash % 5) + 2) * 1000000 },
                 { name: "Sarah Jenkins", company: "Cascade Valley", volume: ((hash % 4) + 1) * 1000000 },
@@ -640,7 +641,7 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
       
       {/* View Mode Navigation Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-[#FAF9F5] p-2 rounded-2xl border border-[#EAE7E0] shadow-2xs">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setViewMode("kanban")}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
@@ -670,24 +671,49 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
               State Sweeps (Rank 1–50)
             </span>
           </button>
+
+          <button
+            onClick={() => setViewMode("card_wall")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              viewMode === "card_wall"
+                ? "bg-[#2D362E] text-white shadow-xs"
+                : "text-[#606C5D] hover:text-[#2D362E] hover:bg-white"
+            }`}
+          >
+            <Award className="w-4 h-4 text-amber-400" />
+            <span>Profile Card Wall & Rosters</span>
+            <span className="bg-amber-400/25 text-amber-900 font-extrabold text-[10px] px-2 py-0.5 rounded-full border border-amber-300/40">
+              Rank 1–50 Wall
+            </span>
+          </button>
         </div>
 
-        <div className="flex items-center gap-2 text-xs pr-2">
-          {viewMode === "kanban" ? (
+        <div className="flex items-center gap-2 text-xs pr-2 flex-wrap">
+          {viewMode !== "top50" && (
             <button
               onClick={() => setViewMode("top50")}
               className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
             >
               <Trophy className="w-3.5 h-3.5 text-amber-600" />
-              <span>Sweep State Top 50 LOs & Agents →</span>
+              <span>Sweep State Top 50 →</span>
             </button>
-          ) : (
+          )}
+          {viewMode !== "card_wall" && (
             <button
-              onClick={() => setViewMode("kanban")}
+              onClick={() => setViewMode("card_wall")}
               className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-xl font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
             >
+              <Award className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Profile Card Wall →</span>
+            </button>
+          )}
+          {viewMode !== "kanban" && (
+            <button
+              onClick={() => setViewMode("kanban")}
+              className="px-3.5 py-1.5 bg-gray-50 hover:bg-gray-100 text-[#2D362E] border border-gray-200 rounded-xl font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+            >
               <Target className="w-3.5 h-3.5 text-emerald-600" />
-              <span>← Back to Active Kanban Pipeline</span>
+              <span>← Active Kanban Pipeline</span>
             </button>
           )}
         </div>
@@ -700,6 +726,13 @@ export const RecruitmentPipeline: React.FC<RecruitmentPipelineProps> = ({
           onTriggerToast={onTriggerToast}
           onOpenOutreachModal={handleOpenTop50Outreach}
           userRole={userRole}
+        />
+      ) : viewMode === "card_wall" ? (
+        <ProfileCardWall
+          guidesState={guidesState}
+          onUpdateGuidesState={onUpdateGuidesState}
+          onTriggerToast={onTriggerToast}
+          onOpenOutreachModal={handleOpenTop50Outreach}
         />
       ) : (
         <>

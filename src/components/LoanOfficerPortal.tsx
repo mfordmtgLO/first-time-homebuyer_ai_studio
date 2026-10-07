@@ -1606,28 +1606,24 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           name: simulatedName,
           title: "Senior Buyer Specialist, REALTOR®",
           brokerage: aiAgentQuery.includes("Realty")
-            ? aiAgentQuery.split(",")[1]?.trim() || "Premier Cascade Realty"
+            ? aiAgentQuery.split(",")[1]?.trim() || "Cascade Heritage Real Estate"
             : "Cascade Heritage Real Estate",
-          licenseNumber: "OR Lic #2024" + Math.floor(10000 + Math.random() * 90000),
-          email: simulatedName.toLowerCase().replace(/\s+/g, ".") + "@cascadeheritage.com",
-          phone: "(503) 555-0" + Math.floor(100 + Math.random() * 900),
-          websiteUrl:
-            "https://cascadeheritage.com/agents/" +
-            simulatedName.toLowerCase().replace(/\s+/g, "-"),
-          headshotUrl:
-            "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
+          licenseNumber: undefined,
+          email: undefined,
+          phone: undefined,
+          websiteUrl: undefined,
+          headshotUrl: undefined,
           agentType: "buyer_agent",
-          bio: `${simulatedName} is an experienced real estate specialist dedicated to guiding first-time buyers, structuring competitive zero-down offers, and partnering with top loan officers on USDA and Flex DPA lending options.`,
+          bio: undefined,
           specialties: [
             "First-Time Homebuyers",
-            "USDA Zero Down Loans",
-            "Down Payment Assistance Grants",
-            "Inspection Negotiations",
+            "Buyer Representation",
+            "Down Payment Assistance Grants"
           ],
           marketAreas: ["Portland Metro", "Beaverton", "Eugene", "Clackamas"],
-          experienceYears: 10,
-          activeListingsCount: 14,
-          rating: 4.9,
+          experienceYears: undefined,
+          activeListingsCount: undefined,
+          rating: undefined,
           aiGenerated: true,
         });
       } else {
@@ -1635,23 +1631,19 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
           name: simulatedName,
           title: "Senior Buyer Specialist, REALTOR®",
           brokerage: aiAgentQuery.includes("Realty")
-            ? aiAgentQuery.split(",")[1]?.trim() || "Premier Cascade Realty"
+            ? aiAgentQuery.split(",")[1]?.trim() || "Cascade Heritage Real Estate"
             : "Cascade Heritage Real Estate",
-          licenseNumber: "OR Lic #2024" + Math.floor(10000 + Math.random() * 90000),
-          email: simulatedName.toLowerCase().replace(/\s+/g, ".") + "@cascadeheritage.com",
-          phone: "(503) 555-0" + Math.floor(100 + Math.random() * 900),
-          websiteUrl:
-            "https://cascadeheritage.com/agents/" +
-            simulatedName.toLowerCase().replace(/\s+/g, "-"),
-          headshotUrl:
-            "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
+          licenseNumber: undefined,
+          email: undefined,
+          phone: undefined,
+          websiteUrl: undefined,
+          headshotUrl: undefined,
           agentType: "buyer_agent",
-          bio: `${simulatedName} is an experienced real estate specialist dedicated to guiding first-time buyers, structuring competitive zero-down offers, and partnering with top loan officers on USDA and Flex DPA lending options.`,
+          bio: undefined,
           specialties: [
             "First-Time Homebuyers",
-            "USDA Zero Down Loans",
-            "Down Payment Assistance Grants",
-            "Inspection Negotiations",
+            "Buyer Representation",
+            "Down Payment Assistance Grants"
           ],
           marketAreas: ["Portland Metro", "Beaverton", "Eugene", "Clackamas"],
           experienceYears: 10,
@@ -10817,9 +10809,9 @@ Don't forget to file your State Homestead Tax Exemption!`,
         isOpen={showScrapeLoModal}
         onClose={() => setShowScrapeLoModal(false)}
         onAddMultipleLos={(los) => {
-          const newOfficers = los.map((lo) => ({
+          const newOfficers = los.map((lo, idx) => ({
             ...lo,
-            id: `lo-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            id: `lo-${Date.now()}-${idx}`,
             isAdmin: false,
           })) as LoanOfficerProfile[];
 
@@ -10839,42 +10831,42 @@ Don't forget to file your State Homestead Tax Exemption!`,
         onClose={() => setShowScrapeRealtorModal(false)}
         onAddMultipleAgents={(agents) => {
           const newAgents: RealEstateAgentProfile[] = agents.map((a, idx) => {
-            const agentId = `agent-scraped-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`;
+            const agentId = `agent-scraped-${Date.now()}-${idx}`;
             const name = a.name || "Realtor Partner";
             const customSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
             return {
               id: agentId,
               name: name,
               title: a.title || "Buyer Specialist, REALTOR®",
-              company: a.company || a.brokerage || "Premier Real Estate",
-              brokerage: a.brokerage || a.company || "Premier Real Estate",
-              licenseNumber: a.licenseNumber || "OR Lic #",
-              email: a.email || `${customSlug}@brokerage.com`,
-              phone: a.phone || "(503) 555-0199",
-              headshotUrl: a.headshotUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256",
-              websiteUrl: a.websiteUrl || a.sourceUrl || "",
-              sourceUrl: a.sourceUrl || a.websiteUrl || "",
+              company: a.company || a.brokerage || undefined,
+              brokerage: a.brokerage || a.company || undefined,
+              licenseNumber: a.licenseNumber || undefined,
+              email: a.email && a.email.includes("@") ? a.email : undefined,
+              phone: a.phone && !a.phone.includes("555") ? a.phone : undefined,
+              headshotUrl: a.headshotUrl && a.headshotUrl.startsWith("http") ? a.headshotUrl : undefined,
+              websiteUrl: a.websiteUrl || a.sourceUrl || undefined,
+              sourceUrl: a.sourceUrl || a.websiteUrl || undefined,
               deepScrapedFromUrl: !!a.deepScrapedFromUrl,
-              rating: a.rating || 4.9,
-              yearsExperience: a.yearsExperience || (a as any).experienceYears || 8,
-              experienceYears: (a as any).experienceYears || a.yearsExperience || 8,
-              production12MoVolume: a.production12MoVolume || 21500000,
-              production12MoUnits: a.production12MoUnits || 38,
-              buysideVolume12Mo: a.buysideVolume12Mo || Math.round((a.production12MoVolume || 21500000) * 0.72),
-              buysideUnits12Mo: a.buysideUnits12Mo || Math.round((a.production12MoUnits || 38) * 0.72),
-              buysideSharePct: a.buysideSharePct || 72,
-              activeListingsCount: a.activeListingsCount || 5,
+              rating: undefined,
+              yearsExperience: a.yearsExperience != null ? Number(a.yearsExperience) : ((a as any).experienceYears != null ? Number((a as any).experienceYears) : undefined),
+              experienceYears: (a as any).experienceYears != null ? Number((a as any).experienceYears) : (a.yearsExperience != null ? Number(a.yearsExperience) : undefined),
+              production12MoVolume: a.production12MoVolume != null ? Number(a.production12MoVolume) : undefined,
+              production12MoUnits: a.production12MoUnits != null ? Number(a.production12MoUnits) : undefined,
+              buysideVolume12Mo: a.buysideVolume12Mo != null ? Number(a.buysideVolume12Mo) : undefined,
+              buysideUnits12Mo: a.buysideUnits12Mo != null ? Number(a.buysideUnits12Mo) : undefined,
+              buysideSharePct: a.buysideSharePct != null ? Number(a.buysideSharePct) : undefined,
+              activeListingsCount: undefined,
               agentType: a.agentType || "buyer_agent",
-              bio: a.bio || "Passionate about guiding first-time buyers through neighborhood selection and structuring winning offers.",
-              specialties: ["First-Time Homebuyers", "USDA Zero-Down", "Flex DPA"],
+              bio: a.bio || undefined,
+              specialties: ["First-Time Homebuyers", "Buyer Representation"],
               areasServed: ["Portland Metro", "Willamette Valley", "Bend"],
               customSlug: customSlug,
               assignedLoIds: [currentLo.id],
             } as RealEstateAgentProfile;
           });
 
-          const newPairings = newAgents.map((ag) => ({
-            id: `pair-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          const newPairings = newAgents.map((ag, pIdx) => ({
+            id: `pair-${Date.now()}-${pIdx}`,
             loId: currentLo.id,
             agentId: ag.id,
             title: `${currentLo.name} + ${ag.name}`,
@@ -10918,7 +10910,7 @@ Don't forget to file your State Homestead Tax Exemption!`,
 
               if (immediateStep) {
                 newHistory.push({
-                  id: `outreach-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                  id: `outreach-${Date.now()}-${lo.id}`,
                   date: now,
                   type: immediateStep.type,
                   subject: immediateStep.subject,
@@ -10958,7 +10950,7 @@ Don't forget to file your State Homestead Tax Exemption!`,
         onDispatch={(type, subject, content) => {
           const now = new Date().toISOString();
           const historyEntry = {
-            id: `outreach-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            id: `outreach-${Date.now()}-${selectedRosterLoIds.size}`,
             date: now,
             type,
             subject,

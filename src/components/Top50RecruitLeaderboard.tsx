@@ -111,8 +111,16 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
   const [trendFilter, setTrendFilter] = useState<"all" | "climbers" | "fallers" | "unchanged" | "new">("all");
   const [sortBy, setSortBy] = useState<"rank" | "volume_desc" | "units_desc" | "buyside_desc" | "experience_desc" | "name_asc" | "trend_climbers" | "trend_fallers">("rank");
 
+  // Checkbox multi-select state on sweep result rows
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
+
   const cacheKey = `${candidateType}_${selectedState}`;
   const currentRoster = rosterMap[cacheKey] || [];
+
+  // Clear selection when switching type or state
+  useEffect(() => {
+    setSelectedCandidateIds(new Set());
+  }, [candidateType, selectedState]);
 
   // Save roster map to local storage
   useEffect(() => {
@@ -337,41 +345,200 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
     };
   }, [currentRoster]);
 
-  // 1-Click Import / Add to Pipeline
+  // Checkbox selection handlers
+  const handleToggleSelectCandidate = (id: string) => {
+    setSelectedCandidateIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleToggleSelectAllVisible = () => {
+    const visibleIds = filteredCandidates.map(c => c.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedCandidateIds.has(id));
+    if (allSelected) {
+      setSelectedCandidateIds(new Set());
+    } else {
+      setSelectedCandidateIds(new Set(visibleIds));
+    }
+  };
+
+  // Batch action: "Create LO Profile Cards (n)" / "Create Agent Profile Cards (n)"
+  // Converts each selected Top50Candidate into a LoanOfficerProfile / RealEstateAgentProfile carrying ONLY verified fields
+  // (nulls stay null on the card, visibly marked "not verified"). Rank 1–50 carried through from sweep; cards without verified rank sort last.
+  const handleCreateProfileCards = () => {
+    const selected = currentRoster.filter(c => selectedCandidateIds.has(c.id));
+    if (selected.length === 0) return;
+
+    if (candidateType === "loan_officer") {
+      const existingNames = new Set(guidesState.loanOfficers.map(l => l.name.toLowerCase().trim()));
+      const newLos: LoanOfficerProfile[] = [];
+
+      selected.forEach((candidate, idx) => {
+        if (existingNames.has(candidate.name.toLowerCase().trim())) return;
+        const cleanLicense = candidate.licenseOrNmls ? candidate.licenseOrNmls.replace(/[^0-9]/g, '') : null;
+        const confirmedRank = typeof candidate.rank === "number" ? candidate.rank : null;
+        const isVerified = Boolean(candidate.sourceUrl && (candidate.realTrendsVerified || confirmedRank !== null));
+
+        newLos.push({
+          id: `lo-profile-${Date.now()}-${idx}`,
+          name: candidate.name,
+          title: candidate.title || "Mortgage Loan Originator",
+          company: candidate.company || undefined,
+          nmlsNumber: cleanLicense || undefined,
+          email: candidate.email && candidate.email.includes("@") ? candidate.email : undefined,
+          phone: candidate.phone && !candidate.phone.includes("555") ? candidate.phone : undefined,
+          headshotUrl: candidate.headshotUrl && candidate.headshotUrl.startsWith("http") ? candidate.headshotUrl : undefined,
+          bio: candidate.production12MoVolume
+            ? `Top 50 ranked mortgage loan originator in ${candidate.officeLocation}. 12-month volume of $${(candidate.production12MoVolume / 1000000).toFixed(1)}M across ${candidate.production12MoUnits || 0} closed units.`
+            : `Top 50 ranked mortgage loan originator in ${candidate.officeLocation}.`,
+          specialties: ["First-Time Homebuyers", "Purchase Dominant", "Down Payment Assistance"],
+          licenseStates: [candidate.state || selectedState],
+          yearsExperience: candidate.yearsExperience != null ? Number(candidate.yearsExperience) : undefined,
+          production12MoVolume: candidate.production12MoVolume ?? undefined,
+          production12MoUnits: candidate.production12MoUnits ?? undefined,
+          recruitmentStatus: "Not Contacted",
+          enrichmentStatus: "enriched",
+          realTrendsVerified: isVerified,
+          realTrendsRank: candidate.accoladeRank || (confirmedRank ? `Scotsman Guide #${confirmedRank}` : undefined),
+          realTrendsVolume: candidate.production12MoVolume ?? undefined,
+          realTrendsUnits: candidate.production12MoUnits ?? undefined,
+          realTrendsYear: 2025,
+          rank: confirmedRank,
+          sourceUrl: candidate.sourceUrl || "https://www.realtrends.com/americas-best/",
+          verifyLicenseUrl: candidate.verifyLicenseUrl || (cleanLicense ? `https://www.nmlsconsumeraccess.org/EntityDetails.aspx/INDIVIDUAL/${cleanLicense}` : "https://www.nmlsconsumeraccess.org/"),
+          rating: undefined,
+          reviewCount: undefined,
+          isTeamMember: false,
+          isAdmin: false
+        });
+      });
+
+      onUpdateGuidesState(prev => ({
+        ...prev,
+        loanOfficers: [...prev.loanOfficers, ...newLos]
+      }));
+
+      // Update in local roster cache to show in active pipeline
+      setRosterMap(prev => ({
+        ...prev,
+        [cacheKey]: (prev[cacheKey] || []).map(c => selectedCandidateIds.has(c.id) ? { ...c, inActivePipeline: true, pipelineStatus: "Not Contacted" } : c)
+      }));
+
+      const count = newLos.length;
+      setSelectedCandidateIds(new Set());
+      onTriggerToast(`✅ Created ${count} LO Profile Cards with verified fields!`);
+    } else {
+      const existingNames = new Set(guidesState.agentRoster.map(a => a.name.toLowerCase().trim()));
+      const newAgents: RealEstateAgentProfile[] = [];
+
+      selected.forEach((candidate, idx) => {
+        if (existingNames.has(candidate.name.toLowerCase().trim())) return;
+        const cleanLicense = candidate.licenseOrNmls ? candidate.licenseOrNmls.trim() : null;
+        const confirmedRank = typeof candidate.rank === "number" ? candidate.rank : null;
+        const isVerified = Boolean(candidate.sourceUrl && (candidate.realTrendsVerified || confirmedRank !== null));
+
+        newAgents.push({
+          id: `ag-profile-${Date.now()}-${idx}`,
+          name: candidate.name,
+          title: candidate.title || "Real Estate Broker",
+          brokerage: candidate.company || undefined,
+          licenseNumber: cleanLicense || undefined,
+          email: candidate.email && candidate.email.includes("@") ? candidate.email : undefined,
+          phone: candidate.phone && !candidate.phone.includes("555") ? candidate.phone : undefined,
+          headshotUrl: candidate.headshotUrl && candidate.headshotUrl.startsWith("http") ? candidate.headshotUrl : undefined,
+          bio: candidate.production12MoVolume
+            ? `Top 50 ranked real estate producer in ${candidate.officeLocation}. 12-month volume of $${(candidate.production12MoVolume / 1000000).toFixed(1)}M (${candidate.buysideSharePct || 0}% buyside share).`
+            : `Top 50 ranked real estate producer in ${candidate.officeLocation}.`,
+          specialties: ["Buyer Representation", "Down Payment Assistance", "First-Time Homebuyers"],
+          marketAreas: [candidate.city || "Portland", `${candidate.state || selectedState} Region`],
+          agentType: "buyer_agent",
+          experienceYears: candidate.yearsExperience != null ? Number(candidate.yearsExperience) : undefined,
+          production12MoVolume: candidate.production12MoVolume ?? undefined,
+          production12MoUnits: candidate.production12MoUnits ?? undefined,
+          buysideVolume12Mo: candidate.buysideVolume12Mo ?? undefined,
+          buysideUnits12Mo: candidate.buysideUnits12Mo ?? undefined,
+          listingVolume12Mo: candidate.listingVolume12Mo ?? undefined,
+          listingUnits12Mo: candidate.listingUnits12Mo ?? undefined,
+          buysideSharePct: candidate.buysideSharePct ?? undefined,
+          rating: undefined,
+          activeListingsCount: undefined,
+          recruitmentStatus: "Not Contacted",
+          enrichmentStatus: "enriched",
+          realTrendsVerified: isVerified,
+          realTrendsRank: candidate.accoladeRank || (confirmedRank ? `RealTrends America's Best #${confirmedRank}` : undefined),
+          realTrendsYear: 2025,
+          realTrendsSides: candidate.production12MoUnits ?? undefined,
+          realTrendsVolume: candidate.production12MoVolume ?? undefined,
+          rank: confirmedRank,
+          sourceUrl: candidate.sourceUrl || "https://www.realtrends.com/americas-best/",
+          verifyLicenseUrl: candidate.verifyLicenseUrl || "https://rea.oregon.gov/"
+        });
+      });
+
+      onUpdateGuidesState(prev => ({
+        ...prev,
+        agentRoster: [...prev.agentRoster, ...newAgents]
+      }));
+
+      // Update in local roster cache to show in active pipeline
+      setRosterMap(prev => ({
+        ...prev,
+        [cacheKey]: (prev[cacheKey] || []).map(c => selectedCandidateIds.has(c.id) ? { ...c, inActivePipeline: true, pipelineStatus: "Not Contacted" } : c)
+      }));
+
+      const count = newAgents.length;
+      setSelectedCandidateIds(new Set());
+      onTriggerToast(`✅ Created ${count} Agent Profile Cards with verified fields!`);
+    }
+  };
+
+  // 1-Click Import / Add to Pipeline carrying ONLY verified fields
   const handleAddToPipeline = (candidate: Top50Candidate) => {
     if (candidateType === "loan_officer") {
       const exists = guidesState.loanOfficers.some(
-        l => l.name.toLowerCase() === candidate.name.toLowerCase() || (l.nmlsNumber && l.nmlsNumber === candidate.licenseOrNmls.replace(/[^0-9]/g, ''))
+        l => l.name.toLowerCase() === candidate.name.toLowerCase() || (l.nmlsNumber && candidate.licenseOrNmls && l.nmlsNumber === candidate.licenseOrNmls.replace(/[^0-9]/g, ''))
       );
       if (exists) {
         onTriggerToast(`${candidate.name} is already in your active pipeline.`);
         return;
       }
 
+      const cleanLicense = candidate.licenseOrNmls ? candidate.licenseOrNmls.replace(/[^0-9]/g, '') : null;
+      const confirmedRank = typeof candidate.rank === "number" ? candidate.rank : null;
+      const isVerified = Boolean(candidate.sourceUrl && (candidate.realTrendsVerified || confirmedRank !== null));
+
       const newLo: LoanOfficerProfile = {
         id: `lo-import-${Date.now()}`,
         name: candidate.name,
-        title: candidate.title,
-        company: candidate.company,
-        nmlsNumber: candidate.licenseOrNmls.replace(/[^0-9]/g, '') || `${Math.floor(100000 + Math.random() * 899999)}`,
-        email: candidate.email,
-        phone: candidate.phone,
-        headshotUrl: candidate.headshotUrl,
-        bio: `Top 50 ranked mortgage loan originator in ${candidate.officeLocation}. Audited 12-month production of $${(candidate.production12MoVolume / 1000000).toFixed(1)}M across ${candidate.production12MoUnits} closed units.`,
-        specialties: ["First-Time Homebuyers", "Purchase Dominant", "Down Payment Assistance", "Conventional", "Jumbo"],
-        licenseStates: [candidate.state],
-        yearsExperience: candidate.yearsExperience,
-        production12MoVolume: candidate.production12MoVolume,
-        production12MoUnits: candidate.production12MoUnits,
+        title: candidate.title || "Mortgage Loan Originator",
+        company: candidate.company || undefined,
+        nmlsNumber: cleanLicense || undefined,
+        email: candidate.email && candidate.email.includes("@") ? candidate.email : undefined,
+        phone: candidate.phone && !candidate.phone.includes("555") ? candidate.phone : undefined,
+        headshotUrl: candidate.headshotUrl && candidate.headshotUrl.startsWith("http") ? candidate.headshotUrl : undefined,
+        bio: candidate.production12MoVolume
+          ? `Top 50 ranked mortgage loan originator in ${candidate.officeLocation}. 12-month volume of $${(candidate.production12MoVolume / 1000000).toFixed(1)}M across ${candidate.production12MoUnits || 0} closed units.`
+          : `Top 50 ranked mortgage loan originator in ${candidate.officeLocation}.`,
+        specialties: ["First-Time Homebuyers", "Purchase Dominant", "Down Payment Assistance"],
+        licenseStates: [candidate.state || selectedState],
+        yearsExperience: candidate.yearsExperience != null ? Number(candidate.yearsExperience) : undefined,
+        production12MoVolume: candidate.production12MoVolume ?? undefined,
+        production12MoUnits: candidate.production12MoUnits ?? undefined,
         recruitmentStatus: "Not Contacted",
         enrichmentStatus: "enriched",
-        realTrendsVerified: true,
-        realTrendsRank: candidate.accoladeRank,
-        realTrendsVolume: candidate.production12MoVolume,
-        realTrendsUnits: candidate.production12MoUnits,
+        realTrendsVerified: isVerified,
+        realTrendsRank: candidate.accoladeRank || (confirmedRank ? `Scotsman Guide #${confirmedRank}` : undefined),
+        realTrendsVolume: candidate.production12MoVolume ?? undefined,
+        realTrendsUnits: candidate.production12MoUnits ?? undefined,
         realTrendsYear: 2025,
-        rating: 4.9,
-        reviewCount: 42,
+        rank: confirmedRank,
+        sourceUrl: candidate.sourceUrl || "https://www.realtrends.com/americas-best/",
+        verifyLicenseUrl: candidate.verifyLicenseUrl || (cleanLicense ? `https://www.nmlsconsumeraccess.org/EntityDetails.aspx/INDIVIDUAL/${cleanLicense}` : "https://www.nmlsconsumeraccess.org/"),
+        rating: undefined,
+        reviewCount: undefined,
         isTeamMember: false,
         isAdmin: false
       };
@@ -387,7 +554,7 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
         [cacheKey]: (prev[cacheKey] || []).map(c => c.id === candidate.id ? { ...c, inActivePipeline: true, pipelineStatus: "Not Contacted" } : c)
       }));
 
-      onTriggerToast(`✅ Successfully imported ${candidate.name} (Rank #${candidate.rank}) into Loan Officer Pipeline!`);
+      onTriggerToast(`✅ Successfully imported ${candidate.name} ${candidate.rank ? `(Rank #${candidate.rank})` : ""} into Loan Officer Pipeline!`);
     } else {
       // Real Estate Agent Partner import
       const exists = guidesState.agentRoster.some(
@@ -398,36 +565,45 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
         return;
       }
 
+      const cleanLicense = candidate.licenseOrNmls ? candidate.licenseOrNmls.trim() : null;
+      const confirmedRank = typeof candidate.rank === "number" ? candidate.rank : null;
+      const isVerified = Boolean(candidate.sourceUrl && (candidate.realTrendsVerified || confirmedRank !== null));
+
       const newAgent: RealEstateAgentProfile = {
         id: `ag-import-${Date.now()}`,
         name: candidate.name,
-        title: candidate.title,
-        brokerage: candidate.company,
-        licenseNumber: candidate.licenseOrNmls.replace(/[^0-9]/g, '') || `2014${Math.floor(10000 + Math.random() * 89000)}`,
-        email: candidate.email,
-        phone: candidate.phone,
-        headshotUrl: candidate.headshotUrl,
-        bio: `Top 50 ranked real estate producer in ${candidate.officeLocation}. Audited 12-month production of $${(candidate.production12MoVolume / 1000000).toFixed(1)}M (${candidate.buysideSharePct}% buyside share).`,
-        specialties: ["Buyer Representation", "Down Payment Assistance", "First-Time Homebuyers", "Relocation"],
-        marketAreas: [candidate.city, `${candidate.state} Region`],
+        title: candidate.title || "Real Estate Broker",
+        brokerage: candidate.company || undefined,
+        licenseNumber: cleanLicense || undefined,
+        email: candidate.email && candidate.email.includes("@") ? candidate.email : undefined,
+        phone: candidate.phone && !candidate.phone.includes("555") ? candidate.phone : undefined,
+        headshotUrl: candidate.headshotUrl && candidate.headshotUrl.startsWith("http") ? candidate.headshotUrl : undefined,
+        bio: candidate.production12MoVolume
+          ? `Top 50 ranked real estate producer in ${candidate.officeLocation}. 12-month volume of $${(candidate.production12MoVolume / 1000000).toFixed(1)}M (${candidate.buysideSharePct || 0}% buyside share).`
+          : `Top 50 ranked real estate producer in ${candidate.officeLocation}.`,
+        specialties: ["Buyer Representation", "Down Payment Assistance", "First-Time Homebuyers"],
+        marketAreas: [candidate.city || "Portland", `${candidate.state || selectedState} Region`],
         agentType: "buyer_agent",
-        experienceYears: candidate.yearsExperience,
-        production12MoVolume: candidate.production12MoVolume,
-        production12MoUnits: candidate.production12MoUnits,
-        buysideVolume12Mo: candidate.buysideVolume12Mo,
-        buysideUnits12Mo: candidate.buysideUnits12Mo,
-        listingVolume12Mo: candidate.listingVolume12Mo,
-        listingUnits12Mo: candidate.listingUnits12Mo,
-        buysideSharePct: candidate.buysideSharePct,
-        activeListingsCount: Math.floor(candidate.production12MoUnits / 5) + 1,
-        rating: 5.0,
+        experienceYears: candidate.yearsExperience != null ? Number(candidate.yearsExperience) : undefined,
+        production12MoVolume: candidate.production12MoVolume ?? undefined,
+        production12MoUnits: candidate.production12MoUnits ?? undefined,
+        buysideVolume12Mo: candidate.buysideVolume12Mo ?? undefined,
+        buysideUnits12Mo: candidate.buysideUnits12Mo ?? undefined,
+        listingVolume12Mo: candidate.listingVolume12Mo ?? undefined,
+        listingUnits12Mo: candidate.listingUnits12Mo ?? undefined,
+        buysideSharePct: candidate.buysideSharePct ?? undefined,
+        rating: undefined,
+        activeListingsCount: undefined,
         recruitmentStatus: "Not Contacted",
         enrichmentStatus: "enriched",
-        realTrendsVerified: true,
-        realTrendsRank: candidate.accoladeRank,
+        realTrendsVerified: isVerified,
+        realTrendsRank: candidate.accoladeRank || (confirmedRank ? `RealTrends America's Best #${confirmedRank}` : undefined),
         realTrendsYear: 2025,
-        realTrendsSides: candidate.production12MoUnits,
-        realTrendsVolume: candidate.production12MoVolume
+        realTrendsSides: candidate.production12MoUnits ?? undefined,
+        realTrendsVolume: candidate.production12MoVolume ?? undefined,
+        rank: confirmedRank,
+        sourceUrl: candidate.sourceUrl || "https://www.realtrends.com/americas-best/",
+        verifyLicenseUrl: candidate.verifyLicenseUrl || "https://rea.oregon.gov/"
       };
 
       onUpdateGuidesState(prev => ({
@@ -441,7 +617,7 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
         [cacheKey]: (prev[cacheKey] || []).map(c => c.id === candidate.id ? { ...c, inActivePipeline: true, pipelineStatus: "Not Contacted" } : c)
       }));
 
-      onTriggerToast(`✅ Successfully imported ${candidate.name} (Rank #${candidate.rank}) into Agent Recruitment Pipeline!`);
+      onTriggerToast(`✅ Successfully imported ${candidate.name} ${candidate.rank ? `(Rank #${candidate.rank})` : ""} into Agent Recruitment Pipeline!`);
     }
   };
 
@@ -874,10 +1050,63 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
 
       {/* Roster Cards List */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between text-xs text-[#606C5D] px-1 font-medium">
-          <span>Showing <strong>{filteredCandidates.length}</strong> of <strong>{currentRoster.length}</strong> {candidateType === "loan_officer" ? "Loan Officers" : "Real Estate Agents"} in {selectedState}</span>
-          <span className="text-[11px]">Ranked strictly by audited 12-month production</span>
+        {/* Header with Select All Visible & Count */}
+        <div className="flex flex-wrap items-center justify-between text-xs text-[#606C5D] px-2 py-1.5 bg-[#FAF9F5] rounded-xl border border-[#EAE7E0] gap-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="select-all-visible"
+              checked={filteredCandidates.length > 0 && filteredCandidates.every(c => selectedCandidateIds.has(c.id))}
+              onChange={handleToggleSelectAllVisible}
+              className="w-4 h-4 rounded text-emerald-600 border-gray-300 focus:ring-emerald-500 cursor-pointer"
+              title="Select all visible candidates"
+            />
+            <label htmlFor="select-all-visible" className="font-bold text-[#2D362E] cursor-pointer">
+              Select All Visible ({filteredCandidates.length})
+            </label>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span>Showing <strong>{filteredCandidates.length}</strong> of <strong>{currentRoster.length}</strong> {candidateType === "loan_officer" ? "Loan Officers" : "Real Estate Agents"} in {selectedState}</span>
+            <span className="text-[11px] text-[#80887D] hidden sm:inline">• Audited 12-Month Production</span>
+          </div>
         </div>
+
+        {/* Batch Actions Bar (Requirement 5 & 6) */}
+        {selectedCandidateIds.size > 0 && (
+          <div className="bg-[#2D362E] text-white p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-md border border-[#1A201B] sticky top-4 z-40">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-400/30">
+                {selectedCandidateIds.size} Candidate{selectedCandidateIds.size > 1 ? "s" : ""} Selected
+              </span>
+              <span className="text-xs text-gray-300 hidden md:inline">
+                Converts each selected candidate into a profile card carrying ONLY verified fields (nulls stay null).
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedCandidateIds(new Set())}
+                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Deselect All
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateProfileCards}
+                className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 font-black rounded-xl text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>
+                  {candidateType === "loan_officer"
+                    ? `Create LO Profile Cards (${selectedCandidateIds.size})`
+                    : `Create Agent Profile Cards (${selectedCandidateIds.size})`}
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {filteredCandidates.length === 0 ? (
           <div className="bg-white p-12 text-center rounded-3xl border border-[#EAE7E0] space-y-3">
@@ -903,7 +1132,8 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
         ) : (
           <div className="grid grid-cols-1 gap-3.5">
             {filteredCandidates.map((candidate) => {
-              const isTop3 = candidate.rank <= 3;
+              const isSelected = selectedCandidateIds.has(candidate.id);
+              const isTop3 = candidate.rank != null && candidate.rank <= 3;
               const rankBadgeColor = 
                 candidate.rank === 1 ? "bg-amber-400 text-amber-950 ring-2 ring-amber-300" :
                 candidate.rank === 2 ? "bg-slate-200 text-slate-900 ring-2 ring-slate-300" :
@@ -914,17 +1144,28 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
                 <div
                   key={candidate.id}
                   className={`bg-white rounded-2xl border p-4 transition-all hover:shadow-md flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 ${
-                    isTop3 ? "border-amber-200/80 bg-gradient-to-r from-amber-50/20 via-white to-white" : "border-[#EAE7E0]"
+                    isSelected ? "ring-2 ring-emerald-500 border-emerald-300 bg-emerald-50/20" : isTop3 ? "border-amber-200/80 bg-gradient-to-r from-amber-50/20 via-white to-white" : "border-[#EAE7E0]"
                   }`}
                 >
-                  {/* Left: Rank, Headshot & Profile Info */}
+                  {/* Left: Checkbox, Rank, Headshot & Profile Info */}
                   <div className="flex items-start sm:items-center gap-3.5 w-full lg:w-auto">
+                    {/* Multi-Select Row Checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleToggleSelectCandidate(candidate.id)}
+                      className="w-4 h-4 rounded text-emerald-600 border-gray-300 focus:ring-emerald-500 cursor-pointer shrink-0 mt-1 sm:mt-0"
+                      title="Select candidate for batch action"
+                    />
+
                     {/* Rank Badge & Trend Movement Indicator */}
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <div className={`w-11 h-11 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 shadow-2xs ${rankBadgeColor}`}>
-                        <span className="text-[9px] uppercase font-bold tracking-tighter opacity-80 leading-none">Rank</span>
-                        <span className="text-base font-extrabold leading-none mt-0.5">#{candidate.rank}</span>
-                      </div>
+                      {candidate.rank != null ? (
+                        <div className={`w-11 h-11 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 shadow-2xs ${rankBadgeColor}`}>
+                          <span className="text-[9px] uppercase font-bold tracking-tighter opacity-80 leading-none">Rank</span>
+                          <span className="text-base font-extrabold leading-none mt-0.5">#{candidate.rank}</span>
+                        </div>
+                      ) : null}
 
                       {/* Trend Indicator (Arrow Up/Down, Even, or New Entry) */}
                       {(() => {
@@ -994,12 +1235,25 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
                       })()}
                     </div>
 
-                    {/* Headshot */}
-                    <img
-                      src={candidate.headshotUrl}
-                      alt={candidate.name}
-                      className="w-12 h-12 rounded-2xl object-cover border border-[#EAE7E0] shrink-0 shadow-2xs"
-                    />
+                    {/* Initials Avatar (Guardrail: Never assign stranger stock photo to real people) */}
+                    <div className="w-12 h-12 rounded-2xl overflow-hidden border border-[#EAE7E0] shrink-0 shadow-2xs bg-[#F4F1EA] flex items-center justify-center font-black text-sm text-[#2D362E]">
+                      {candidate.headshotUrl && candidate.headshotUrl.startsWith("http") ? (
+                        <img
+                          src={candidate.headshotUrl}
+                          alt={candidate.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span>
+                          {candidate.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </span>
+                      )}
+                    </div>
 
                     {/* Basic Info */}
                     <div className="flex-1 min-w-0">
@@ -1016,31 +1270,67 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
                             Organic Registry Sweep
                           </span>
                         )}
-                        <span className="text-[10px] font-bold bg-amber-50 text-amber-900 px-2 py-0.5 rounded-md border border-amber-200 flex items-center gap-0.5">
-                          <Award className="w-2.5 h-2.5 text-amber-700" /> {candidate.accoladeRank}
-                        </span>
+                        {candidate.accoladeRank && (
+                          <span className="text-[10px] font-bold bg-amber-50 text-amber-900 px-2 py-0.5 rounded-md border border-amber-200 flex items-center gap-0.5">
+                            <Award className="w-2.5 h-2.5 text-amber-700" /> {candidate.accoladeRank}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-[#606C5D] mt-1">
-                        <span className="font-medium text-[#2D362E]">{candidate.company}</span>
+                        <span className="font-medium text-[#2D362E]">{candidate.company || "Company not verified"}</span>
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3 h-3 text-[#9A9488]" />
                           {candidate.officeLocation}
                         </span>
-                        <span className="text-[11px] text-[#80887D]">{candidate.licenseOrNmls}</span>
-                        <span className="text-[11px] text-[#80887D]">• {candidate.yearsExperience} yrs exp</span>
+                        {candidate.licenseOrNmls ? (
+                          <span className="text-[11px] text-[#80887D]">{candidate.licenseOrNmls}</span>
+                        ) : (
+                          <span className="text-[11px] text-amber-800 italic font-semibold">License not verified</span>
+                        )}
+                        <span className="text-[11px] text-[#80887D]">
+                          • {candidate.yearsExperience != null ? `${candidate.yearsExperience} yrs exp` : "Exp unverified"}
+                        </span>
+                      </div>
+
+                      {/* Verification Affordances (Requirement 4) */}
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {candidate.sourceUrl && (
+                          <a
+                            href={candidate.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded border border-blue-200 flex items-center gap-1 transition-colors"
+                          >
+                            <ExternalLink className="w-2.5 h-2.5" />
+                            <span>Source Page ↗</span>
+                          </a>
+                        )}
+                        <a
+                          href={candidate.verifyLicenseUrl || (candidateType === "loan_officer" ? "https://www.nmlsconsumeraccess.org/" : "https://rea.oregon.gov/")}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1 transition-colors"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          <span>Verify License ({candidateType === "loan_officer" ? "NMLS" : "Oregon REA"}) ↗</span>
+                        </a>
                       </div>
                     </div>
                   </div>
 
-                  {/* Middle: Audited Production Metrics */}
+                  {/* Middle: Audited Production Metrics (Null fields render "Not verified") */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full lg:w-auto bg-[#FAF9F5] p-3 rounded-xl border border-[#EAE7E0] shrink-0">
                     <div>
                       <span className="text-[10px] font-bold text-[#80887D] uppercase tracking-wider block">
                         12-Mo Volume
                       </span>
                       <span className="text-sm font-extrabold text-[#2D362E]">
-                        ${(candidate.production12MoVolume / 1000000).toFixed(1)}M
+                        {candidate.production12MoVolume != null ? (
+                          `$${(candidate.production12MoVolume / 1000000).toFixed(1)}M`
+                        ) : (
+                          <span className="text-xs text-amber-800 italic font-semibold">Not verified</span>
+                        )}
                       </span>
                     </div>
 
@@ -1049,7 +1339,11 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
                         Closed Units
                       </span>
                       <span className="text-sm font-extrabold text-[#2D362E]">
-                        {candidate.production12MoUnits} Units
+                        {candidate.production12MoUnits != null ? (
+                          `${candidate.production12MoUnits} Units`
+                        ) : (
+                          <span className="text-xs text-amber-800 italic font-semibold">Not verified</span>
+                        )}
                       </span>
                     </div>
 
@@ -1057,20 +1351,26 @@ export const Top50RecruitLeaderboard: React.FC<Top50RecruitLeaderboardProps> = (
                       <span className="text-[10px] font-bold text-[#80887D] uppercase tracking-wider block">
                         Buyside Share
                       </span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-amber-800">
-                          {candidate.buysideSharePct}%
-                        </span>
-                        <div className="w-16 bg-gray-200 h-1.5 rounded-full overflow-hidden">
-                          <div 
-                            className="bg-amber-600 h-full rounded-full" 
-                            style={{ width: `${candidate.buysideSharePct}%` }}
-                          />
-                        </div>
-                      </div>
-                      <span className="text-[9px] text-[#80887D]">
-                        {candidate.buysideUnits12Mo} buyside / {candidate.listingUnits12Mo} list
-                      </span>
+                      {candidate.buysideSharePct != null ? (
+                        <>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-amber-800">
+                              {candidate.buysideSharePct}%
+                            </span>
+                            <div className="w-16 bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                              <div 
+                                className="bg-amber-600 h-full rounded-full" 
+                                style={{ width: `${candidate.buysideSharePct}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-[9px] text-[#80887D]">
+                            {candidate.buysideUnits12Mo != null ? `${candidate.buysideUnits12Mo} buyside` : ""} {candidate.listingUnits12Mo != null ? `/ ${candidate.listingUnits12Mo} list` : ""}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-xs text-amber-800 italic font-semibold">Not verified</span>
+                      )}
                     </div>
                   </div>
 

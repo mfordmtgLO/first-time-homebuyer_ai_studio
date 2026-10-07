@@ -777,7 +777,7 @@ export function generateDatasheetPDF(options: {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(100, 110, 100);
-  const partnerInfo = agent ? `  •  Co-marketing Partner: ${agent.name} (${agent.company || "Real Estate"})` : "";
+  const partnerInfo = agent ? `  •  Co-marketing Partner: ${agent.name} (${agent.brokerage || (agent as any).company || "Real Estate"})` : "";
   const sub = leadName
     ? `Prepared for: ${leadName}${partnerInfo}  •  Date: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`
     : `Date: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}${partnerInfo}  •  Bend & Redmond Area Listings`;
@@ -986,7 +986,7 @@ export function generateEmailDraftPDF(options: EmailDraftPdfOptions): jsPDF {
   doc.setFontSize(8);
   doc.setTextColor(96, 108, 93);
   const partnerText = agent
-    ? `Co-Marketing Partner: ${agent.name} (${agent.company || "Real Estate"})`
+    ? `Co-Marketing Partner: ${agent.name} (${agent.brokerage || (agent as any).company || "Real Estate"})`
     : "Realtor Partner Co-Branded Outreach";
   doc.text(partnerText, margin + 12, currentY + 28);
 

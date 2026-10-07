@@ -37,16 +37,16 @@ export const INITIAL_CRON_JOBS: ScheduledCronJob[] = [
   },
   {
     id: 'cron-top50-daily',
-    name: 'Top 50 RealTrends & USDA Market Sweep',
-    cronExpression: '0 2 * * *',
-    humanFrequency: 'Daily at 02:00 AM',
+    name: 'Top 50 RealTrends & Market Sweep (On-Demand)',
+    cronExpression: 'Manual / On-Demand',
+    humanFrequency: 'On-Demand (Client-side Triggered)',
     category: 'top50_sweep',
-    description: 'Runs RealTrends 2025 Oregon Top 50 agents and USDA Zero-Down eligible property sweeps via Hybrid 2nd Brain.',
-    status: 'active',
-    lastRunAt: new Date(Date.now() - 1000 * 60 * 60 * 14).toISOString(),
-    lastRunStatus: 'success',
-    nextRunAt: new Date(Date.now() + 1000 * 60 * 60 * 10).toISOString(),
-    executionCount: 142
+    description: 'On-demand sweep of published RealTrends America\'s Best rankings and Oregon producers. NOTE: Unattended background cron is not active; sweeps run on-demand via dashboard button.',
+    status: 'paused',
+    lastRunAt: undefined,
+    lastRunStatus: undefined,
+    nextRunAt: 'N/A (On-demand only)',
+    executionCount: 0
   },
   {
     id: 'cron-geomap-sync',

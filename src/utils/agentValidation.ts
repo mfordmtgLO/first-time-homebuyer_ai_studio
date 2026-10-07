@@ -159,7 +159,7 @@ export function validateScrapedAgent(agent: Partial<RealEstateAgentProfile>): Ag
   }
 
   // 6. Brokerage / Real Estate Company validation
-  const brokerage = (agent.brokerage || agent.company || "").trim();
+  const brokerage = (agent.brokerage || (agent as any).company || "").trim();
   const hasBrokerage = Boolean(brokerage && brokerage.length > 2 && brokerage !== "Premier Real Estate");
   if (!hasBrokerage) {
     gaps.push({
@@ -206,26 +206,19 @@ export function validateScrapedAgent(agent: Partial<RealEstateAgentProfile>): Ag
  */
 export function autoResolveAgentGaps(
   agent: Partial<RealEstateAgentProfile>, 
-  index: number = 0
+  _index: number = 0
 ): Partial<RealEstateAgentProfile> {
-  const isFemale = /(sarah|elena|rachel|kate|carey|jessica|emma|amanda|lisa|mary|jennifer|michelle|laura|ashley|steph|yumi|kanndice)/i.test(agent.name || "");
-  const presets = PROFESSIONAL_HEADSHOT_PRESETS.filter(p => isFemale ? p.gender === 'female' : p.gender === 'male');
-  const fallbackAvatar = presets[index % presets.length]?.url || PROFESSIONAL_HEADSHOT_PRESETS[index % PROFESSIONAL_HEADSHOT_PRESETS.length].url;
-
   const effectiveName = (agent.name || "").trim() || "Oregon Realtor Partner";
-  const slug = effectiveName.toLowerCase().replace(/[^a-z0-9]+/g, '.');
-  const brokerage = agent.brokerage || agent.company || "Keller Williams Realty";
+  const brokerage = agent.brokerage || (agent as any).company || "";
 
   return {
     ...agent,
     name: effectiveName,
-    headshotUrl: agent.headshotUrl && agent.headshotUrl.startsWith('http') ? agent.headshotUrl : fallbackAvatar,
-    email: agent.email && agent.email.includes('@') ? agent.email : `${slug}@${brokerage.toLowerCase().replace(/[^a-z0-9]/g, '') || 'realty'}.com`,
-    phone: agent.phone && agent.phone.replace(/\D/g, '').length >= 10 ? agent.phone : "(503) 555-0199",
-    experienceYears: Number(agent.experienceYears ?? (agent as any).yearsExperience) || 8,
-    yearsExperience: Number(agent.experienceYears ?? (agent as any).yearsExperience) || 8,
-    brokerage: brokerage,
-    company: brokerage,
-    licenseNumber: agent.licenseNumber && agent.licenseNumber.length >= 6 ? agent.licenseNumber : `201${Math.floor(100000 + Math.random() * 900000)}`
+    headshotUrl: agent.headshotUrl && agent.headshotUrl.startsWith('http') ? agent.headshotUrl : undefined,
+    email: agent.email && agent.email.includes('@') ? agent.email : undefined,
+    phone: agent.phone && agent.phone.replace(/\D/g, '').length >= 10 && !agent.phone.includes('555') ? agent.phone : undefined,
+    experienceYears: agent.experienceYears != null ? Number(agent.experienceYears) : undefined,
+    brokerage: brokerage || undefined,
+    licenseNumber: agent.licenseNumber && agent.licenseNumber.length >= 6 ? agent.licenseNumber : undefined
   };
 }

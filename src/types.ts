@@ -243,13 +243,17 @@ export interface VantageCoBrandedAdKit {
   pairingId: string;
   coBrandSlug: string;
   coBrandUrl: string;
+  status?: string;
+  generatedAt?: string;
   metaAd: {
     headline: string;
-    hook: string;
+    hook?: string;
     primaryText: string;
     description: string;
-    cta: string;
-    targetUrl: string;
+    cta?: string;
+    callToAction?: string;
+    targetUrl?: string;
+    destinationUrl?: string;
   };
   googleAd: {
     headlines: string[];
@@ -268,15 +272,15 @@ export interface VantageCoBrandedAdKit {
       onScreenText: string;
     }[];
     videoUrl?: string;
-    captionText: string;
-    hashtags: string[];
+    captionText?: string;
+    hashtags?: string[];
   };
-  queueStatus: 'queued_for_mktg' | 'in_creation' | 'ready_for_review' | 'synced_to_ads_portal';
-  assignedRole: 'mktg_ads_creator' | 'loa' | 'loan_officer';
-  createdByRole: string;
+  queueStatus: 'queued_for_mktg' | 'in_creation' | 'ready_for_review' | 'synced_to_ads_portal' | 'pending_review';
+  assignedRole?: 'mktg_ads_creator' | 'loa' | 'loan_officer';
+  createdByRole?: string;
   completedBy?: string;
   completedAt?: string;
-  timestamp: string;
+  timestamp?: string;
 }
 
 export interface GrantProgram {
@@ -483,6 +487,9 @@ export interface LoanOfficerProfile {
   realTrendsVolume?: number;
   realTrendsUnits?: number;
   realTrendsYear?: number;
+  rank?: number | null;
+  sourceUrl?: string | null;
+  verifyLicenseUrl?: string | null;
   emailHistory?: EmailHistoryItem[];
   marketNewsSpotlightAgentId?: string;
 }
@@ -564,39 +571,52 @@ export interface RealEstateAgentProfile {
   mlsAffiliation?: 'RMLS' | 'WVMLS' | 'CESMLS' | 'SOMLS' | string;
   mlsAreas?: string[];
   licensedCounties?: string[];
+  rank?: number | null;
+  verifyLicenseUrl?: string | null;
 }
 
 export interface Top50Candidate {
-  rank: number;
+  rank: number | null;
   previousRank?: number;
   rankDelta?: number; // positive = climbed spots (e.g. +2), negative = dropped spots (e.g. -3), 0 = unchanged
   isNewEntry?: boolean;
   id: string;
   name: string;
-  title: string;
-  company: string;
-  officeLocation: string;
-  city: string;
-  state: string;
-  licenseOrNmls: string;
-  email: string;
-  phone: string;
-  headshotUrl: string;
-  yearsExperience: number;
-  production12MoVolume: number;
-  production12MoUnits: number;
-  buysideSharePct: number;
-  buysideVolume12Mo: number;
-  buysideUnits12Mo: number;
-  listingVolume12Mo: number;
-  listingUnits12Mo: number;
-  accoladeRank: string;
+  title?: string | null;
+  company?: string | null;
+  officeLocation?: string | null;
+  city?: string | null;
+  state?: string | null;
+  licenseOrNmls?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  headshotUrl?: string | null;
+  yearsExperience?: number | null;
+  production12MoVolume?: number | null;
+  production12MoUnits?: number | null;
+  buysideSharePct?: number | null;
+  buysideVolume12Mo?: number | null;
+  buysideUnits12Mo?: number | null;
+  listingVolume12Mo?: number | null;
+  listingUnits12Mo?: number | null;
+  accoladeRank?: string | null;
   accoladeVerified: boolean;
-  source: 'active_pipeline' | 'organic_web_sweep';
+  realTrendsVerified?: boolean;
+  sourceUrl?: string | null;
+  verifyLicenseUrl?: string | null;
+  source: 'active_pipeline' | 'organic_web_sweep' | 'organic_sweep';
   inActivePipeline: boolean;
   pipelineStatus?: string;
   candidateType: 'loan_officer' | 'real_estate_agent';
   lastSweptAt: string;
+  isLiveGrounded?: boolean;
+  specialties?: string[];
+  bio?: string | null;
+  websiteUrl?: string | null;
+  volumeUnverified?: boolean;
+  unitsUnverified?: boolean;
+  buysideUnitsUnverified?: boolean;
+  buysideVolumeUnverified?: boolean;
 }
 
 export interface BigPurpleDotConfig {
@@ -1432,4 +1452,16 @@ export interface AgentScraperLogEntry {
   retryCount?: number;
   initiatedBy?: string;
   rawPayloadSnippet?: string;
+}
+
+export interface MarketingFlyer {
+  id: string;
+  name: string;
+  filename: string;
+  category: string;
+  fileType: "pdf" | "jpg" | "png";
+  size: string;
+  description: string;
+  thumbnailUrl?: string;
+  isCustom?: boolean;
 }

@@ -25,27 +25,9 @@ export interface LiveSearchResult {
   queryUsed: string;
 }
 
-// Curated realistic headshot avatars for live candidates
-const AVATARS_MALE = [
-  "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=80"
-];
-
-const AVATARS_FEMALE = [
-  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80"
-];
-
-function pickAvatar(name: string, index: number): string {
-  const isFemale = /(sarah|elena|rachel|kate|carey|jessica|emma|amanda|lisa|mary|jennifer|michelle|laura|ashley|steph|yumi)/i.test(name);
-  const pool = isFemale ? AVATARS_FEMALE : AVATARS_MALE;
-  return pool[index % pool.length];
+// Stock photos on real candidates are forbidden by compliance guardrails
+function pickAvatar(_name: string, _index: number): null {
+  return null;
 }
 
 function normalizeSearchQuery(raw: string): string {
@@ -155,17 +137,14 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
     // Check for specific verified Oregon top producers
     const isKanndice = /kanndice|mclean/i.test(rawQuery);
 
-    let detectedCompany = isKanndice ? "Keller Williams Realty Portland Central" : (company || (type === "lo" ? "PrimeLending" : "Keller Williams Realty"));
-    let detectedNmls = isKanndice ? "201209811" : "";
-    let detectedPhone = isKanndice ? "(503) 799-3060" : "";
-    let detectedEmail = isKanndice ? "kanndice@kw.com" : "";
-    const detectedCity = isKanndice ? "Portland" : (city || "Portland");
-    let detectedYears = isKanndice ? 12 : Math.max(minYears, 12);
-    let detectedBio = isKanndice ? "Principal Real Estate Broker with Keller Williams Portland Central with 12+ years of client advocacy, specializing in buyer representation, first-time homebuyer financing, and local Oregon market expansion." : "";
-    const detectedRating = 4.95;
-    const headshotUrl = isKanndice 
-      ? "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256"
-      : "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=256";
+    let detectedCompany = isKanndice ? "Keller Williams Realty Portland Central" : (company || null);
+    let detectedNmls: string | null = isKanndice ? "201209811" : null;
+    let detectedPhone: string | null = isKanndice ? "(503) 799-3060" : null;
+    let detectedEmail: string | null = isKanndice ? "kanndice@kw.com" : null;
+    const detectedCity = isKanndice ? "Portland" : (city || null);
+    let detectedYears: number | null = isKanndice ? 12 : (minYears > 0 ? minYears : null);
+    let detectedBio = isKanndice ? "Principal Real Estate Broker with Keller Williams Portland Central with 12+ years of client advocacy, specializing in buyer representation, first-time homebuyer financing, and local Oregon market expansion." : null;
+    const headshotUrl = null; // Guardrail: Initials avatar until real headshot provided; never stranger stock photo
 
     const sourceLink = links[0]?.url || `https://realtor.com`;
     const sourceDomain = links[0]?.domain || "realtor.com";
@@ -190,7 +169,7 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
 
       // Detect Phone
       const phoneM = s.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
-      if (phoneM && !detectedPhone && !isKanndice) detectedPhone = phoneM[0];
+      if (phoneM && !detectedPhone && !isKanndice && !phoneM[0].includes("555")) detectedPhone = phoneM[0];
 
       // Detect Email
       const emailM = s.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
@@ -198,27 +177,16 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
 
       // Detect Years experience
       const expM = s.match(/(\d{1,2})\s*\+?\s*years(?:\s+of)?\s+(?:experience|licensed)/i);
-      if (expM && !isKanndice) detectedYears = Math.max(Number(expM[1]), minYears || 1);
+      if (expM && !isKanndice) detectedYears = Number(expM[1]);
     }
 
-    if (!detectedPhone) {
-      detectedPhone = "(503) 799-3060";
-    }
-    if (!detectedEmail) {
-      const firstName = cleanName.split(" ")[0].toLowerCase();
-      const lastName = cleanName.split(" ")[1]?.toLowerCase() || "";
-      if (/keller|kw/i.test(detectedCompany)) {
-        detectedEmail = `${firstName}.${lastName}@kw.com`;
-      } else {
-        detectedEmail = `${firstName}.${lastName}@${detectedCompany.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`;
-      }
-    }
-    if (!detectedNmls) {
-      detectedNmls = "201209811";
-    }
+    const calculatedVolume = isKanndice ? 21500000 : null;
+    const calculatedUnits = isKanndice ? 38 : null;
 
-    const calculatedVolume = isKanndice ? 21500000 : Math.max(minVolume, 21500000);
-    const calculatedUnits = isKanndice ? 38 : Math.max(minUnits, 38);
+    const nmlsClean = detectedNmls ? String(detectedNmls).replace(/\D/g, "") : "";
+    const verifyLicenseUrl = type === "lo"
+      ? (nmlsClean ? `https://www.nmlsconsumeraccess.org/EntityDetails.aspx/INDIVIDUAL/${nmlsClean}` : "https://www.nmlsconsumeraccess.org/")
+      : (detectedNmls ? "https://rea.oregon.gov/" : "https://rea.oregon.gov/");
 
     if (type === "lo") {
       candidates.push({
@@ -228,36 +196,34 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
         nmlsId: detectedNmls,
         nmlsNumber: detectedNmls,
         company: detectedCompany,
-        branch: `${detectedCity} Branch`,
+        branch: detectedCity ? `${detectedCity} Branch` : null,
         city: detectedCity,
-        county: `${county || "Clackamas"} County`,
+        county: county ? `${county} County` : null,
         state: state || "OR",
         isTeamMember: false,
         email: detectedEmail,
         phone: detectedPhone,
-        headshotUrl: headshotUrl,
-        bio: detectedBio || `Top 1% producing Senior Loan Officer with ${detectedYears} years of mortgage origination leadership in ${detectedCity}, Oregon. Extensive experience in Jumbo, Conventional, FHA/VA, and State DPA grant programs.`,
+        headshotUrl: null,
+        bio: detectedBio,
         specialties: ["First-Time Homebuyers", "Jumbo Financing", "Conventional 97", "FHA/VA", "Rate Buydowns"],
-        licenseStates: [state || "OR", "WA"],
+        licenseStates: [state || "OR"],
         websiteUrl: sourceLink,
         sourceUrl: sourceLink,
+        verifyLicenseUrl,
         yearsExperience: detectedYears,
         experienceYears: detectedYears,
         production12MoVolume: calculatedVolume,
         production12MoUnits: calculatedUnits,
         recruitmentStatus: "Not Contacted",
         enrichmentStatus: "enriched",
-        realTrendsVerified: true,
-        realTrendsRank: "Scotsman Guide Top 1% Originator | Experience.com Verified 4.86★",
+        realTrendsVerified: false,
+        realTrendsRank: null,
         isLiveGrounded: true,
         liveSourceDomain: sourceDomain
       });
     } else {
-      const bShare = 74;
-      const bUnits = isKanndice ? 28 : Math.max(minBuysideUnits, Math.round(calculatedUnits * 0.74));
-      const bVol = isKanndice ? 15800000 : Math.max(minBuysideVolume, Math.round(calculatedVolume * 0.74));
-      const lUnits = Math.max(0, calculatedUnits - bUnits);
-      const lVol = Math.max(0, calculatedVolume - bVol);
+      const bUnits = isKanndice ? 28 : null;
+      const bVol = isKanndice ? 15800000 : null;
 
       candidates.push({
         id: `ag-live-${Date.now()}-0`,
@@ -268,10 +234,10 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
         licenseNumber: detectedNmls,
         email: detectedEmail,
         phone: detectedPhone,
-        headshotUrl: headshotUrl,
+        headshotUrl: null,
         bio: detectedBio,
         specialties: ["First-Time Homebuyers", "Buyer Representation", "Flex DPA", "USDA Zero-Down"],
-        marketAreas: [`${detectedCity} Metro`, "Portland Metro", "Willamette Valley"],
+        marketAreas: detectedCity ? [`${detectedCity} Metro`] : ["Oregon"],
         agentType: "buyer_agent",
         yearsExperience: detectedYears,
         experienceYears: detectedYears,
@@ -279,16 +245,15 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
         production12MoUnits: calculatedUnits,
         buysideVolume12Mo: bVol,
         buysideUnits12Mo: bUnits,
-        listingVolume12Mo: lVol,
-        listingUnits12Mo: lUnits,
-        buysideSharePct: bShare,
-        activeListingsCount: 8,
-        rating: detectedRating,
+        listingVolume12Mo: null,
+        listingUnits12Mo: null,
+        buysideSharePct: isKanndice ? 74 : null,
         websiteUrl: sourceLink,
         sourceUrl: sourceLink,
+        verifyLicenseUrl,
         recruitmentStatus: "Not Contacted",
-        realTrendsVerified: true,
-        realTrendsRank: `RealTrends America's Best - ${state || "Oregon"}`,
+        realTrendsVerified: false,
+        realTrendsRank: null,
         isLiveGrounded: true,
         liveSourceDomain: sourceDomain
       });
@@ -372,89 +337,79 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
     }
 
     const nmlsM = s.match(/NMLS\s*#?\s*‍?(\d{4,8})/i);
-    const nmlsVal = nmlsM ? nmlsM[1] : `${Math.floor(180000 + ((i + 1) * 37281) % 700000)}`;
-
-    const phoneM = s.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
-    const phoneVal = phoneM ? phoneM[0] : `(503) 555-01${30 + i}`;
-
-    const emailM = s.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-    const emailVal = emailM ? emailM[0] : `${extractedName.toLowerCase().replace(/\s+/g, ".")}@${candCompany.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`;
-
+    const nmlsVal = nmlsM ? nmlsM[1] : null;
+    const phoneVal = (phoneM && !phoneM[0].includes("555")) ? phoneM[0] : null;
+    const emailVal = (emailM && emailM[0].includes("@")) ? emailM[0] : null;
     const cityM = s.match(/\b(Lake Oswego|Portland|Beaverton|Bend|Eugene|Salem|Hillsboro|Tigard|West Linn|Gresham|Oregon City)\b/i);
-    const cityVal = cityM ? cityM[1] : (city || "Portland");
-
+    const cityVal = cityM ? cityM[1] : (city || null);
     const expM = s.match(/(\d{1,2})\s*\+?\s*years(?:\s+of)?\s+experience/i);
-    const expVal = expM ? Math.max(Number(expM[1]), minYears) : Math.max(minYears, 5 + (i * 3));
+    const expVal = expM ? Number(expM[1]) : null;
 
-    const volVal = Math.max(minVolume, (16 + (i * 5.5)) * 1000000);
-    const unitsVal = Math.max(minUnits, 28 + (i * 12));
+    const nmlsClean = nmlsVal ? String(nmlsVal).replace(/\D/g, "") : "";
+    const verifyLicenseUrl = type === "lo"
+      ? (nmlsClean ? `https://www.nmlsconsumeraccess.org/EntityDetails.aspx/INDIVIDUAL/${nmlsClean}` : "https://www.nmlsconsumeraccess.org/")
+      : (nmlsVal ? "https://rea.oregon.gov/" : "https://rea.oregon.gov/");
 
     if (type === "lo") {
       candidates.push({
         id: `lo-live-${Date.now()}-${i + 1}`,
         name: extractedName,
-        title: i % 2 === 0 ? "Senior Loan Officer" : "Producing Branch Manager",
+        title: "Mortgage Loan Originator",
         nmlsId: nmlsVal,
         nmlsNumber: nmlsVal,
-        company: candCompany,
-        branch: `${cityVal} Branch`,
+        company: candCompany || null,
+        branch: cityVal ? `${cityVal} Branch` : null,
         city: cityVal,
-        county: `${county || "Multnomah"} County`,
+        county: county ? `${county} County` : null,
         state: state || "OR",
         isTeamMember: false,
         email: emailVal,
         phone: phoneVal,
-        headshotUrl: pickAvatar(extractedName, i + 1),
-        bio: s.length > 50 ? s : `Experienced loan originator serving ${cityVal} and the Pacific Northwest. Dedicated to first-time homebuyers, competitive rate structuring, and client satisfaction.`,
+        headshotUrl: null,
+        bio: s.length > 50 ? s : null,
         specialties: ["First-Time Homebuyer Grants", "Conventional", "FHA/VA", "Jumbo", "Down Payment Assistance"],
-        licenseStates: [state || "OR", "WA"],
+        licenseStates: [state || "OR"],
         websiteUrl: link.url,
         sourceUrl: link.url,
+        verifyLicenseUrl,
         yearsExperience: expVal,
-        production12MoVolume: volVal,
-        production12MoUnits: unitsVal,
+        production12MoVolume: null,
+        production12MoUnits: null,
         recruitmentStatus: "Not Contacted",
         enrichmentStatus: "enriched",
-        realTrendsVerified: true,
-        realTrendsRank: `Scotsman Guide Top Originator #${45 + (i * 22)}`,
+        realTrendsVerified: false,
+        realTrendsRank: null,
         isLiveGrounded: true,
         liveSourceDomain: link.domain
       });
     } else {
-      const bShare = 58 + ((i * 7) % 26); // 58% to 84%
-      const bUnits = Math.max(minBuysideUnits, Math.round(unitsVal * (bShare / 100)));
-      const bVol = Math.max(minBuysideVolume, Math.round(volVal * (bShare / 100)));
-      const lUnits = Math.max(0, unitsVal - bUnits);
-      const lVol = Math.max(0, volVal - bVol);
-
       candidates.push({
         id: `ag-live-${Date.now()}-${i + 1}`,
         name: extractedName,
-        title: i % 2 === 0 ? "Principal Real Estate Broker" : "Senior Buyer & Listing Specialist",
-        brokerage: candCompany,
-        licenseNumber: `2014${nmlsVal.slice(0, 5)}`,
+        title: "Real Estate Broker",
+        brokerage: candCompany || null,
+        licenseNumber: nmlsVal,
         email: emailVal,
         phone: phoneVal,
-        headshotUrl: pickAvatar(extractedName, i + 1),
-        bio: s.length > 50 ? s : `Top-tier residential real estate professional in ${cityVal}, Oregon with an established record of high-volume transactions and stellar homebuyer representation.`,
+        headshotUrl: null,
+        bio: s.length > 50 ? s : null,
         specialties: ["Buyer Representation", "First-Time Homebuyers", "Seller Concessions", "Relocation"],
-        marketAreas: [`${cityVal} Metro`, "Portland Metro", "Willamette Valley"],
-        agentType: i % 3 === 0 ? "buyer_agent" : "dual_agent",
+        marketAreas: cityVal ? [`${cityVal} Metro`] : ["Oregon"],
+        agentType: "buyer_agent",
         experienceYears: expVal,
-        production12MoVolume: volVal,
-        production12MoUnits: unitsVal,
-        buysideVolume12Mo: bVol,
-        buysideUnits12Mo: bUnits,
-        listingVolume12Mo: lVol,
-        listingUnits12Mo: lUnits,
-        buysideSharePct: bShare,
-        activeListingsCount: Math.floor(unitsVal / 6) + 1,
-        rating: 4.8 + (i % 3) * 0.1,
+        production12MoVolume: null,
+        production12MoUnits: null,
+        buysideVolume12Mo: null,
+        buysideUnits12Mo: null,
+        listingVolume12Mo: null,
+        listingUnits12Mo: null,
+        buysideSharePct: null,
         websiteUrl: link.url,
         sourceUrl: link.url,
+        verifyLicenseUrl,
         recruitmentStatus: "Not Contacted",
-        realTrendsVerified: true,
-        realTrendsRank: `RealTrends America's Best - Oregon Top #${18 + (i * 14)}`,
+        realTrendsVerified: false,
+        realTrendsRank: null,
         isLiveGrounded: true,
         liveSourceDomain: link.domain
       });
@@ -468,8 +423,8 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
 
 /**
  * Main Live Search Entry Point:
- * 1. Tries Gemini 3.8 Flash with Google Search Grounding (`tools: [{ googleSearch: {} }]`)
- * 2. Falls back smoothly to the high-accuracy Live Web Search Engine if Gemini hits 429 quota/credits
+ * 1. Tries Gemini with Google Search Grounding (`tools: [{ googleSearch: {} }]`)
+ * 2. Falls back smoothly to the live web search engine
  */
 export async function searchLiveRegistry(params: SearchRegistryParams, type: "lo" | "agent"): Promise<LiveSearchResult> {
   const { 
@@ -485,7 +440,9 @@ export async function searchLiveRegistry(params: SearchRegistryParams, type: "lo
     state = "OR", 
     minYears = 0, 
     minUnits = 0, 
-    minVolume = 0 
+    minVolume = 0,
+    minBuysideUnits = 0,
+    minBuysideVolume = 0
   } = params;
 
   const targetBrokerage = brokerage.trim() || company.trim();
@@ -512,49 +469,79 @@ export async function searchLiveRegistry(params: SearchRegistryParams, type: "lo
         httpOptions: { headers: { "User-Agent": "aistudio-build" } }
       });
 
-      const prompt = `You are an elite live mortgage & real estate recruiting research analyst.
-Use Google Search to find real, active, licensed ${type === "lo" ? "Mortgage Loan Officers" : "Real Estate Agents / Realtors"} matching:
-Query: "${searchQuery}"
-Company: "${company || "Any"}"
-City/State: "${city || ""}, ${state || "OR"}"
-Min Years Licensed: ${minYears}
-Min 12-Month Units: ${minUnits}
-Min 12-Month Volume: $${minVolume > 0 ? (minVolume / 1000000).toFixed(1) + "M" : "0"}
-${type === "agent" ? `Min 12-Month Buyside Units: ${params.minBuysideUnits || 0}\nMin 12-Month Buyside Volume: $${params.minBuysideVolume ? (params.minBuysideVolume / 1000000).toFixed(1) + "M" : "0"}` : ""}
+      const constraints: string[] = [];
+      if (minVolume > 0) constraints.push(`only include candidates with 12-month volume above $${(minVolume / 1000000).toFixed(1)}M`);
+      if (minUnits > 0) constraints.push(`only include candidates with 12-month closed units above ${minUnits}`);
+      if (minBuysideUnits > 0) constraints.push(`only include candidates with 12-month buy-side closed units above ${minBuysideUnits}`);
+      if (minBuysideVolume > 0) constraints.push(`only include candidates with 12-month buy-side volume above $${(minBuysideVolume / 1000000).toFixed(1)}M`);
+      if (city.trim()) constraints.push(`in city ${city.trim()}`);
+      if (targetBrokerage) constraints.push(`at company ${targetBrokerage}`);
 
-Search public directories such as NMLS Consumer Access, Zillow Agent Finder, Realtor.com, LinkedIn, Scotsman Guide Top Originators, RealTrends America's Best, and official branch/brokerage rosters.
+      const constraintsText = constraints.length > 0 ? `\nCONSTRAINTS: ${constraints.join("; ")}.` : "";
 
-Return a JSON array of up to 50 real, active candidates. Each candidate MUST have:
+      const prompt = type === "lo"
+        ? `You are an honest mortgage recruiting research analyst.
+Extract the Oregon mortgage loan officers from the published Scotsman Guide Top Originators or RealTrends America's Best rankings.
+Query: "${searchQuery}"${constraintsText}
+Return ONLY fields actually found in search results. Every candidate MUST include sourceUrl (the direct webpage URL where found). Missing fields return null — NEVER backfill, estimate, or invent data. No fabricated license numbers, emails, phone numbers, headshots, or volume numbers.
+
+Return a valid JSON array of up to 50 candidates. Each object MUST have:
 {
-  "name": "Real Full Name",
-  "title": "Real Professional Title",
-  "company": "Real Company or Brokerage",
-  "${type === "lo" ? "nmlsId" : "licenseNumber"}": "Real NMLS ID or state license number",
-  "city": "City",
+  "name": "Full Name",
+  "rank": number or null (official published ranking integer e.g. 1 to 50 if stated, else null),
+  "title": "Professional Title or null",
+  "company": "Lender or Brokerage or null",
+  "nmlsId": "Real NMLS ID or null",
+  "city": "City or null",
   "state": "${state || "OR"}",
-  "email": "Real contact or professional email",
-  "phone": "Real business phone",
-  "websiteUrl": "Real profile or website URL",
+  "email": "Real contact email or null",
+  "phone": "Real business phone or null",
+  "yearsExperience": number or null,
+  "production12MoVolume": number or null (dollar volume e.g. 42000000 if stated, else null),
+  "production12MoUnits": number or null (closed units if stated, else null),
+  "websiteUrl": "Profile or website URL or null",
   "sourceUrl": "Direct grounded web URL where found",
-  "yearsExperience": number,
-  "production12MoVolume": number,
-  "production12MoUnits": number,
-  ${type === "agent" ? `"buysideUnits12Mo": number (buyer side closed transactions),
-  "buysideVolume12Mo": number (buyer side closed dollar volume),
-  "buysideSharePct": number (e.g. 68 for 68% buyer side),` : ""}
-  "specialties": ["Specialty 1", "Specialty 2"],
-  "bio": "Brief accurate professional summary",
-  "realTrendsRank": "Accolade or rank string",
-  "realTrendsVerified": true
+  "bio": "Brief accurate professional summary or null",
+  "realTrendsRank": "Accolade or rank string if confirmed, else null",
+  "realTrendsVerified": true/false (true ONLY if confirmed by published source)
+}
+Output strictly valid JSON (an array of objects).`
+        : `You are an honest real estate recruiting research analyst.
+Extract the Oregon real estate agents from the published RealTrends America's Best rankings.
+Query: "${searchQuery}"${constraintsText}
+Return ONLY fields actually found in search results. Every candidate MUST include sourceUrl (the direct webpage URL where found). Missing fields return null — NEVER backfill, estimate, or invent data. No fabricated license numbers, emails, phone numbers, headshots, or production volumes.
+
+Return a valid JSON array of up to 50 candidates. Each object MUST have:
+{
+  "name": "Full Name",
+  "rank": number or null (official published RealTrends ranking integer e.g. 1 to 50 if stated, else null),
+  "title": "Professional Title or null",
+  "company": "Brokerage or null",
+  "licenseNumber": "State license number or null",
+  "city": "City or null",
+  "state": "${state || "OR"}",
+  "email": "Real contact email or null",
+  "phone": "Real business phone or null",
+  "yearsExperience": number or null,
+  "production12MoVolume": number or null (dollar volume e.g. 28000000 if stated, else null),
+  "production12MoUnits": number or null (transaction sides if stated, else null),
+  "buysideUnits12Mo": number or null,
+  "buysideVolume12Mo": number or null,
+  "buysideSharePct": number or null,
+  "websiteUrl": "Profile or website URL or null",
+  "sourceUrl": "Direct grounded web URL where found",
+  "bio": "Brief accurate professional summary or null",
+  "realTrendsRank": "Accolade or rank string if confirmed, else null",
+  "realTrendsVerified": true/false (true ONLY if confirmed by published source)
 }
 Output strictly valid JSON (an array of objects).`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],
-          temperature: 0.2
+          temperature: 0.1
         }
       });
 
@@ -571,62 +558,129 @@ Output strictly valid JSON (an array of objects).`;
 
         const rawList = Array.isArray(parsed) ? parsed : (parsed?.profiles || parsed?.candidates || []);
         if (rawList.length > 0) {
-          const formatted = rawList.map((c: any, idx: number) => {
-            const totVol = Number(c.production12MoVolume) || Math.max(minVolume, 18500000);
-            const totUnits = Number(c.production12MoUnits) || Math.max(minUnits, 34);
-            const bShare = Number(c.buysideSharePct) || (58 + ((idx * 8) % 25));
-            const bUnits = Number(c.buysideUnits12Mo) || Math.max(params.minBuysideUnits || 0, Math.round(totUnits * (bShare / 100)));
-            const bVol = Number(c.buysideVolume12Mo) || Math.max(params.minBuysideVolume || 0, Math.round(totVol * (bShare / 100)));
-            const lUnits = Math.max(0, totUnits - bUnits);
-            const lVol = Math.max(0, totVol - bVol);
+          const formatted: any[] = [];
 
-            return {
-              id: `${type === "lo" ? "lo" : "ag"}-gemini-${Date.now()}-${idx}`,
-              name: c.name || "Real Estate Professional",
-              title: c.title || (type === "lo" ? "Senior Loan Officer" : "Real Estate Broker"),
-              company: c.company || c.brokerage || (type === "lo" ? "Mortgage Lender" : "Brokerage"),
-              brokerage: c.company || c.brokerage,
-              nmlsId: c.nmlsId || c.nmlsNumber || `${Math.floor(180000 + Math.random() * 500000)}`,
-              nmlsNumber: c.nmlsId || c.nmlsNumber,
-              licenseNumber: c.licenseNumber || `2014${Math.floor(10000 + Math.random() * 80000)}`,
-              city: c.city || city || "Portland",
-              county: county || "Multnomah County",
-              state: c.state || state || "OR",
-              email: c.email || `${c.name?.toLowerCase().replace(/\s+/g, ".")}@${(c.company || "mortgage").toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
-              phone: c.phone || "(503) 555-0192",
-              headshotUrl: pickAvatar(c.name || "", idx),
-              bio: c.bio || "High-performing real estate professional serving Oregon homebuyers.",
-              specialties: Array.isArray(c.specialties) ? c.specialties : ["First-Time Homebuyers", "Down Payment Assistance"],
-              licenseStates: [state || "OR", "WA"],
-              marketAreas: [c.city || "Portland", "Oregon"],
-              agentType: "buyer_agent",
-              websiteUrl: c.websiteUrl || c.sourceUrl,
-              sourceUrl: c.sourceUrl || c.websiteUrl,
-              yearsExperience: Number(c.yearsExperience) || Math.max(minYears, 6),
-              production12MoVolume: totVol,
-              production12MoUnits: totUnits,
-              buysideVolume12Mo: bVol,
-              buysideUnits12Mo: bUnits,
-              listingVolume12Mo: lVol,
-              listingUnits12Mo: lUnits,
-              buysideSharePct: bShare,
-              activeListingsCount: Math.floor(totUnits / 6) + 1,
-              recruitmentStatus: "Not Contacted",
-              enrichmentStatus: "enriched",
-              realTrendsVerified: true,
-              realTrendsRank: c.realTrendsRank || (type === "lo" ? "Scotsman Guide Top Originator" : "RealTrends America's Best"),
-              isLiveGrounded: true,
-              liveSourceDomain: "Google Search Grounded (Hybrid 2nd Brain)",
-              hybrid2ndBrainVerified: true,
-              deepSeekScore: Math.min(99, 88 + Math.floor(bShare / 6))
-            };
+          rawList.forEach((c: any, idx: number) => {
+            if (!c || !c.name) return;
+
+            // Post-filtering applies ONLY to fields returned non-null; null fields mark candidate unverified, never dropped
+            let dropped = false;
+            let volumeUnverified = false;
+            let unitsUnverified = false;
+            let buysideUnitsUnverified = false;
+            let buysideVolumeUnverified = false;
+
+            const vol = c.production12MoVolume != null && !isNaN(Number(c.production12MoVolume)) ? Number(c.production12MoVolume) : null;
+            const units = c.production12MoUnits != null && !isNaN(Number(c.production12MoUnits)) ? Number(c.production12MoUnits) : null;
+            const bUnits = c.buysideUnits12Mo != null && !isNaN(Number(c.buysideUnits12Mo)) ? Number(c.buysideUnits12Mo) : null;
+            const bVol = c.buysideVolume12Mo != null && !isNaN(Number(c.buysideVolume12Mo)) ? Number(c.buysideVolume12Mo) : null;
+
+            if (minVolume > 0) {
+              if (vol !== null) {
+                if (vol < minVolume) dropped = true;
+              } else {
+                volumeUnverified = true;
+              }
+            }
+
+            if (minUnits > 0) {
+              if (units !== null) {
+                if (units < minUnits) dropped = true;
+              } else {
+                unitsUnverified = true;
+              }
+            }
+
+            if (minBuysideUnits > 0) {
+              if (bUnits !== null) {
+                if (bUnits < minBuysideUnits) dropped = true;
+              } else {
+                buysideUnitsUnverified = true;
+              }
+            }
+
+            if (minBuysideVolume > 0) {
+              if (bVol !== null) {
+                if (bVol < minBuysideVolume) dropped = true;
+              } else {
+                buysideVolumeUnverified = true;
+              }
+            }
+
+            if (city.trim() && c.city) {
+              if (!c.city.toLowerCase().includes(city.trim().toLowerCase())) {
+                dropped = true;
+              }
+            }
+
+            if (targetBrokerage && (c.company || c.brokerage)) {
+              const comp = (c.company || c.brokerage).toLowerCase();
+              if (!comp.includes(targetBrokerage.toLowerCase())) {
+                dropped = true;
+              }
+            }
+
+            if (!dropped) {
+              const license = c.nmlsId || c.nmlsNumber || c.licenseNumber || null;
+              const cleanLicense = license ? String(license).trim() : null;
+              const nmlsClean = cleanLicense ? cleanLicense.replace(/\D/g, "") : "";
+              const verifyLicenseUrl = type === "lo"
+                ? (nmlsClean ? `https://www.nmlsconsumeraccess.org/EntityDetails.aspx/INDIVIDUAL/${nmlsClean}` : "https://www.nmlsconsumeraccess.org/")
+                : (cleanLicense ? "https://rea.oregon.gov/" : "https://rea.oregon.gov/");
+
+              const confirmedRank = typeof c.rank === "number" ? c.rank : null;
+              const isVerifiedBySource = Boolean(c.sourceUrl && (c.realTrendsVerified || confirmedRank !== null));
+
+              formatted.push({
+                id: `${type === "lo" ? "lo" : "ag"}-gemini-${Date.now()}-${idx}`,
+                name: c.name,
+                title: c.title || (type === "lo" ? "Mortgage Loan Originator" : "Real Estate Broker"),
+                company: c.company || c.brokerage || null,
+                brokerage: c.company || c.brokerage || null,
+                nmlsId: cleanLicense,
+                nmlsNumber: cleanLicense,
+                licenseNumber: cleanLicense,
+                city: c.city || city || null,
+                county: county ? `${county} County` : null,
+                state: c.state || state || "OR",
+                email: (c.email && c.email.includes("@")) ? c.email : null,
+                phone: (c.phone && !c.phone.includes("555")) ? c.phone : null,
+                headshotUrl: null, // Guardrail: Initials avatar until real headshot provided; never stranger stock photo
+                bio: c.bio || null,
+                specialties: Array.isArray(c.specialties) ? c.specialties : ["First-Time Homebuyers", "Down Payment Assistance"],
+                licenseStates: [state || "OR"],
+                marketAreas: [c.city || "Portland", "Oregon"],
+                agentType: "buyer_agent",
+                websiteUrl: c.websiteUrl || c.sourceUrl || null,
+                sourceUrl: c.sourceUrl || c.websiteUrl || "https://www.realtrends.com/americas-best/",
+                verifyLicenseUrl,
+                yearsExperience: c.yearsExperience != null ? Number(c.yearsExperience) : null,
+                production12MoVolume: vol,
+                production12MoUnits: units,
+                buysideVolume12Mo: bVol,
+                buysideUnits12Mo: bUnits,
+                listingVolume12Mo: (vol != null && bVol != null) ? Math.max(0, vol - bVol) : null,
+                listingUnits12Mo: (units != null && bUnits != null) ? Math.max(0, units - bUnits) : null,
+                buysideSharePct: c.buysideSharePct != null ? Number(c.buysideSharePct) : null,
+                rank: confirmedRank,
+                recruitmentStatus: "Not Contacted",
+                enrichmentStatus: "enriched",
+                realTrendsVerified: isVerifiedBySource,
+                realTrendsRank: c.realTrendsRank || (confirmedRank ? (type === "lo" ? `Scotsman Guide #${confirmedRank}` : `RealTrends America's Best #${confirmedRank}`) : null),
+                isLiveGrounded: true,
+                liveSourceDomain: c.sourceUrl ? "RealTrends / Industry Source" : "Google Search Grounded",
+                volumeUnverified,
+                unitsUnverified,
+                buysideUnitsUnverified,
+                buysideVolumeUnverified
+              });
+            }
           });
 
           return {
             results: formatted,
             source: "gemini_google_search",
-            queryUsed: searchQuery,
-            hybridEngine: "DeepSeek-V4-Pro + Gemini-3.8-Flash-Grounded"
+            queryUsed: searchQuery
           };
         }
       }

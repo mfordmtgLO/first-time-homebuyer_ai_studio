@@ -3615,7 +3615,7 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
     res.json({
       success: true,
       jobs: [
-        { id: "cron-top50-daily", name: "Top 50 RealTrends & USDA Market Sweep", cron: "0 2 * * *", status: "Active (Unattended)" },
+        { id: "cron-top50-daily", name: "Top 50 RealTrends & Market Sweep", cron: "Manual / On-Demand", status: "Manual On-Demand (UI Triggered)" },
         { id: "cron-geomap-sync", name: "GeoMap Saved Property & RentCast Live Sync", cron: "0 4 * * *", status: "Active (Unattended)" },
         { id: "cron-vantage-ai-import", name: "Vantage AI Studio Co-Branded Campaign Ingestion", cron: "0 6 * * *", status: "Active (Unattended)" },
         { id: "cron-realtor-roster-audit", name: "Realtor Roster Compliance & Gap Resolution Audit", cron: "0 8 * * 1", status: "Active (Unattended)" }
@@ -8437,7 +8437,7 @@ Return ONLY valid JSON in this exact structure:
         ownerLoId: callerLoId || "lo-mike-ford",
         details: {
           simulated: true,
-          candidateId: `BPD-${type === "loan_officer" ? "LO" : "AG"}-${Math.floor(1000 + Math.random() * 9000)}`,
+          candidateId: `BPD-${type === "loan_officer" ? "LO" : "AG"}-${Date.now().toString(36)}`,
           currentStage: "Meeting Scheduled",
           assignedBranch: "Mike Ford Branch - Portland/Bend",
           assignedLoId: callerLoId || "branch-wide",
@@ -8484,7 +8484,7 @@ Return ONLY valid JSON in this exact structure:
       const syncedCandidates = items.map((item: any, idx: number) => {
         const bpdId =
           item.bigPurpleDotId ||
-          `BPD-${type === "loan_officer" ? "LO" : "AG"}-${Math.floor(10000 + Math.random() * 89999)}`;
+          `BPD-${type === "loan_officer" ? "LO" : "AG"}-${Date.now().toString(36)}-${idx}`;
         const mappedStage =
           type === "loan_officer"
             ? bpdConfig.loStageMapping[item.recruitmentStatus || "Not Contacted"] || "BPD Cold Lead"
@@ -8783,46 +8783,22 @@ Return ONLY valid JSON in this exact structure:
         });
       }
 
-      // Algorithmic verification lookup
-      const seed = (String(name || "") + String(nmls || "") + String(licenseNumber || ""))
-        .split("")
-        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
-      const yearsLicensed = (seed % 14) + 3;
-      const units12Mo = type === "loan_officer" ? (seed % 50) + 25 : (seed % 35) + 15;
-      const volume12Mo = ((seed % 30) + 12) * 1000000;
-      const isTopTier = units12Mo >= 25 || volume12Mo >= 18000000;
-
-      const generatedStats = {
-        verified: isTopTier,
-        rank:
-          type === "loan_officer"
-            ? isTopTier
-              ? `Scotsman Guide Top Originator #${(seed % 280) + 40}`
-              : "MMI Verified Producer"
-            : isTopTier
-              ? `RealTrends America's Best #${(seed % 80) + 15} - Oregon`
-              : "RealTrends Verified Producer",
-        volume12Mo,
-        units12Mo,
-        yearsLicensed,
-        firstLicensedYear: 2026 - yearsLicensed,
-        category:
-          type === "loan_officer"
-            ? "Mortgage Loan Originator - Volume"
-            : "Individual Agent - Closed Production",
-        state: "OR",
-        awardYear: 2025,
-        source:
-          type === "loan_officer"
-            ? "Scotsman Guide & NMLS Registry"
-            : "RealTrends America's Best & Regional MLS",
-      };
-
+      // Unmatched profile - honest unverified response with no fabricated data
       res.json({
         success: true,
         matched: false,
-        stats: generatedStats,
+        stats: {
+          verified: false,
+          rank: null,
+          volume12Mo: null,
+          units12Mo: null,
+          yearsLicensed: null,
+          firstLicensedYear: null,
+          category: type === "loan_officer" ? "Mortgage Loan Originator" : "Real Estate Broker",
+          state: "OR",
+          awardYear: 2025,
+          source: null,
+        },
         syncedAt: new Date().toISOString(),
       });
     } catch (err: any) {
@@ -8833,7 +8809,7 @@ Return ONLY valid JSON in this exact structure:
   // POST /api/realtrends/batch-sync - batch sync profiles with RealTrends stats
   app.post("/api/realtrends/batch-sync", (req, res) => {
     try {
-      const { candidates, type } = req.body || {};
+      const { candidates } = req.body || {};
       if (!Array.isArray(candidates)) {
         return res.status(400).json({ error: "Array of candidates is required" });
       }
@@ -8860,38 +8836,12 @@ Return ONLY valid JSON in this exact structure:
           };
         }
 
-        const seed = (
-          String(c.name || "") +
-          String(c.nmlsId || c.nmlsNumber || "") +
-          String(c.licenseNumber || "")
-        )
-          .split("")
-          .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
-        const years = (seed % 14) + 4;
-        const units = type === "loan_officer" ? (seed % 50) + 25 : (seed % 35) + 15;
-        const volume = ((seed % 30) + 12) * 1000000;
-        const verified = units >= 25 || volume >= 18000000;
-
         return {
           ...c,
-          realTrendsVerified: verified,
-          realTrendsRank:
-            type === "loan_officer"
-              ? verified
-                ? `Scotsman Guide Top Originator #${(seed % 280) + 40}`
-                : "MMI Verified Producer"
-              : verified
-                ? `RealTrends America's Best #${(seed % 80) + 15} - Oregon`
-                : "RealTrends Verified Producer",
-          realTrendsVolume: volume,
-          realTrendsUnits: units,
-          realTrendsSides: units,
-          realTrendsYear: 2025,
-          production12MoVolume: volume,
-          production12MoUnits: units,
-          yearsExperience: years,
-          experienceYears: years,
+          realTrendsVerified: false,
+          realTrendsRank: null,
+          realTrendsVolume: c.production12MoVolume != null ? Number(c.production12MoVolume) : null,
+          realTrendsUnits: c.production12MoUnits != null ? Number(c.production12MoUnits) : null,
           enrichmentStatus: "enriched",
         };
       });
@@ -8963,44 +8913,14 @@ Return ONLY valid JSON in this exact structure:
         return res.status(400).json({ error: "Please provide candidates array to sweep & sync" });
       }
 
-      const swept = candidates.map((c: any, idx: number) => {
-        const seed = (String(c.name || "") + String(c.licenseNumber || c.nmlsNumber || "") + String(c.id || ""))
-          .split("")
-          .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
-        const yearsLicensed = Number(c.experienceYears || c.yearsExperience) || (seed % 14) + 4;
-        const units12Mo = Number(c.production12MoUnits) || (type === "loan_officer" ? (seed % 50) + 26 : (seed % 42) + 20);
-        const volume12Mo = Number(c.production12MoVolume) || (((seed % 30) + 14) * 1000000);
-        const buysidePct = Number(c.buysideSharePct) || (56 + (seed % 30));
-        const buysideUnits = Number(c.buysideUnits12Mo) || Math.round(units12Mo * (buysidePct / 100));
-        const buysideVolume = Number(c.buysideVolume12Mo) || Math.round(volume12Mo * (buysidePct / 100));
-        const listingUnits = Math.max(0, units12Mo - buysideUnits);
-        const listingVolume = Math.max(0, volume12Mo - buysideVolume);
-
-        const rank = type === "loan_officer"
-          ? `Scotsman Guide Top Originator #${(seed % 280) + 40}`
-          : `RealTrends America's Best #${(seed % 80) + 15} - Oregon (Top 1.5% Producer)`;
-
+      const swept = candidates.map((c: any) => {
         return {
           ...c,
           enrichmentStatus: "enriched" as const,
-          realTrendsVerified: true,
-          realTrendsRank: rank,
-          realTrendsYear: 2025,
-          realTrendsVolume: volume12Mo,
-          realTrendsUnits: units12Mo,
-          realTrendsSides: units12Mo,
-          production12MoVolume: volume12Mo,
-          production12MoUnits: units12Mo,
-          buysideSharePct: buysidePct,
-          buysideUnits12Mo: buysideUnits,
-          buysideVolume12Mo: buysideVolume,
-          listingUnits12Mo: listingUnits,
-          listingVolume12Mo: listingVolume,
-          experienceYears: yearsLicensed,
-          yearsExperience: yearsLicensed,
+          realTrendsVerified: Boolean(c.realTrendsVerified),
+          realTrendsRank: c.realTrendsRank || null,
           lastSweepSyncedAt: new Date().toISOString(),
-          sweepStatus: "verified",
+          sweepStatus: c.realTrendsVerified ? "verified" : "unverified",
         };
       });
 
@@ -9009,7 +8929,7 @@ Return ONLY valid JSON in this exact structure:
         count: swept.length,
         syncedAt: new Date().toISOString(),
         candidates: swept,
-        message: `Successfully swept & synchronized ${swept.length} ${type === "loan_officer" ? "Loan Officer" : "Real Estate Agent"} recruit(s).`,
+        message: `Successfully synchronized ${swept.length} ${type === "loan_officer" ? "Loan Officer" : "Real Estate Agent"} recruit(s).`,
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to execute recruit sweep & sync" });
@@ -9207,38 +9127,22 @@ Return ONLY valid JSON in this exact structure:
   // POST /api/recruitment/sweep-top50 - Gathers active pipeline + fills gap with organic online sweep
   app.post("/api/recruitment/sweep-top50", async (req, res) => {
     try {
-      const { state = "OR", type = "loan_officer", activeCandidates = [], previousRoster = [], fresh50 = false } = req.body || {};
+      const {
+        state = "OR",
+        type = "loan_officer",
+        activeCandidates = [],
+        previousRoster = [],
+        fresh50 = false,
+        minVolume = 0,
+        minUnits = 0,
+        minBuysideUnits = 0,
+        minBuysideVolume = 0,
+        city = "",
+        company = ""
+      } = req.body || {};
       const targetState = String(state || "OR").toUpperCase().slice(0, 2);
 
-      // City mappings per state
-      const stateCities: Record<string, string[]> = {
-        OR: ["Portland", "Lake Oswego", "Bend", "Eugene", "Salem", "Beaverton", "Clackamas", "Hillsboro", "West Linn", "Medford"],
-        WA: ["Seattle", "Bellevue", "Kirkland", "Spokane", "Tacoma", "Vancouver", "Redmond", "Olympia", "Bellingham", "Issaquah"],
-        CA: ["Los Angeles", "San Diego", "San Francisco", "Irvine", "Sacramento", "San Jose", "Newport Beach", "Pasadena", "Walnut Creek", "Fresno"],
-        ID: ["Boise", "Meridian", "Eagle", "Coeur d'Alene", "Idaho Falls", "Nampa", "Post Falls", "Twin Falls", "Sun Valley"],
-        AZ: ["Phoenix", "Scottsdale", "Chandler", "Gilbert", "Mesa", "Paradise Valley", "Tucson", "Tempe", "Peoria", "Flagstaff"],
-        TX: ["Austin", "Dallas", "Houston", "Fort Worth", "Plano", "Frisco", "San Antonio", "The Woodlands", "Southlake", "Arlington"],
-        CO: ["Denver", "Boulder", "Colorado Springs", "Fort Collins", "Lakewood", "Aurora", "Littleton", "Vail", "Centennial"],
-        NV: ["Las Vegas", "Henderson", "Reno", "Summerlin", "Sparks", "Incline Village", "Carson City"],
-        FL: ["Miami", "Tampa", "Orlando", "Jacksonville", "Naples", "Sarasota", "Fort Lauderdale", "St. Petersburg", "Boca Raton"],
-        UT: ["Salt Lake City", "Park City", "Provo", "Sandy", "St. George", "Draper", "Lehi", "South Jordan"]
-      };
-      const cities = stateCities[targetState] || ["Metro Area", "Central District", "Westside", "North County", "Valley Region"];
-
-      const avatarImages = [
-        "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80"
-      ];
-
-      // 1. Process and format existing active candidates
+      // 1. Process and format existing active candidates without fabrication
       const activeCandidatesProcessed: any[] = [];
       const seenNames = new Set<string>();
 
@@ -9249,38 +9153,49 @@ Return ONLY valid JSON in this exact structure:
           if (seenNames.has(nameLower)) return;
           seenNames.add(nameLower);
 
-          const vol = Number(c.production12MoVolume) || 28000000;
-          const units = Number(c.production12MoUnits) || Math.max(18, Math.round(vol / 500000));
-          const buysidePct = Number(c.buysideSharePct) || 68;
-          const bUnits = Number(c.buysideUnits12Mo) || Math.round(units * (buysidePct / 100));
-          const bVol = Number(c.buysideVolume12Mo) || Math.round(vol * (buysidePct / 100));
-          const lUnits = Math.max(0, units - bUnits);
-          const lVol = Math.max(0, vol - bVol);
-          const city = (c.marketAreas && c.marketAreas[0]) || (c.city) || cities[0];
-          const company = c.company || c.brokerage || (type === "loan_officer" ? "Cornerstone First Mortgage" : "Keller Williams");
+          const vol = c.production12MoVolume != null && !isNaN(Number(c.production12MoVolume)) ? Number(c.production12MoVolume) : null;
+          const units = c.production12MoUnits != null && !isNaN(Number(c.production12MoUnits)) ? Number(c.production12MoUnits) : null;
+          const bShare = c.buysideSharePct != null && !isNaN(Number(c.buysideSharePct)) ? Number(c.buysideSharePct) : null;
+          const bUnits = c.buysideUnits12Mo != null && !isNaN(Number(c.buysideUnits12Mo)) ? Number(c.buysideUnits12Mo) : null;
+          const bVol = c.buysideVolume12Mo != null && !isNaN(Number(c.buysideVolume12Mo)) ? Number(c.buysideVolume12Mo) : null;
+          const lUnits = (units != null && bUnits != null) ? Math.max(0, units - bUnits) : null;
+          const lVol = (vol != null && bVol != null) ? Math.max(0, vol - bVol) : null;
+          const candidateCity = c.city || (c.marketAreas && c.marketAreas[0]) || null;
+          const candidateCompany = c.company || c.brokerage || null;
+          const license = c.nmlsNumber || c.licenseNumber || c.nmlsId || null;
+          const cleanLicense = license ? String(license).trim() : null;
+
+          const nmlsClean = cleanLicense ? cleanLicense.replace(/\D/g, "") : "";
+          const verifyLicenseUrl = type === "loan_officer"
+            ? (nmlsClean ? `https://www.nmlsconsumeraccess.org/EntityDetails.aspx/INDIVIDUAL/${nmlsClean}` : "https://www.nmlsconsumeraccess.org/")
+            : (cleanLicense ? "https://rea.oregon.gov/" : "https://rea.oregon.gov/");
 
           activeCandidatesProcessed.push({
-            id: c.id || `active-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+            id: c.id || `active-${Date.now()}-${activeCandidatesProcessed.length}`,
             name: c.name,
-            title: c.title || (type === "loan_officer" ? "Senior Loan Originator" : "Principal Real Estate Broker"),
-            company,
-            officeLocation: `${city}, ${targetState}`,
-            city,
+            title: c.title || (type === "loan_officer" ? "Mortgage Loan Originator" : "Real Estate Broker"),
+            company: candidateCompany,
+            officeLocation: candidateCity ? `${candidateCity}, ${targetState}` : targetState,
+            city: candidateCity,
             state: targetState,
-            licenseOrNmls: c.nmlsNumber || c.licenseNumber || `NMLS# ${Math.floor(200000 + Math.random() * 800000)}`,
-            email: c.email || `${c.name.toLowerCase().replace(/[^a-z]/g, "")}@${company.toLowerCase().replace(/[^a-z]/g, "")}.com`,
-            phone: c.phone || "(503) 555-0199",
-            headshotUrl: c.headshotUrl || avatarImages[0],
-            yearsExperience: Number(c.yearsExperience || c.experienceYears) || 12,
+            licenseOrNmls: cleanLicense,
+            email: c.email && c.email.includes("@") ? c.email : null,
+            phone: c.phone && !c.phone.includes("555") ? c.phone : null,
+            headshotUrl: c.headshotUrl && c.headshotUrl.startsWith("http") && !c.headshotUrl.includes("images.unsplash.com") ? c.headshotUrl : null,
+            yearsExperience: c.yearsExperience != null ? Number(c.yearsExperience) : (c.experienceYears != null ? Number(c.experienceYears) : null),
             production12MoVolume: vol,
             production12MoUnits: units,
-            buysideSharePct: buysidePct,
+            buysideSharePct: bShare,
             buysideVolume12Mo: bVol,
             buysideUnits12Mo: bUnits,
             listingVolume12Mo: lVol,
             listingUnits12Mo: lUnits,
-            accoladeRank: c.realTrendsRank || (type === "loan_officer" ? "Scotsman Guide Top Producer" : "RealTrends America's Best"),
-            accoladeVerified: true,
+            rank: typeof c.rank === "number" ? c.rank : null,
+            accoladeRank: c.realTrendsRank || c.accoladeRank || (typeof c.rank === "number" ? `#${c.rank}` : null),
+            accoladeVerified: Boolean(c.realTrendsVerified && c.sourceUrl),
+            realTrendsVerified: Boolean(c.realTrendsVerified && c.sourceUrl),
+            sourceUrl: c.sourceUrl || null,
+            verifyLicenseUrl,
             source: "active_pipeline",
             inActivePipeline: true,
             pipelineStatus: c.recruitmentStatus || "Not Contacted",
@@ -9290,10 +9205,10 @@ Return ONLY valid JSON in this exact structure:
         });
       }
 
-      // 2. Live Gemini Grounded Internet Search (Backfill or Fresh 50)
+      // 2. Live Gemini Grounded Internet Search targeting published rankings
       let combined: any[] = [];
       if (!fresh50) {
-         combined = [...activeCandidatesProcessed];
+        combined = [...activeCandidatesProcessed];
       }
 
       const totalNeeded = fresh50 ? 50 : Math.max(0, 50 - combined.length);
@@ -9302,32 +9217,68 @@ Return ONLY valid JSON in this exact structure:
       if (totalNeeded > 0 && process.env.GEMINI_API_KEY) {
         try {
           const ai = getGeminiClient();
-          const prompt = `You are an elite live mortgage & real estate recruiting research analyst.
-Use Google Search to find exactly ${Math.min(totalNeeded, 50)} real, active, licensed ${type === "loan_officer" ? "Mortgage Loan Officers" : "Real Estate Agents / Realtors"} in ${targetState}.
-Focus heavily on top producers ranked by closed buyside transactions. Return a JSON array of candidates. Each MUST have:
+
+          // Build filter constraints into prompt
+          const constraints: string[] = [];
+          if (minVolume > 0) constraints.push(`only include candidates with 12-month volume above $${(minVolume / 1000000).toFixed(1)}M`);
+          if (minUnits > 0) constraints.push(`only include candidates with 12-month closed units above ${minUnits}`);
+          if (minBuysideUnits > 0) constraints.push(`only include candidates with 12-month buy-side closed units above ${minBuysideUnits}`);
+          if (minBuysideVolume > 0) constraints.push(`only include candidates with 12-month buy-side volume above $${(minBuysideVolume / 1000000).toFixed(1)}M`);
+          if (city.trim()) constraints.push(`in city ${city.trim()}`);
+          if (company.trim()) constraints.push(`at brokerage or company ${company.trim()}`);
+
+          const constraintsText = constraints.length > 0 ? `\nCONSTRAINTS: ${constraints.join("; ")}.` : "";
+
+          const prompt = type === "loan_officer"
+            ? `You are an honest mortgage recruiting research analyst.
+Extract the Oregon mortgage loan officers from the published Scotsman Guide Top Originators or RealTrends America's Best rankings.${constraintsText}
+Return ONLY fields actually found in search results. Every candidate MUST include sourceUrl (the direct webpage URL where found). Missing fields return null — NEVER backfill, estimate, or invent data. No fabricated license numbers, emails, phone numbers, headshots, or volume numbers.
+
+Return a valid JSON array of up to ${Math.min(totalNeeded, 50)} candidates. Format each object:
 {
-  "name": "Real Full Name",
-  "title": "Real Professional Title",
-  "company": "Real Company or Brokerage",
-  "${type === "loan_officer" ? "nmlsId" : "licenseNumber"}": "Real NMLS ID or state license number",
-  "city": "City",
+  "name": "Full Name",
+  "rank": number or null (official published ranking integer e.g. 1 to 50, only if source explicitly confirms it, else null),
+  "title": "Professional Title or null",
+  "company": "Mortgage Lender / Company name or null",
+  "city": "City or null",
   "state": "${targetState}",
-  "email": "Real contact or professional email",
-  "phone": "Real business phone",
-  "websiteUrl": "Real profile or website URL",
-  "sourceUrl": "Direct grounded web URL where found",
-  "yearsExperience": number,
-  "production12MoVolume": number (number, e.g. 45000000 for $45M),
-  "production12MoUnits": number (number, e.g. 85),
-  "buysideUnits12Mo": number (buyer side closed transactions),
-  "buysideVolume12Mo": number (buyer side closed dollar volume),
-  "buysideSharePct": number (e.g. 68 for 68% buyer side),
-  "specialties": ["Specialty 1", "Specialty 2"],
-  "bio": "Brief accurate professional summary",
-  "realTrendsRank": "Accolade or rank string",
-  "realTrendsVerified": true
+  "nmlsId": "NMLS ID string or null",
+  "email": "Email address or null",
+  "phone": "Phone number or null",
+  "yearsExperience": number or null,
+  "production12MoVolume": number or null (dollar volume e.g. 42000000, only if stated in source, else null),
+  "production12MoUnits": number or null (closed units count, only if stated in source, else null),
+  "sourceUrl": "Direct URL of the page where the ranking was published",
+  "accoladeRank": "Official accolade string or null (e.g. 'Scotsman Guide Top Originator #14' if stated, else null)",
+  "realTrendsVerified": true/false (true ONLY if confirmed by published Scotsman Guide or RealTrends source)
 }
-Output strictly valid JSON (an array of objects). Limit response strictly to JSON. Search deeply and find as many as you can, up to ${Math.min(totalNeeded, 50)}.`;
+Output strictly valid JSON (an array of objects).`
+            : `You are an honest real estate recruiting research analyst.
+Extract the Oregon real estate agents from the published RealTrends America's Best rankings.${constraintsText}
+Return ONLY fields actually found in search results. Every candidate MUST include sourceUrl (the direct webpage URL where found). Missing fields return null — NEVER backfill, estimate, or invent data. No fabricated license numbers, emails, phone numbers, headshots, or production volumes.
+
+Return a valid JSON array of up to ${Math.min(totalNeeded, 50)} candidates. Format each object:
+{
+  "name": "Full Name",
+  "rank": number or null (official published RealTrends ranking integer e.g. 1 to 50, only if source confirms it, else null),
+  "title": "Professional Title or null",
+  "company": "Brokerage name or null",
+  "city": "City or null",
+  "state": "${targetState}",
+  "licenseNumber": "State license string or null",
+  "email": "Email address or null",
+  "phone": "Phone number or null",
+  "yearsExperience": number or null,
+  "production12MoVolume": number or null (dollar volume e.g. 28000000, only if stated in source, else null),
+  "production12MoUnits": number or null (closed transaction sides, only if stated in source, else null),
+  "buysideUnits12Mo": number or null,
+  "buysideVolume12Mo": number or null,
+  "buysideSharePct": number or null,
+  "sourceUrl": "Direct URL of the page where the ranking was published",
+  "accoladeRank": "Official accolade string or null (e.g. 'RealTrends America's Best #8' if stated, else null)",
+  "realTrendsVerified": true/false (true ONLY if confirmed by published RealTrends source)
+}
+Output strictly valid JSON (an array of objects).`;
 
           const response = await ai!.models.generateContent({
             model: "gemini-2.5-flash",
@@ -9337,51 +9288,120 @@ Output strictly valid JSON (an array of objects). Limit response strictly to JSO
               temperature: 0.1
             }
           });
-          
+
           const responseText = response.text || "";
           const jsonMatch = responseText.match(/\[\s*\{[\s\S]*\}\s*\]/);
-          
+
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
             parsed.forEach((c: any, idx: number) => {
               if (c && c.name && !seenNames.has(c.name.toLowerCase().trim())) {
                 seenNames.add(c.name.toLowerCase().trim());
-                const vol = Number(c.production12MoVolume) || (18500000 + Math.random() * 5000000);
-                const units = Number(c.production12MoUnits) || 34;
-                const bShare = Number(c.buysideSharePct) || 68;
-                const bUnits = Number(c.buysideUnits12Mo) || Math.round(units * (bShare / 100));
-                const bVol = Number(c.buysideVolume12Mo) || Math.round(vol * (bShare / 100));
-                
-                organicCandidates.push({
-                  id: `top50-sweep-${targetState}-${type}-${Date.now()}-${idx}`,
-                  name: c.name,
-                  title: c.title || (type === "loan_officer" ? "Senior Loan Officer" : "Real Estate Broker"),
-                  company: c.company || "Brokerage",
-                  officeLocation: `${c.city || cities[0]}, ${targetState}`,
-                  city: c.city || cities[0],
-                  state: targetState,
-                  licenseOrNmls: c.nmlsId || c.licenseNumber || `Lic# ${Math.floor(180000 + Math.random() * 500000)}`,
-                  email: c.email || `${c.name.toLowerCase().replace(/[^a-z]/g, "")}@${(c.company || "test").toLowerCase().replace(/[^a-z]/g, "")}.com`,
-                  phone: c.phone || "(503) 555-0199",
-                  headshotUrl: avatarImages[idx % avatarImages.length],
-                  yearsExperience: Number(c.yearsExperience) || 6,
-                  production12MoVolume: vol,
-                  production12MoUnits: units,
-                  buysideSharePct: bShare,
-                  buysideVolume12Mo: bVol,
-                  buysideUnits12Mo: bUnits,
-                  listingVolume12Mo: Math.max(0, vol - bVol),
-                  listingUnits12Mo: Math.max(0, units - bUnits),
-                  accoladeRank: c.realTrendsRank || (type === "loan_officer" ? "Scotsman Guide Top Originator" : "RealTrends America's Best"),
-                  accoladeVerified: true,
-                  source: "organic_web_sweep",
-                  inActivePipeline: false,
-                  candidateType: type,
-                  lastSweptAt: new Date().toISOString(),
-                  websiteUrl: c.websiteUrl,
-                  sourceUrl: c.sourceUrl,
-                  isLiveGrounded: true
-                });
+
+                // Post-filter applies ONLY to fields returned non-null; null fields mark candidate "unverified for this criterion", never silently dropped
+                let dropped = false;
+                let volumeUnverified = false;
+                let unitsUnverified = false;
+                let buysideUnitsUnverified = false;
+                let buysideVolumeUnverified = false;
+
+                const vol = c.production12MoVolume != null && !isNaN(Number(c.production12MoVolume)) ? Number(c.production12MoVolume) : null;
+                const units = c.production12MoUnits != null && !isNaN(Number(c.production12MoUnits)) ? Number(c.production12MoUnits) : null;
+                const bUnits = c.buysideUnits12Mo != null && !isNaN(Number(c.buysideUnits12Mo)) ? Number(c.buysideUnits12Mo) : null;
+                const bVol = c.buysideVolume12Mo != null && !isNaN(Number(c.buysideVolume12Mo)) ? Number(c.buysideVolume12Mo) : null;
+
+                if (minVolume > 0) {
+                  if (vol !== null) {
+                    if (vol < minVolume) dropped = true;
+                  } else {
+                    volumeUnverified = true;
+                  }
+                }
+
+                if (minUnits > 0) {
+                  if (units !== null) {
+                    if (units < minUnits) dropped = true;
+                  } else {
+                    unitsUnverified = true;
+                  }
+                }
+
+                if (minBuysideUnits > 0) {
+                  if (bUnits !== null) {
+                    if (bUnits < minBuysideUnits) dropped = true;
+                  } else {
+                    buysideUnitsUnverified = true;
+                  }
+                }
+
+                if (minBuysideVolume > 0) {
+                  if (bVol !== null) {
+                    if (bVol < minBuysideVolume) dropped = true;
+                  } else {
+                    buysideVolumeUnverified = true;
+                  }
+                }
+
+                if (city.trim() && c.city) {
+                  if (!c.city.toLowerCase().includes(city.trim().toLowerCase())) {
+                    dropped = true;
+                  }
+                }
+
+                if (company.trim() && c.company) {
+                  if (!c.company.toLowerCase().includes(company.trim().toLowerCase())) {
+                    dropped = true;
+                  }
+                }
+
+                if (!dropped) {
+                  const license = c.licenseNumber || c.nmlsId || c.licenseOrNmls || null;
+                  const cleanLicense = license ? String(license).trim() : null;
+                  const nmlsClean = cleanLicense ? cleanLicense.replace(/\D/g, "") : "";
+                  const verifyLicenseUrl = type === "loan_officer"
+                    ? (nmlsClean ? `https://www.nmlsconsumeraccess.org/EntityDetails.aspx/INDIVIDUAL/${nmlsClean}` : "https://www.nmlsconsumeraccess.org/")
+                    : (cleanLicense ? "https://rea.oregon.gov/" : "https://rea.oregon.gov/");
+
+                  const confirmedRank = typeof c.rank === "number" ? c.rank : null;
+                  const isVerifiedBySource = Boolean(c.sourceUrl && (c.realTrendsVerified || confirmedRank !== null));
+
+                  organicCandidates.push({
+                    id: `top50-sweep-${targetState}-${type}-${Date.now()}-${idx}`,
+                    name: c.name,
+                    title: c.title || (type === "loan_officer" ? "Mortgage Loan Originator" : "Real Estate Broker"),
+                    company: c.company || null,
+                    officeLocation: c.city ? `${c.city}, ${targetState}` : targetState,
+                    city: c.city || null,
+                    state: targetState,
+                    licenseOrNmls: cleanLicense,
+                    email: c.email && c.email.includes("@") ? c.email : null,
+                    phone: c.phone && !c.phone.includes("555") ? c.phone : null,
+                    headshotUrl: null, // Guardrail: Initials avatar until real headshot provided; never stranger stock photo
+                    yearsExperience: c.yearsExperience != null ? Number(c.yearsExperience) : null,
+                    production12MoVolume: vol,
+                    production12MoUnits: units,
+                    buysideSharePct: c.buysideSharePct != null ? Number(c.buysideSharePct) : null,
+                    buysideVolume12Mo: bVol,
+                    buysideUnits12Mo: bUnits,
+                    listingVolume12Mo: (vol != null && bVol != null) ? Math.max(0, vol - bVol) : null,
+                    listingUnits12Mo: (units != null && bUnits != null) ? Math.max(0, units - bUnits) : null,
+                    rank: confirmedRank,
+                    accoladeRank: c.accoladeRank || (confirmedRank ? (type === "loan_officer" ? `Scotsman Guide Top Originator #${confirmedRank}` : `RealTrends America's Best #${confirmedRank}`) : null),
+                    accoladeVerified: isVerifiedBySource,
+                    realTrendsVerified: isVerifiedBySource,
+                    sourceUrl: c.sourceUrl || "https://www.realtrends.com/americas-best/",
+                    verifyLicenseUrl,
+                    source: "organic_web_sweep",
+                    inActivePipeline: false,
+                    candidateType: type,
+                    lastSweptAt: new Date().toISOString(),
+                    isLiveGrounded: true,
+                    volumeUnverified,
+                    unitsUnverified,
+                    buysideUnitsUnverified,
+                    buysideVolumeUnverified
+                  });
+                }
               }
             });
           }
@@ -9392,42 +9412,40 @@ Output strictly valid JSON (an array of objects). Limit response strictly to JSO
 
       // Merge handling based on fresh50 flag
       if (fresh50) {
-        // If Fresh 50, update any existing active candidates that share a name
         organicCandidates.forEach(oc => {
-           const existing = activeCandidatesProcessed.find(ac => ac.name.toLowerCase() === oc.name.toLowerCase());
-           if (existing) {
-              oc.id = existing.id; // Keep existing profile card pairing
-              oc.inActivePipeline = existing.inActivePipeline;
-              oc.pipelineStatus = existing.pipelineStatus;
-              oc.source = "active_pipeline_updated";
-           }
+          const existing = activeCandidatesProcessed.find(ac => ac.name.toLowerCase() === oc.name.toLowerCase());
+          if (existing) {
+            oc.id = existing.id;
+            oc.inActivePipeline = existing.inActivePipeline;
+            oc.pipelineStatus = existing.pipelineStatus;
+            oc.source = "active_pipeline_updated";
+          }
         });
         combined = [...organicCandidates];
-        
-        // Ensure we hit exactly up to 50 if Gemini fell short by appending active candidates
-        if (combined.length < 50) {
-            for (const ac of activeCandidatesProcessed) {
-                if (!combined.find(c => c.id === ac.id)) {
-                    combined.push(ac);
-                }
-                if (combined.length >= 50) break;
-            }
+
+        for (const ac of activeCandidatesProcessed) {
+          if (!combined.find(c => c.id === ac.id)) {
+            combined.push(ac);
+          }
+          if (combined.length >= 50) break;
         }
       } else {
         combined = [...combined, ...organicCandidates];
       }
 
-      // 3. Strict Sort by Buyside Units Descending
-      combined.sort((a, b) => b.buysideUnits12Mo - a.buysideUnits12Mo);
+      // 3. Sort: Verified ranks 1-50 first, then by non-null volume/units, unranked last
+      combined.sort((a, b) => {
+        if (a.rank != null && b.rank != null) return a.rank - b.rank;
+        if (a.rank != null) return -1;
+        if (b.rank != null) return 1;
+        if (a.production12MoVolume != null && b.production12MoVolume != null) return b.production12MoVolume - a.production12MoVolume;
+        if (a.production12MoVolume != null) return -1;
+        if (b.production12MoVolume != null) return 1;
+        return a.name.localeCompare(b.name);
+      });
 
-      // 4. Slice to top 50 and assign official Ranks
-      const top50 = combined.slice(0, 50).map((cand, idx) => {
-        const rank = idx + 1;
-        const refinedAccolade = cand.candidateType === "loan_officer"
-          ? `Scotsman Guide Top Originator #${rank} (${targetState})`
-          : `RealTrends America's Best #${rank} (${targetState})`;
-
-        // Determine movement vs previous week's sweep
+      // 4. Map candidates to final response carrying only honest verified ranks
+      const top50 = combined.slice(0, 50).map((cand) => {
         let previousRank: number | undefined = undefined;
         let rankDelta = 0;
         let isNewEntry = false;
@@ -9437,39 +9455,20 @@ Output strictly valid JSON (an array of objects). Limit response strictly to JSO
             (p.name && p.name.toLowerCase().trim() === cand.name.toLowerCase().trim()) ||
             (p.id && p.id === cand.id)
           );
-          if (match && typeof match.rank === "number") {
+          if (match && typeof match.rank === "number" && typeof cand.rank === "number") {
             previousRank = match.rank;
-            rankDelta = previousRank - rank;
+            rankDelta = previousRank - cand.rank;
             isNewEntry = false;
-          } else {
+          } else if (!match) {
             isNewEntry = true;
-          }
-        } else {
-          // Deterministic simulated previous week rank based on candidate signature
-          const charCodeSum = (cand.name + targetState + (cand.company || "")).split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-          const shiftPatterns = [1, -1, 2, 0, -2, 3, 0, -1, 1, 0, -3, 2, 0, 4, -2];
-          const shift = shiftPatterns[charCodeSum % shiftPatterns.length];
-
-          if (rank >= 46 && (charCodeSum % 3 === 0)) {
-            isNewEntry = true;
-            previousRank = undefined;
-            rankDelta = 0;
-          } else {
-            let pRank = rank + shift;
-            if (pRank < 1) pRank = 1;
-            if (pRank > 52) pRank = 50;
-            previousRank = pRank;
-            rankDelta = previousRank - rank;
           }
         }
 
         return {
           ...cand,
-          rank,
           previousRank,
           rankDelta,
           isNewEntry,
-          accoladeRank: refinedAccolade
         };
       });
 

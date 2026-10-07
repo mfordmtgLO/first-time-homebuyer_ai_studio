@@ -17,7 +17,7 @@ export interface EngagementBreakdown {
  * Computes a weighted 0-100 engagement score for a lead based on real-time interaction frequency.
  */
 export function computeLeadEngagement(lead: CapturedLead): EngagementBreakdown {
-  const savedPropertiesCount = (lead.curatedPropertyIds?.length || 0) + (lead.spatialProfile?.pinnedPropertyIds?.length || 0);
+  const savedPropertiesCount = (lead.curatedPropertyIds?.length || 0) + ((lead.spatialProfile as any)?.pinnedPropertyIds?.length || 0);
   const calculatorRunsCount = lead.savedScenarios?.length || 0;
   // Estimate document downloads or guides viewed based on metadata or lead path
   const documentDownloadsCount = lead.leadPathTag?.includes("download") || lead.interactedSourceType === 'flyer' ? 2 : (savedPropertiesCount > 0 ? 1 : 0);

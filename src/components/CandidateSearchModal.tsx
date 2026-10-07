@@ -306,11 +306,18 @@ export const CandidateSearchModal: React.FC<CandidateSearchModalProps> = ({ onCl
                   
                   {/* Candidate Info */}
                   <div className="flex-1 min-w-0 flex items-start gap-4">
-                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center text-xl font-bold text-gray-400 shrink-0 border border-gray-200 overflow-hidden shadow-inner">
-                      {result.headshotUrl ? (
+                    <div className="w-14 h-14 bg-gradient-to-br from-emerald-100 to-amber-100 rounded-2xl flex items-center justify-center text-lg font-black text-[#2D362E] shrink-0 border border-[#EAE7E0] overflow-hidden shadow-2xs">
+                      {result.headshotUrl && result.headshotUrl.startsWith('http') ? (
                         <img src={result.headshotUrl} alt={result.name} className="w-full h-full object-cover" />
                       ) : (
-                        result.name.charAt(0)
+                        <span>
+                          {result.name
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </span>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -322,11 +329,16 @@ export const CandidateSearchModal: React.FC<CandidateSearchModalProps> = ({ onCl
                             Live Verified
                           </span>
                         )}
+                        {typeof result.rank === "number" && (
+                          <span className="text-[10px] font-black bg-amber-400 text-amber-950 px-2 py-0.5 rounded-full border border-amber-300">
+                            Rank #{result.rank}
+                          </span>
+                        )}
                       </div>
                       
                       <p className="text-[#606C5D] text-sm flex items-center gap-1.5 mt-0.5">
                         <Building className="w-3.5 h-3.5 shrink-0" />
-                        <span className="font-semibold text-[#2D362E]">{result.company || result.brokerage}</span>
+                        <span className="font-semibold text-[#2D362E]">{result.company || result.brokerage || "Brokerage / Branch"}</span>
                         {(result.city || city) && ` • ${result.city || city}, ${result.state || stateParam || 'OR'}`}
                       </p>
 
@@ -340,12 +352,18 @@ export const CandidateSearchModal: React.FC<CandidateSearchModalProps> = ({ onCl
                         {result.realTrendsVerified && (
                           <span className="text-[10px] font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1">
                             <Award className="w-3 h-3 text-amber-600" />
-                            {result.realTrendsRank || "Top Producer Verified"}
+                            {result.realTrendsRank || "RealTrends Verified"}
                           </span>
                         )}
-                        <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                          {result.nmlsNumber || result.nmlsId ? `NMLS: ${result.nmlsNumber || result.nmlsId}` : `License: ${result.licenseNumber}`}
-                        </span>
+                        {result.nmlsNumber || result.nmlsId || result.licenseNumber ? (
+                          <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                            {result.nmlsNumber || result.nmlsId ? `NMLS: ${result.nmlsNumber || result.nmlsId}` : `License: ${result.licenseNumber}`}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 italic">
+                            License not verified
+                          </span>
+                        )}
                         {result.sourceUrl && (
                           <a
                             href={result.sourceUrl}
@@ -354,15 +372,24 @@ export const CandidateSearchModal: React.FC<CandidateSearchModalProps> = ({ onCl
                             className="text-[10px] font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded border border-blue-200 flex items-center gap-1 transition-colors"
                           >
                             <ExternalLink className="w-2.5 h-2.5" />
-                            {result.liveSourceDomain || "Verified Source"} ↗
+                            {result.liveSourceDomain || "Source Page"} ↗
                           </a>
                         )}
+                        <a
+                          href={result.verifyLicenseUrl || (type === "lo" ? "https://www.nmlsconsumeraccess.org/" : "https://rea.oregon.gov/")}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1 transition-colors"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          Verify License ({type === "lo" ? "NMLS" : "Oregon REA"}) ↗
+                        </a>
                       </div>
                     </div>
                   </div>
                   
                   {/* Stats & Add Button */}
-                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 border-t md:border-t-0 md:border-l border-[#EAE7E0] pt-4 md:pt-0 md:pl-6 shrink-0 min-w-[190px]">
+                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 border-t md:border-t-0 md:border-l border-[#EAE7E0] pt-4 md:pt-0 md:pl-6 shrink-0 min-w-[210px]">
                     {type === 'agent' ? (
                       <div className="text-left md:text-right space-y-1">
                         <div className="flex items-center gap-1.5 md:justify-end">
@@ -370,27 +397,39 @@ export const CandidateSearchModal: React.FC<CandidateSearchModalProps> = ({ onCl
                             12Mo Buyside
                           </span>
                           <span className="text-[10px] font-bold text-emerald-700 bg-white px-1.5 py-0.5 rounded border border-emerald-200 shadow-2xs">
-                            {result.buysideSharePct || 68}% Buyer
+                            {result.buysideSharePct != null ? `${result.buysideSharePct}% Buyer` : "Share unverified"}
                           </span>
                         </div>
                         <p className="text-xl font-black text-emerald-950 leading-tight">
-                          ${(((result.buysideVolume12Mo || (result.production12MoVolume * 0.68))) / 1000000).toFixed(1)}M
+                          {result.buysideVolume12Mo != null ? (
+                            `$${(result.buysideVolume12Mo / 1000000).toFixed(1)}M`
+                          ) : (
+                            <span className="text-xs text-amber-800 italic font-semibold">Volume unverified</span>
+                          )}
                         </p>
                         <p className="text-xs font-bold text-emerald-800">
-                          {result.buysideUnits12Mo || Math.round(result.production12MoUnits * 0.68)} Buyside Units
+                          {result.buysideUnits12Mo != null ? (
+                            `${result.buysideUnits12Mo} Buyside Units`
+                          ) : (
+                            <span className="text-[11px] text-amber-800 italic font-medium">Buyside units unverified</span>
+                          )}
                         </p>
                         <p className="text-[11px] font-medium text-[#606C5D] pt-1 border-t border-[#EAE7E0]">
-                          Total: ${(result.production12MoVolume / 1000000).toFixed(1)}M • {result.production12MoUnits} Sides
+                          Total: {result.production12MoVolume != null ? `$${(result.production12MoVolume / 1000000).toFixed(1)}M` : "Volume unverified"} • {result.production12MoUnits != null ? `${result.production12MoUnits} Sides` : "Sides unverified"}
                         </p>
                       </div>
                     ) : (
                       <div className="text-left md:text-right">
                         <p className="text-[10px] font-bold text-[#9A9488] uppercase">12Mo Production</p>
                         <p className="text-lg font-black text-[#2D362E]">
-                          ${(result.production12MoVolume / 1000000).toFixed(1)}M
+                          {result.production12MoVolume != null ? (
+                            `$${(result.production12MoVolume / 1000000).toFixed(1)}M`
+                          ) : (
+                            <span className="text-xs text-amber-800 italic font-semibold">Production unverified</span>
+                          )}
                         </p>
                         <p className="text-xs font-medium text-[#606C5D]">
-                          {result.production12MoUnits} Units • {result.experienceYears || result.yearsExperience || 5} Yrs Exp
+                          {result.production12MoUnits != null ? `${result.production12MoUnits} Units` : "Units unverified"} • {result.yearsExperience != null ? `${result.yearsExperience} Yrs Exp` : "Exp unverified"}
                         </p>
                       </div>
                     )}

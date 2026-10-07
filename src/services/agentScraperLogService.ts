@@ -715,7 +715,7 @@ export async function executeLiveAgentScraperRun(
     sourceType = "brokerage_bio";
   }
 
-  const logId = `scrape-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const logId = `scrape-${Date.now()}`;
 
   try {
     const res = await fetch("/api/gemini/scrape-agent-url", {
@@ -852,7 +852,7 @@ export async function executeLiveGeoMapSyncRun(
   actorName: string = "Mike Ford"
 ): Promise<{ success: boolean; log: AgentScraperLogEntry; listingsCount: number }> {
   const startTime = Date.now();
-  const logId = `geomap-sync-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const logId = `geomap-sync-${startTime}`;
   const datasetObj = GEOSPHERE_DATASETS.find((d) => d.id === datasetId) || GEOSPHERE_DATASETS[0];
 
   try {
@@ -984,7 +984,7 @@ export async function executeTop50SweepRun(
   actorName: string = "Mike Ford"
 ): Promise<{ success: boolean; log: AgentScraperLogEntry }> {
   const startTime = Date.now();
-  const logId = `sweep-top50-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const logId = `sweep-top50-${startTime}`;
 
   let title: string;
   let sourceUrl: string;
@@ -1045,7 +1045,7 @@ export async function executeTop50SweepRun(
     ];
   }
 
-  const latencyMs = Date.now() - startTime + Math.floor(Math.random() * 400) + 700;
+  const latencyMs = Math.max(700, Date.now() - startTime);
 
   const logEntry: AgentScraperLogEntry = {
     id: logId,
@@ -1095,9 +1095,9 @@ export async function executeVantageAiImportRun(
   actorName: string = "Mike Ford"
 ): Promise<{ success: boolean; log: AgentScraperLogEntry }> {
   const startTime = Date.now();
-  const logId = `vantage-ai-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const logId = `vantage-ai-${startTime}`;
 
-  const latencyMs = Date.now() - startTime + Math.floor(Math.random() * 300) + 500;
+  const latencyMs = Math.max(500, Date.now() - startTime);
 
   const logEntry: AgentScraperLogEntry = {
     id: logId,

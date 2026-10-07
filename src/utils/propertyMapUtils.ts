@@ -367,6 +367,28 @@ export function calculateHomebuyingReadiness(
   const priceDiff = targetPrice - price;
   const isBudgetFit = price <= targetPrice * 1.1;
 
+  // Monthly payment estimates & HOA calculation
+  const hoa = (property as any).hoaDues || (property as any).hoa || 0;
+  const annualRate = 0.065;
+  const loanPrincipal = price * 0.965;
+  const monthlyRate = annualRate / 12;
+  const n = 360;
+  const piMonthly = Math.round(
+    (loanPrincipal * (monthlyRate * Math.pow(1 + monthlyRate, n))) /
+    (Math.pow(1 + monthlyRate, n) - 1)
+  );
+  const taxesIns = Math.round((price * 0.0125) / 12);
+  const totalMonthly = piMonthly + taxesIns + hoa;
+
+  const targetLoanPrincipal = targetPrice * 0.965;
+  const targetPiMonthly = Math.round(
+    (targetLoanPrincipal * (monthlyRate * Math.pow(1 + monthlyRate, n))) /
+    (Math.pow(1 + monthlyRate, n) - 1)
+  );
+  const targetTaxesIns = Math.round((targetPrice * 0.0125) / 12);
+  const targetTotalMonthly = targetPiMonthly + targetTaxesIns;
+  const savingsVsTarget = Math.max(0, targetTotalMonthly - totalMonthly);
+
   let score = 70; // baseline
   const positiveFactors: string[] = [];
   const cautionFactors: string[] = [];

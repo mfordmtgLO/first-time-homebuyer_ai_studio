@@ -221,22 +221,22 @@ export function buildFthbVantageAdPackage(
   loanOfficer?: LoanOfficerProfile,
   agent?: RealEstateAgentProfile
 ): FthbVantageAdPackage {
-  const currentLo = loanOfficer || {
-    id: "lo-dan-green",
-    name: "Dan Green",
-    company: "Cornerstone First Mortgage",
-    nmls: "NMLS #288455",
-    phone: "(541) 729-0819",
-    email: "mford@cfmtg.com"
+  const currentLo = {
+    id: loanOfficer?.id || "lo-dan-green",
+    name: loanOfficer?.name || "Mike Ford",
+    company: (loanOfficer as any)?.company || "Cornerstone First Mortgage",
+    nmls: (loanOfficer as any)?.nmls || loanOfficer?.nmlsNumber || "NMLS #288455",
+    phone: loanOfficer?.phone || "(541) 729-0819",
+    email: loanOfficer?.email || "mford@cfmtg.com"
   };
 
-  const currentAgent = agent || listing.matchedRosterAgent || {
-    id: "agent-jake-zach",
-    name: "Jake Zach",
-    brokerage: "Hybrid Real Estate",
-    license: "OR RE Lic #201214890",
-    phone: "(541) 555-0188",
-    email: "jake@hybridre.com"
+  const currentAgent = {
+    id: agent?.id || listing.matchedRosterAgent?.id || "agent-jake-zach",
+    name: agent?.name || listing.matchedRosterAgent?.name || "Jake Zach",
+    brokerage: agent?.brokerage || (agent as any)?.company || listing.matchedRosterAgent?.brokerage || "Hybrid Real Estate",
+    license: (agent as any)?.license || agent?.licenseNumber || (listing.matchedRosterAgent as any)?.license || listing.matchedRosterAgent?.licenseNumber || "OR RE Lic #201214890",
+    phone: agent?.phone || listing.matchedRosterAgent?.phone || "(541) 555-0188",
+    email: agent?.email || listing.matchedRosterAgent?.email || "jake@hybridre.com"
   };
 
   const { persistentMoniker, shortTag, financingAngle, downPaymentBadge, grantBadge, programType } = 

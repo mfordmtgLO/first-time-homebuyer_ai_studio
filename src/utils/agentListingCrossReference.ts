@@ -226,8 +226,8 @@ export function generateVantageCoBrandedAdKit(
   const slug = pairing?.customSlug || `${loanOfficer.id.replace('lo-', '')}-and-${agent.customSlug || agent.name.toLowerCase().replace(/\s+/g, '-')}`;
   const coBrandUrl = `https://homebuyer.oregon.gov/${slug}?property=${encodeURIComponent(listing.address)}`;
 
-  const isUsda = Boolean(listing.overlayEligibility?.usdaEligible || listing.isUsdaEligible);
-  const isOhcs = Boolean(listing.overlayEligibility?.firstHomeEligible || listing.isOhcsEligible);
+  const isUsda = Boolean(listing.overlayEligibility?.usdaEligible || (listing as any).isUsdaEligible);
+  const isOhcs = Boolean(listing.overlayEligibility?.firstHomeEligible || (listing as any).isOhcsEligible);
 
   const financingAngle = isUsda
     ? "100% USDA Zero-Down Financing (No Down Payment Required)"

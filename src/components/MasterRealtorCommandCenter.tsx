@@ -619,12 +619,23 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
                   <div className="space-y-4">
                     {/* Header with Badges */}
                     <div className="flex items-start gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-[#F4F1EA] overflow-hidden shrink-0 border border-[#EAE7E0] shadow-2xs">
-                        <img
-                          src={agent.headshotUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256"}
-                          alt={agent.name}
-                          className="w-full h-full object-cover"
-                        />
+                      <div className="w-14 h-14 rounded-2xl bg-[#F4F1EA] overflow-hidden shrink-0 border border-[#EAE7E0] shadow-2xs flex items-center justify-center font-black text-lg text-[#2D362E]">
+                        {agent.headshotUrl && agent.headshotUrl.startsWith("http") ? (
+                          <img
+                            src={agent.headshotUrl}
+                            alt={agent.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span>
+                            {agent.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -640,16 +651,16 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
                         <p className="text-xs text-[#606C5D] font-medium truncate">{agent.title}</p>
                         <p className="text-xs text-[#9E6D43] font-semibold truncate flex items-center gap-1 mt-0.5">
                           <Building2 className="w-3.5 h-3.5 shrink-0" />
-                          <span>{agent.company || agent.brokerage}</span>
+                          <span>{agent.company || agent.brokerage || "Brokerage not verified"}</span>
                         </p>
                       </div>
                     </div>
 
                     {/* Status Badges Bar */}
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {agent.isTop50 && (
+                      {agent.isTop50 && agent.top50Rank && (
                         <span className="text-[10px] font-extrabold bg-amber-400 text-amber-950 px-2 py-0.5 rounded-full border border-amber-300 flex items-center gap-1 shadow-2xs">
-                          🏆 Top 50 State Recruit {agent.top50Rank ? `(#${agent.top50Rank})` : ""}
+                          🏆 Top 50 State Recruit (#{agent.top50Rank})
                         </span>
                       )}
 
@@ -668,15 +679,15 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
                     <div className="bg-[#FAF9F5] p-3 rounded-2xl border border-[#EAE7E0] space-y-1.5 text-xs text-[#606C5D]">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold text-[#7D8877] uppercase">License #:</span>
-                        <span className="font-bold text-[#2D362E]">{agent.licenseNumber || "OR Broker"}</span>
+                        <span className="font-bold text-[#2D362E]">{agent.licenseNumber || <span className="text-amber-800 italic font-semibold">Not verified</span>}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold text-[#7D8877] uppercase">Email:</span>
-                        <span className="truncate max-w-[180px] font-medium text-[#2D362E]">{agent.email}</span>
+                        <span className="truncate max-w-[180px] font-medium text-[#2D362E]">{agent.email || <span className="text-amber-800 italic font-medium">Not verified</span>}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold text-[#7D8877] uppercase">Phone:</span>
-                        <span className="font-medium text-[#2D362E]">{agent.phone || "(503) 555-0199"}</span>
+                        <span className="font-medium text-[#2D362E]">{agent.phone || <span className="text-amber-800 italic font-medium">Not verified</span>}</span>
                       </div>
                     </div>
 
@@ -684,16 +695,16 @@ export const MasterRealtorCommandCenter: React.FC<MasterRealtorCommandCenterProp
                     <div className="grid grid-cols-3 gap-2 bg-[#F4F1EA]/60 p-2.5 rounded-2xl text-center border border-[#EAE7E0]">
                       <div>
                         <div className="text-[9px] font-bold text-[#7D8877] uppercase">Experience</div>
-                        <div className="text-xs font-bold text-[#2D362E]">{agent.yearsExperience || 8} Yrs</div>
+                        <div className="text-xs font-bold text-[#2D362E]">{agent.yearsExperience != null ? `${agent.yearsExperience} Yrs` : (agent.experienceYears != null ? `${agent.experienceYears} Yrs` : <span className="text-amber-800 italic">Unverified</span>)}</div>
                       </div>
                       <div>
                         <div className="text-[9px] font-bold text-[#7D8877] uppercase">12mo Units</div>
-                        <div className="text-xs font-bold text-emerald-700">{agent.production12MoUnits || 38}</div>
+                        <div className="text-xs font-bold text-emerald-700">{agent.production12MoUnits != null ? agent.production12MoUnits : <span className="text-amber-800 italic">Not verified</span>}</div>
                       </div>
                       <div>
                         <div className="text-[9px] font-bold text-[#7D8877] uppercase">12mo Vol</div>
                         <div className="text-xs font-bold text-emerald-700">
-                          ${((agent.production12MoVolume || 21500000) / 1000000).toFixed(1)}M
+                          {agent.production12MoVolume != null ? `$${(agent.production12MoVolume / 1000000).toFixed(1)}M` : <span className="text-amber-800 italic">Not verified</span>}
                         </div>
                       </div>
                     </div>

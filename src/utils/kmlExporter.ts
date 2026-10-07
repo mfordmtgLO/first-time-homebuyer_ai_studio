@@ -24,7 +24,7 @@ export function generateKML(properties: PropertyListing[]): string {
     kmlContent += `        <b>Tour Grade:</b> ${(p as any).tourGrade || 'B+'}<br/>\n`;
     kmlContent += `        <hr/>\n`;
     kmlContent += `        <b>Co-Branded Contact:</b><br/>\n`;
-    kmlContent += `        • Loan Officer: Mike Ford (fordmj@gmail.com / 555-0199)<br/>\n`;
+    kmlContent += `        • Loan Officer: Mike Ford (fordmj@gmail.com / (541) 729-0819)<br/>\n`;
     kmlContent += `        • Real Estate Agent: Kanndice McLean<br/>\n`;
     kmlContent += `        <br/>\n`;
     kmlContent += `        <i>For more information on low or no down payment mortgage products matched for high confidence eligible areas, call Mike Ford. To get a personalized home search profile, reach out to Kanndice McLean.</i>\n`;

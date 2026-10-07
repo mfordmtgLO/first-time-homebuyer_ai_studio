@@ -688,9 +688,9 @@ export function matchMarketNewsSpotlightListings(
           isSpotlightAgent: true,
           name: agent.name,
           role: "Primary Contact • Listing Agent of Record",
-          phone: agent.phone || "(503) 555-0144",
+          phone: agent.phone || "",
           email: agent.email || "",
-          brokerage: agent.brokerage || "Cascade Valley Real Estate",
+          brokerage: agent.brokerage || (agent as any).company || "",
           licenseNumber: agent.licenseNumber,
           avatarUrl: agent.headshotUrl
         }
@@ -698,9 +698,9 @@ export function matchMarketNewsSpotlightListings(
           isSpotlightAgent: false,
           name: agent.name,
           role: "Buyer Brokerage Representation",
-          phone: agent.phone || "(503) 555-0144",
+          phone: agent.phone || "",
           email: agent.email || "",
-          brokerage: agent.brokerage || "Cascade Valley Real Estate",
+          brokerage: agent.brokerage || (agent as any).company || "",
           licenseNumber: agent.licenseNumber,
           avatarUrl: agent.headshotUrl
         };

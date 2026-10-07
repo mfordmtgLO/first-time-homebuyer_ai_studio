@@ -319,57 +319,12 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
       if (res && !res.ok) {
         const data = await res.json().catch(() => ({}));
         if (data && data.error) {
+          const isDormant = data.error === "twilio_dormant";
           setTestResult({
             success: false,
-            message: data.error + (data.code ? ` (Twilio Code: ${data.code})` : ""),
-          });
-          return;
-        }
-      }
-
-      // Client-side Direct Twilio REST Fallback
-      if (config.accountSid && config.authToken && config.phoneNumber) {
-        const cleanTo = testPhoneNumber.replace(/[^0-9+]/g, "");
-        const formattedTo = cleanTo.startsWith("+")
-          ? cleanTo
-          : cleanTo.length === 10
-            ? `+1${cleanTo}`
-            : `+${cleanTo}`;
-
-        const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(
-          config.accountSid
-        )}/Messages.json`;
-        const authHeader = "Basic " + btoa(`${config.accountSid}:${config.authToken}`);
-        const formParams = new URLSearchParams();
-        formParams.append("To", formattedTo);
-        formParams.append("From", config.phoneNumber);
-        formParams.append("Body", testMessageText);
-
-        const clientTwilioRes = await fetch(twilioEndpoint, {
-          method: "POST",
-          headers: {
-            Authorization: authHeader,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: formParams.toString(),
-        });
-
-        const clientTwilioData = await clientTwilioRes.json().catch(() => ({}));
-
-        if (clientTwilioRes.ok) {
-          setTestResult({
-            success: true,
-            message: `Test SMS dispatched directly via Twilio to ${formattedTo}! Status: ${clientTwilioData.status || "queued"}`,
-            sid: clientTwilioData.sid,
-          });
-          return;
-        } else {
-          setTestResult({
-            success: false,
-            message:
-              clientTwilioData.message ||
-              clientTwilioData.detail ||
-              `Twilio Error HTTP ${clientTwilioRes.status}`,
+            message: isDormant
+              ? "Twilio is dormant in this environment. In-app property notes are the active communication channel."
+              : data.error + (data.code ? ` (Twilio Code: ${data.code})` : ""),
           });
           return;
         }
@@ -377,7 +332,7 @@ export const TwilioSettingsModal: React.FC<TwilioSettingsModalProps> = ({
 
       setTestResult({
         success: false,
-        message: "Please ensure your Twilio Account SID, Auth Token, and Sender Number are provided.",
+        message: "Unable to reach SMS gateway or Twilio is currently dormant.",
       });
     } catch (err: any) {
       setTestResult({

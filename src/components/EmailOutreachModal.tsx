@@ -599,7 +599,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
           agentNames: targetAgentNames.length > 0 ? targetAgentNames : ["Top Buyer Agent"],
           properties: properties,
           loName: "Mike Ford",
-          loPhone: "555-0199",
+          loPhone: "(541) 729-0819",
           loEmail: "fordmj@gmail.com",
           campaignType: "Attract Buyer Agents - Stop Renting Zero Down & Flex DPA Push",
         }),
@@ -888,9 +888,9 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
     // Resolve Loan Officer details
     const activeLo = loanOfficers?.[0] || INITIAL_TEAM_LOAN_OFFICERS[0];
-    const loName = activeLo?.name || "Mike Ford";
-    const rawNmls = activeLo?.nmlsId ? activeLo.nmlsId.replace(/[^0-9]/g, "") : "288455";
-    const loNmls = rawNmls || "288455";
+    const loName = activeLo?.name || "Licensed Loan Officer";
+    const rawNmls = activeLo?.nmlsId ? activeLo.nmlsId.replace(/[^0-9]/g, "") : (activeLo?.nmlsNumber ? activeLo.nmlsNumber.replace(/[^0-9]/g, "") : "");
+    const loNmls = rawNmls || "";
 
     // Replace lead or agent placeholders
     if (recipientTab === "website_leads" && selectedLeadId) {
@@ -923,7 +923,7 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
     text = text.replace(/\[LoName\]/g, loName);
     text = text.replace(/\[LoNMLS\]/g, loNmls);
-    text = text.replace(/\[MyName\]/g, `${loName} (Senior Loan Officer, NMLS #${loNmls})`);
+    text = text.replace(/\[MyName\]/g, loNmls ? `${loName} (Senior Loan Officer, NMLS #${loNmls})` : `${loName} (Senior Loan Officer)`);
 
     const targetProperties: PropertyListing[] = [];
     selectedAgentEmails.forEach((email) => {

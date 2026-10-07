@@ -49,13 +49,43 @@ export function generateScenarioDrafts({
   draftRealtorEmailBody: string;
 } {
   const firstName = (lead?.fullName || "there").split(" ")[0] || "there";
-  const loName = loanOfficer?.name || "Mike Ford";
-  const loNmls = loanOfficer?.nmlsId || "NMLS #288455";
-  const loPhone = loanOfficer?.phone || "(541) 729-0819";
-  const loCompany = loanOfficer?.company || "Cornerstone First Mortgage";
-  const agentName = agent?.name || lead.assignedAgent || "Sarah Jenkins";
-  const agentBrokerage = agent?.brokerage || "Cascade Valley Real Estate";
-  const agentPhone = agent?.phone || "(503) 555-0144";
+  const loName = loanOfficer?.name || "Your Mortgage Loan Officer";
+  const loNmls = loanOfficer?.nmlsId ? (loanOfficer.nmlsId.startsWith("NMLS") ? loanOfficer.nmlsId : `NMLS #${loanOfficer.nmlsId}`) : (loanOfficer?.nmlsNumber ? `NMLS #${loanOfficer.nmlsNumber}` : "");
+  const loPhone = loanOfficer?.phone || "";
+  const loCompany = loanOfficer?.company || "";
+  const agentName = agent?.name || lead.assignedAgent || "";
+  const agentBrokerage = agent?.brokerage || (agent as any)?.company || "";
+  const agentPhone = agent?.phone || "";
+
+  const loSignLines: string[] = [loName];
+  const loTitleParts = ["Senior Loan Officer", loNmls].filter(Boolean).join(" | ");
+  if (loTitleParts) loSignLines.push(loTitleParts);
+  if (loCompany) loSignLines.push(loCompany);
+  if (loPhone) loSignLines.push(`📞 ${loPhone}`);
+  const loSignBlock = loSignLines.join("\n");
+
+  const agentSignLines: string[] = [];
+  if (agentName) {
+    agentSignLines.push(agentName);
+    agentSignLines.push("Senior Real Estate Specialist");
+    if (agentBrokerage) agentSignLines.push(agentBrokerage);
+    if (agentPhone) agentSignLines.push(`📞 ${agentPhone}`);
+  }
+  const agentSignBlock = agentSignLines.join("\n");
+
+  const advisorySupportText = (() => {
+    const parts: string[] = [];
+    if (loName) {
+      const loDetails = [loNmls, loCompany].filter(Boolean).join(" - ");
+      parts.push(`${loName}${loDetails ? ` (${loDetails})` : ""}`);
+    }
+    if (agentName) {
+      const agDetails = [agentBrokerage, agentPhone ? `Phone: ${agentPhone}` : ""].filter(Boolean).join(", ");
+      parts.push(`${agentName}${agDetails ? ` (${agDetails})` : ""}`);
+    }
+    if (parts.length === 0) return "Our mortgage team is here to guide you every step of the way.";
+    return `${parts.join(" and ")} are here to guide you every step of the way. We can test additional purchase price bands, explore Oregon Down Payment Assistance (DPA) state grants, or structure seller concession rate buydowns before touring properties.`;
+  })();
 
   const downPct = Math.round((profile.downPaymentSavings / Math.max(1, profile.targetPrice)) * 100 * 10) / 10;
   const formattedPrice = formatUSD(profile.targetPrice);
@@ -98,26 +128,22 @@ ${closingCosts ? `• Estimated Closing Costs & Prepaids: ${formatUSD(closingCos
 ${breakdown.hoa > 0 ? `• HOA Dues: ${formattedHoa}/mo\n` : ""}• TOTAL ESTIMATED MONTHLY INVESTMENT: ${formattedPITI}/mo
 ${acceleratorSection}
 🎯 CO-BRANDED ADVISORY SUPPORT:
-${loName} (${loNmls} - ${loCompany}) and ${agentName} (${agentBrokerage}, Phone: ${agentPhone}) are here to guide you every step of the way. We can test additional purchase price bands, explore Oregon Down Payment Assistance (DPA) state grants, or structure seller concession rate buydowns before touring properties.
+${advisorySupportText}
 
 Let's connect for 10 minutes to review these numbers or make any adjustments to match your exact comfort zone!
 
 Warm regards,
 
-${loName} | Senior Loan Officer | ${loNmls}
-${loCompany}
-📞 ${loPhone}
-
-${agentName} | Senior Real Estate Specialist
-${agentBrokerage}
-📞 ${agentPhone}`;
+${loSignBlock}
+${agentSignBlock ? `\n${agentSignBlock}` : ""}`;
 
   // 2. Borrower SMS
   const draftBorrowerSmsText = `Hi ${firstName}, ${loName} here! I just ran your updated payment scenario for the ${formattedPrice} price point on a ${loanProgram} program (~${formattedPITI}/mo total PITI). Let me know if you'd like me to email you the complete itemized breakdown or test another price band!`;
 
   // 3. Realtor Co-Brand Email
   const draftRealtorEmailSubject = `Financing Scenario Update for Buyer: ${lead.fullName} (${formattedPrice} Purchasing Power)`;
-  const draftRealtorEmailBody = `Hi ${agentName.split(" ")[0]},
+  const agentGreetingName = agentName ? agentName.split(" ")[0] : "Partner";
+  const draftRealtorEmailBody = `Hi ${agentGreetingName},
 
 I just reviewed and structured an updated financing scenario for our shared buyer, ${lead.fullName}.
 
@@ -133,9 +159,7 @@ Feel free to show homes within this price bracket. Please let me know if you nee
 
 Best,
 
-${loName} | Senior Loan Officer | ${loNmls}
-${loCompany}
-📞 ${loPhone}`;
+${loSignBlock}`;
 
   return {
     draftBorrowerEmailSubject,

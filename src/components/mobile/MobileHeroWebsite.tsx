@@ -352,11 +352,13 @@ export const MobileHeroWebsite: React.FC<MobileHeroWebsiteProps> = ({
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-bold text-[#2D362E] dark:text-slate-200">
-                  {loanOfficer?.name || "Mike Ford"}
+                  {loanOfficer?.name || "Licensed Loan Officer"}
                 </span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                  NMLS #{loanOfficer?.nmls || "288455"}
-                </span>
+                {(loanOfficer?.nmls || (loanOfficer as any)?.nmlsId || (loanOfficer as any)?.nmlsNumber) && (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    NMLS #{loanOfficer?.nmls || (loanOfficer as any)?.nmlsId || (loanOfficer as any)?.nmlsNumber}
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-[#9A9488]">Verified Local Lending Advisor</p>
             </div>

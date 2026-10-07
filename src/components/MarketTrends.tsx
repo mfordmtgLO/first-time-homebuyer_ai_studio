@@ -149,11 +149,11 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
   }, [isCoBranded, activeAgent, loanOfficer, effectiveRoster, pairings]);
 
   // Agent Contact Credentials
-  const agentName = spotlightAgent.name || "Sarah Jenkins";
-  const agentPhone = spotlightAgent.phone || "(503) 555-0144";
-  const agentBrokerage = spotlightAgent.brokerage || "Cascade Valley Real Estate";
+  const agentName = spotlightAgent?.name || "Real Estate Specialist";
+  const agentPhone = spotlightAgent?.phone || "";
+  const agentBrokerage = spotlightAgent?.brokerage || (spotlightAgent as any)?.company || "";
   const agentHeadshot =
-    spotlightAgent.headshotUrl ||
+    spotlightAgent?.headshotUrl ||
     "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80";
 
   // Merge external listings with comprehensive GeoSphere RentCast snapshots
@@ -527,8 +527,8 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
                 >
                   <span>{agentName}</span>
                   <Sparkles className="w-3 h-3 text-[#C18C5D] inline" />
-                </button>{" "}
-                ({agentPhone}).”
+                </button>
+                {agentPhone ? ` (${agentPhone}).` : "."}
               </p>
 
               <p className="text-xs text-[#606C5D]">
@@ -548,23 +548,27 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
               <span>Get Curated Home List</span>
             </button>
 
-            <a
-              href={`tel:${agentPhone}`}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-[#FAF9F5] text-[#4A5D4E] border border-[#EAE7E0] hover:border-[#DCD7CD] text-xs font-bold transition-all shadow-2xs"
-              title={`Call ${agentName}`}
-            >
-              <PhoneCall className="w-3.5 h-3.5 text-[#D4A373]" />
-              <span>Call</span>
-            </a>
+            {agentPhone && (
+              <>
+                <a
+                  href={`tel:${agentPhone}`}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-[#FAF9F5] text-[#4A5D4E] border border-[#EAE7E0] hover:border-[#DCD7CD] text-xs font-bold transition-all shadow-2xs"
+                  title={`Call ${agentName}`}
+                >
+                  <PhoneCall className="w-3.5 h-3.5 text-[#D4A373]" />
+                  <span>Call</span>
+                </a>
 
-            <a
-              href={`sms:${agentPhone}`}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-[#FAF9F5] text-[#4A5D4E] border border-[#EAE7E0] hover:border-[#DCD7CD] text-xs font-bold transition-all shadow-2xs"
-              title={`Text ${agentName}`}
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-[#C18C5D]" />
-              <span>Text</span>
-            </a>
+                <a
+                  href={`sms:${agentPhone}`}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-[#FAF9F5] text-[#4A5D4E] border border-[#EAE7E0] hover:border-[#DCD7CD] text-xs font-bold transition-all shadow-2xs"
+                  title={`Text ${agentName}`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-[#C18C5D]" />
+                  <span>Text</span>
+                </a>
+              </>
+            )}
 
             <button
               type="button"
@@ -745,12 +749,14 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <a
-                  href={`tel:${agentPhone}`}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-800 text-white text-xs font-bold hover:bg-emerald-900 transition-colors"
-                >
-                  Call {agentName.split(" ")[0]}
-                </a>
+                {agentPhone && (
+                  <a
+                    href={`tel:${agentPhone}`}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-800 text-white text-xs font-bold hover:bg-emerald-900 transition-colors"
+                  >
+                    Call {agentName.split(" ")[0]}
+                  </a>
+                )}
                 <button
                   type="button"
                   onClick={() => setInlineIsSubmitted(false)}
@@ -1094,20 +1100,24 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
                               <Sparkles className="w-3 h-3 text-[#D4A373]" />
                               <span>Tour / Curated List in {listing.city}</span>
                             </button>
-                            <a
-                              href={`tel:${agentPhone}`}
-                              className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-white border border-amber-300 text-[#2D362E] text-[11px] font-bold hover:bg-amber-100 transition-colors shadow-2xs"
-                            >
-                              <PhoneCall className="w-3 h-3 text-[#D4A373]" />
-                              <span>Call</span>
-                            </a>
-                            <a
-                              href={`sms:${agentPhone}`}
-                              className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-white border border-amber-300 text-[#2D362E] text-[11px] font-bold hover:bg-amber-100 transition-colors shadow-2xs"
-                            >
-                              <MessageSquare className="w-3 h-3 text-amber-700" />
-                              <span>Text</span>
-                            </a>
+                            {agentPhone && (
+                              <>
+                                <a
+                                  href={`tel:${agentPhone}`}
+                                  className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-white border border-amber-300 text-[#2D362E] text-[11px] font-bold hover:bg-amber-100 transition-colors shadow-2xs"
+                                >
+                                  <PhoneCall className="w-3 h-3 text-[#D4A373]" />
+                                  <span>Call</span>
+                                </a>
+                                <a
+                                  href={`sms:${agentPhone}`}
+                                  className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-white border border-amber-300 text-[#2D362E] text-[11px] font-bold hover:bg-amber-100 transition-colors shadow-2xs"
+                                >
+                                  <MessageSquare className="w-3 h-3 text-amber-700" />
+                                  <span>Text</span>
+                                </a>
+                              </>
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -1127,8 +1137,8 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
                               title={`Connect with ${agentName}`}
                             >
                               {agentName}
-                            </button>{" "}
-                            ({agentPhone}) can represent you as your buyer's broker, arrange a private tour, and structure your purchase offer with down payment assistance.
+                            </button>
+                            {agentPhone ? ` (${agentPhone})` : ""} can represent you as your buyer's broker, arrange a private tour, and structure your purchase offer with down payment assistance.
                           </p>
                           <div className="flex items-center gap-2 pt-1 border-t border-[#EAE7E0]/80">
                             <button
@@ -1139,13 +1149,15 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
                               <Sparkles className="w-3 h-3 text-[#C18C5D]" />
                               <span>Get Curated List in {listing.city}</span>
                             </button>
-                            <a
-                              href={`tel:${agentPhone}`}
-                              className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-white border border-[#EAE7E0] text-[#4A5D4E] text-[10px] font-bold hover:bg-[#FAF9F5]"
-                            >
-                              <Phone className="w-3 h-3 text-[#4A5D4E]" />
-                              <span>Call</span>
-                            </a>
+                            {agentPhone && (
+                              <a
+                                href={`tel:${agentPhone}`}
+                                className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-white border border-[#EAE7E0] text-[#4A5D4E] text-[10px] font-bold hover:bg-[#FAF9F5]"
+                              >
+                                <Phone className="w-3 h-3 text-[#4A5D4E]" />
+                                <span>Call</span>
+                              </a>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1397,8 +1409,8 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
                           title={`Request curated list of low/no down homes from ${agentName}`}
                         >
                           {agentName}
-                        </button>{" "}
-                        ({agentPhone}).
+                        </button>
+                        {agentPhone ? ` (${agentPhone}).` : "."}
                       </p>
 
                       <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -1411,21 +1423,25 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
                           <span>Get Curated City List</span>
                         </button>
 
-                        <a
-                          href={`tel:${agentPhone}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-[#EAE7E0] hover:bg-[#FAF9F5] text-[#4A5D4E] text-[11px] font-bold transition-colors"
-                        >
-                          <PhoneCall className="w-3 h-3 text-[#D4A373]" />
-                          <span>Call</span>
-                        </a>
+                        {agentPhone && (
+                          <>
+                            <a
+                              href={`tel:${agentPhone}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-[#EAE7E0] hover:bg-[#FAF9F5] text-[#4A5D4E] text-[11px] font-bold transition-colors"
+                            >
+                              <PhoneCall className="w-3 h-3 text-[#D4A373]" />
+                              <span>Call</span>
+                            </a>
 
-                        <a
-                          href={`sms:${agentPhone}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-[#EAE7E0] hover:bg-[#FAF9F5] text-[#4A5D4E] text-[11px] font-bold transition-colors"
-                        >
-                          <MessageSquare className="w-3 h-3 text-[#C18C5D]" />
-                          <span>Text</span>
-                        </a>
+                            <a
+                              href={`sms:${agentPhone}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-[#EAE7E0] hover:bg-[#FAF9F5] text-[#4A5D4E] text-[11px] font-bold transition-colors"
+                            >
+                              <MessageSquare className="w-3 h-3 text-[#C18C5D]" />
+                              <span>Text</span>
+                            </a>
+                          </>
+                        )}
 
                         <span className="text-[10px] text-[#9A9488] ml-auto truncate">
                           {agentBrokerage}

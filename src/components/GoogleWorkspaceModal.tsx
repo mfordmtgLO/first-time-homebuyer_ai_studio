@@ -42,19 +42,19 @@ export const GoogleWorkspaceModal: React.FC<GoogleWorkspaceModalProps> = ({
   onUpdateLead
 }) => {
   const activeLo: LoanOfficerProfile = currentLo || loanOfficer || {
-    id: "lo-default",
+    id: "lo-mike-ford",
     name: "Mike Ford",
-    title: "Senior Mortgage Advisor",
-    company: "Capital Lending",
-    phone: "(503) 555-0199",
-    email: "mford@capitallending.com",
+    title: "Senior Loan Officer",
+    company: "Cornerstone First Mortgage",
+    phone: "(541) 729-0819",
+    email: "mford@cfmtg.com",
     headshotUrl: "",
     bio: "",
-    rating: 4.9,
+    rating: 5.0,
     reviewCount: 48,
     activeListingsCount: 12,
     licenseStates: ["OR", "WA"],
-    nmlsId: "389201"
+    nmlsId: "288455"
   };
 
   const [activeTab, setActiveTab] = useState<"email" | "calendar" | "docs" | "tasks" | "sheets" | "drive">(defaultTab);

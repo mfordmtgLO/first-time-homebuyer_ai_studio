@@ -222,21 +222,21 @@ export function buildFthbVantageAdPackage(
   agent?: RealEstateAgentProfile
 ): FthbVantageAdPackage {
   const currentLo = {
-    id: loanOfficer?.id || "lo-dan-green",
-    name: loanOfficer?.name || "Mike Ford",
-    company: (loanOfficer as any)?.company || "Cornerstone First Mortgage",
-    nmls: (loanOfficer as any)?.nmls || loanOfficer?.nmlsNumber || "NMLS #288455",
-    phone: loanOfficer?.phone || "(541) 729-0819",
-    email: loanOfficer?.email || "mford@cfmtg.com"
+    id: loanOfficer?.id || "lo-officer",
+    name: loanOfficer?.name || "",
+    company: (loanOfficer as any)?.company || loanOfficer?.company || "",
+    nmls: (loanOfficer as any)?.nmls || (loanOfficer?.nmlsNumber ? (loanOfficer.nmlsNumber.startsWith("NMLS") ? loanOfficer.nmlsNumber : `NMLS #${loanOfficer.nmlsNumber}`) : (loanOfficer?.nmlsId ? (loanOfficer.nmlsId.startsWith("NMLS") ? loanOfficer.nmlsId : `NMLS #${loanOfficer.nmlsId}`) : "")),
+    phone: loanOfficer?.phone || "",
+    email: loanOfficer?.email || ""
   };
 
   const currentAgent = {
-    id: agent?.id || listing.matchedRosterAgent?.id || "agent-jake-zach",
-    name: agent?.name || listing.matchedRosterAgent?.name || "Jake Zach",
-    brokerage: agent?.brokerage || (agent as any)?.company || listing.matchedRosterAgent?.brokerage || "Hybrid Real Estate",
-    license: (agent as any)?.license || agent?.licenseNumber || (listing.matchedRosterAgent as any)?.license || listing.matchedRosterAgent?.licenseNumber || "OR RE Lic #201214890",
-    phone: agent?.phone || listing.matchedRosterAgent?.phone || "(541) 555-0188",
-    email: agent?.email || listing.matchedRosterAgent?.email || "jake@hybridre.com"
+    id: agent?.id || listing.matchedRosterAgent?.id || "agent-roster",
+    name: agent?.name || listing.matchedRosterAgent?.name || "",
+    brokerage: agent?.brokerage || (agent as any)?.company || listing.matchedRosterAgent?.brokerage || "",
+    license: (agent as any)?.license || agent?.licenseNumber || (listing.matchedRosterAgent as any)?.license || listing.matchedRosterAgent?.licenseNumber || "",
+    phone: agent?.phone || listing.matchedRosterAgent?.phone || "",
+    email: agent?.email || listing.matchedRosterAgent?.email || ""
   };
 
   const { persistentMoniker, shortTag, financingAngle, downPaymentBadge, grantBadge, programType } = 
@@ -401,14 +401,14 @@ Would you like to review your pre-qualification numbers or schedule a private VI
     imageUrl: listing.imageUrl,
     loId: currentLo.id,
     loName: currentLo.name,
-    loNmls: currentLo.nmls || "NMLS #288455",
-    loPhone: currentLo.phone || "(541) 729-0819",
+    loNmls: currentLo.nmls || "",
+    loPhone: currentLo.phone || "",
     loHeadshotUrl: (currentLo as any).headshotUrl || "",
     agentId: currentAgent.id,
     agentName: currentAgent.name,
-    agentBrokerage: currentAgent.brokerage || "Partner Brokerage",
-    agentLicense: currentAgent.license || "OR RE Lic",
-    agentPhone: currentAgent.phone || "(541) 555-0188",
+    agentBrokerage: currentAgent.brokerage || "",
+    agentLicense: currentAgent.license || "",
+    agentPhone: currentAgent.phone || "",
     agentHeadshotUrl: (currentAgent as any).headshotUrl || "",
     pairingId: `pair-${currentLo.id}-${currentAgent.id}`,
     coBrandSlug,

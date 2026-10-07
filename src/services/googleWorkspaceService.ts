@@ -1287,10 +1287,12 @@ ${leadName} is an exceptionally qualified buyer capable of meeting customary clo
 Sincerely,
 
 ${loName}
-Senior Mortgage Advisor | ${company}
-NMLS ID: ${input.nmlsId || "123456"}
-Phone: ${input.phone || "(503) 555-0199"}
-Email: ${input.email || "lo@mortgage.com"}
+${[
+  company ? `Senior Mortgage Advisor | ${company}` : `Senior Mortgage Advisor`,
+  input.nmlsId ? `NMLS ID: ${input.nmlsId}` : undefined,
+  input.phone ? `Phone: ${input.phone}` : undefined,
+  input.email ? `Email: ${input.email}` : undefined,
+].filter(Boolean).join("\n")}
 
 [Equal Housing Lender | Equal Opportunity Housing]`;
   }

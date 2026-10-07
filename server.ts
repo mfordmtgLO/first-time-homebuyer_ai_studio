@@ -24,6 +24,11 @@ import {
   getConversationDocId,
   calculatePriceDropMonthlySavings,
 } from "./src/services/geosphereIngestionService.ts";
+import {
+  isTwilioLiveEnabled,
+  checkBuyerSmsConsent,
+  attemptTwilioSmsDispatch,
+} from "./src/services/twilioGateService.ts";
 
 // Enterprise Encryption Vault Setup (Zero-Trust Security Architecture)
 // In production, MASTER_ENCRYPTION_KEY can be configured via Cloud Secrets / Environment.
@@ -3127,7 +3132,7 @@ Return JSON matching this shape:
     }
   });
 
-  // Automated Real-Time Cell Push & SMS Dispatch Engine
+  // In-App Price Drop Alert & Property Notes Dispatch Engine
   async function triggerAutomatedPriceDropPushNotification({
     propertyAddress,
     city = "Oregon",
@@ -3138,11 +3143,7 @@ Return JSON matching this shape:
     priceDropAmount,
     monthlySavings,
     loName = "Mike Ford",
-    loPhone = "(541) 555-0199",
-    agentName = "Kanndice",
-    agentPhone = "(541) 555-0142",
     revelation = "",
-    userPhone = "(541) 555-0188",
     triggerSource = "automated_price_reduction_sweep"
   }: any) {
     if (!propertyAddress || !priceDropAmount || Number(priceDropAmount) <= 0) return null;
@@ -3151,10 +3152,10 @@ Return JSON matching this shape:
     const alertId = `auto_pda_${addressSlug}_${Number(currentPrice)}`;
     const db = getAdminDb();
 
-    // Check if alert was already dispatched for this specific address & reduced price
+    // Check if alert was already recorded for this specific address & reduced price
     try {
       const existing = await db.collection("price_drop_alerts").doc(alertId).get();
-      if (existing.exists && existing.data()?.status === "delivered") {
+      if (existing.exists && (existing.data()?.status === "in_app_note_written" || existing.data()?.status === "delivered")) {
         return { success: true, alreadyDispatched: true, alertId, alertRecord: existing.data() };
       }
     } catch (e) {
@@ -3162,51 +3163,77 @@ Return JSON matching this shape:
     }
 
     const effectiveSavings = monthlySavings || Math.max(25, Math.round(Number(priceDropAmount) * 0.007));
-    const smsPayload = `🚨 AUTOMATED PRICE DROP ALERT: ${propertyAddress} reduced by $${Number(priceDropAmount).toLocaleString()} down to $${Number(currentPrice).toLocaleString()}! Estimated monthly payment savings: ~$${Number(effectiveSavings).toLocaleString()}/mo. Mike Ford (LO) & Kanndice (Agent) are ready to prepare a purchase offer. View: https://ais-pre-h5e42vrshqrry7uiwwuhmv-427099073161.us-east5.run.app`;
+    const noteText = `Price dropped by $${Number(priceDropAmount).toLocaleString()} down to $${Number(currentPrice).toLocaleString()}! Estimated monthly savings: ~$${Number(effectiveSavings).toLocaleString()}/mo.`;
+    const nowIso = new Date().toISOString();
 
-    // Real Twilio Telecom Carrier Dispatch Check
-    let liveCarrierStatus = "staged_sandbox_simulation";
-    const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-    const twilioAuth = process.env.TWILIO_AUTH_TOKEN;
-    const twilioFrom = process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_PHONE_NUMBER;
+    // In-app two-way property thread delivery (Firestore property_conversations)
+    const propertyId = `prop_${addressSlug}`;
+    const leadId = "lead-active";
+    const convId = getConversationDocId(propertyId, leadId);
 
-    // Check if live Twilio credentials and valid non-555 phone numbers are present
-    const isMockPhone = (p: string) => !p || p.includes("555-01") || p.includes("55501");
-    if (twilioSid && twilioAuth && twilioFrom && (!isMockPhone(loPhone) || !isMockPhone(userPhone))) {
-      try {
-        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
-        const authHeader = "Basic " + Buffer.from(`${twilioSid}:${twilioAuth}`).toString("base64");
-        
-        const targetNumber = !isMockPhone(loPhone) ? loPhone : userPhone;
-        const cleanTo = targetNumber.replace(/\D/g, "");
-        const formattedTo = cleanTo.length === 10 ? `+1${cleanTo}` : cleanTo.startsWith("1") ? `+${cleanTo}` : cleanTo;
+    const alertMessage = {
+      id: `msg_pda_${Date.now()}`,
+      sender: "system",
+      senderName: "Price Drop Monitor",
+      senderRole: "System Alert",
+      text: `🚨 Price drop detected: ${propertyAddress} reduced by $${Number(priceDropAmount).toLocaleString()} to $${Number(currentPrice).toLocaleString()} (estimated ~$${effectiveSavings}/mo savings).`,
+      timestamp: nowIso,
+      messageType: "note",
+      priceDropAmount: Number(priceDropAmount),
+      savings: Number(effectiveSavings),
+      newPrice: Number(currentPrice),
+    };
 
-        const params = new URLSearchParams();
-        params.append("To", formattedTo);
-        params.append("From", twilioFrom);
-        params.append("Body", smsPayload);
+    const alertActionItem = {
+      id: `action_pda_${Date.now()}`,
+      conversationId: convId,
+      propertyId,
+      propertyAddress,
+      propertyPrice: Number(currentPrice),
+      propertyCity: city,
+      leadId,
+      leadName: "First-Time Homebuyer",
+      questionText: `[LO Alert] Price reduction: ${propertyAddress} dropped $${Number(priceDropAmount).toLocaleString()} (~$${effectiveSavings}/mo savings).`,
+      questionCategory: "financing",
+      status: "pending",
+      priority: "high",
+      createdAt: nowIso,
+      alertSource: triggerSource,
+    };
 
-        const twilioRes = await fetch(twilioUrl, {
-          method: "POST",
-          headers: {
-            "Authorization": authHeader,
-            "Content-Type": "application/x-www-form-urlencoded"
-          },
-          body: params.toString()
+    try {
+      const convRef = db.collection("property_conversations").doc(convId);
+      const convSnap = await convRef.get();
+      if (convSnap.exists) {
+        const convData = convSnap.data() || {};
+        const msgs = Array.isArray(convData.messages) ? [...convData.messages, alertMessage] : [alertMessage];
+        const actions = Array.isArray(convData.pendingActionItems) ? [...convData.pendingActionItems, alertActionItem] : [alertActionItem];
+        await convRef.set({
+          messages: msgs,
+          pendingActionItems: actions,
+          hasPendingActionItem: true,
+          notes: noteText,
+          updatedAt: nowIso,
+        }, { merge: true });
+      } else {
+        await convRef.set({
+          id: convId,
+          propertyId,
+          propertyAddress,
+          propertyPrice: Number(currentPrice),
+          propertyCity: city,
+          leadId,
+          leadName: "First-Time Homebuyer",
+          messages: [alertMessage],
+          pendingActionItems: [alertActionItem],
+          hasPendingActionItem: true,
+          notes: noteText,
+          createdAt: nowIso,
+          updatedAt: nowIso,
         });
-
-        if (twilioRes.ok) {
-          liveCarrierStatus = "delivered";
-          console.log(`[TWILIO LIVE DISPATCH] SMS successfully transmitted via Twilio carrier to ${formattedTo}!`);
-        } else {
-          const errText = await twilioRes.text();
-          console.warn("[Twilio API] Carrier dispatch response error:", errText);
-          liveCarrierStatus = "failed_carrier_rejected";
-        }
-      } catch (err: any) {
-        console.warn("[Twilio API] Network dispatch error:", err.message);
-        liveCarrierStatus = "failed_network_exception";
       }
+    } catch (convErr) {
+      console.warn("[Auto Price Drop Alert] Conversation write notice:", convErr);
     }
 
     const alertRecord = {
@@ -3221,20 +3248,14 @@ Return JSON matching this shape:
       monthlySavings: Number(effectiveSavings) || 0,
       revelation: revelation || `Price dropped by $${Number(priceDropAmount).toLocaleString()} — saving ~$${effectiveSavings}/mo in monthly debt service.`,
       loName,
-      loPhone,
-      agentName,
-      agentPhone,
-      userPhone,
-      smsPayload,
       isAutomated: true,
       triggerSource,
-      pushedAt: new Date().toISOString(),
-      status: liveCarrierStatus,
-      isLiveTwilioCarrierDispatched: liveCarrierStatus === "delivered",
-      recipients: [
-        { role: "loan_officer", name: loName, phone: loPhone, status: liveCarrierStatus, deliveredAt: new Date().toISOString() },
-        { role: "buyer_plugin_user", phone: userPhone, status: liveCarrierStatus, deliveredAt: new Date().toISOString() }
-      ]
+      recordedAt: nowIso,
+      status: "in_app_note_written",
+      deliveryChannel: "in_app_property_thread",
+      deliveryMode: "in_app_note_written",
+      conversationId: convId,
+      noteText
     };
 
     try {
@@ -3243,25 +3264,25 @@ Return JSON matching this shape:
       console.warn("[Auto Price Drop Alert] Firestore write notice:", dbErr);
     }
 
-    await recordComplianceAuditLog("AUTOMATED_PRICE_DROP_CELL_PUSH_DISPATCHED", {
+    // Honest compliance audit event for in-app delivery only
+    await recordComplianceAuditLog("PRICE_DROP_IN_APP_ALERT_DELIVERED", {
       alertId,
       propertyAddress,
       priceDropAmount: Number(priceDropAmount),
       monthlySavings: Number(effectiveSavings),
       loName,
-      loPhone,
-      userPhone,
       triggerSource,
-      deliveryMode: liveCarrierStatus,
-      isLiveTwilioCarrier: liveCarrierStatus === "delivered"
+      deliveryMode: "in_app_note_written",
+      deliveryChannel: "in_app_property_thread",
+      conversationId: convId
     });
 
-    console.log(`[CELL PUSH DISPATCHED] Record logged. Mode: ${liveCarrierStatus}. LO (${loName}: ${loPhone}), Buyer (${userPhone}) for ${propertyAddress}. Price drop: -$${priceDropAmount}.`);
+    console.log(`[IN-APP ALERT RECORDED] Note written to property thread. LO (${loName}) for ${propertyAddress}. Price drop: -$${priceDropAmount}.`);
 
-    return { success: true, alertId, isAutomated: true, liveCarrierStatus, alertRecord };
+    return { success: true, alertId, isAutomated: true, deliveryMode: "in_app_note_written", alertRecord };
   }
 
-  // Cell Phone Push & SMS Price Drop Instant Alert Wire (Handles both automated & manual requests)
+  // Price Drop In-App Alert Wire (Handles both automated & manual triggers)
   app.post("/api/sms/send-price-drop-alert", async (req, res) => {
     try {
       const result = await triggerAutomatedPriceDropPushNotification({
@@ -3278,14 +3299,14 @@ Return JSON matching this shape:
         alertId: result.alertId,
         alreadyDispatched: !!result.alreadyDispatched,
         message: result.alreadyDispatched 
-          ? `Automated cell push was already dispatched to Loan Officer Mike Ford & Buyer for ${req.body.propertyAddress}.`
-          : `Automated cell phone push notification & SMS dispatched for ${req.body.propertyAddress}! Both Loan Officer (${req.body.loName || "Mike Ford"}) and Buyer have been alerted with estimated monthly savings of ~$${req.body.monthlySavings || 140}/mo.`,
+          ? `Price drop in-app alert note was already recorded for ${req.body.propertyAddress}.`
+          : `Price drop in-app alert note recorded in property conversation for ${req.body.propertyAddress} with estimated monthly savings of ~$${req.body.monthlySavings || 140}/mo.`,
         monthlySavings: Number(req.body.monthlySavings) || 0,
-        pushedAt: new Date().toISOString()
+        recordedAt: new Date().toISOString()
       });
     } catch (err: any) {
-      console.error("[Price Drop Push Alert] Error:", err);
-      return res.status(500).json({ error: err.message || "Failed to dispatch price drop push alert." });
+      console.error("[Price Drop Alert] Error:", err);
+      return res.status(500).json({ error: err.message || "Failed to record price drop in-app alert." });
     }
   });
 
@@ -3615,7 +3636,6 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
     res.json({
       success: true,
       jobs: [
-        { id: "cron-top50-daily", name: "Top 50 RealTrends & Market Sweep", cron: "Manual / On-Demand", status: "Manual On-Demand (UI Triggered)" },
         { id: "cron-geomap-sync", name: "GeoMap Saved Property & RentCast Live Sync", cron: "0 4 * * *", status: "Active (Unattended)" },
         { id: "cron-vantage-ai-import", name: "Vantage AI Studio Co-Branded Campaign Ingestion", cron: "0 6 * * *", status: "Active (Unattended)" },
         { id: "cron-realtor-roster-audit", name: "Realtor Roster Compliance & Gap Resolution Audit", cron: "0 8 * * 1", status: "Active (Unattended)" }
@@ -5264,16 +5284,12 @@ INSTRUCTIONS:
       return res.status(400).json({ error: "Tenant isolation violation: industryId is required." });
     }
 
-    const loName = loanOfficer?.name || "Mike Ford";
-    const loNmls = loanOfficer?.nmlsId || "288455";
-    const loContact =
-      loanOfficer?.phone || loanOfficer?.email
-        ? `(${loanOfficer.phone || ""} ${loanOfficer.email || ""})`
-        : "";
-    const agentName = agent?.name || "Kanndice McLean";
+    const loName = loanOfficer?.name || "Licensed Loan Officer";
+    const loNmls = loanOfficer?.nmlsId ? (loanOfficer.nmlsId.toString().startsWith("NMLS") ? loanOfficer.nmlsId.toString() : `NMLS #${loanOfficer.nmlsId}`) : "";
+    const loContact = [loanOfficer?.phone, loanOfficer?.email].filter(Boolean).join(" ");
+    const agentName = agent?.name || "";
     const agentBrokerage = agent?.brokerage ? ` of ${agent.brokerage}` : "";
-    const agentContact =
-      agent?.phone || agent?.email ? `(${agent.phone || ""} ${agent.email || ""})` : "";
+    const agentContact = [agent?.phone, agent?.email].filter(Boolean).join(" ");
 
     if (!message) {
       return res.status(400).json({ error: "Message is required" });
@@ -5582,6 +5598,31 @@ Respond with strict JSON:
   "htmlPreview": "Clean HTML formatted email body with inline CSS styling, green/warm earthy palette (#4A5D4E, #2D362E, #F9F8F4, #EAE7E0), tables, and badges"
 }`;
 
+      const advisoryLines: string[] = [];
+      if (loanOfficer && loanOfficer.name) {
+        const loDetails: string[] = [];
+        if (loanOfficer.company) loDetails.push(loanOfficer.company);
+        const nmls = loanOfficer.nmlsId || loanOfficer.nmlsNumber;
+        if (nmls) loDetails.push(nmls.toString().startsWith("NMLS") ? nmls.toString() : `NMLS #${nmls}`);
+        if (loanOfficer.phone) loDetails.push(`Phone: ${loanOfficer.phone}`);
+        if (loanOfficer.email) loDetails.push(`Email: ${loanOfficer.email}`);
+        if (loanOfficer.leadGenFormUrl) loDetails.push(`Fast-Track Portal: ${loanOfficer.leadGenFormUrl}`);
+        const loDetailsStr = loDetails.length > 0 ? ` (${loDetails.join(", ")})` : "";
+        advisoryLines.push(`- Loan Officer: ${loanOfficer.name}${loDetailsStr}`);
+      }
+      if (activeAgent && activeAgent.name) {
+        const agDetails: string[] = [];
+        const brokerage = activeAgent.brokerage || activeAgent.company;
+        if (brokerage) agDetails.push(brokerage);
+        if (activeAgent.phone) agDetails.push(`Phone: ${activeAgent.phone}`);
+        if (activeAgent.email) agDetails.push(`Email: ${activeAgent.email}`);
+        const agDetailsStr = agDetails.length > 0 ? ` (${agDetails.join(", ")})` : "";
+        advisoryLines.push(`- Real Estate Agent: ${activeAgent.name}${agDetailsStr}`);
+      }
+      const advisoryTeamPrompt = advisoryLines.length > 0
+        ? `Advisory Team:\n${advisoryLines.join("\n")}`
+        : "Advisory Team: None assigned.";
+
       const prompt = `Recipient: ${nameToUse} (${recipientEmail})
 ${customNote ? `Personal Note from Sender: "${customNote}"` : ""}
 
@@ -5600,9 +5641,7 @@ Roadmap Progress:
 Saved Properties (${(properties || []).length} homes):
 ${propertyListSummary || "No properties saved yet."}
 
-Advisory Team:
-- Loan Officer: ${loanOfficer?.name || "Mike Ford"} (${loanOfficer?.company || "Cornerstone First Mortgage"}, NMLS #${loanOfficer?.nmlsId || "288455"}, Phone: ${loanOfficer?.phone || "(503) 555-0199"}, Email: ${loanOfficer?.email || "mford@cfmtg.com"}, Fast-Track Portal: ${loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM"})
-${activeAgent ? `- Real Estate Agent: ${activeAgent.name} (${activeAgent.brokerage || "Pacific Northwest Realty"}, Phone: ${activeAgent.phone || "(503) 555-0144"}, Email: ${activeAgent.email || "agent@pnwrealty.com"})` : ""}`;
+${advisoryTeamPrompt}`;
 
       const response = await generateWithModelFallback({
         preferredModel: "gemini-3.8-flash",
@@ -5692,10 +5731,38 @@ ${(milestones || [])
 ${propertiesBlock || "No properties saved yet."}
 
 4. ADVISORY TEAM CONTACTS
-• Loan Officer: ${loanOfficer?.name || "Mike Ford"} (${loanOfficer?.company || "Cornerstone First Mortgage"}, NMLS #${loanOfficer?.nmlsId || "288455"})
-  Phone: ${loanOfficer?.phone || "(503) 555-0199"} | Email: ${loanOfficer?.email || "mford@cfmtg.com"}
-  Start Pre-Approval Online: ${loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM"}
-${activeAgent ? `• Real Estate Agent: ${activeAgent.name} (${activeAgent.brokerage || "Pacific Northwest Realty"})\n  Phone: ${activeAgent.phone || "(503) 555-0144"} | Email: ${activeAgent.email || "agent@pnwrealty.com"}` : ""}
+${(() => {
+  const blocks: string[] = [];
+  if (loanOfficer && loanOfficer.name) {
+    const loCreds = [
+      loanOfficer.company,
+      (loanOfficer.nmlsId || loanOfficer.nmlsNumber) ? `NMLS #${loanOfficer.nmlsId || loanOfficer.nmlsNumber}` : ""
+    ].filter(Boolean).join(", ");
+    const loCredsStr = loCreds ? ` (${loCreds})` : "";
+    const loContact = [
+      loanOfficer.phone ? `Phone: ${loanOfficer.phone}` : "",
+      loanOfficer.email ? `Email: ${loanOfficer.email}` : ""
+    ].filter(Boolean).join(" | ");
+
+    let loBlock = `• Loan Officer: ${loanOfficer.name}${loCredsStr}`;
+    if (loContact) loBlock += `\n  ${loContact}`;
+    if (loanOfficer.leadGenFormUrl) loBlock += `\n  Start Pre-Approval Online: ${loanOfficer.leadGenFormUrl}`;
+    blocks.push(loBlock);
+  }
+  if (activeAgent && activeAgent.name) {
+    const agCreds = activeAgent.brokerage || activeAgent.company;
+    const agCredsStr = agCreds ? ` (${agCreds})` : "";
+    const agContact = [
+      activeAgent.phone ? `Phone: ${activeAgent.phone}` : "",
+      activeAgent.email ? `Email: ${activeAgent.email}` : ""
+    ].filter(Boolean).join(" | ");
+
+    let agBlock = `• Real Estate Agent: ${activeAgent.name}${agCredsStr}`;
+    if (agContact) agBlock += `\n  ${agContact}`;
+    blocks.push(agBlock);
+  }
+  return blocks.length > 0 ? blocks.join("\n") : "No advisory contacts assigned.";
+})()}
 --------------------------------------------------`;
 
       const htmlBody = `
@@ -5738,16 +5805,34 @@ ${activeAgent ? `• Real Estate Agent: ${activeAgent.name} (${activeAgent.broke
                 .join("")}
             </div>
 
+            ${loanOfficer?.leadGenFormUrl ? `
             <!-- Fast-Track Loan App Action Box -->
             <div style="margin-top: 24px; padding: 18px; background-color: #F9F8F4; border: 1px solid #D4A373; border-radius: 12px; text-align: center;">
               <span style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #4A5D4E; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Fast-Track Home Loan Application</span>
-              <p style="font-size: 13px; color: #2D362E; margin: 0 0 12px 0;">Ready to lock in your verified mortgage pre-approval with Mike Ford?</p>
-              <a href="${loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM"}" style="display: inline-block; background-color: #D4A373; color: #ffffff; font-weight: bold; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 13px;">Start Fast-Track Pre-Approval Online &rarr;</a>
-            </div>
+              <p style="font-size: 13px; color: #2D362E; margin: 0 0 12px 0;">Ready to lock in your verified mortgage pre-approval${loanOfficer?.name ? ` with ${loanOfficer.name}` : ""}?</p>
+              <a href="${loanOfficer.leadGenFormUrl}" style="display: inline-block; background-color: #D4A373; color: #ffffff; font-weight: bold; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 13px;">Start Fast-Track Pre-Approval Online &rarr;</a>
+            </div>` : ""}
 
+            ${(loanOfficer?.name || activeAgent?.name) ? `
             <div style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #EAE7E0; font-size: 12px; color: #9A9488;">
-              <p>Loan Officer: <strong>${loanOfficer?.name || "Mike Ford"}</strong> (Cornerstone First Mortgage, NMLS #${loanOfficer?.nmlsId || "288455"}) • ${loanOfficer?.phone || "(503) 555-0199"}</p>
-            </div>
+              ${loanOfficer?.name ? (() => {
+                const creds = [
+                  loanOfficer.company,
+                  (loanOfficer.nmlsId || loanOfficer.nmlsNumber) ? `NMLS #${loanOfficer.nmlsId || loanOfficer.nmlsNumber}` : ""
+                ].filter(Boolean).join(", ");
+                const credsStr = creds ? ` (${creds})` : "";
+                const contact = [loanOfficer.phone, loanOfficer.email].filter(Boolean).join(" • ");
+                const contactStr = contact ? ` • ${contact}` : "";
+                return `<p style="margin: 0 0 4px 0;">Loan Officer: <strong>${loanOfficer.name}</strong>${credsStr}${contactStr}</p>`;
+              })() : ""}
+              ${activeAgent?.name ? (() => {
+                const brk = activeAgent.brokerage || activeAgent.company;
+                const brkStr = brk ? ` (${brk})` : "";
+                const contact = [activeAgent.phone, activeAgent.email].filter(Boolean).join(" • ");
+                const contactStr = contact ? ` • ${contact}` : "";
+                return `<p style="margin: 0;">Real Estate Agent: <strong>${activeAgent.name}</strong>${brkStr}${contactStr}</p>`;
+              })() : ""}
+            </div>` : ""}
           </div>
         </div>
       `;
@@ -5847,6 +5932,22 @@ Respond with strict JSON:
   "htmlPreview": "Clean, responsive HTML email with inline CSS styles (#4A5D4E primary brand color, celebration banner, progress indicator, card layout, and advisory team buttons)"
 }`;
 
+      const milestoneAdvisoryLines: string[] = [];
+      if (loanOfficer && loanOfficer.name) {
+        const loCreds = [
+          loanOfficer.company,
+          (loanOfficer.nmlsId || loanOfficer.nmlsNumber) ? `NMLS #${loanOfficer.nmlsId || loanOfficer.nmlsNumber}` : ""
+        ].filter(Boolean).join(", ");
+        milestoneAdvisoryLines.push(`- Loan Officer: ${loanOfficer.name}${loCreds ? ` (${loCreds})` : ""}`);
+      }
+      if (activeAgent && activeAgent.name) {
+        const agCreds = activeAgent.brokerage || activeAgent.company;
+        milestoneAdvisoryLines.push(`- Real Estate Agent: ${activeAgent.name}${agCreds ? ` (${agCreds})` : ""}`);
+      }
+      const milestoneAdvisoryTeam = milestoneAdvisoryLines.length > 0
+        ? `Advisory Team:\n${milestoneAdvisoryLines.join("\n")}`
+        : "Advisory Team: None assigned.";
+
       const prompt = `Homebuyer: ${nameToUse} (${recipientEmail})
 Completed Milestone: Step ${stepNum}: ${milestoneTitle} (Stage: ${milestoneObj.stage || "Readiness"})
 Milestone Summary: ${milestoneObj.summary || ""}
@@ -5869,9 +5970,7 @@ ${(properties || [])
   .map((p: any) => `• ${p.address}, ${p.city} ($${Number(p.price || 0).toLocaleString()})`)
   .join("\n")}
 
-Advisory Team:
-- Loan Officer: ${loanOfficer?.name || "Mike Ford"} (${loanOfficer?.company || "Guild Mortgage"}, NMLS #${loanOfficer?.nmlsId || "184209"})
-- Real Estate Agent: ${activeAgent?.name || "Sarah Jenkins"} (${activeAgent?.brokerage || "Pacific Northwest Realty"})`;
+${milestoneAdvisoryTeam}`;
 
       const response = await generateWithModelFallback({
         preferredModel: "gemini-3.8-flash",
@@ -5944,9 +6043,26 @@ FINANCIAL STATUS:
 • Saved Homes: ${(properties || []).length} tracked
 
 ADVISORY CONTACTS:
-• Loan Officer: ${loanOfficer?.name || "Mike Ford"} (${loanOfficer?.phone || "(503) 555-0199"} / ${loanOfficer?.email || "mford@cfmtg.com"})
-  Fast-Track Pre-Approval Application: ${loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM"}
-${activeAgent ? `• Real Estate Agent: ${activeAgent.name} (${activeAgent.phone || "(503) 555-0144"} / ${activeAgent.email || "agent@pnwrealty.com"})` : ""}
+${(() => {
+  const lines: string[] = [];
+  if (loanOfficer && loanOfficer.name) {
+    const creds = [
+      loanOfficer.company,
+      (loanOfficer.nmlsId || loanOfficer.nmlsNumber) ? `NMLS #${loanOfficer.nmlsId || loanOfficer.nmlsNumber}` : ""
+    ].filter(Boolean).join(", ");
+    const contacts = [loanOfficer.phone, loanOfficer.email].filter(Boolean).join(" / ");
+    lines.push(`• Loan Officer: ${loanOfficer.name}${creds ? ` (${creds})` : ""}${contacts ? ` (${contacts})` : ""}`);
+    if (loanOfficer.leadGenFormUrl) {
+      lines.push(`  Fast-Track Pre-Approval Application: ${loanOfficer.leadGenFormUrl}`);
+    }
+  }
+  if (activeAgent && activeAgent.name) {
+    const creds = activeAgent.brokerage || activeAgent.company;
+    const contacts = [activeAgent.phone, activeAgent.email].filter(Boolean).join(" / ");
+    lines.push(`• Real Estate Agent: ${activeAgent.name}${creds ? ` (${creds})` : ""}${contacts ? ` (${contacts})` : ""}`);
+  }
+  return lines.length > 0 ? lines.join("\n") : "• No advisory contacts assigned.";
+})()}
 
 Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
 
@@ -6027,19 +6143,34 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
               </div>
             </div>
 
+            ${loanOfficer?.leadGenFormUrl ? `
             <!-- Fast-Track Application Box -->
             <div style="margin-top: 24px; padding: 16px; background-color: #F9F8F4; border: 1px solid #D4A373; border-radius: 12px; text-align: center;">
               <p style="font-size: 13px; color: #2D362E; margin: 0 0 10px 0; font-weight: bold;">Ready to apply for your official mortgage pre-approval?</p>
-              <a href="${loanOfficer?.leadGenFormUrl || "https://portal.myhometrac.com/get-started/MFORD@CFMTG.COM"}" style="display: inline-block; background-color: #D4A373; color: #ffffff; font-weight: bold; text-decoration: none; padding: 8px 18px; border-radius: 8px; font-size: 12px;">Start Fast-Track Pre-Approval Online &rarr;</a>
-            </div>
+              <a href="${loanOfficer.leadGenFormUrl}" style="display: inline-block; background-color: #D4A373; color: #ffffff; font-weight: bold; text-decoration: none; padding: 8px 18px; border-radius: 8px; font-size: 12px;">Start Fast-Track Pre-Approval Online &rarr;</a>
+            </div>` : ""}
 
+            ${(loanOfficer?.name || activeAgent?.name) ? `
             <!-- Footer Advisory Team -->
             <div style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #EAE7E0; font-size: 12px; color: #606C5D; line-height: 1.6;">
-              <p style="margin: 0 0 4px 0;">
-                <strong>Assigned Loan Officer:</strong> ${loanOfficer?.name || "Mike Ford"} (${loanOfficer?.company || "Cornerstone First Mortgage"}, NMLS #${loanOfficer?.nmlsId || "288455"}) • ${loanOfficer?.phone || "(503) 555-0199"}
-              </p>
-              ${activeAgent ? `<p style="margin: 0;"><strong>Assigned Realtor:</strong> ${activeAgent.name} (${activeAgent.brokerage || "Pacific Northwest Realty"}) • ${activeAgent.phone || "(503) 555-0144"}</p>` : ""}
-            </div>
+              ${loanOfficer?.name ? (() => {
+                const creds = [
+                  loanOfficer.company,
+                  (loanOfficer.nmlsId || loanOfficer.nmlsNumber) ? `NMLS #${loanOfficer.nmlsId || loanOfficer.nmlsNumber}` : ""
+                ].filter(Boolean).join(", ");
+                const credsStr = creds ? ` (${creds})` : "";
+                const contact = [loanOfficer.phone, loanOfficer.email].filter(Boolean).join(" • ");
+                const contactStr = contact ? ` • ${contact}` : "";
+                return `<p style="margin: 0 0 4px 0;"><strong>Assigned Loan Officer:</strong> ${loanOfficer.name}${credsStr}${contactStr}</p>`;
+              })() : ""}
+              ${activeAgent?.name ? (() => {
+                const brk = activeAgent.brokerage || activeAgent.company;
+                const brkStr = brk ? ` (${brk})` : "";
+                const contact = [activeAgent.phone, activeAgent.email].filter(Boolean).join(" • ");
+                const contactStr = contact ? ` • ${contact}` : "";
+                return `<p style="margin: 0;"><strong>Assigned Realtor:</strong> ${activeAgent.name}${brkStr}${contactStr}</p>`;
+              })() : ""}
+            </div>` : ""}
           </div>
         </div>
       `;
@@ -7095,11 +7226,29 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
     });
   });
 
-  // API Route: Twilio SMS Carrier Integration Proxy
+  // API Route: Twilio SMS Carrier Integration Proxy (Guarded by Dormancy Gate & Consent Contract)
   app.post("/api/twilio/send-sms", authenticateUser, async (req, res) => {
     try {
-      const { to, message, accountSid, authToken, fromNumber, attachmentUrl, encryptedVault } =
+      const { to, message, accountSid, authToken, fromNumber, attachmentUrl, encryptedVault, isBuyer = true } =
         req.body;
+
+      // PART 2: Dormancy Gate Check
+      if (!isTwilioLiveEnabled()) {
+        const maskedPhone = to ? `${to.slice(0, 4)}***${to.slice(-4)}` : "unknown";
+        console.warn(`[TWILIO DORMANT] twilio_dormant_skipped — Outbound send blocked to ${maskedPhone}. Live sends disabled.`);
+        await recordComplianceAuditLog("twilio_dormant_skipped", {
+          targetPhone: maskedPhone,
+          requestedBy: (req as any).user?.uid || "authenticated_user",
+          timestamp: new Date().toISOString(),
+          reason: "Twilio live sends are dormant (TWILIO_LIVE_SENDS !== 'true')"
+        });
+        return res.status(403).json({
+          success: false,
+          error: "twilio_dormant",
+          message: "Twilio live transmission is dormant. In-app property notes are the active communication channel."
+        });
+      }
+
       let sid = accountSid;
       let token = authToken;
       let from = fromNumber;
@@ -7139,6 +7288,26 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
           .json({ success: false, error: "Target phone number and message text are required" });
       }
 
+      // PART 3: Consent Check for Buyer Recipients
+      if (isBuyer !== false) {
+        const consentResult = await checkBuyerSmsConsent(to, getAdminDb());
+        if (!consentResult.hasConsent) {
+          const maskedPhone = to ? `${to.slice(0, 4)}***${to.slice(-4)}` : "unknown";
+          console.warn(`[TWILIO CONSENT BLOCKED] consent_blocked — Blocked send to ${maskedPhone}: ${consentResult.reason}`);
+          await recordComplianceAuditLog("consent_blocked", {
+            targetPhone: maskedPhone,
+            reason: consentResult.reason || "Missing TCPA SMS consent",
+            requestedBy: (req as any).user?.uid || "authenticated_user",
+            timestamp: new Date().toISOString()
+          });
+          return res.status(403).json({
+            success: false,
+            error: "consent_blocked",
+            message: consentResult.reason || "Target recipient has not provided active TCPA SMS consent."
+          });
+        }
+      }
+
       // Format recipient phone number to E.164 format (+1...)
       const cleanTo = to.replace(/[^0-9+]/g, "");
       const formattedTo = cleanTo.startsWith("+")
@@ -7147,49 +7316,41 @@ Generated automatically by First-Time Homebuyer Roadmap & Loan Officer Hub.`;
           ? `+1${cleanTo}`
           : `+${cleanTo}`;
 
-      // Call Twilio REST API
-      const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
-      const authHeader = "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
-
-      const params = new URLSearchParams();
-      params.append("To", formattedTo);
-      params.append("From", from);
-      params.append("Body", message);
-      if (
-        attachmentUrl &&
-        (attachmentUrl.startsWith("http://") || attachmentUrl.startsWith("https://"))
-      ) {
-        params.append("MediaUrl", attachmentUrl);
-      }
-
-      const twilioRes = await fetch(twilioEndpoint, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: params.toString(),
+      // Call through Twilio Gate Dispatcher
+      const dispatchResult = await attemptTwilioSmsDispatch({
+        to,
+        from,
+        body: message,
+        mediaUrl: attachmentUrl,
+        accountSid: sid,
+        authToken: token,
+        isBuyer: isBuyer !== false,
+        dbInstance: getAdminDb(),
+        auditLogger: (evt, meta) => recordComplianceAuditLog(evt, {
+          ...meta,
+          requestedBy: (req as any).user?.uid || "authenticated_user",
+        }),
       });
 
-      const twilioData: any = await twilioRes.json();
-
-      if (!twilioRes.ok) {
-        return res.status(twilioRes.status).json({
+      if (!dispatchResult.success) {
+        return res.status(dispatchResult.httpStatus || 400).json({
           success: false,
-          error:
-            twilioData.message || twilioData.detail || `Twilio API error HTTP ${twilioRes.status}`,
-          code: twilioData.code,
-          moreInfo: twilioData.more_info,
+          error: dispatchResult.error,
+          message: dispatchResult.error === "twilio_dormant"
+            ? "Twilio live transmission is dormant. In-app property notes are the active communication channel."
+            : dispatchResult.error === "consent_blocked"
+              ? "Target recipient has not provided active TCPA SMS consent."
+              : dispatchResult.error,
         });
       }
 
       res.json({
         success: true,
-        messageSid: twilioData.sid,
-        status: twilioData.status,
-        to: twilioData.to,
-        from: twilioData.from,
-        dateCreated: twilioData.date_created,
+        messageSid: dispatchResult.messageSid,
+        status: dispatchResult.status,
+        to: dispatchResult.to,
+        from: dispatchResult.from,
+        dateCreated: dispatchResult.dateCreated,
       });
     } catch (error: any) {
       console.error("Twilio SMS send error:", error);

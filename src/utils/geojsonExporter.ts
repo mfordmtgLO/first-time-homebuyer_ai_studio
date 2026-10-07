@@ -26,7 +26,7 @@ export function generateGeoJSON(properties: PropertyListing[]): string {
         monthlyPayment: (p as any).monthlyPayment || Math.round(p.price * 0.0065),
         tourGrade: (p as any).tourGrade || "B+",
         status: p.status,
-        loanOfficer: "Mike Ford (fordmj@gmail.com / 555-0199)",
+        loanOfficer: "Mike Ford (fordmj@gmail.com / (541) 729-0819)",
         agent: "Kanndice McLean",
         ctaNote: "For more information on low or no down payment mortgage products matched for high confidence eligible areas, call Mike Ford. To get a personalized home search profile, reach out to Kanndice McLean."
       }

@@ -85,10 +85,10 @@ export const AgentRosterExportModal: React.FC<AgentRosterExportModalProps> = ({
         const agent = masterAgentRoster.find((a) => a.id === pairing.agentId) || {
           id: pairing.agentId,
           name: pairing.title.split("+")[1]?.trim() || "Realtor Partner",
-          brokerage: "Premier Real Estate",
-          email: "agent@brokerage.com",
-          phone: "(503) 555-0199",
-          licenseNumber: "OR Broker",
+          brokerage: "",
+          email: "",
+          phone: "",
+          licenseNumber: "",
           isTop50: false
         } as UnifiedAgentProfile;
 
@@ -262,7 +262,7 @@ export const AgentRosterExportModal: React.FC<AgentRosterExportModalProps> = ({
         escapeCsv(agent.licenseNumber || "OR Broker"),
         escapeCsv(agent.licenseStates?.[0] || "OR"),
         escapeCsv(agent.email || ""),
-        escapeCsv(agent.phone || "(503) 555-0199"),
+        escapeCsv(agent.phone || ""),
         escapeCsv(agent.city || agent.areasServed?.[0] || "Portland"),
         escapeCsv((agent.marketAreas || agent.areasServed || []).join("; ") || "Oregon Statewide"),
         escapeCsv(agent.agentType === "buyer_agent" ? "Buyer Specialist" : agent.agentType === "listing_agent" ? "Listing Specialist" : "Dual Agent"),

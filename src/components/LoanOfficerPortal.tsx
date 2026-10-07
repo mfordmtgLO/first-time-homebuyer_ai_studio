@@ -1044,7 +1044,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
       }).catch(() => null);
 
       const nowIso = new Date().toISOString();
-      const bpdId = lead.bpdCrmLeadId || `BPD-LEAD-${Math.floor(10000 + Math.random() * 89999)}`;
+      const bpdId = lead.bpdCrmLeadId || `BPD-LEAD-${Date.now().toString(36)}`;
       const updatedLeads = (guidesState.leads || []).map((l) => {
         if (l.id === lead.id) {
           return {
@@ -1118,7 +1118,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
             ...l,
             bpdCrmUploaded: true,
             bpdCrmUploadedAt: nowIso,
-            bpdCrmLeadId: l.bpdCrmLeadId || `BPD-LEAD-${Math.floor(10000 + Math.random() * 89999)}`,
+            bpdCrmLeadId: l.bpdCrmLeadId || `BPD-LEAD-${Date.now().toString(36)}-${l.id}`,
             bpdCrmSyncStatus: "uploaded" as const,
           };
         }

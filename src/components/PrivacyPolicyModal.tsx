@@ -88,7 +88,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, 
               <li><strong>Message Frequency:</strong> Recurring messages may vary based on your homebuying stage, requested rate alerts, and property inquiries.</li>
               <li><strong>Carrier Rates:</strong> Message and data rates may apply depending on your mobile carrier and plan.</li>
               <li><strong>Opt-Out Instructions:</strong> You can cancel SMS notifications at any time by replying <strong>STOP</strong> to any message received. Upon sending STOP, you will receive a single confirmation message confirming your unsubscription.</li>
-              <li><strong>Customer Support:</strong> For assistance, reply <strong>HELP</strong> to any text message, call <strong>(503) 555-0199</strong>, or email <strong>fordmj@gmail.com</strong>.</li>
+              <li><strong>Customer Support:</strong> For assistance, reply <strong>HELP</strong> to any text message, call <strong>(541) 729-0819</strong>, or email <strong>fordmj@gmail.com</strong>.</li>
               <li><strong>Carriers Supported:</strong> Compatible carriers include AT&amp;T, T-Mobile, Verizon, Sprint, and major independent US cellular networks. Carriers are not liable for delayed or undelivered messages.</li>
             </ul>
           </section>

@@ -1,4 +1,5 @@
 import { getFirestore } from "firebase-admin/firestore";
+import { isTwilioLiveEnabled, attemptTwilioSmsDispatch } from "./twilioGateService";
 
 /**
  * Service to handle bi-directional SMS synchronization from Twilio webhook payloads.
@@ -14,7 +15,24 @@ export async function handleIncomingTwilioWebhook(req: any, res: any, adminApp: 
       return res.status(500).send("<Response><Message>System error.</Message></Response>");
     }
     
-    const db = getFirestore();
+    let db: any;
+    try {
+      if (typeof adminApp?.firestore === "function") {
+        db = adminApp.firestore();
+      } else if (adminApp && adminApp.name && adminApp.options) {
+        db = getFirestore(adminApp);
+      } else {
+        db = getFirestore();
+      }
+    } catch {
+      if (typeof adminApp?.firestore === "function") {
+        db = adminApp.firestore();
+      } else if (adminApp?.collection) {
+        db = adminApp;
+      } else {
+        db = getFirestore();
+      }
+    }
     let loName = "Loan Officer";
     let isVerifiedSender = false;
 
@@ -115,77 +133,69 @@ export async function handleIncomingTwilioWebhook(req: any, res: any, adminApp: 
 
         console.log(`[Twilio Webhook] Successfully verified and routed SMS reply to ${targetLeadName}'s property thread.`);
 
-        // 4. Send Outbound SMS if TCPA Opt-In is checked
+        // 4. Check Twilio Gate & Outbound SMS if TCPA Opt-In is checked
         if (optInBuyerPhone && decryptVaultFunc) {
           try {
-            console.log(`[Twilio Webhook] Buyer opted in for SMS alerts. Attempting to send outbound notification to ${optInBuyerPhone}...`);
-            let matchingVault = null;
-            const vaultSnap = await db.collection("twilio_vault").get();
+            console.log(`[Twilio Webhook] Outbound notification requested for ${optInBuyerPhone}. Checking dormancy gate...`);
             
-            for (const vDoc of vaultSnap.docs) {
-              const vData = vDoc.data();
-              if (vData.encryptedVault) {
-                try {
-                  const decrypted = JSON.parse(decryptVaultFunc(vData.encryptedVault));
-                  // If the To number matches the stored Twilio number
-                  const cleanTo = (To || "").replace(/\D/g, '');
-                  const cleanStored = (decrypted.phoneNumber || "").replace(/\D/g, '');
-                  
-                  // For demo, we might just take the first valid vault if matching fails
-                  matchingVault = decrypted;
-                  
-                  if (cleanTo && cleanStored && (cleanTo === cleanStored || cleanTo.endsWith(cleanStored) || cleanStored.endsWith(cleanTo))) {
+            if (!isTwilioLiveEnabled()) {
+              console.log(`[Twilio Webhook] Twilio live transmission dormant (twilio_dormant_skipped). Zero outbound SMS calls dispatched.`);
+            } else {
+              let matchingVault = null;
+              const vaultSnap = await db.collection("twilio_vault").get();
+              
+              for (const vDoc of vaultSnap.docs) {
+                const vData = vDoc.data();
+                if (vData.encryptedVault) {
+                  try {
+                    const decrypted = JSON.parse(decryptVaultFunc(vData.encryptedVault));
+                    const cleanTo = (To || "").replace(/\D/g, '');
+                    const cleanStored = (decrypted.phoneNumber || "").replace(/\D/g, '');
                     matchingVault = decrypted;
-                    break;
+                    if (cleanTo && cleanStored && (cleanTo === cleanStored || cleanTo.endsWith(cleanStored) || cleanStored.endsWith(cleanTo))) {
+                      matchingVault = decrypted;
+                      break;
+                    }
+                  } catch (e) {
+                    // ignore decrypt errors for other vaults
                   }
-                } catch (e) {
-                  // ignore decrypt errors for other vaults
                 }
               }
-            }
-            
-            const envSid = typeof process !== 'undefined' ? process?.env?.TWILIO_ACCOUNT_SID : undefined;
-            const envToken = typeof process !== 'undefined' ? process?.env?.TWILIO_AUTH_TOKEN : undefined;
-            const envPhone = typeof process !== 'undefined' ? process?.env?.TWILIO_PHONE_NUMBER : undefined;
+              
+              const envSid = typeof process !== 'undefined' ? process?.env?.TWILIO_ACCOUNT_SID : undefined;
+              const envToken = typeof process !== 'undefined' ? process?.env?.TWILIO_AUTH_TOKEN : undefined;
+              const envPhone = typeof process !== 'undefined' ? process?.env?.TWILIO_PHONE_NUMBER : undefined;
 
-            if ((!matchingVault || !matchingVault.accountSid) && envSid && envToken) {
-              matchingVault = {
-                accountSid: envSid,
-                authToken: envToken,
-                phoneNumber: envPhone || To || "+15035550199"
-              };
-            }
-
-            if (matchingVault && matchingVault.accountSid && matchingVault.authToken) {
-              // We will use native fetch to call Twilio REST API to avoid requiring the twilio SDK if it's not installed
-              const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${matchingVault.accountSid}/Messages.json`;
-              const authHeader = "Basic " + Buffer.from(`${matchingVault.accountSid}:${matchingVault.authToken}`).toString("base64");
-              
-              const formData = new URLSearchParams();
-              formData.append("To", optInBuyerPhone);
-              formData.append("From", matchingVault.phoneNumber || To || "+15035550199");
-              formData.append("Body", `${loName} replied to your property question: "${Body}"\n\nView in Portal: https://ais-pre-h5e42vrshqrry7uiwwuhmv-427099073161.us-east5.run.app`);
-              
-              const smsRes = await fetch(twilioUrl, {
-                method: "POST",
-                headers: {
-                  "Authorization": authHeader,
-                  "Content-Type": "application/x-www-form-urlencoded"
-                },
-                body: formData.toString()
-              });
-              
-              if (smsRes.ok) {
-                console.log(`[Twilio Webhook] Outbound SMS alert sent successfully to ${optInBuyerPhone}`);
-              } else {
-                const errText = await smsRes.text();
-                console.warn(`[Twilio Webhook] Twilio API error sending outbound SMS:`, errText);
+              if ((!matchingVault || !matchingVault.accountSid) && envSid && envToken) {
+                matchingVault = {
+                  accountSid: envSid,
+                  authToken: envToken,
+                  phoneNumber: envPhone || To || "+15035550199"
+                };
               }
-            } else {
-               console.warn(`[Twilio Webhook] No valid Twilio credentials found to send outbound SMS.`);
+
+              if (matchingVault && matchingVault.accountSid && matchingVault.authToken) {
+                const dispatchResult = await attemptTwilioSmsDispatch({
+                  to: optInBuyerPhone,
+                  from: matchingVault.phoneNumber || To || "+15035550199",
+                  body: `${loName} replied to your property question: "${Body}"\n\nView in Portal: https://ais-pre-h5e42vrshqrry7uiwwuhmv-427099073161.us-east5.run.app`,
+                  accountSid: matchingVault.accountSid,
+                  authToken: matchingVault.authToken,
+                  isBuyer: true,
+                  dbInstance: db
+                });
+
+                if (dispatchResult.success) {
+                  console.log(`[Twilio Webhook] Outbound SMS alert sent successfully to ${optInBuyerPhone}`);
+                } else {
+                  console.warn(`[Twilio Webhook] Outbound SMS blocked or failed (${dispatchResult.error}):`, dispatchResult);
+                }
+              } else {
+                console.warn(`[Twilio Webhook] No valid Twilio credentials found to send outbound SMS.`);
+              }
             }
           } catch (outboundErr) {
-            console.error(`[Twilio Webhook] Failed to send outbound SMS alert:`, outboundErr);
+            console.error(`[Twilio Webhook] Failed to process outbound SMS alert:`, outboundErr);
           }
         }
 

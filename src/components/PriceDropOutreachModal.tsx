@@ -80,12 +80,16 @@ ${agentName} and I recommend taking a look in person before other weekend shoppe
 Best regards,
 
 ${loName}
-Senior Loan Officer | NMLS #${loanOfficer?.nmls || "238914"}
-${loanOfficer?.phone || "(503) 555-0199"} • ${loanOfficer?.email || "lo@vantage.com"}
+${[
+  loanOfficer?.nmls ? `Senior Loan Officer | NMLS #${loanOfficer.nmls}` : `Senior Loan Officer`,
+  [loanOfficer?.phone, loanOfficer?.email].filter(Boolean).join(" • ")
+].filter(Boolean).join("\n")}
 
 ${agentName}
-Paired Real Estate Agent Partner | ${agent?.brokerage || "Premier Real Estate"}
-${agent?.phone || "(503) 555-0142"} • ${agent?.email || "agent@brokerage.com"}
+${[
+  agent?.brokerage ? `Paired Real Estate Agent Partner | ${agent.brokerage}` : `Paired Real Estate Agent Partner`,
+  [agent?.phone, agent?.email].filter(Boolean).join(" • ")
+].filter(Boolean).join("\n")}
 Vantage Dual-Agent Autonomous Client Outreach`;
 
   const smsBody = `Hi [Buyer]! ${loName} (LO) & ${agentName} (Realtor) here. Great news: ${property.address} was just reduced by ${formatUSD(dropAmount)} on MLS/Zillow! Your monthly payment drops by ~${formatUSD(monthlySavings)}/mo to ${formatUSD(estNewMonthly)}/mo. Would you like to schedule a private tour this weekend? Reply YES!`;

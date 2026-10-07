@@ -157,7 +157,9 @@ export const GrantFinder: React.FC<GrantFinderProps> = ({ guidesState, onNavigat
       `• Fannie Mae HomeReady / Freddie Home Possible: 3% down + CRA closing credit`,
       `• FHA Standard: 3.5% down (580+ FICO)`,
       ``,
-      `Prepared by: ${guidesState?.loanOfficer?.name || "Licensed Loan Officer"} (NMLS #${guidesState?.loanOfficer?.nmlsId || "288455"})`
+      guidesState?.loanOfficer?.name
+        ? `Prepared by: ${guidesState.loanOfficer.name}${guidesState.loanOfficer.nmlsId ? ` (NMLS #${guidesState.loanOfficer.nmlsId})` : ""}`
+        : "Prepared by: Licensed Mortgage Loan Originator"
     ];
     return lines.join("\n");
   };

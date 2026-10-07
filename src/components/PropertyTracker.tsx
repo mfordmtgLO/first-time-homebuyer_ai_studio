@@ -970,10 +970,11 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   };
 
   const showExportSuccessToast = (type: 'CSV' | 'PDF') => {
-    const agentName = activeAgent?.name || loanOfficer?.name || "Kanndice McLean";
-    const agentEmail = activeAgent?.email || loanOfficer?.email || "kanndice@thecooleygroup.com";
-    const agentPhone = activeAgent?.phone || loanOfficer?.phone || "555-0123";
-    const agentBrokerage = activeAgent?.brokerage || "The Cooley Group";
+    const contact = activeAgent || loanOfficer;
+    const agentName = contact?.name;
+    const agentEmail = contact?.email;
+    const agentPhone = contact?.phone;
+    const agentBrokerage = activeAgent?.brokerage || activeAgent?.company || loanOfficer?.company;
 
     setToastMessage({
       title: `${type} Download Complete`,
@@ -981,19 +982,27 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       body: (
         <>
           <p>Your property tracker has been saved successfully.</p>
-          <p className="mt-2 text-[#4A5D4E] font-medium border-t border-[#EAE7E0] pt-2">
-            For more property specific details on your curated saved list today, reach out to <strong>{agentName}</strong> @ {agentBrokerage}.
-          </p>
-          <div className="flex items-center gap-3 mt-2 font-bold text-[#2D362E]">
-            <a href={`mailto:${agentEmail}`} className="flex items-center gap-1 hover:text-[#C18C5D] transition-colors">
-              <Mail className="w-3.5 h-3.5" />
-              {agentEmail}
-            </a>
-            <a href={`tel:${agentPhone}`} className="flex items-center gap-1 hover:text-[#C18C5D] transition-colors">
-              <Phone className="w-3.5 h-3.5" />
-              {agentPhone}
-            </a>
-          </div>
+          {agentName && (
+            <p className="mt-2 text-[#4A5D4E] font-medium border-t border-[#EAE7E0] pt-2">
+              For more property specific details on your curated saved list today, reach out to <strong>{agentName}</strong>{agentBrokerage ? ` @ ${agentBrokerage}` : ""}.
+            </p>
+          )}
+          {(agentEmail || agentPhone) && (
+            <div className="flex items-center gap-3 mt-2 font-bold text-[#2D362E]">
+              {agentEmail && (
+                <a href={`mailto:${agentEmail}`} className="flex items-center gap-1 hover:text-[#C18C5D] transition-colors">
+                  <Mail className="w-3.5 h-3.5" />
+                  {agentEmail}
+                </a>
+              )}
+              {agentPhone && (
+                <a href={`tel:${agentPhone}`} className="flex items-center gap-1 hover:text-[#C18C5D] transition-colors">
+                  <Phone className="w-3.5 h-3.5" />
+                  {agentPhone}
+                </a>
+              )}
+            </div>
+          )}
         </>
       )
     });
@@ -1178,7 +1187,9 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
     const prop = properties.find(p => p.id === id);
     if (prop && !prop.isFavorite) {
       // It's being favorited
-      alert(`🤖 SYSTEM AUTOMATION: SMS SENT TO CO-BRANDED PARTNER\n\nTo: Your Co-branded Agent (555-0199)\n\nMessage: "Hey Your Co-branded Agent, your buyer just Favorited ${prop.title} on their portal. Give them a call to schedule a tour!"`);
+      const agentTargetName = activeAgent?.name || "Realtor Partner";
+      const agentTargetPhone = activeAgent?.phone ? ` (${activeAgent.phone})` : "";
+      alert(`🤖 SYSTEM AUTOMATION: SMS SENT TO CO-BRANDED PARTNER\n\nTo: ${agentTargetName}${agentTargetPhone}\n\nMessage: "Hey ${agentTargetName.split(" ")[0]}, your buyer just Favorited ${prop.title} on their portal. Give them a call to schedule a tour!"`);
     }
 
     setProperties(prev =>

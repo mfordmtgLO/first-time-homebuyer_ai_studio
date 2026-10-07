@@ -40,15 +40,21 @@ export function getWorkEmailSignature(loanOfficer?: LoanOfficerProfile): string 
   }
 
   // Dynamic signature for another logged-in team member
-  return `Best regards,
+  const sigLines: string[] = ["Best regards,", "", loanOfficer.name];
+  if (loanOfficer.title) sigLines.push(loanOfficer.title);
+  if (loanOfficer.company) sigLines.push(loanOfficer.company);
+  
+  const nmls = loanOfficer.nmlsId || loanOfficer.nmlsNumber;
+  if (nmls) {
+    sigLines.push(nmls.toString().startsWith("NMLS") ? nmls.toString() : `NMLS #${nmls}`);
+  }
+  if (loanOfficer.phone) sigLines.push(`Direct: ${loanOfficer.phone}`);
+  if (loanOfficer.email) sigLines.push(`Email: ${loanOfficer.email}`);
+  if (loanOfficer.websiteUrl) sigLines.push(`Website: ${loanOfficer.websiteUrl}`);
+  if (loanOfficer.branch) sigLines.push(`Branch: ${loanOfficer.branch}`);
+  sigLines.push("Equal Housing Opportunity | Equal Housing Lender");
 
-${loanOfficer.name}
-${loanOfficer.title || "Loan Officer"}
-${loanOfficer.company || "Cornerstone First Mortgage"}
-${loanOfficer.nmlsId ? (loanOfficer.nmlsId.startsWith("NMLS") ? loanOfficer.nmlsId : `NMLS #${loanOfficer.nmlsId}`) : "NMLS #288455"} | Company NMLS #173855
-Direct: ${loanOfficer.phone || "(541) 729-0819"}
-Email: ${loanOfficer.email || "mford@cfmtg.com"}
-${loanOfficer.websiteUrl ? `Website: ${loanOfficer.websiteUrl}\n` : ""}${loanOfficer.branch ? `Branch: ${loanOfficer.branch}\n` : ""}Equal Housing Opportunity | Equal Housing Lender`;
+  return sigLines.join("\n");
 }
 
 /**
@@ -98,9 +104,9 @@ export function generateLeadDraftEmailContent(
     ? `$${Number((lead as any).targetPrice).toLocaleString()}` 
     : (lead.targetPriceRange || "$425,000");
   // const loName = loanOfficer?.name || "Mike Ford";
-  const agentName = agent?.name || lead.assignedAgent || "Sarah Jenkins";
-  const agentBrokerage = agent?.brokerage || "Cascade Valley Real Estate";
-  const agentPhone = agent?.phone || "(503) 555-0144";
+  const agentName = agent?.name || lead.assignedAgent || "";
+  const agentBrokerage = agent?.brokerage || (agent as any)?.company || "";
+  const agentPhone = agent?.phone || "";
 
   // Check if lead has saved scenarios
   if (lead.savedScenarios && lead.savedScenarios.length > 0) {
@@ -115,6 +121,12 @@ export function generateLeadDraftEmailContent(
 
   const subject = `Your ${targetCity} Homebuyer Payment Options & Financing Blueprint (${budgetStr})`;
   
+  let teamSection = "";
+  if (agentName) {
+    const agDetails = [agentBrokerage, agentPhone ? `📞 ${agentPhone}` : ""].filter(Boolean).join(", ");
+    teamSection = `\n\n🤝 YOUR DEDICATED HOMEBUYING TEAM:\nI work closely with ${agentName}${agDetails ? ` (${agDetails})` : ""} to coordinate your financing pre-approval and arrange private property tours with zero stress.`;
+  }
+
   const bodyWithoutSig = `Hi ${firstName},
 
 Thank you for exploring your homebuying options on our interactive portal! Based on your target budget of ${budgetStr} in ${targetCity}, I wanted to reach out directly with some exciting financing options tailored for you.
@@ -122,10 +134,7 @@ Thank you for exploring your homebuying options on our interactive portal! Based
 💡 KEY FINANCING ADVANTAGES FOR ${targetCity.toUpperCase()}:
 • Zero-Down USDA Financing: Many homes in and around ${targetCity} qualify for 100% USDA financing ($0 down payment required).
 • Oregon Down Payment Assistance: Up to $15,000 in state-sponsored DPA grants or 3.5% Flex assistance to cover your down payment.
-• 2-1 Temporary Rate Buydown: Seller concessions can lower your initial interest rate by 2% in Year 1 and 1% in Year 2, saving $350-$500/month!
-
-🤝 YOUR DEDICATED HOMEBUYING TEAM:
-I work closely with ${agentName} (${agentBrokerage}, 📞 ${agentPhone}) to coordinate your financing pre-approval and arrange private property tours with zero stress.
+• 2-1 Temporary Rate Buydown: Seller concessions can lower your initial interest rate by 2% in Year 1 and 1% in Year 2, saving $350-$500/month!${teamSection}
 
 Would you be open to a quick 10-minute call this week to review your exact monthly numbers and ensure you're in the strongest position possible?`;
 

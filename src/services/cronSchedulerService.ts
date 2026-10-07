@@ -36,19 +36,6 @@ export const INITIAL_CRON_JOBS: ScheduledCronJob[] = [
     executionCount: 184
   },
   {
-    id: 'cron-top50-daily',
-    name: 'Top 50 RealTrends & Market Sweep (On-Demand)',
-    cronExpression: 'Manual / On-Demand',
-    humanFrequency: 'On-Demand (Client-side Triggered)',
-    category: 'top50_sweep',
-    description: 'On-demand sweep of published RealTrends America\'s Best rankings and Oregon producers. NOTE: Unattended background cron is not active; sweeps run on-demand via dashboard button.',
-    status: 'paused',
-    lastRunAt: undefined,
-    lastRunStatus: undefined,
-    nextRunAt: 'N/A (On-demand only)',
-    executionCount: 0
-  },
-  {
     id: 'cron-geomap-sync',
     name: 'GeoMap Saved Property & RentCast Live Sync',
     cronExpression: '0 4 * * *',

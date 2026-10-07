@@ -317,42 +317,11 @@ export const SmsMessagingModal: React.FC<SmsMessagingModalProps> = ({
       if (data && data.success) {
         setTwilioDispatchStatus(`📡 Live Twilio SMS sent from ${fromNumber || "Twilio"} to ${lead.phone} (SID: ${data.messageSid?.slice(0, 8)}...)`);
       } else if (data && data.error) {
-        setTwilioDispatchStatus(`⚠️ Twilio notice: ${data.error}`);
-      } else {
-        // Fallback directly to Twilio REST API if serverless/static environment doesn't proxy
-        if (sid && authToken && fromNumber) {
-          try {
-            const cleanTo = lead.phone.replace(/[^0-9+]/g, "");
-            const formattedTo = cleanTo.startsWith("+") ? cleanTo : cleanTo.length === 10 ? `+1${cleanTo}` : `+${cleanTo}`;
-            const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(sid)}/Messages.json`;
-            const authHeader = "Basic " + btoa(`${sid}:${authToken}`);
-            const formParams = new URLSearchParams();
-            formParams.append("To", formattedTo);
-            formParams.append("From", fromNumber);
-            formParams.append("Body", currentMsgText);
-
-            const directRes = await fetch(twilioEndpoint, {
-              method: "POST",
-              headers: {
-                "Authorization": authHeader,
-                "Content-Type": "application/x-www-form-urlencoded"
-              },
-              body: formParams.toString()
-            });
-
-            const directData = await directRes.json().catch(() => ({}));
-            if (directRes.ok) {
-              setTwilioDispatchStatus(`📡 Direct Twilio SMS dispatched from ${fromNumber} to ${formattedTo}! (SID: ${(directData.sid || '').slice(0, 8)}...)`);
-            } else {
-              setTwilioDispatchStatus(`⚠️ Twilio error: ${directData.message || directData.detail || 'Dispatch failed'}`);
-            }
-          } catch (directErr: any) {
-            setTwilioDispatchStatus(`⚠️ Twilio notice: ${directErr.message || 'Check credentials'}`);
-          }
-        }
+        setTwilioDispatchStatus(`⚠️ Twilio notice: ${data.error === "twilio_dormant" ? "Twilio live transmission is dormant (in-app notes active)." : data.error}`);
       }
     } catch (e: any) {
-      console.error("Twilio send error:", e);
+      console.warn("Backend /api/twilio/send-sms error:", e);
+      setTwilioDispatchStatus("⚠️ SMS send failed (Twilio dormant / server unavailable).");
     }
     setTimeout(() => setTwilioDispatchStatus(null), 6000);
   };

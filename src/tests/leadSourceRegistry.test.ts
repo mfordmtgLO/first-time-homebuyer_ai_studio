@@ -111,6 +111,45 @@ describe("Owner Spec: Canonical Lead Source Registry Suite (Mike Ford, 2026-10-0
     });
   });
 
+  describe("Micro-Addendum (2026-10-08): 4 Legacy Alias Strings", () => {
+    it("A1: 'Website AI Intake Chatbot' as only source field resolves to 'First Time Homebuyer Website: Chatbot'", () => {
+      const lead: Partial<CapturedLead> = { leadSource: "Website AI Intake Chatbot" };
+      const resolved = resolveLeadSource(lead);
+      expect(resolved.slug).toBe("lead_intake_chatbot");
+      expect(resolved.label).toBe("First Time Homebuyer Website: Chatbot");
+    });
+
+    it("A2: 'Market Trends Lead' as only source field resolves to 'Local Market Trends Tool'", () => {
+      const lead: Partial<CapturedLead> = { leadPathTag: "Market Trends Lead" };
+      const resolved = resolveLeadSource(lead);
+      expect(resolved.slug).toBe("local-market-trends");
+      expect(resolved.label).toBe("Local Market Trends Tool");
+
+      const leadViaSourceField: Partial<CapturedLead> = { leadSource: "Market Trends Lead" };
+      expect(resolveLeadSource(leadViaSourceField).label).toBe("Local Market Trends Tool");
+    });
+
+    it("A3: 'Agent Spotlight Curated Home List' as only source field resolves to 'Agent Spotlight'", () => {
+      const lead: Partial<CapturedLead> = { leadPathTag: "Agent Spotlight Curated Home List" };
+      const resolved = resolveLeadSource(lead);
+      expect(resolved.slug).toBe("agent-spotlight");
+      expect(resolved.label).toBe("Agent Spotlight");
+
+      const leadViaSourceField: Partial<CapturedLead> = { leadSource: "Agent Spotlight Curated Home List" };
+      expect(resolveLeadSource(leadViaSourceField).label).toBe("Agent Spotlight");
+    });
+
+    it("A4: 'Agent Spotlight Hero Lead Gen' as only source field resolves to 'Agent Spotlight'", () => {
+      const lead: Partial<CapturedLead> = { leadPathTag: "Agent Spotlight Hero Lead Gen" };
+      const resolved = resolveLeadSource(lead);
+      expect(resolved.slug).toBe("agent-spotlight");
+      expect(resolved.label).toBe("Agent Spotlight");
+
+      const leadViaSourceField: Partial<CapturedLead> = { leadSource: "Agent Spotlight Hero Lead Gen" };
+      expect(resolveLeadSource(leadViaSourceField).label).toBe("Agent Spotlight");
+    });
+  });
+
   describe("Expense & ROI Attribution Alignment", () => {
     it("E1: resolveExpenseSource maps known expense strings to canonical definitions", () => {
       expect(resolveExpenseSource("Facebook Ads").label).toBe("Facebook Ads");

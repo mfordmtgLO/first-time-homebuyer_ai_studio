@@ -25,6 +25,9 @@ export interface LeadSourceDefinition {
   isExpenseSelectable?: boolean;
 }
 
+export const WEBSITE_CHATBOT_SOURCE_SLUG = "lead_intake_chatbot";
+export const WEBSITE_CHATBOT_SOURCE_LABEL = "First Time Homebuyer Website: Chatbot";
+
 export const UNATTRIBUTED_SOURCE: LeadSourceDefinition = {
   slug: "unattributed",
   label: "Unattributed",
@@ -42,6 +45,7 @@ export const CANONICAL_LEAD_SOURCES: LeadSourceDefinition[] = [
     aliases: [
       "lead_intake_chatbot",
       "chatbot",
+      "Website AI Intake Chatbot",
       "website ai intake chatbot",
       "website ai intake",
       "interactive guided ai intake",
@@ -177,6 +181,7 @@ export const CANONICAL_LEAD_SOURCES: LeadSourceDefinition[] = [
     label: "Local Market Trends Tool",
     expenseKey: "local-market-trends",
     aliases: [
+      "Market Trends Lead",
       "local market trends tool",
       "market trends lead",
       "market trends",
@@ -189,6 +194,8 @@ export const CANONICAL_LEAD_SOURCES: LeadSourceDefinition[] = [
     label: "Agent Spotlight",
     expenseKey: "agent-spotlight",
     aliases: [
+      "Agent Spotlight Curated Home List",
+      "Agent Spotlight Hero Lead Gen",
       "agent spotlight",
       "agent spotlight curated home list",
       "agent spotlight hero lead gen",

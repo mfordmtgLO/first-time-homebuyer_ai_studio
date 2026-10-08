@@ -46,6 +46,10 @@ import { formatUSD } from "../utils/mortgageMath";
 import { containsSSN, sanitizeSSN } from "../utils/ssnProtection";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { telemetry } from "../services/telemetryService";
+import {
+  WEBSITE_CHATBOT_SOURCE_SLUG,
+  WEBSITE_CHATBOT_SOURCE_LABEL,
+} from "../utils/leadSourceRegistry";
 
 // Comprehensive alphabetical listing of cities and towns across the state of Oregon
 export const OREGON_CITIES: string[] = [
@@ -670,9 +674,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     ownerLoId: loanOfficer.id || "lo-mike-ford",
     assignedLoId: loanOfficer.id,
     assignedAgentId: showAgent && agent ? agent.id : undefined,
-    source: "lead_intake_chatbot",
-    sourceLabel: "First Time Homebuyer Website: Chatbot",
-    leadSource: "First Time Homebuyer Website: Chatbot",
+    source: WEBSITE_CHATBOT_SOURCE_SLUG,
+    sourceLabel: WEBSITE_CHATBOT_SOURCE_LABEL,
+    leadSource: WEBSITE_CHATBOT_SOURCE_LABEL,
     intentScore: "hot",
     status: "new",
   });
@@ -1078,8 +1082,8 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       ownerLoId: loanOfficer.id || "lo-mike-ford",
       assignedLoId: loanOfficer.id,
       assignedAgentId: agent?.id,
-      source: "lead_intake_chatbot",
-      sourceLabel: "First Time Homebuyer Website: Chatbot",
+      source: WEBSITE_CHATBOT_SOURCE_SLUG,
+      sourceLabel: WEBSITE_CHATBOT_SOURCE_LABEL,
       leadSource: computedLeadSource,
       sourceCampaignId: sourceCampaignId,
       sourceCampaignName: sourceCampaignName,
@@ -1180,9 +1184,9 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       ownerLoId: loanOfficer.id || "lo-mike-ford",
       assignedLoId: loanOfficer.id,
       assignedAgentId: agent.id,
-      source: "lead_intake_chatbot",
-      sourceLabel: "First Time Homebuyer Website: Chatbot",
-      leadSource: "First Time Homebuyer Website: Chatbot",
+      source: WEBSITE_CHATBOT_SOURCE_SLUG,
+      sourceLabel: WEBSITE_CHATBOT_SOURCE_LABEL,
+      leadSource: WEBSITE_CHATBOT_SOURCE_LABEL,
       intentScore: "hot",
       status: "new",
     });

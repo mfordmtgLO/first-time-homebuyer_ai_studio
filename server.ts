@@ -387,16 +387,31 @@ const authenticateUser = async (
     const decodedToken = await getAuth().verifyIdToken(token, true);
 
     // Priority 1 Item 1: Extract role and loId from custom claims or server-side whitelist/roles record (H1 & M3)
-    let role = (decodedToken as any).role || (decodedToken as any).rbacRole;
+    let role: string | undefined = (decodedToken as any).role || (decodedToken as any).rbacRole;
     let assignedLoId: string | undefined = undefined;
 
-    const emailLower = decodedToken.email ? decodedToken.email.toLowerCase() : "";
+    const emailLower = decodedToken.email ? decodedToken.email.toLowerCase().trim() : "";
+
+    // Break-glass Master Admin Bypass (A1/A2): Master-admin resolves to branch_manager without doc
+    if (emailLower && (emailLower === "fordmj@gmail.com" || emailLower === "mford@cfmtg.com")) {
+      role = "branch_manager";
+      assignedLoId = "lo-mike-ford";
+    }
+
     if (emailLower) {
       try {
         const db = getAdminDb();
         const whitelistDoc = await db.collection("whitelisted_emails").doc(emailLower).get();
         if (whitelistDoc.exists) {
           const wData = whitelistDoc.data();
+          // Server-Side Lockout Enforcement (A3): Locked-out user gets immediate 403
+          if (wData?.isLockedOut === true) {
+            console.warn(`[Zero-Trust Auth] Blocked request from locked-out account: ${emailLower}`);
+            return res.status(403).json({
+              error: "Forbidden: Account has been locked out by an administrator.",
+              code: "auth/account-locked",
+            });
+          }
           if (wData?.role) {
             role = role || wData.role;
           }
@@ -414,11 +429,33 @@ const authenticateUser = async (
         const userDoc = await getAdminDb().collection("user_roles").doc(decodedToken.uid).get();
         if (userDoc.exists) {
           const data = userDoc.data();
-          role = data?.rbacRole || data?.role || "team_lo";
+          if (data?.isLockedOut === true) {
+            console.warn(`[Zero-Trust Auth] Blocked request from locked-out user doc: ${decodedToken.uid}`);
+            return res.status(403).json({
+              error: "Forbidden: Account has been locked out by an administrator.",
+              code: "auth/account-locked",
+            });
+          }
+          if (data?.rbacRole || data?.role) {
+            role = data?.rbacRole || data?.role;
+          }
+          if (data?.assignedLoId && !assignedLoId) {
+            assignedLoId = data.assignedLoId;
+          }
         }
       } catch (dbErr) {
         console.warn("[Zero-Trust Auth] user_roles lookup notice:", dbErr);
       }
+    }
+
+    // Role resolution FAIL-CLOSED (A2): Missing user_roles doc, missing role fields, or lookup error -> 403
+    // Remove the "team_lo" default completely.
+    if (!role || role === "pending") {
+      console.warn(`[Zero-Trust Auth] Access denied for unapproved/pending account: ${emailLower || decodedToken.uid}`);
+      return res.status(403).json({
+        error: "Forbidden: Account is pending administrator approval or lacks an authorized staff role.",
+        code: "auth/forbidden-no-role",
+      });
     }
 
     // Bootstrap admins resolve via whitelisted_emails like everyone else; no code hardcodes.
@@ -427,7 +464,7 @@ const authenticateUser = async (
 
     (req as any).user = {
       ...decodedToken,
-      role: (role || "team_lo").toLowerCase(),
+      role: role.toLowerCase(),
       loId: resolvedLoId,
     };
     (req as any).authChecked = true;
@@ -775,7 +812,8 @@ async function startServer() {
         preferredLocations: String(lead.preferredLocations || "TBD").slice(0, 100),
         propertyType: String(lead.propertyType || "Single Family").slice(0, 50),
         notes: lead.notes ? String(lead.notes).slice(0, 1000) : "",
-        assignedLoId: "mike-ford", // Server-enforced: cannot be overridden by payload
+        ownerLoId: String(lead.assignedLoId || lead.ownerLoId || "lo-mike-ford").trim(),
+        assignedLoId: String(lead.assignedLoId || lead.ownerLoId || "lo-mike-ford").trim(),
         createdAt: new Date().toISOString(),
       };
 
@@ -10298,7 +10336,7 @@ Disallow: /
     }
   });
 
-  // Dedicated Lockout Endpoint
+  // Dedicated Lockout Endpoint (A3)
   app.post("/api/admin/roles/lock", authenticateUser, async (req, res) => {
     try {
       if (!(await verifyBranchManager(req, res))) return;
@@ -10314,20 +10352,148 @@ Disallow: /
 
       await docRef.set({ isLockedOut: !!isLockedOut, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 
+      // Admin SDK revoke refresh tokens for target user (A3)
+      let targetUid: string | null = null;
+      try {
+        const userRecord = await getAuth().getUserByEmail(targetEmail);
+        targetUid = userRecord.uid;
+        if (isLockedOut) {
+          await getAuth().revokeRefreshTokens(targetUid);
+          console.log(`[Admin SDK] Revoked refresh tokens for user ${targetUid} (${targetEmail})`);
+        }
+        await db.collection("user_roles").doc(targetUid).set(
+          { isLockedOut: !!isLockedOut, updatedAt: FieldValue.serverTimestamp() },
+          { merge: true }
+        );
+      } catch (authErr: any) {
+        console.warn("[Admin SDK] getUserByEmail/revoke notice:", authErr?.message || authErr);
+      }
+
       await recordComplianceAuditLog(
-        "ROLE_LOCK_TOGGLED",
+        isLockedOut ? "ACCOUNT_LOCKED" : "ACCOUNT_UNLOCKED",
         {
           targetEmail,
+          targetUid,
           isLockedOut: !!isLockedOut,
-          toggledBy: (req as any).user?.email || (req as any).user?.uid,
+          tokensRevoked: !!isLockedOut && !!targetUid,
+          actor: (req as any).user?.email || (req as any).user?.uid,
+          timestamp: new Date().toISOString(),
         },
         (req as any).user?.email
       );
 
-      res.json({ success: true, email: targetEmail, isLockedOut: !!isLockedOut });
+      res.json({
+        success: true,
+        email: targetEmail,
+        isLockedOut: !!isLockedOut,
+        tokensRevoked: !!isLockedOut && !!targetUid,
+      });
     } catch (err: any) {
       console.error("[Role Lock API] Error:", err);
       res.status(500).json({ error: err.message || "Failed to toggle lock state." });
+    }
+  });
+
+  // B3: POST /api/admin/leads/backfill-owner — Master-Admin gated backfill of ownerLoId
+  app.post("/api/admin/leads/backfill-owner", authenticateUser, async (req, res) => {
+    try {
+      const callerEmail = String((req as any).user?.email || "").toLowerCase().trim();
+      if (callerEmail !== "fordmj@gmail.com" && callerEmail !== "mford@cfmtg.com") {
+        return res.status(403).json({ error: "Forbidden: Master Admin privileges required." });
+      }
+
+      const db = getAdminDb();
+      const leadsSnap = await db.collection("leads").get();
+      const adminPoolLoId = "lo-mike-ford";
+      const scanned = leadsSnap.size;
+      const unownedDocs = leadsSnap.docs.filter((d) => !d.data()?.ownerLoId);
+      let updated = 0;
+
+      for (let i = 0; i < unownedDocs.length; i += 400) {
+        const chunk = unownedDocs.slice(i, i + 400);
+        const batch = db.batch();
+        chunk.forEach((d) => {
+          batch.update(d.ref, {
+            ownerLoId: adminPoolLoId,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+          updated++;
+        });
+        await batch.commit();
+      }
+
+      await recordComplianceAuditLog(
+        "LEADS_OWNER_BACKFILLED",
+        {
+          scanned,
+          updated,
+          adminPoolLoId,
+          performedBy: (req as any).user?.email || (req as any).user?.uid,
+          timestamp: new Date().toISOString(),
+        },
+        (req as any).user?.email
+      );
+
+      res.json({ success: true, scanned, updated, ownerLoId: adminPoolLoId });
+    } catch (err: any) {
+      console.error("[Leads Backfill Error]:", err);
+      res.status(500).json({ error: err.message || "Failed to backfill lead ownership." });
+    }
+  });
+
+  // B8: POST /api/admin/leads/reassign — Reassign lead ownership (verifyBranchManager-gated)
+  app.post("/api/admin/leads/reassign", authenticateUser, async (req, res) => {
+    try {
+      if (!(await verifyBranchManager(req, res))) return;
+
+      const { leadId, newOwnerLoId } = req.body || {};
+      if (!leadId || typeof leadId !== "string" || !newOwnerLoId || typeof newOwnerLoId !== "string") {
+        return res.status(400).json({ error: "Missing required fields: leadId and newOwnerLoId." });
+      }
+
+      const cleanLeadId = leadId.trim();
+      const cleanNewOwnerLoId = newOwnerLoId.trim();
+      const db = getAdminDb();
+      const leadRef = db.collection("leads").doc(cleanLeadId);
+      const leadSnap = await leadRef.get();
+
+      if (!leadSnap.exists) {
+        return res.status(404).json({ error: "Lead document not found." });
+      }
+
+      const leadData = leadSnap.data();
+      const previousOwnerLoId = leadData?.ownerLoId || leadData?.assignedLoId || "unassigned";
+
+      await leadRef.set(
+        {
+          ownerLoId: cleanNewOwnerLoId,
+          assignedLoId: cleanNewOwnerLoId,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      await recordComplianceAuditLog(
+        "LEAD_REASSIGNED",
+        {
+          leadId: cleanLeadId,
+          fromOwnerLoId: previousOwnerLoId,
+          toOwnerLoId: cleanNewOwnerLoId,
+          reassignedBy: (req as any).user?.email || (req as any).user?.uid,
+          timestamp: new Date().toISOString(),
+        },
+        (req as any).user?.email
+      );
+
+      res.json({
+        success: true,
+        leadId: cleanLeadId,
+        previousOwnerLoId,
+        newOwnerLoId: cleanNewOwnerLoId,
+      });
+    } catch (err: any) {
+      console.error("[Lead Reassign Error]:", err);
+      res.status(500).json({ error: err.message || "Failed to reassign lead." });
     }
   });
 
@@ -10358,8 +10524,10 @@ Disallow: /
   // GET /api/leads/curate/queue — Curation queue with auditor PII masking & backfill
   app.get("/api/leads/curate/queue", authenticateUser, async (req, res) => {
     try {
-      const callerRole = (req as any).user?.role || "team_lo";
+      const callerRole = String((req as any).user?.role || "").toLowerCase();
+      const callerLoId = (req as any).user?.loId;
       const isAuditor = callerRole === "compliance_auditor";
+      const isLoStaff = callerRole === "senior_lo" || callerRole === "team_lo" || callerRole === "processor";
       const db = getAdminDb();
 
       // 1. Fetch all leads from leads collection and guides_state
@@ -10405,6 +10573,12 @@ Disallow: /
       const queue: any[] = [];
 
       for (const [leadId, lead] of leadMap.entries()) {
+        // Tenant isolation: LO roles only receive leads they own
+        const leadOwner = lead.ownerLoId || lead.assignedLoId;
+        if (isLoStaff && leadOwner !== callerLoId) {
+          continue;
+        }
+
         const existingCuration = curationMap.get(leadId);
         let curationReq = lead.leadCurationRequest;
 
@@ -10442,6 +10616,7 @@ Disallow: /
             status,
             curationDoc: existingCuration || null,
             assignedLoId: lead.assignedLoId || null,
+            ownerLoId: lead.ownerLoId || lead.assignedLoId || null,
           });
         }
       }
@@ -10495,7 +10670,9 @@ Disallow: /
   // POST /api/leads/curate/marry — "Marry to Lead" action with validation & immutable audit
   app.post("/api/leads/curate/marry", authenticateUser, async (req, res) => {
     try {
-      const callerRole = (req as any).user?.role || "team_lo";
+      const callerRole = String((req as any).user?.role || "").toLowerCase();
+      const callerLoId = (req as any).user?.loId;
+      const isLoStaff = callerRole === "senior_lo" || callerRole === "team_lo" || callerRole === "processor";
       if (callerRole === "compliance_auditor") {
         return res.status(403).json({ error: "Access Denied: Compliance Auditor role has read-only access." });
       }
@@ -10509,7 +10686,36 @@ Disallow: /
         return res.status(400).json({ error: "listingIds must be a non-empty array of valid property IDs." });
       }
 
+      const cleanLeadId = leadId.trim();
       const db = getAdminDb();
+
+      // Fetch lead details first to verify existence and enforce tenant isolation
+      let leadName = "Valued Homebuyer";
+      let leadEmail = "";
+      let existingCurationRequest: any = null;
+      let existingLeadData: any = null;
+
+      try {
+        const leadDoc = await db.collection("leads").doc(cleanLeadId).get();
+        if (leadDoc.exists) {
+          existingLeadData = leadDoc.data();
+          leadName = existingLeadData?.fullName || existingLeadData?.name || leadName;
+          leadEmail = existingLeadData?.email || "";
+          existingCurationRequest = existingLeadData?.leadCurationRequest || null;
+        }
+      } catch (e) {
+        console.warn("[Marry API] Lead lookup notice:", e);
+      }
+
+      if (!existingLeadData) {
+        return res.status(404).json({ error: "Lead not found." });
+      }
+
+      // Tenant isolation (B7): LO roles cannot access another LO's lead; return 404 to avoid leaking existence
+      const leadOwner = existingLeadData.ownerLoId || existingLeadData.assignedLoId;
+      if (isLoStaff && leadOwner !== callerLoId) {
+        return res.status(404).json({ error: "Lead not found." });
+      }
 
       // Validate that each listingId exists in the canonical curated_listings pool (reject invented IDs)
       const validPoolIds = new Set<string>();
@@ -10532,24 +10738,6 @@ Disallow: /
         }
       }
 
-      // Fetch lead details for normalization and retrieve existing leadCurationRequest to preserve original intake fields
-      let leadName = "Valued Homebuyer";
-      let leadEmail = "";
-      let existingCurationRequest: any = null;
-      let existingLeadData: any = null;
-
-      try {
-        const leadDoc = await db.collection("leads").doc(cleanLeadId).get();
-        if (leadDoc.exists) {
-          existingLeadData = leadDoc.data();
-          leadName = existingLeadData?.fullName || existingLeadData?.name || leadName;
-          leadEmail = existingLeadData?.email || "";
-          existingCurationRequest = existingLeadData?.leadCurationRequest || null;
-        }
-      } catch (e) {
-        console.warn("[Marry API] Lead lookup notice:", e);
-      }
-
       // Check fallback from notes if leadCurationRequest was not yet structured
       if (!existingCurationRequest && existingLeadData) {
         const hasUrgentNote = typeof existingLeadData.notes === "string" && (
@@ -10561,12 +10749,11 @@ Disallow: /
             city: existingLeadData.preferredLocations || existingLeadData.taggedCityArea || existingLeadData.desiredPurchaseLocation || "Oregon",
             priceRange: existingLeadData.targetPriceRange || null,
             source: "chatbot",
-            requestedAt: existingLeadData.createdAt || nowIso,
+            requestedAt: existingLeadData.createdAt || new Date().toISOString(),
           };
         }
       }
 
-      const cleanLeadId = leadId.trim();
       const existingCurationDoc = await db.collection("lead_curations").doc(cleanLeadId).get();
       const isSupersede = existingCurationDoc.exists;
 
@@ -10643,7 +10830,9 @@ Disallow: /
   // POST /api/leads/curate/unmarry — Un-marry action returns request to "requested" & stamps ledger
   app.post("/api/leads/curate/unmarry", authenticateUser, async (req, res) => {
     try {
-      const callerRole = (req as any).user?.role || "team_lo";
+      const callerRole = String((req as any).user?.role || "").toLowerCase();
+      const callerLoId = (req as any).user?.loId;
+      const isLoStaff = callerRole === "senior_lo" || callerRole === "team_lo" || callerRole === "processor";
       if (callerRole === "compliance_auditor") {
         return res.status(403).json({ error: "Access Denied: Compliance Auditor role has read-only access." });
       }
@@ -10656,13 +10845,34 @@ Disallow: /
       const cleanLeadId = leadId.trim();
       const db = getAdminDb();
 
+      // Read existing lead document first to check existence and enforce tenant isolation
+      let existingCurationRequest: any = null;
+      let existingLeadData: any = null;
+
+      try {
+        const leadDoc = await db.collection("leads").doc(cleanLeadId).get();
+        if (leadDoc.exists) {
+          existingLeadData = leadDoc.data();
+          existingCurationRequest = existingLeadData?.leadCurationRequest || null;
+        }
+      } catch (e) {
+        console.warn("[Unmarry API] Lead lookup notice:", e);
+      }
+
+      if (!existingLeadData) {
+        return res.status(404).json({ error: "Lead not found." });
+      }
+
+      // Tenant isolation (B7): LO roles cannot access another LO's lead; return 404 to avoid leaking existence
+      const leadOwner = existingLeadData.ownerLoId || existingLeadData.assignedLoId;
+      if (isLoStaff && leadOwner !== callerLoId) {
+        return res.status(404).json({ error: "Lead not found." });
+      }
+
       // Delete the curation document
       await db.collection("lead_curations").doc(cleanLeadId).delete();
 
       // Read existing lead document first to preserve city, priceRange, source, requestedAt, etc.
-      let existingCurationRequest: any = null;
-      let existingLeadData: any = null;
-
       try {
         const leadDoc = await db.collection("leads").doc(cleanLeadId).get();
         if (leadDoc.exists) {

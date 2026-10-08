@@ -667,6 +667,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
     annualIncome: "",
     preferredLocations: "",
     propertyType: "Single Family",
+    ownerLoId: loanOfficer.id || "lo-mike-ford",
     assignedLoId: loanOfficer.id,
     assignedAgentId: showAgent && agent ? agent.id : undefined,
     leadSource: "Website AI Intake Chatbot",
@@ -1072,6 +1073,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       sendSampleHomesOption:
         leadState.sendSampleHomesOption ||
         "YES - Please send available homes with low/no down payment options",
+      ownerLoId: loanOfficer.id || "lo-mike-ford",
       assignedLoId: loanOfficer.id,
       assignedAgentId: agent?.id,
       leadSource: computedLeadSource,
@@ -1171,6 +1173,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
       propertyType: "Single Family",
       sendSampleHomes: true,
       sendSampleHomesOption: "",
+      ownerLoId: loanOfficer.id || "lo-mike-ford",
       assignedLoId: loanOfficer.id,
       assignedAgentId: agent.id,
       leadSource: "Website AI Intake Chatbot",

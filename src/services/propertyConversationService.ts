@@ -56,7 +56,10 @@ export function getOrCreateVisitorLeadId(): string {
   // 2. Check simple lead ID key
   let visitorId = localStorage.getItem(VISITOR_SESSION_LEAD_KEY);
   if (!visitorId) {
-    visitorId = `lead-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const uniqueSuffix = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID().slice(0, 8)
+      : `${Date.now().toString(36)}`;
+    visitorId = `visitor-${Date.now()}-${uniqueSuffix}`;
     localStorage.setItem(VISITOR_SESSION_LEAD_KEY, visitorId);
   }
   return visitorId;

@@ -832,6 +832,7 @@ export interface CapturedLead {
   propertyType: string;
   sendSampleHomes?: boolean;
   sendSampleHomesOption?: string;
+  ownerLoId?: string;
   assignedLoId: string;
   assignedAgentId?: string;
   assignedLO?: string;

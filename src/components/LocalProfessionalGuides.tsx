@@ -97,6 +97,7 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
       sendSampleHomesOption: buyerMsg.wantsCuratedList
         ? `YES - Curated list of recently listed homes in ${cityClean || "Oregon"} (Low/No Down Eligible)`
         : "No sample list",
+      ownerLoId: loanOfficer.id || "lo-mike-ford",
       assignedLoId: loanOfficer.id,
       assignedAgentId: activeAgent?.id || "agent-1",
       assignedLO: loanOfficer.name,

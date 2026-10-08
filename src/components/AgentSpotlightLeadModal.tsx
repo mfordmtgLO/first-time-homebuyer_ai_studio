@@ -164,6 +164,7 @@ export const AgentSpotlightLeadModal: React.FC<AgentSpotlightLeadModalProps> = (
       propertyType: "Single Family",
       sendSampleHomes: wantsCuratedList,
       sendSampleHomesOption: `YES - Curated list of recently listed homes in ${cityClean} (Low/No Down Eligible)`,
+      ownerLoId: loId || "lo-mike-ford",
       assignedLoId: loId,
       assignedAgentId: agent.id,
       assignedLO: loName,

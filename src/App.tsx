@@ -148,13 +148,13 @@ export default function App() {
           try {
             const role = await checkAndProvisionUser(result.user);
             setUserRole(role);
-            setShowLoPortal(true);
+            setShowLoPortal(role !== "pending");
           } catch (e) {
             const fallbackRole = (email === "fordmj@gmail.com" || email === "mford@cfmtg.com")
               ? "branch_manager"
-              : "team_lo";
+              : "pending";
             setUserRole(fallbackRole);
-            setShowLoPortal(true);
+            setShowLoPortal(fallbackRole !== "pending");
           }
           setIsAuthChecking(false);
         }
@@ -215,21 +215,17 @@ export default function App() {
         try {
           const role = await checkAndProvisionUser(user);
           setUserRole(role);
-          setShowLoPortal(true);
+          setShowLoPortal(role !== "pending");
         } catch (e) {
           console.error("Auth provisioning error:", e);
           const fallbackRole = (email === "fordmj@gmail.com" || email === "mford@cfmtg.com")
             ? "branch_manager"
-            : "team_lo";
+            : "pending";
           setUserRole(fallbackRole);
-          setShowLoPortal(true);
+          setShowLoPortal(fallbackRole !== "pending");
         }
       } else {
-        if (typeof window !== "undefined" && localStorage.getItem("public_review_mode") === "true") {
-          setUserRole("branch_manager");
-        } else {
-          setUserRole(null);
-        }
+        setUserRole(null);
       }
       setIsAuthChecking(false);
     });
@@ -662,7 +658,7 @@ export default function App() {
   // Secure reactive subscription to the sharded /leads collection (GLBA & PII Guard)
   // Ensures website visitors can never pull down the full lead register from Firebase.
   useEffect(() => {
-    if (!userRole || userRole === null) {
+    if (!userRole || userRole === null || userRole === "pending") {
       // Clear lead records in client memory if user is not authorized staff
       setGuidesState((prev) => ({ ...prev, leads: [] }));
       return;

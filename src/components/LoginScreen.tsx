@@ -57,9 +57,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, guidesState }
             try {
               const role = await checkAndProvisionUser(user);
               onLogin(role);
-            } catch (err) {
-              console.warn("[LoginScreen] Session check fallback note:", err);
-              onLogin("team_lo");
+            } catch (err: any) {
+              if (err?.message === "LOCKED_OUT") {
+                setError("Your account has been locked by an administrator.");
+                return;
+              }
+              console.warn("[LoginScreen] Session check note:", err);
+              onLogin("pending");
             }
           }
         }
@@ -100,10 +104,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, guidesState }
         console.log("Calling onLogin callback...");
         onLogin(role);
       } catch (err: any) {
-        console.warn("Provisioning check fallback note:", err);
+        if (err?.message === "LOCKED_OUT") {
+          setError("Your account has been locked out by an administrator.");
+          return;
+        }
+        console.warn("Provisioning check note:", err);
         const fallbackRole = (email === "fordmj@gmail.com" || email === "mford@cfmtg.com")
           ? "branch_manager"
-          : "team_lo";
+          : "pending";
         if (typeof window !== "undefined") {
           localStorage.removeItem("lo_portal_logged_out");
           sessionStorage.removeItem("lo_portal_auth_in_progress");

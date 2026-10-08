@@ -348,6 +348,7 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
       propertyType: "Single Family",
       sendSampleHomes: inlineWantsList,
       sendSampleHomesOption: `YES - Curated list of recently listed homes in ${cityClean} (Low/No Down Eligible)`,
+      ownerLoId: loId || "lo-mike-ford",
       assignedLoId: loId,
       assignedAgentId: spotlightAgent.id,
       assignedLO: loName,

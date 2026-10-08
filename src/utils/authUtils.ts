@@ -1,9 +1,8 @@
 import { db } from "../firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getMessaging, getToken } from "firebase/messaging";
-import { normalizeRole, RbacRole } from "./rbac";
+import { normalizeRole, RbacRole, isMasterAdminEmail, MASTER_ADMIN_EMAILS } from "./rbac";
 
-const ADMIN_EMAILS = ["fordmj@gmail.com", "mford@cfmtg.com"];
 const COMPLIANCE_EMAIL = "auditor@yourcompany.com";
 
 const withTimeout = <T>(ms: number, promise: Promise<T>, label: string): Promise<T> => {
@@ -23,18 +22,19 @@ const withTimeout = <T>(ms: number, promise: Promise<T>, label: string): Promise
   });
 };
 
-export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admin"> {
+export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admin" | "pending"> {
   if (!user.email) throw new Error("No email found on user.");
   
   const email = user.email.toLowerCase();
   
-  // 1. Is this the master admin / branch manager?
-  if (ADMIN_EMAILS.map(e => e.toLowerCase()).includes(email)) {
+  // 1. Break-glass bypass: Is this the master admin / branch manager?
+  if (isMasterAdminEmail(email)) {
     // Non-blocking fire-and-forget sync to Firestore so auth is instant
     setDoc(doc(db, "user_roles", user.uid), {
       email,
       role: "admin",
       rbacRole: "branch_manager",
+      assignedLoId: "lo-mike-ford",
       lastLogin: serverTimestamp()
     }, { merge: true }).catch(err => console.warn("Admin Firestore sync note:", err));
     return "branch_manager";
@@ -51,7 +51,7 @@ export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admi
     return "compliance_auditor" as RbacRole;
   }
 
-  // 2. Are they in the whitelist?
+  // 2. Are they in the whitelist? Whitelisted_emails is the ONLY admission authority.
   try {
     const whitelistRef = doc(db, "whitelisted_emails", email);
     const whitelistSnap = await withTimeout(4000, getDoc(whitelistRef), "Whitelist Check");
@@ -76,51 +76,16 @@ export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admi
       return assignedRole;
     }
   } catch (err: any) {
+    if (err?.message === "LOCKED_OUT") {
+      throw err;
+    }
     console.warn("Whitelist lookup error:", err);
   }
 
-  // 2.b Fallback: Check if user is in configured LO roster or has @cfmtg.com email
-  try {
-    if (email.endsWith("@cfmtg.com")) {
-      return "team_lo";
-    }
-
-    const savedGuides =
-      typeof window !== "undefined"
-        ? localStorage.getItem("homebuyer_roadmap_state_v2") ||
-          localStorage.getItem("homebuyer_guides_state")
-        : null;
-    if (savedGuides) {
-      const parsed = JSON.parse(savedGuides);
-      const matchedLo = parsed.loanOfficers?.find((lo: any) => lo.email?.toLowerCase() === email);
-      if (matchedLo) {
-        return (matchedLo.isAdmin || matchedLo.role?.toLowerCase().includes("manager"))
-          ? "branch_manager"
-          : "team_lo";
-      }
-    }
-  } catch (rosterErr) {
-    console.warn("Roster fallback check note:", rosterErr);
-  }
-
-  // 2.c Verified Google Sign-In Originator Fallback:
-  // Any user who authenticated successfully with verified Google OAuth is granted Originator access
-  try {
-    setDoc(
-      doc(db, "user_roles", user.uid),
-      {
-        email,
-        role: "lo",
-        rbacRole: "team_lo",
-        lastLogin: serverTimestamp(),
-      },
-      { merge: true }
-    ).catch((err) => console.warn("Auto-provision sync note:", err));
-  } catch (syncErr) {
-    console.warn("User role sync error:", syncErr);
-  }
-
-  return "team_lo";
+  // 3. Whitelist MISS: Fail-closed zero-trust admission.
+  // Provision NOTHING with access — no user_roles write carrying any rbacRole.
+  // Return "pending" so the UI renders the pending approval screen with zero data views.
+  return "pending";
 }
 
 /**

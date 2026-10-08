@@ -304,11 +304,15 @@ export function isProcessorRole(rawRole?: string | null): boolean {
  * are the only role designations that can see and use loan officer recruit functions
  * in their combined “LO+Agent Recruit Command Center” tab.
  */
+export const MASTER_ADMIN_EMAILS = ['fordmj@gmail.com', 'mford@cfmtg.com'];
+
+export function isMasterAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return MASTER_ADMIN_EMAILS.includes(email.toLowerCase().trim());
+}
+
 export function canAccessLoRecruiting(rawRole?: string | null, userEmail?: string | null): boolean {
-  if (userEmail) {
-    const emailLower = userEmail.toLowerCase().trim();
-    if (emailLower === 'fordmj@gmail.com' || emailLower === 'mford@cfmtg.com') return true;
-  }
+  if (isMasterAdminEmail(userEmail)) return true;
   const clean = (rawRole || '').toLowerCase().trim();
   if (clean === 'admin' || clean === 'superadmin') return true;
   const role = normalizeRole(rawRole);
@@ -323,10 +327,7 @@ export function canAccessLoRecruiting(rawRole?: string | null, userEmail?: strin
  * or agent recruit functions or tab at all.
  */
 export function canAccessAgentRecruiting(rawRole?: string | null, userEmail?: string | null): boolean {
-  if (userEmail) {
-    const emailLower = userEmail.toLowerCase().trim();
-    if (emailLower === 'fordmj@gmail.com' || emailLower === 'mford@cfmtg.com') return true;
-  }
+  if (isMasterAdminEmail(userEmail)) return true;
   const clean = (rawRole || '').toLowerCase().trim();
   if (clean === 'admin' || clean === 'superadmin') return true;
   const role = normalizeRole(rawRole);
@@ -340,10 +341,7 @@ export function canAccessAgentRecruiting(rawRole?: string | null, userEmail?: st
  * Downstream team LOs, processors, LOAs, and other non-manager roles cannot access or view BPD Recruit.
  */
 export function canAccessBpdRecruit(rawRole?: string | null, userEmail?: string | null): boolean {
-  if (userEmail) {
-    const emailLower = userEmail.toLowerCase().trim();
-    if (emailLower === 'fordmj@gmail.com' || emailLower === 'mford@cfmtg.com') return true;
-  }
+  if (isMasterAdminEmail(userEmail)) return true;
   const clean = (rawRole || '').toLowerCase().trim();
   if (clean === 'admin' || clean === 'superadmin') return true;
   const role = normalizeRole(rawRole);

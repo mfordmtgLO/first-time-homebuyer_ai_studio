@@ -29,6 +29,7 @@ import {
   RealEstateAgentProfile 
 } from "../../types";
 import { formatUSD } from "../../utils/mortgageMath";
+import { getRolePermissions } from "../../utils/rbac";
 import { auth } from "../../firebase";
 import { signOut } from "firebase/auth";
 import { MasterRealtorCommandCenter } from "../MasterRealtorCommandCenter";
@@ -138,8 +139,18 @@ export const MobileLoanOfficerPortal: React.FC<MobileLoanOfficerPortalProps> = (
     }
   };
 
-  // Leads list
-  const leads = useMemo(() => guidesState.leads || [], [guidesState.leads]);
+  // Leads list with RBAC tenant isolation
+  const permissions = useMemo(() => getRolePermissions(userRole), [userRole]);
+  const leads = useMemo(() => {
+    const raw = guidesState.leads || [];
+    if (permissions.canViewAllLeads || isAdminUser) return raw;
+    return raw.filter((lead) => 
+      lead.assignedLoId === currentLo.id ||
+      lead.assignedLO === currentLo.name ||
+      (lead as any).loId === currentLo.id ||
+      lead.ownerLoId === currentLo.id
+    );
+  }, [guidesState.leads, permissions.canViewAllLeads, isAdminUser, currentLo.id, currentLo.name]);
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {

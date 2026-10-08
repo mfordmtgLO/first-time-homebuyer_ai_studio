@@ -625,6 +625,8 @@ const MarketReportLeadCaptureModal: React.FC<MarketReportLeadCaptureModalProps> 
         ownerLoId: loanOfficer?.id || "lo-mike-ford",
         assignedLoId: loanOfficer?.id || "lo-mike-ford",
         assignedAgentId: activeAgent?.id,
+        source: "local-market-trends",
+        sourceLabel: "Local Market Trends Tool",
         leadSource: "Local Market Trends Tool",
         leadPathTag: "Market Trends Lead",
         interactedSourceType: "property_listing",

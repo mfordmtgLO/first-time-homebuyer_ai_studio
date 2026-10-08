@@ -16,6 +16,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { CapturedLead, PropertyListing, LoanOfficerProfile } from "../types";
+import { resolveLeadSource } from "../utils/leadSourceRegistry";
 
 interface SourceBreakdownReportModalProps {
   leads: CapturedLead[];
@@ -54,8 +55,8 @@ export const SourceBreakdownReportModal: React.FC<SourceBreakdownReportModalProp
   const totalLeadCount = leads.length || 1;
 
   leads.forEach(l => {
-    const rawSource = l.leadPathTag || l.leadSource || "AI Intake Chatbot";
-    const sourceKey = rawSource.trim() || "AI Intake Chatbot";
+    const sourceDef = resolveLeadSource(l);
+    const sourceKey = sourceDef.label;
 
     if (!sourceMetricsMap.has(sourceKey)) {
       sourceMetricsMap.set(sourceKey, {
@@ -97,7 +98,7 @@ export const SourceBreakdownReportModal: React.FC<SourceBreakdownReportModalProp
     }
 
     // Top city for this source
-    const matchingLeads = leads.filter(l => (l.leadPathTag || l.leadSource || "AI Intake Chatbot") === m.sourceName);
+    const matchingLeads = leads.filter(l => resolveLeadSource(l).label === m.sourceName);
     const citiesCountMap = new Map<string, number>();
     matchingLeads.forEach(l => {
       const city = l.taggedCityArea || l.preferredLocations || "Oregon";
@@ -269,8 +270,8 @@ export const SourceBreakdownReportModal: React.FC<SourceBreakdownReportModalProp
         `"${l.fullName || ""}"`,
         `"${l.email || ""}"`,
         `"${l.phone || ""}"`,
-        `"${l.leadSource || "AI Intake Chatbot"}"`,
-        `"${l.leadPathTag || "General Intake"}"`,
+        `"${resolveLeadSource(l).label}"`,
+        `"${resolveLeadSource(l).slug}"`,
         `"${l.taggedCityArea || l.preferredLocations || ""}"`,
         `"${l.sourcePropertyAddress || ""}"`,
         `"${l.sourceCampaignName || "Organic Direct"}"`,

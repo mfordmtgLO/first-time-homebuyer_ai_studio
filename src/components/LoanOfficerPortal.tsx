@@ -191,6 +191,7 @@ import { RbacRole, normalizeRole, getRolePermissions } from "../utils/rbac";
 import { PWAInstallButton } from "./PWAInstallButton";
 import { EngagementScoreBadge } from "./EngagementScoreBadge";
 import { enrichAndSortLeadsByEngagement } from "../utils/leadEngagementScoring";
+import { resolveLeadSource } from "../utils/leadSourceRegistry";
 
 interface LoanOfficerPortalProps {
   userRole?: RbacRole | "admin" | "lo" | string | null;
@@ -2507,7 +2508,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         `"${l.preferredLocations || ""}"`,
         `"${l.propertyType || ""}"`,
         `"${lo?.name || l.assignedLoId}"`,
-        `"${l.leadSource || ""}"`,
+        `"${resolveLeadSource(l).label}"`,
         `"${l.intentScore || "hot"}"`,
         `"${l.status || "new"}"`,
         `"${(l.notes || "").replace(/"/g, '""')}"`,
@@ -4138,6 +4139,7 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                           <option value="campaign">📢 Marketing Campaigns (Meta / Google)</option>
                           <option value="listing">🏠 Property Listings Inquiries</option>
                           <option value="chatbot">🌐 Website AI Chatbot</option>
+                          <option value="plugin">🧩 House Finder Plugin</option>
                           <option value="flyer">📄 Co-Branded Flyer QR</option>
                           <option value="calculator">🧮 Mortgage Lab / Calculator</option>
                           <option value="organic">🍃 Organic / Direct Intake</option>
@@ -4323,33 +4325,45 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                         (lead as any).loId === currentLo.id;
 
                     let matchSource = true;
+                    const canonicalSource = resolveLeadSource(lead);
                     if (leadSourceFilter === "campaign") {
                       matchSource =
                         lead.interactedSourceType === "campaign" ||
-                        Boolean(lead.sourceCampaignName);
+                        Boolean(lead.sourceCampaignName) ||
+                        canonicalSource.slug === "facebook-ads" ||
+                        canonicalSource.slug === "google-ads" ||
+                        canonicalSource.slug === "youtube-video-ads";
                     } else if (leadSourceFilter === "listing") {
                       matchSource =
                         lead.interactedSourceType === "property_listing" ||
-                        Boolean(lead.sourcePropertyAddress);
+                        Boolean(lead.sourcePropertyAddress) ||
+                        canonicalSource.slug === "property-listing-inquiry";
                     } else if (leadSourceFilter === "chatbot") {
                       matchSource =
-                        lead.interactedSourceType === "chatbot" ||
-                        (!lead.sourceCampaignName &&
-                          !lead.sourcePropertyAddress &&
-                          lead.leadSource.toLowerCase().includes("chatbot"));
+                        canonicalSource.slug === "lead_intake_chatbot" ||
+                        lead.interactedSourceType === "chatbot";
+                    } else if (leadSourceFilter === "plugin") {
+                      matchSource =
+                        canonicalSource.slug === "plugin-chatbot" ||
+                        canonicalSource.slug === "plugin-email-link";
                     } else if (leadSourceFilter === "flyer") {
                       matchSource =
                         lead.interactedSourceType === "flyer" ||
-                        lead.leadSource.toLowerCase().includes("flyer");
+                        canonicalSource.slug === "flyer-qr-code" ||
+                        (lead.leadSource || "").toLowerCase().includes("flyer");
                     } else if (leadSourceFilter === "calculator") {
                       matchSource =
                         lead.interactedSourceType === "calculator" ||
-                        lead.leadSource.toLowerCase().includes("calculator") ||
-                        lead.leadSource.toLowerCase().includes("lab");
+                        (lead.leadSource || "").toLowerCase().includes("calculator") ||
+                        (lead.leadSource || "").toLowerCase().includes("lab");
                     } else if (leadSourceFilter === "organic") {
                       matchSource =
-                        lead.leadSource.toLowerCase().includes("organic") ||
-                        lead.leadSource.toLowerCase().includes("direct");
+                        canonicalSource.slug === "social-media" ||
+                        canonicalSource.slug === "guide-consultation" ||
+                        canonicalSource.slug === "agent-spotlight" ||
+                        canonicalSource.slug === "local-market-trends" ||
+                        (lead.leadSource || "").toLowerCase().includes("organic") ||
+                        (lead.leadSource || "").toLowerCase().includes("direct");
                     }
 
                     let matchDate = true;
@@ -4426,7 +4440,9 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
                                   ? "Property Listings"
                                   : leadSourceFilter === "chatbot"
                                     ? "AI Chatbot"
-                                    : leadSourceFilter === "flyer"
+                                    : leadSourceFilter === "plugin"
+                                      ? "House Finder Plugin"
+                                      : leadSourceFilter === "flyer"
                                       ? "Flyer QR"
                                       : leadSourceFilter === "calculator"
                                         ? "Mortgage Calculator"
@@ -4761,24 +4777,24 @@ Best regards,`,
                                               </div>
                                             </div>
                                           ) : lead.interactedSourceType === "flyer" ||
-                                            lead.leadSource.toLowerCase().includes("flyer") ? (
+                                            (lead.leadSource || "").toLowerCase().includes("flyer") ? (
                                             <div className="bg-amber-50 border border-amber-200 p-2 rounded-xl text-amber-900 space-y-0.5">
                                               <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
                                                 <QrCode className="w-3 h-3 text-amber-600" />
                                                 <span>Co-Branded Flyer QR</span>
                                               </div>
                                               <div className="font-semibold text-xs leading-snug">
-                                                {lead.leadSource}
+                                                {resolveLeadSource(lead).label}
                                               </div>
                                             </div>
                                           ) : (
                                             <div className="bg-[#FAF9F5] border border-[#EAE7E0] p-2 rounded-xl text-[#2D362E] space-y-0.5">
                                               <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#606C5D]">
                                                 <Globe className="w-3 h-3 text-[#4A5D4E]" />
-                                                <span>Website AI Intake</span>
+                                                <span>{resolveLeadSource(lead).slug.startsWith("plugin") ? "House Finder Plugin" : "Website AI Intake"}</span>
                                               </div>
                                               <div className="font-semibold text-xs leading-snug">
-                                                {lead.leadSource}
+                                                {resolveLeadSource(lead).label}
                                               </div>
                                             </div>
                                           )}
@@ -5659,7 +5675,7 @@ Best regards,`,
                                       </span>
                                     )}
                                     <span className="text-[11px] text-[#9A9488]">
-                                      Source: {lead.leadSource}
+                                      Source: {resolveLeadSource(lead).label}
                                     </span>
                                   </div>
 
@@ -9774,7 +9790,7 @@ Mike Ford`;
                     {viewingTranscriptLead.fullName || viewingTranscriptLead.name || "Client"} • AI Chat Transcript
                   </h3>
                   <p className="text-[11px] text-white/80">
-                    {viewingTranscriptLead.leadSource} •{" "}
+                    {resolveLeadSource(viewingTranscriptLead).label} •{" "}
                     {new Date(viewingTranscriptLead.createdAt).toLocaleString()}
                   </p>
                 </div>

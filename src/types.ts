@@ -838,6 +838,8 @@ export interface CapturedLead {
   assignedLO?: string;
   assignedAgent?: string;
   pairingId?: string;
+  source?: string;
+  sourceLabel?: string;
   leadSource: string;
   sourceCampaignId?: string;
   sourceCampaignName?: string;

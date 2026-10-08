@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { ProfessionalGuidesState, CapturedLead, AdCampaignDraft } from "../types";
+import { resolveLeadSource } from "../utils/leadSourceRegistry";
 import {
   Users, TrendingUp, PieChart, BarChart3, Clock, Calendar,
   Search, Filter, ChevronDown, Award, Target, Activity, DollarSign, Trophy, Medal, Download, Gift, Star, Printer
@@ -89,7 +90,7 @@ export const GrowthDashboard: React.FC<GrowthDashboardProps> = ({ guidesState })
   const sourceData = useMemo(() => {
     const leads = filteredLeads;
     const counts = leads.reduce((acc, lead) => {
-      const source = lead.leadSource || "Unknown";
+      const source = resolveLeadSource(lead).label;
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);

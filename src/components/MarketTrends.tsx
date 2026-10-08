@@ -353,6 +353,8 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
       assignedAgentId: spotlightAgent.id,
       assignedLO: loName,
       assignedAgent: agentName,
+      source: "agent-spotlight",
+      sourceLabel: `Agent Spotlight: Curated Homes in ${cityClean}`,
       leadSource: `Agent Spotlight: Curated Homes in ${cityClean}`,
       interactedSourceType: "chatbot",
       intentScore: "hot",

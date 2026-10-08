@@ -42,6 +42,7 @@ import {
   RealEstateAgentProfile 
 } from "../types";
 import { formatUSD } from "../utils/mortgageMath";
+import { resolveLeadSource } from "../utils/leadSourceRegistry";
 import { OutreachLog } from "../types";
 import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 import { HeadshotAvatar } from "./HeadshotAvatar";
@@ -389,8 +390,8 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
         
       const locations = activeLead?.preferredLocations || activeLead?.taggedCityArea || "their desired area";
       
-      const sourceNotes = activeLead?.leadSource 
-        ? `This lead came through our co-branded First-Time Buyer website (Source: ${activeLead.leadSource}).` 
+      const sourceNotes = activeLead 
+        ? `This lead came through our co-branded First-Time Buyer website (Source: ${resolveLeadSource(activeLead).label}).` 
         : `This lead came through our co-branded digital portal.`;
         
       let buyerRequests = "";
@@ -444,7 +445,7 @@ export const GoogleWorkspaceHub: React.FC<GoogleWorkspaceHubProps> = ({
         l.timeline,
         l.preferredLocations,
         currentLo.name,
-        l.leadSource || "Website Intake",
+        resolveLeadSource(l).label,
         l.createdAt || new Date().toISOString().split("T")[0]
       ]);
 

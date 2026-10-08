@@ -102,6 +102,8 @@ export const LocalProfessionalGuides: React.FC<LocalProfessionalGuidesProps> = (
       assignedAgentId: activeAgent?.id || "agent-1",
       assignedLO: loanOfficer.name,
       assignedAgent: activeAgent?.name || "Sarah Jenkins",
+      source: "guide-consultation",
+      sourceLabel: `Guide Consultation: ${cityClean || "Local Market"}`,
       leadSource: `Guide Consultation: ${cityClean || "Local Market"}`,
       interactedSourceType: "chatbot",
       intentScore: "hot",

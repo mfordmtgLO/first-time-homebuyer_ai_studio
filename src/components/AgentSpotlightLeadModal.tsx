@@ -169,6 +169,8 @@ export const AgentSpotlightLeadModal: React.FC<AgentSpotlightLeadModalProps> = (
       assignedAgentId: agent.id,
       assignedLO: loName,
       assignedAgent: agent.name,
+      source: "agent-spotlight",
+      sourceLabel: `Agent Spotlight: Curated Homes in ${cityClean}`,
       leadSource: `Agent Spotlight: Curated Homes in ${cityClean}`,
       interactedSourceType: initialProperty ? "property_listing" : "chatbot",
       intentScore: "hot",

@@ -34,6 +34,7 @@ import {
   X
 } from "lucide-react";
 import { LoanOfficerProfile, CapturedLead, FinancialProfile } from "../types";
+import { resolveLeadSource } from "../utils/leadSourceRegistry";
 import { formatUSD } from "../utils/mortgageMath";
 import { launchLocalOutlookDraft } from "../utils/outlookEmailService";
 import { GeminiAgentPanel } from "./GeminiAgentPanel";
@@ -536,7 +537,9 @@ How can I assist your pipeline today? You can select any active borrower from yo
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#9A9488]">Lead Source:</span>
-                  <span className="font-medium text-[#2D362E] truncate max-w-[150px]">{activeLead.leadSource || "Website"}</span>
+                  <span className="font-medium text-[#2D362E] truncate max-w-[150px]" title={resolveLeadSource(activeLead).label}>
+                    {resolveLeadSource(activeLead).label}
+                  </span>
                 </div>
               </div>
             )}

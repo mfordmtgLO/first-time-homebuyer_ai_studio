@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { LoanOfficerProfile } from "../types";
 import { X, DollarSign, Megaphone, Video, Globe, MapPin, Tag, Plus, CheckCircle2 } from "lucide-react";
+import { getExpenseSourceOptions } from "../utils/leadSourceRegistry";
 
 interface AddAdExpenseModalProps {
   isOpen: boolean;
@@ -55,6 +56,12 @@ export const AddAdExpenseModal: React.FC<AddAdExpenseModalProps> = ({
     } else if (newSource === "GeoSphere GIS Map") {
       setAssetType("geosphere_map");
       if (!campaignName) setCampaignName("GeoSphere Map Interactive Property Widget");
+    } else if (newSource.includes("Website: Chatbot")) {
+      setAssetType("chatbot");
+      if (!campaignName) setCampaignName("FTHB Website AI Chatbot Inbound");
+    } else if (newSource.includes("House Finder plugin")) {
+      setAssetType("plugin");
+      if (!campaignName) setCampaignName("FTHB House Finder Extension Inbound");
     } else {
       setAssetType("social_media");
       if (!campaignName) setCampaignName("Instagram Reels / Social Post");
@@ -106,11 +113,11 @@ export const AddAdExpenseModal: React.FC<AddAdExpenseModalProps> = ({
                 onChange={(e) => handleSourceChange(e.target.value)}
                 className="w-full bg-[#F9F8F4] border border-[#EAE7E0] rounded-xl px-3 py-2 text-xs font-medium text-[#2D362E] focus:outline-none focus:border-[#4A5D4E]"
               >
-                <option value="Facebook Ads">Facebook Ads (Meta)</option>
-                <option value="Google Ads">Google Ads (Search/PPC)</option>
-                <option value="YouTube Video Ads">YouTube Video Ads (Vantage AI)</option>
-                <option value="GeoSphere GIS Map">GeoSphere GIS Map (RentCast)</option>
-                <option value="Social Media">Social Media (Instagram/LinkedIn)</option>
+                {getExpenseSourceOptions().map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
 

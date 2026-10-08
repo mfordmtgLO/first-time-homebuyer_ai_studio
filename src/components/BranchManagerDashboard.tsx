@@ -19,6 +19,7 @@ import {
   CrmExportFormat,
   triggerCrmCsvDownload 
 } from "../services/crmLeadExportService";
+import { resolveExpenseSource } from "../utils/leadSourceRegistry";
 
 interface BranchManagerDashboardProps {
   guidesState: ProfessionalGuidesState;
@@ -273,11 +274,9 @@ export const BranchManagerDashboard: React.FC<BranchManagerDashboardProps> = ({
       // Expenses breakdown
       if (lo.adExpensesBreakdown) {
         lo.adExpensesBreakdown.forEach(item => {
-          if (sourceExpenseMap[item.source] !== undefined) {
-            sourceExpenseMap[item.source] += item.amount;
-          } else {
-            sourceExpenseMap[item.source] = (sourceExpenseMap[item.source] || 0) + item.amount;
-          }
+          const canonical = resolveExpenseSource(item.source);
+          const key = canonical.label;
+          sourceExpenseMap[key] = (sourceExpenseMap[key] || 0) + item.amount;
         });
       }
 

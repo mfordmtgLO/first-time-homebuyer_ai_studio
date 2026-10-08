@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { X, Calendar, Download, Search, Printer, Activity, UserPlus, Target } from "lucide-react";
 import { CapturedLead, AdQueueItem } from "../types"; // Will update types.ts to export AdQueueItem if needed
+import { resolveLeadSource } from "../utils/leadSourceRegistry";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface MediaAssetLeadTrackerModalProps {
@@ -34,7 +35,7 @@ export const MediaAssetLeadTrackerModal: React.FC<MediaAssetLeadTrackerModalProp
     
     // Apply Source Search
     if (searchSource.trim()) {
-      filtered = filtered.filter(l => l.leadSource.toLowerCase().includes(searchSource.toLowerCase()));
+      filtered = filtered.filter(l => resolveLeadSource(l).label.toLowerCase().includes(searchSource.toLowerCase()));
     }
     
     // Sort chronological
@@ -44,7 +45,8 @@ export const MediaAssetLeadTrackerModal: React.FC<MediaAssetLeadTrackerModalProp
   const sourceBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};
     filteredLeads.forEach(l => {
-      counts[l.leadSource] = (counts[l.leadSource] || 0) + 1;
+      const srcName = resolveLeadSource(l).label;
+      counts[srcName] = (counts[srcName] || 0) + 1;
     });
     return Object.keys(counts).map(k => ({ name: k, value: counts[k] })).sort((a, b) => b.value - a.value);
   }, [filteredLeads]);
@@ -54,7 +56,7 @@ export const MediaAssetLeadTrackerModal: React.FC<MediaAssetLeadTrackerModalProp
     const rows = filteredLeads.map(l => [
       new Date(l.createdAt).toLocaleDateString(),
       l.fullName,
-      l.leadSource,
+      resolveLeadSource(l).label,
       l.status,
       l.intentScore
     ]);
@@ -203,7 +205,7 @@ export const MediaAssetLeadTrackerModal: React.FC<MediaAssetLeadTrackerModalProp
                       <td className="px-4 py-3 text-sm font-medium text-[#2D362E]">{lead.fullName}</td>
                       <td className="px-4 py-3 text-xs">
                         <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full border border-gray-200">
-                          {lead.leadSource}
+                          {resolveLeadSource(lead).label}
                         </span>
                       </td>
                       <td className="px-4 py-3">

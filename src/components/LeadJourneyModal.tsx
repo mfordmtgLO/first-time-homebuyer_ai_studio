@@ -32,6 +32,7 @@ import {
   Send
 } from "lucide-react";
 import { CapturedLead, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
+import { resolveLeadSource } from "../utils/leadSourceRegistry";
 import { HeadshotAvatar } from "./HeadshotAvatar";
 import { OutreachHistoryBadge } from "./OutreachHistoryBadge";
 
@@ -157,7 +158,7 @@ export const LeadJourneyModal: React.FC<LeadJourneyModalProps> = ({
                     Hot Buyer Intent
                   </span>
                 )}
-                <span className="text-xs text-white/70">Source: {lead.leadSource}</span>
+                <span className="text-xs text-white/70">Source: {resolveLeadSource(lead).label}</span>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-xl sm:text-2xl font-serif font-bold text-white">{lead.fullName}</h2>
@@ -415,7 +416,7 @@ export const LeadJourneyModal: React.FC<LeadJourneyModalProps> = ({
                     <span className="text-[11px] text-[#9A9488] font-mono">{formatDate(lead.createdAt)}</span>
                   </div>
                   <p className="text-xs text-[#606C5D] leading-relaxed">
-                    Prospect initiated contact via <strong>{lead.leadSource}</strong>.
+                    Prospect initiated contact via <strong>{resolveLeadSource(lead).label}</strong>.
                     {lead.sourceCampaignName && ` Interacted with campaign: "${lead.sourceCampaignName}".`}
                     {lead.sourcePropertyAddress && ` Inquiry made regarding listing: "${lead.sourcePropertyAddress}".`}
                   </p>

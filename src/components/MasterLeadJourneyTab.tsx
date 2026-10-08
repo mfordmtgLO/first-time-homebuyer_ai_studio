@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { CapturedLead, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
+import { resolveLeadSource } from "../utils/leadSourceRegistry";
 import { 
   Database, 
   Layers, 
@@ -403,11 +404,12 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({
                           <Tag className="w-3 h-3" /> {lead.leadPathTag}
                         </span>
                       )}
-                      {lead.leadSource && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md border bg-blue-50 text-blue-800 border-blue-200 truncate max-w-[140px]">
-                          {lead.leadSource}
-                        </span>
-                      )}
+                      <span 
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-md border bg-blue-50 text-blue-800 border-blue-200 truncate max-w-[180px]"
+                        title={resolveLeadSource(lead).label}
+                      >
+                        {resolveLeadSource(lead).label}
+                      </span>
                     </div>
 
                     {/* 🏆 User-Input Funding & Closing Stats Card for Closed Leads */}
@@ -652,9 +654,13 @@ export const MasterLeadJourneyTab: React.FC<MasterLeadJourneyTabProps> = ({
                           <label className="text-[10px] font-bold text-[#606C5D] uppercase tracking-wider">Lead Source</label>
                           <input 
                             type="text"
-                            value={lead.leadSource || ""}
-                            onChange={(e) => onUpdateLead({ ...lead, leadSource: e.target.value })}
-                            placeholder="e.g. Zillow, Bot, Open House"
+                            value={lead.sourceLabel || lead.leadSource || resolveLeadSource(lead).label}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const def = resolveLeadSource({ source: val, leadSource: val });
+                              onUpdateLead({ ...lead, leadSource: val, sourceLabel: def.label, source: def.slug });
+                            }}
+                            placeholder="e.g. Website Chatbot, Plugin, Open House"
                             className="w-full bg-[#FAF9F5] border border-[#EAE7E0] rounded-lg px-2 py-1.5 text-xs font-semibold text-[#2D362E]"
                           />
                         </div>

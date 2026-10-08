@@ -1,4 +1,5 @@
 import { CapturedLead, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
+import { resolveLeadSource } from "../utils/leadSourceRegistry";
 
 export type CrmExportFormat = "salesforce" | "totalexpert";
 
@@ -121,7 +122,8 @@ export interface NormalizedSourceMetadata {
  * Normalizes lead intake and digital touchpoint source fields for enterprise CRM ingestion
  */
 export function normalizeSourceMetadata(lead: CapturedLead): NormalizedSourceMetadata {
-  const rawSource = lead.leadSource || "First-Time Homebuyer Roadmap";
+  const canonical = resolveLeadSource(lead);
+  const rawSource = lead.sourceLabel || canonical.label || lead.leadSource || "First-Time Homebuyer Roadmap";
   const campaignName = lead.sourceCampaignName || (lead.sourceCampaignId ? `Campaign #${lead.sourceCampaignId}` : "");
   const propertyAddress = lead.sourcePropertyAddress || "";
   const leadPathTag = lead.leadPathTag || (lead.grantInterest ? "grant_finder" : "affordability_calculator");
@@ -135,7 +137,9 @@ export function normalizeSourceMetadata(lead: CapturedLead): NormalizedSourceMet
     channelCategory = "Paid Ad Campaign";
   } else if (lead.assignedAgentId || lead.assignedAgent) {
     channelCategory = "Realtor Partner Referral";
-  } else if (lead.chatTranscript && lead.chatTranscript.length > 0) {
+  } else if (canonical.slug === "plugin-chatbot" || canonical.slug === "plugin-email-link") {
+    channelCategory = "House Finder Plugin";
+  } else if (canonical.slug === "lead_intake_chatbot" || (lead.chatTranscript && lead.chatTranscript.length > 0)) {
     channelCategory = "AI Digital Chatbot";
   }
 

@@ -22,7 +22,8 @@ import {
   ChevronDown,
   Info,
   X,
-  Package
+  Package,
+  UserCheck
 } from "lucide-react";
 import { MfaSetupModal } from "./MfaSetupModal";
 import { BranchAuditLogSection } from "./BranchAuditLogSection";
@@ -35,7 +36,8 @@ import {
   RBAC_ROLE_CONFIGS, 
   normalizeRole, 
   WhitelistedUserRecord,
-  RbacRoleDefinition
+  RbacRoleDefinition,
+  isMasterAdminEmail
 } from "../utils/rbac";
 import { logSensitiveAssetAccess } from "../utils/auditLogger";
 
@@ -85,6 +87,24 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
   const [showRbacMatrixModal, setShowRbacMatrixModal] = useState(false);
   const [inspectingUser, setInspectingUser] = useState<WhitelistedUserRecord | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  // Master Admin Lead Ownership Backfill State (Phase 1.2)
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(() => {
+    return auth.currentUser?.email || null;
+  });
+  const [showBackfillConfirm, setShowBackfillConfirm] = useState(false);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+  const [backfillResult, setBackfillResult] = useState<{ scanned: number; updated: number } | null>(null);
+  const [backfillError, setBackfillError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubAuth = auth.onAuthStateChanged((user) => {
+      setCurrentUserEmail(user?.email || null);
+    });
+    return () => unsubAuth();
+  }, []);
+
+  const isMasterAdmin = isMasterAdminEmail(currentUserEmail || auth.currentUser?.email);
 
   useEffect(() => {
     // 1. Instant optimistic load from localStorage or initial roster
@@ -353,6 +373,36 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
     }
   };
 
+  const handleRunBackfill = async () => {
+    setIsBackfilling(true);
+    setBackfillError(null);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/admin/leads/backfill-owner", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to backfill lead ownership.");
+      }
+      setBackfillResult({
+        scanned: data.scanned,
+        updated: data.updated,
+      });
+      setShowBackfillConfirm(false);
+      showFeedback(`✅ Scanned ${data.scanned} leads · Stamped ${data.updated} into your pool`);
+    } catch (err: any) {
+      console.warn("Lead ownership backfill notice:", err);
+      setBackfillError(err.message || "Failed to backfill lead ownership.");
+    } finally {
+      setIsBackfilling(false);
+    }
+  };
+
   // Filter and metrics
   const totalCount = users.length;
   const seniorLoCount = users.filter(u => u.role === "senior_lo").length;
@@ -519,6 +569,106 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({ onNavigateTo
               <div className="text-[10px] text-[#606C5D] mt-0.5">Read-Only Pipeline Support</div>
             </div>
           </div>
+
+      {/* Master Admin: Lead Ownership Panel (Phase 1.2) */}
+      {isMasterAdmin && (
+        <div className="bg-white rounded-2xl border border-purple-200 p-5 shadow-xs bg-gradient-to-r from-purple-50/40 via-white to-purple-50/20">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <div className="p-2.5 rounded-xl bg-purple-100 text-purple-800 shrink-0 mt-0.5">
+                <UserCheck className="w-5 h-5" />
+              </div>
+              <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-[#2D362E]">Lead Ownership</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-100 text-purple-800 border border-purple-300">
+                    Master Admin Only
+                  </span>
+                </div>
+                <p className="text-xs text-[#606C5D]">
+                  Manage organizational lead assignments and ensure unallocated leads are properly stamped into the executive pool (lo-mike-ford).
+                </p>
+
+                {/* Inline Confirmation Step */}
+                {showBackfillConfirm && (
+                  <div className="mt-3 p-3.5 bg-purple-50/80 border border-purple-200 rounded-xl space-y-3">
+                    <p className="text-xs font-medium text-[#2D362E]">
+                      This stamps every lead that has no owner into your pool (lo-mike-ford). It changes no other lead data. Continue?
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleRunBackfill}
+                        disabled={isBackfilling}
+                        className="px-4 py-2 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      >
+                        {isBackfilling ? "Running…" : "Run"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBackfillConfirm(false);
+                          setBackfillError(null);
+                        }}
+                        disabled={isBackfilling}
+                        className="px-4 py-2 bg-white border border-[#EAE7E0] hover:bg-[#F8F7F4] text-[#606C5D] rounded-xl font-semibold text-xs transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Failure State with Retry Option */}
+                {backfillError && (
+                  <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-3 text-xs text-rose-800">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span className="truncate">{backfillError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRunBackfill}
+                      disabled={isBackfilling}
+                      className="px-3 py-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs shrink-0 cursor-pointer"
+                    >
+                      {isBackfilling ? "Running…" : "Retry"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Success State displaying verbatim server response counts */}
+                {backfillResult && (
+                  <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-xs font-semibold text-emerald-800">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      Scanned {backfillResult.scanned} leads · Stamped {backfillResult.updated} into your pool
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Backfill Lead Ownership Action Button */}
+            {!showBackfillConfirm && (
+              <div className="shrink-0 self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBackfillConfirm(true);
+                    setBackfillError(null);
+                  }}
+                  disabled={isBackfilling}
+                  className="px-4 py-2.5 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  <span>{isBackfilling ? "Running…" : "Backfill Lead Ownership"}</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Website Visibility & 2FA Quick Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

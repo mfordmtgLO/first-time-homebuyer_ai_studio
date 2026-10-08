@@ -8501,7 +8501,12 @@ Mike Ford`;
               </div>
             )}
 
-            {activeTab === "master_role_manager" && <MasterRoleManager guidesState={guidesState} />}
+            {activeTab === "master_role_manager" && (
+              <MasterRoleManager
+                guidesState={guidesState}
+                onNavigateToBranchManagement={() => setActiveTab("branch_management")}
+              />
+            )}
 
             {activeTab === "branch_admin_metrics" && (
               <BranchManagerDashboard

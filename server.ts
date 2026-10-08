@@ -8538,7 +8538,11 @@ Return ONLY valid JSON in this exact structure:
   // GET /api/big-purple-dot/webhook/events - Retrieve webhook events with server-authoritative RBAC isolation
   app.get("/api/big-purple-dot/webhook/events", authenticateUser, async (req, res) => {
     try {
-      const userRole = ((req as any).user?.role || "team_lo").toString().toLowerCase();
+      const rawRole = (req as any).user?.role;
+      if (!rawRole) {
+        return res.status(403).json({ error: "Access Denied: Missing user role." });
+      }
+      const userRole = rawRole.toString().toLowerCase();
       const userLoId = ((req as any).user?.loId || "").toString();
 
       // Priority 1 Item 2: Read from Firestore webhook_events collection

@@ -1,7 +1,7 @@
 import { db } from "../firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getMessaging, getToken } from "firebase/messaging";
-import { normalizeRole, RbacRole, isMasterAdminEmail, MASTER_ADMIN_EMAILS } from "./rbac";
+import { normalizeRole, RbacRole, isMasterAdminEmail } from "./rbac";
 
 const COMPLIANCE_EMAIL = "auditor@yourcompany.com";
 
@@ -86,6 +86,47 @@ export async function checkAndProvisionUser(user: any): Promise<RbacRole | "admi
   // Provision NOTHING with access — no user_roles write carrying any rbacRole.
   // Return "pending" so the UI renders the pending approval screen with zero data views.
   return "pending";
+}
+
+/**
+ * Resolves the caller's assignedLoId directly from client-side identity:
+ * whitelisted_emails/{email} is the authority, user_roles/{uid}.assignedLoId is the fallback.
+ */
+export async function resolveCallerAssignedLoId(user: any): Promise<string | null> {
+  if (!user?.email) return null;
+  const email = user.email.toLowerCase();
+  if (isMasterAdminEmail(email)) {
+    return "lo-mike-ford";
+  }
+  try {
+    const whitelistRef = doc(db, "whitelisted_emails", email);
+    const snap = await withTimeout(4000, getDoc(whitelistRef), "Whitelist assignedLoId Check");
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data?.assignedLoId) {
+        return String(data.assignedLoId);
+      }
+    }
+  } catch (err) {
+    console.warn("Whitelist assignedLoId resolution note:", err);
+  }
+
+  try {
+    if (user.uid) {
+      const roleRef = doc(db, "user_roles", user.uid);
+      const rSnap = await withTimeout(4000, getDoc(roleRef), "UserRole assignedLoId Check");
+      if (rSnap.exists()) {
+        const rData = rSnap.data();
+        if (rData?.assignedLoId) {
+          return String(rData.assignedLoId);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("User role assignedLoId resolution note:", err);
+  }
+
+  return null;
 }
 
 /**

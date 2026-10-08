@@ -43,6 +43,44 @@ service cloud.firestore {
              exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
              getUserRoleDoc().rbacRole == 'processor';
     }
+    function isLoStaff() {
+      return isSeniorLo() || isTeamLo() || isProcessor();
+    }
+    function callerTokenEmail() {
+      return ('email' in request.auth.token && request.auth.token.email != null) ?
+             request.auth.token.email.lower() : '';
+    }
+    function isComplianceAuditor() {
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+         'rbacRole' in getUserRoleDoc() &&
+         getUserRoleDoc().rbacRole == 'compliance_auditor') ||
+        (callerTokenEmail() != '' &&
+         exists(/databases/$(database)/documents/whitelisted_emails/$(callerTokenEmail())) &&
+         'role' in get(/databases/$(database)/documents/whitelisted_emails/$(callerTokenEmail())).data &&
+         get(/databases/$(database)/documents/whitelisted_emails/$(callerTokenEmail())).data.role == 'compliance_auditor') ||
+        (callerTokenEmail() == 'auditor@yourcompany.com')
+      );
+    }
+    function getCallerAssignedLoId() {
+      return (callerTokenEmail() != '' &&
+              exists(/databases/$(database)/documents/whitelisted_emails/$(callerTokenEmail())) &&
+              'assignedLoId' in get(/databases/$(database)/documents/whitelisted_emails/$(callerTokenEmail())).data &&
+              get(/databases/$(database)/documents/whitelisted_emails/$(callerTokenEmail())).data.assignedLoId != null)
+             ? get(/databases/$(database)/documents/whitelisted_emails/$(callerTokenEmail())).data.assignedLoId
+             : (exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+                'assignedLoId' in getUserRoleDoc() &&
+                getUserRoleDoc().assignedLoId != null
+                ? getUserRoleDoc().assignedLoId
+                : null);
+    }
+    function canAccessOwnedLead() {
+      return isLoStaff() &&
+             'ownerLoId' in resource.data &&
+             resource.data.ownerLoId != null &&
+             getCallerAssignedLoId() != null &&
+             resource.data.ownerLoId == getCallerAssignedLoId();
+    }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
@@ -227,11 +265,23 @@ service cloud.firestore {
     }
     // Sharded lead documents to prevent 1MB single-document cap
     match /leads/{leadId} {
-      // Restricted: Only authenticated LO/staff can read or list leads (PII Guard)
-      allow read: if isSignedIn() && (isBranchManager() || isSeniorLo() || isTeamLo() || isProcessor());
-      // Anyone can create their lead profile, but updates are restricted to the lead owner or LO staff
+      // Scoped reads: branch_manager and compliance_auditor can read all leads.
+      // LO staff (senior_lo, team_lo, processor) can read ONLY leads where ownerLoId == caller's assignedLoId.
+      // A lead with no ownerLoId is readable ONLY by branch_manager and auditor.
+      allow read: if isSignedIn() && (
+        isBranchManager() ||
+        isComplianceAuditor() ||
+        canAccessOwnedLead()
+      );
+      // Anyone can create their lead profile
       allow create: if true;
-      allow update: if (isSignedIn() && (isBranchManager() || isSeniorLo() || isTeamLo() || isProcessor())) || (request.auth.uid == leadId);
+      // Updates: branch_manager can update all leads. LO staff can update only their owned leads.
+      // Auditor has zero update rights. Lead owner buyer can update their own record.
+      allow update: if (isSignedIn() && (
+        isBranchManager() ||
+        canAccessOwnedLead()
+      )) || (request.auth.uid == leadId);
+      // Delete: restricted to branch_manager
       allow delete: if isSignedIn() && isBranchManager();
     }
 

@@ -31,7 +31,7 @@ const LoginScreen = React.lazy(() => import("./components/LoginScreen").then(m =
 const SystemPitchDeck = React.lazy(() => import("./components/SystemPitchDeck").then(m => ({ default: m.SystemPitchDeck })));
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut, getRedirectResult } from "firebase/auth";
-import { checkAndProvisionUser, registerFCMToken } from "./utils/authUtils";
+import { checkAndProvisionUser, registerFCMToken, resolveCallerAssignedLoId } from "./utils/authUtils";
 import { applyMetadataToDocument, fetchSavedSeoMetadata } from "./utils/seoManager";
 import { SEOSchemaInjector } from "./components/SEOSchemaInjector";
 import { PrivacyPolicyModal } from "./components/PrivacyPolicyModal";
@@ -69,7 +69,7 @@ import {
   resolveFromUrlPath,
 } from "./utils/guideMatching";
 import { db } from "./firebase";
-import { doc, getDoc, setDoc, onSnapshot, collection, writeBatch } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, collection, query, where, writeBatch } from "firebase/firestore";
 
 import { GEOSPHERE_MOCK_LISTINGS } from "./data/geoSphereData";
 
@@ -120,6 +120,7 @@ export default function App() {
     }
     return null;
   });
+  const [callerAssignedLoId, setCallerAssignedLoId] = useState<string | null>(null);
   const [isAppPublic, setIsAppPublic] = useState(false);
   const [forceDesktopLoPortal, setForceDesktopLoPortal] = useState(false);
 
@@ -148,12 +149,15 @@ export default function App() {
           try {
             const role = await checkAndProvisionUser(result.user);
             setUserRole(role);
+            const resolvedLoId = await resolveCallerAssignedLoId(result.user);
+            setCallerAssignedLoId(resolvedLoId);
             setShowLoPortal(role !== "pending");
           } catch (e) {
             const fallbackRole = (email === "fordmj@gmail.com" || email === "mford@cfmtg.com")
               ? "branch_manager"
               : "pending";
             setUserRole(fallbackRole);
+            setCallerAssignedLoId(email === "fordmj@gmail.com" || email === "mford@cfmtg.com" ? "lo-mike-ford" : null);
             setShowLoPortal(fallbackRole !== "pending");
           }
           setIsAuthChecking(false);
@@ -215,6 +219,8 @@ export default function App() {
         try {
           const role = await checkAndProvisionUser(user);
           setUserRole(role);
+          const resolvedLoId = await resolveCallerAssignedLoId(user);
+          setCallerAssignedLoId(resolvedLoId);
           setShowLoPortal(role !== "pending");
         } catch (e) {
           console.error("Auth provisioning error:", e);
@@ -222,10 +228,12 @@ export default function App() {
             ? "branch_manager"
             : "pending";
           setUserRole(fallbackRole);
+          setCallerAssignedLoId(email === "fordmj@gmail.com" || email === "mford@cfmtg.com" ? "lo-mike-ford" : null);
           setShowLoPortal(fallbackRole !== "pending");
         }
       } else {
         setUserRole(null);
+        setCallerAssignedLoId(null);
       }
       setIsAuthChecking(false);
     });
@@ -656,7 +664,9 @@ export default function App() {
   }, []);
 
   // Secure reactive subscription to the sharded /leads collection (GLBA & PII Guard)
-  // Ensures website visitors can never pull down the full lead register from Firebase.
+  // Ensures website visitors and non-whitelisted users never pull down leads.
+  // Enforces tenant isolation: LO roles (senior_lo, team_lo, processor) only query
+  // where ownerLoId == callerAssignedLoId. Full collection is scoped to admin tier / auditor.
   useEffect(() => {
     if (!userRole || userRole === null || userRole === "pending") {
       // Clear lead records in client memory if user is not authorized staff
@@ -664,8 +674,23 @@ export default function App() {
       return;
     }
 
+    const isAdminTier =
+      userRole === "branch_manager" ||
+      userRole === "admin" ||
+      userRole === "compliance_auditor";
+
+    // For LO roles, wait until callerAssignedLoId has resolved from identity
+    if (!isAdminTier && !callerAssignedLoId) {
+      setGuidesState((prev) => ({ ...prev, leads: [] }));
+      return;
+    }
+
+    const leadsQuery = isAdminTier
+      ? collection(db, "leads")
+      : query(collection(db, "leads"), where("ownerLoId", "==", callerAssignedLoId));
+
     const unsubLeads = onSnapshot(
-      collection(db, "leads"),
+      leadsQuery,
       (snapshot) => {
         const remoteLeads: CapturedLead[] = [];
         snapshot.forEach((docSnap) => {
@@ -690,7 +715,7 @@ export default function App() {
     );
 
     return () => unsubLeads();
-  }, [userRole]);
+  }, [userRole, callerAssignedLoId]);
 
   // Batch Processing & Debounced Idle Write Queue for Leads (minimizes Firestore writes & billing bottlenecks)
   const pendingLeadBatchRef = useRef<Map<string, CapturedLead>>(new Map());
@@ -1128,6 +1153,8 @@ export default function App() {
       sessionStorage.clear();
     }
     setUserRole(null);
+    setCallerAssignedLoId(null);
+    setGuidesState((prev) => ({ ...prev, leads: [] }));
     setShowLoPortal(true);
     try {
       await signOut(auth);
@@ -1220,12 +1247,16 @@ export default function App() {
       >
         <LoginScreen
           guidesState={guidesState}
-          onLogin={(role) => {
+          onLogin={async (role) => {
             if (typeof window !== "undefined") {
               localStorage.removeItem("lo_portal_logged_out");
             }
             setUserRole(role as any);
-            setShowLoPortal(true);
+            if (auth.currentUser) {
+              const resolvedLoId = await resolveCallerAssignedLoId(auth.currentUser);
+              setCallerAssignedLoId(resolvedLoId);
+            }
+            setShowLoPortal(role !== "pending");
           }}
         />
       </React.Suspense>

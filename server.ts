@@ -635,7 +635,10 @@ async function startServer() {
             "'self'",
             "https://ai.studio",
             "https://*.ai.studio",
+            "https://aistudio.google.com",
             "https://*.google.com",
+            "https://*.run.app",
+            "https://*.googleusercontent.com",
           ],
           objectSrc: ["'none'"],
           baseUri: ["'self'"],
@@ -713,6 +716,7 @@ async function startServer() {
     "GET /api/ai/diagnostics", // boolean capability flags only; called by the public chatbot
     // Public lead-gen funnel: chatbot intake, AI copilot, property browsing,
     // mortgage lab, market trends, share-via-email, client interaction memories
+    "POST /api/chat",
     "POST /api/gemini/lead-intake",
     "POST /api/gemini/advisor",
     "POST /api/gemini/offer-strategy",
@@ -3393,7 +3397,7 @@ Return JSON matching this shape:
   // Standard Chat Endpoint (Vantage AI)
   app.post("/api/chat", async (req, res) => {
     try {
-      const industryId = ((req as any).user?.industryId || req.body?.industryId || "").trim();
+      const industryId = ((req as any).user?.industryId || req.body?.industryId || "mortgage_real_estate").trim();
       if (!industryId) {
         return res.status(400).json({ error: "Tenant isolation violation: industryId is required." });
       }
@@ -10940,16 +10944,7 @@ Disallow: /
   });
 
   // Vite middleware in dev, static serving in prod
-  const isProduction =
-    process.env.NODE_ENV === "production" ||
-    fs.existsSync(path.join(process.cwd(), "dist")) ||
-    (typeof __filename !== "undefined" && __filename.endsWith(".cjs")) ||
-    !fs.existsSync(path.join(process.cwd(), "server.ts"));
-
-  // Bind and listen on port 3000 immediately so Cloud Run TCP startup probes succeed on attempt 1
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Manus Homebuyer Server running on http://0.0.0.0:${PORT} [mode=${isProduction ? "production" : "development"}]`);
-  });
+  const isProduction = process.env.NODE_ENV === "production";
 
   if (!isProduction) {
     const vite = await createViteServer({
@@ -11020,6 +11015,11 @@ Disallow: /
       }
     });
   }
+
+  // Bind and listen on port 3000 immediately
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Manus Homebuyer Server running on http://0.0.0.0:${PORT} [mode=${isProduction ? "production" : "development"}]`);
+  });
 }
 
 startServer().catch((err) => {

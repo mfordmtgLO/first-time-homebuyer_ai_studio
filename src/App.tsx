@@ -649,7 +649,10 @@ export default function App() {
           // First time initialization: Push local state up to Firebase if authenticated
           if (auth.currentUser) {
             const { leads, ...strippedState } = guidesState;
-            setDoc(doc(db, "guides_state", "singleton"), strippedState).catch(console.warn);
+            setDoc(doc(db, "guides_state", "singleton"), strippedState).catch((err) => {
+              console.error("[Firestore Initial Singleton Save Error]:", err);
+              triggerGlobalToast("Couldn't save — please retry. If this persists, contact support.");
+            });
           }
         }
       },
@@ -736,7 +739,8 @@ export default function App() {
         await batch.commit();
       }
     } catch (err) {
-      console.warn("Error committing batched lead writes to Firestore:", err);
+      console.error("[Firestore Batched Lead Writes Error]:", err);
+      triggerGlobalToast("Couldn't save — please retry. If this persists, contact support.");
     }
   };
 
@@ -835,7 +839,10 @@ export default function App() {
               const updatedLeads = [...data.leads, ...(prev.leads || [])];
               const newState = { ...prev, leads: updatedLeads };
               // Auto-sync new webhooks to Firebase
-              setDoc(doc(db, "guides_state", "singleton"), newState).catch(console.error);
+              setDoc(doc(db, "guides_state", "singleton"), newState).catch((err) => {
+                console.error("[Firestore Webhook Sync Save Error]:", err);
+                triggerGlobalToast("Couldn't save — please retry. If this persists, contact support.");
+              });
               return newState;
             });
           }

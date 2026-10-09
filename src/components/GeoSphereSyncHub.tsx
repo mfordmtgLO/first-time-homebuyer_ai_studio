@@ -383,9 +383,9 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
         onTriggerToast("Saved to local dashboard cache. Log in to sync to cloud public portal.");
       }
     } catch (e: any) {
-      console.warn("Cloud push warning:", e?.message);
+      console.error("[Firestore GeoSphere Sync Save Error]:", e?.message || e);
       setFirestoreSyncCount(syncedListings.length);
-      onTriggerToast("Properties saved to local portal cache.");
+      onTriggerToast("Couldn't save — please retry. If this persists, contact support.");
     } finally {
       setIsForceSyncing(false);
     }

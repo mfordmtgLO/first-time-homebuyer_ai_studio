@@ -1,5 +1,5 @@
 import { db } from "../firebase";
-import { doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, collection, runTransaction } from "firebase/firestore";
 import { PropertyConversation, PropertyConversationMessage, PropertyActionItem } from "../types";
 import { evaluateBadgesForConversation } from "./loanWisdomBadgeService";
 
@@ -214,6 +214,18 @@ export async function sendPropertyConversationMessage(params: {
   const docRef = doc(db, "property_conversations", docId);
 
   const existingSnap = await getDoc(docRef);
+  // Dashboard policy: the buyer must initiate each property-specific thread.
+  // This client-side guard is UX only until server authorization and
+  // Firestore security rules are tightened (anonymous writes currently allowed).
+  if (params.sender !== 'buyer') {
+    const existing = existingSnap.exists() ? existingSnap.data() as PropertyConversation : null;
+    if (!existing || existing.propertyId !== params.propertyId ||
+        existing.leadId !== params.leadId ||
+        !Array.isArray(existing.messages) ||
+        !existing.messages.some(m => m.sender === 'buyer' && typeof m.text === 'string' && m.text.trim().length > 0)) {
+      throw new Error('PROPERTY_NOTE_BUYER_MUST_INITIATE');
+    }
+  }
   const now = new Date().toISOString();
 
   const isBuyer = params.sender === 'buyer';
@@ -429,9 +441,13 @@ export async function resolvePropertyActionItemDirectly(params: {
 }): Promise<void> {
   const docRef = doc(db, "property_conversations", params.conversationId);
   const snap = await getDoc(docRef);
-  if (!snap.exists()) return;
+  if (!snap.exists()) throw new Error('PROPERTY_NOTE_BUYER_MUST_INITIATE');
 
   const data = snap.data() as PropertyConversation;
+  if (!Array.isArray(data.messages) ||
+      !data.messages.some(m => m.sender === 'buyer' && typeof m.text === 'string' && m.text.trim().length > 0)) {
+    throw new Error('PROPERTY_NOTE_BUYER_MUST_INITIATE');
+  }
   const now = new Date().toISOString();
   const loName = params.loName || data.assignedLoName || "Mike Ford";
 

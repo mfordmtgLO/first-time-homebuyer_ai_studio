@@ -4,6 +4,7 @@ import type { KnowledgeSearchResult } from "../../vantageKnowledge.ts";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { executeDeepSeekHarness } from "./deepseekHarness.ts";
+import { GEMINI_DEFAULT_MODEL } from "../server/aiModels.ts";
 
 export interface MuseContextParams {
   query: string;
@@ -265,7 +266,7 @@ export async function buildMuseContext({
         sources: [],
         memoriesUsedCount: buyerMemoriesCount + programDocsCount,
         industryId: cleanIndustryId,
-        engine: "deepseek-math-harness",
+        engine: "deepseek-reasoner",
         qualifiedOnly: true,
       };
     } catch (mathErr) {
@@ -274,7 +275,7 @@ export async function buildMuseContext({
   }
 
   // 5. Assemble Prompt: buyer profile -> cited knowledge chunks (with doc ids) -> query.
-  // Ground with gemini-3.8-flash + Google Search tools.
+  // Ground with gemini-2.5-flash + Google Search tools.
   const contextBlocks: string[] = [];
   if (buyerProfileSummary) {
     contextBlocks.push(`[VERIFIED BUYER PROFILE BLOCK]:\n${buyerProfileSummary}`);
@@ -296,7 +297,7 @@ Rules:
 4. If the buyer profile contains preferences (budget, cities, timeline), tailor recommendations directly to them.`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3.8-flash",
+    model: GEMINI_DEFAULT_MODEL,
     contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
     config: {
       tools: [{ googleSearch: {} }],

@@ -1584,7 +1584,7 @@ export const SystemPitchDeck: React.FC = () => {
         },
         {
           heading: "DeepSeek Harness CLI (dsh) execFile Pipeline",
-          description: "Executes execFile('dsh', ['execute', '--model', 'deepseek-v4-pro', '--lightweight', 'deepseek-flash', '--prompt', prompt]) with automated proxy fallbacks for mathematical auditing.",
+          description: "Executes execFile('dsh', ['execute', '--model', 'deepseek-reasoner', '--lightweight', 'deepseek-chat', '--prompt', prompt]) with automated proxy fallbacks for mathematical auditing.",
           highlight: "dsh Multi-Model"
         },
         {
@@ -1608,7 +1608,7 @@ export const SystemPitchDeck: React.FC = () => {
             <p className="text-slate-300 pl-3">systemInstruction: <span className="text-amber-300">'Enforce DTI &lt; 45%, TRID, and DPA guidelines.'</span></p>
             <p className="text-indigo-300">{'}'});</p>
             <p className="text-slate-500 pt-1">// 2. DeepSeek Harness CLI (dsh) Math Engine (Hardened execFile)</p>
-            <p className="text-emerald-300">const {'{'} stdout {'}'} = await execFileAsync(<span className="text-amber-300">'dsh'</span>, [<span className="text-amber-300">'execute'</span>, <span className="text-amber-300">'--model'</span>, <span className="text-amber-300">'deepseek-v4-pro'</span>, <span className="text-amber-300">'--lightweight'</span>, <span className="text-amber-300">'deepseek-flash'</span>, <span className="text-amber-300">'--prompt'</span>, prompt]);</p>
+            <p className="text-emerald-300">const {'{'} stdout {'}'} = await execFileAsync(<span className="text-amber-300">'dsh'</span>, [<span className="text-amber-300">'execute'</span>, <span className="text-amber-300">'--model'</span>, <span className="text-amber-300">'deepseek-reasoner'</span>, <span className="text-amber-300">'--lightweight'</span>, <span className="text-amber-300">'deepseek-chat'</span>, <span className="text-amber-300">'--prompt'</span>, prompt]);</p>
             <p className="text-slate-500 pt-1">// 3. Centralized Firestore /memories Sync</p>
             <p className="text-purple-300">await addDoc(collection(db, <span className="text-amber-300">'memories'</span>), {'{'} title, content, industryId, createdAt {'}'});</p>
           </div>
@@ -1953,7 +1953,7 @@ export const SystemPitchDeck: React.FC = () => {
           </div>
           <div className="space-y-1 leading-relaxed">
             <p className="text-slate-500">// 1. Argument Vector Isolation (No Shell Interpolation)</p>
-            <p className="text-amber-300">execFile('dsh', ['execute', '--model', model, '--lightweight', 'deepseek-flash', '--prompt', prompt]);</p>
+            <p className="text-amber-300">execFile('dsh', ['execute', '--model', model, '--lightweight', 'deepseek-chat', '--prompt', prompt]);</p>
             <p className="text-slate-500 pt-1">// 2. Zero-Hallucination Outage Circuit Breaker</p>
             <p className="text-indigo-300">if (err.includes('quota') || err.includes('overloaded')) {'{'}</p>
             <p className="text-emerald-300 pl-3">return escalateToHuman("Mike Ford will follow up shortly.");</p>

@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { db } from '../firebase.ts';
 import { collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
+import { GEMINI_DEFAULT_MODEL } from '../server/aiModels.ts';
 
 function getAiClient(): GoogleGenAI {
   const geminiApiKey =
@@ -47,7 +48,7 @@ export async function query2ndBrainWithGrounding(prompt: string, contextMemories
     const ai = getAiClient();
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: GEMINI_DEFAULT_MODEL,
       contents: [
         {
           role: 'user',

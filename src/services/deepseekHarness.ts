@@ -26,8 +26,8 @@ const VANTAGE_REMOTE_BASE_URL = "https://ais-dev-ytqtpwssj6gdvjvqbsrbyo-42709907
 
 export interface HarnessRequest {
   prompt: string;            // PII-scrubbed inside the module with redactPII()
-  model?: string;            // default "deepseek-v4-pro"
-  lightweight?: string;      // default "deepseek-flash"
+  model?: string;            // default "deepseek-reasoner"
+  lightweight?: string;      // default "deepseek-chat"
   timeoutMs?: number;        // default 5000; caller policy
   tenantId: string;          // REQUIRED, fail-closed (no default) — for spend guard + ledger
   runId?: string;            // generated if absent (crypto.randomUUID)
@@ -108,8 +108,8 @@ async function logHarnessCompliance(action: string, details: Record<string, any>
 export async function executeDeepSeekHarness(req: HarnessRequest): Promise<HarnessResult> {
   const startTime = Date.now();
   const runId = req.runId || crypto.randomUUID();
-  const model = req.model || "deepseek-v4-pro";
-  const lightweight = req.lightweight || "deepseek-flash";
+  const model = req.model || "deepseek-reasoner";
+  const lightweight = req.lightweight || "deepseek-chat";
   const timeoutMs = req.timeoutMs || 5000;
 
   // 1. Validation: tenantId REQUIRED (fail-closed)

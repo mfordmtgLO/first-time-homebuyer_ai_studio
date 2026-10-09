@@ -341,5 +341,23 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isSignedIn() || isValidId(alertId);
     }
+
+    // Plugin entitlement registry + kill switch (added 2026-10-06).
+    // Single-doc GET is public: the unguessable instanceId is the
+    // capability and the document exposes only status metadata.
+    // Listing, creating, revoking and auditing are admin-only.
+    match /plugin_entitlements/{instanceId} {
+      allow get: if true;
+      allow list, create, update, delete: if request.auth != null && request.auth.token.email == 'fordmj@gmail.com';
+    }
+
+    match /plugin_system_flags/{flagId} {
+      allow get: if true;
+      allow list, create, update, delete: if request.auth != null && request.auth.token.email == 'fordmj@gmail.com';
+    }
+
+    match /plugin_audit_log/{entryId} {
+      allow read, write: if request.auth != null && request.auth.token.email == 'fordmj@gmail.com';
+    }
   }
 }

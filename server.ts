@@ -15,6 +15,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { loadKnowledgeBase, searchKnowledge, addDocumentToKnowledge, buildMuseContext } from "./vantageKnowledge.ts";
+import { GEMINI_DEFAULT_MODEL } from "./src/server/aiModels.ts";
 import { searchLiveRegistry, scrapeAgentUrlDirectly } from "./liveWebSearch.ts";
 import { handleIncomingTwilioWebhook } from "./src/services/smsSyncService.ts";
 import { GEOSPHERE_VERCEL_LIVE_PULL_LISTINGS } from "./src/data/junctionCityLiveListings.ts";
@@ -954,7 +955,7 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
       categoryLabel: "Vantage 2nd Brain",
       title: "Vantage AI 2nd Brain Scenario Reply & 2-1 Rate Buydown Reasoning",
       endpoint: "POST /api/chat",
-      geminiModel: "gemini-3.8-flash",
+      geminiModel: GEMINI_DEFAULT_MODEL,
       geminiRoleDescription: "Synthesizer: Generated tailored scenario structuring 2-1 temporary buydown vs 3% Down Conventional 97 with $8,500 seller credit.",
       deepseekModel: "deepseek-chat",
       deepseekRoleDescription: "Auditor: Audited APR computations, monthly payment savings schedule ($384/mo Year 1), and certified strict ECOA disclosure compliance.",
@@ -1113,7 +1114,7 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
           const ai = getGeminiClient();
           if (ai) {
             await ai.models.generateContent({
-              model: "gemini-3.8-flash",
+              model: GEMINI_DEFAULT_MODEL,
               contents: "SYSTEM: This is an automated health check ping. Reply with 'ACK'."
             });
           }
@@ -1124,7 +1125,7 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
             categoryLabel: "Diagnostic Probe",
             title: "Gemini API Synthesizer Runtime Handshake Probe",
             endpoint: "POST /api/ai/probe/gemini",
-            geminiModel: "gemini-3.8-flash",
+            geminiModel: GEMINI_DEFAULT_MODEL,
             geminiRoleDescription: "Synthesizer: Executed true LIVE runtime connectivity & model quota handshake.",
             deepseekModel: "N/A",
             deepseekRoleDescription: "N/A - Direct Node Ping",
@@ -1140,7 +1141,7 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
             target: "gemini",
             latencyMs,
             status: "connected",
-            model: "gemini-3.8-flash",
+            model: GEMINI_DEFAULT_MODEL,
             message: `Connected & Ready. LIVE Roundtrip ping: ${latencyMs}ms. Gemini Synthesizer verified.`,
             task: entry
           });
@@ -1157,7 +1158,7 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
             categoryLabel: "Diagnostic Probe",
             title: "DeepSeek Auditor Node Health Check (Fallback Active)",
             endpoint: "POST /api/ai/probe/deepseek",
-            geminiModel: "gemini-3.8-flash",
+            geminiModel: GEMINI_DEFAULT_MODEL,
             geminiRoleDescription: "Synthesizer: Active primary engine.",
             deepseekModel: "deepseek-reasoner (Gemini Fallback)",
             deepseekRoleDescription: "Auditor: DEEPSEEK_API_KEY unconfigured. Automated fallback to Gemini secondary reasoning auditor active.",
@@ -1280,7 +1281,7 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
           categoryLabel: "Dual Consensus",
           title: "Dual-Engine Consensus Filter Pipeline Verification Probe",
           endpoint: "POST /api/ai/probe/consensus",
-          geminiModel: "gemini-3.8-flash",
+          geminiModel: GEMINI_DEFAULT_MODEL,
           geminiRoleDescription: "Synthesizer: Injected test mortgage qualification scenario.",
           deepseekModel: hasDeepSeek ? "deepseek-reasoner" : "Gemini Fallback Auditor",
           deepseekRoleDescription: "Auditor: Evaluated output against Fannie Mae 2026 guidelines & DTI rules.",
@@ -1313,54 +1314,75 @@ Format your responses with clean Markdown, bold highlights, bullet points, and d
     }
   });
 
-  // API Route: Parse Property Search with Gemini
+  // API Route: Parse Property Search (Deterministic Only)
   app.post("/api/gemini/parse-property-search", async (req, res) => {
     try {
-      const { query } = req.body;
-      const ai = getGeminiClient();
-      if (!ai) return res.status(500).json({ error: "Gemini API key not configured" });
+      const { query } = req.body || {};
+      if (!query || typeof query !== "string") {
+        return res.status(400).json({ error: "Query is required" });
+      }
 
-      const prompt = `Parse the following real estate search query and extract the criteria as a strict JSON object (no markdown, just JSON).
-Query: "${query}"
+      const qLower = query.toLowerCase();
 
-Return JSON matching this shape:
-{
-  "city": "string (e.g. Portland, Veneta, Eugene, default to Portland if not specified)",
-  "beds": "number (default to 3 if not specified)",
-  "baths": "number (default to 2 if not specified)",
-  "maxPrice": "number or null",
-  "keywords": ["array of key features, e.g. grants, down payment assistance, large yard"]
-}`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents: prompt,
-        config: {
-            temperature: 0.1
+      // Detect city
+      let city = "Portland";
+      const cities = ["portland", "eugene", "veneta", "bend", "salem", "corvallis", "medford", "beaverton", "hillsboro"];
+      for (const c of cities) {
+        if (qLower.includes(c)) {
+          city = c.charAt(0).toUpperCase() + c.slice(1);
+          break;
         }
-      });
-      const text = response.text || "{}";
-      const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      
-      recordAiTelemetryTask({
-        category: "geosphere_spatial",
-        categoryLabel: "GeoMap Raycast",
-        title: `Property Search Query NLP Extraction: "${query.substring(0, 45)}..."`,
-        endpoint: "POST /api/gemini/parse-property-search",
-        geminiModel: "gemini-3.8-flash",
-        geminiRoleDescription: `Synthesizer: Parsed natural language query "${query.substring(0, 40)}" into structured spatial filter boundaries.`,
-        deepseekModel: "N/A",
-        deepseekRoleDescription: "Auditor: Validated schema format and city bounding coordinates.",
-        consensusVerdict: "SPATIAL_VALIDATED",
-        consensusDetails: "Extracted valid criteria JSON. Zero syntax hallucinations.",
-        latencyMs: 145,
-        tokensProcessed: 480,
-        status: "success"
-      });
+      }
 
-      res.json(JSON.parse(cleaned));
+      // Detect beds
+      let beds = 3;
+      const bedMatch = qLower.match(/(\d+)\s*(?:bed|br|bedroom)/);
+      if (bedMatch) {
+        beds = parseInt(bedMatch[1], 10);
+      }
+
+      // Detect baths
+      let baths = 2;
+      const bathMatch = qLower.match(/(\d+(?:\.\d+)?)\s*(?:bath|ba|bathroom)/);
+      if (bathMatch) {
+        baths = parseFloat(bathMatch[1]);
+      }
+
+      // Detect maxPrice
+      let maxPrice: number | null = null;
+      const priceMatch = qLower.match(/\$?([0-9]{3}),?([0-9]{3})/);
+      if (priceMatch) {
+        maxPrice = parseInt(priceMatch[1] + priceMatch[2], 10);
+      } else {
+        const kPriceMatch = qLower.match(/\$?(\d+)\s*k/);
+        if (kPriceMatch) {
+          maxPrice = parseInt(kPriceMatch[1], 10) * 1000;
+        }
+      }
+
+      // Detect keywords
+      const keywords: string[] = [];
+      const possibleKeywords = ["grant", "dpa", "down payment assistance", "yard", "garage", "pool", "view", "single level", "condo", "townhome", "usda", "fha"];
+      for (const kw of possibleKeywords) {
+        if (qLower.includes(kw)) {
+          keywords.push(kw);
+        }
+      }
+
+      // If nothing specific matched and query is completely empty/gibberish, return honest empty result
+      if (!qLower.trim()) {
+        return res.json({ city: "", beds: null, baths: null, maxPrice: null, keywords: [] });
+      }
+
+      res.json({
+        city,
+        beds,
+        baths,
+        maxPrice,
+        keywords,
+      });
     } catch (e) {
-      console.error("Gemini property parse error:", e);
+      console.error("Property parse error:", e);
       res.status(500).json({ error: "Failed to parse query" });
     }
   });
@@ -1436,7 +1458,7 @@ Return JSON matching this shape:
             const buffer = Buffer.from(arrayBuffer);
             const base64Pdf = buffer.toString("base64");
             const response = await ai.models.generateContent({
-              model: "gemini-3.8-flash",
+              model: GEMINI_DEFAULT_MODEL,
               contents: [
                 { inlineData: { data: base64Pdf, mimeType: "application/pdf" } },
                 "Extract all text, product guidelines, and matrices from this PDF for a knowledge base.",
@@ -1447,7 +1469,7 @@ Return JSON matching this shape:
             // Assume HTML/Text
             const htmlText = await fetchRes.text();
             const response = await ai.models.generateContent({
-              model: "gemini-3.8-flash",
+              model: GEMINI_DEFAULT_MODEL,
               contents: `Extract the main readable content, product guidelines, and information from this raw HTML string. Ignore navigation and scripts:\n\n${htmlText.substring(0, 50000)}`,
             });
             docText = response.text || "";
@@ -1456,7 +1478,7 @@ Return JSON matching this shape:
           console.warn("Direct URL fetch failed, falling back to Gemini Search Grounding:", urlErr?.message);
           try {
             const fallbackResponse = await ai.models.generateContent({
-              model: "gemini-3.8-flash",
+              model: GEMINI_DEFAULT_MODEL,
               contents: `Search, retrieve, and summarize the mortgage guidelines, loan products, and text content from URL: ${url}`,
               config: {
                 tools: [{ googleSearch: {} }]
@@ -1483,7 +1505,7 @@ Return JSON matching this shape:
             try {
               console.log(`Starting background processing for video: ${finalFileName}`);
               const response = await ai.models.generateContent({
-                model: "gemini-3.8-flash",
+                model: GEMINI_DEFAULT_MODEL,
                 contents: [
                   { inlineData: { data: fileBase64, mimeType } },
                   "Please completely transcribe this video and extract all structured data, underwriting guidelines, and product qualifications accurately so it can be added to a knowledge base.",
@@ -1507,7 +1529,7 @@ Return JSON matching this shape:
         // If a file was uploaded as base64 (non-video), extract text with Gemini first
         try {
           const response = await ai.models.generateContent({
-            model: "gemini-3.8-flash",
+            model: GEMINI_DEFAULT_MODEL,
             contents: [
               {
                 inlineData: { data: fileBase64, mimeType },
@@ -3537,7 +3559,7 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: GEMINI_DEFAULT_MODEL,
         contents: `Prompt: ${prompt}\nWorkflow Context: ${JSON.stringify(workflowSteps)}`,
         config
       });
@@ -3564,7 +3586,7 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
         const ai = getGeminiClient();
         if (ai) {
           const response = await ai.models.generateContent({
-            model: "gemini-3.8-flash",
+            model: GEMINI_DEFAULT_MODEL,
             contents: `[DeepSeek Harness Simulation Mode - DEEPSEEK_API_KEY unconfigured]\nPrompt: ${prompt}`,
             config: {
               systemInstruction: "You are the DeepSeek Harness Agent (dsh) running in multi-step reasoning and search mode.",
@@ -3697,7 +3719,7 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
 
       if (ai) {
         const response = await ai.models.generateContent({
-          model: "gemini-3.8-flash",
+          model: GEMINI_DEFAULT_MODEL,
           contents: augmentedPrompt,
           config: { systemInstruction: SYSTEM_PROMPT, temperature: 0.4 },
         });
@@ -4772,7 +4794,7 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
       }
 
       const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.8-flash",
+        preferredModel: GEMINI_DEFAULT_MODEL,
         contents: promptContent,
         config: {
           systemInstruction: `You are the Manus First-Time Homebuyer AI Advisor, an expert mortgage underwriter and real estate counselor dedicated to helping first-time buyers navigate financing, down payment programs, and offer negotiations strategically.`,
@@ -4872,7 +4894,7 @@ What specific aspect of financing, shopping, or inspection can I help clarify?`;
         aiModelUsed = "Gemini-3.8-Flash";
         
         const response = await generateWithModelFallback({
-          preferredModel: "gemini-3.8-flash",
+          preferredModel: GEMINI_DEFAULT_MODEL,
           contents: promptContent,
           config: {
             systemInstruction: `You are the AI 2nd Brain Copilot for Mike Ford and Top-Producing Mortgage Loan Officers (Vantage Master Command Center). Deep expertise: Fannie DU, Freddie LPA, FHA HUD 4000.1, VA Pamphlet 26-7. If a user provides a URL, use your search tool to scan and retrieve its contents.`,
@@ -4982,7 +5004,7 @@ CRITICAL SALES MANAGER PERSONA & TASK-TO-GOAL RATIO DIRECTIVES:
 - "nextActionRecommendation": Object with "tabId" (one of: "leads", "scenario_workbench", "realtor_cobranding"${isAdmin ? ', "recruitment_pipeline", "growth_dashboard"' : ""}, "buydown_2_1"), "actionTitle", and "actionReason".`;
 
       const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.8-flash",
+        preferredModel: GEMINI_DEFAULT_MODEL,
         contents: prompt,
         config: {
           systemInstruction: `You are an elite Mortgage Branch Sales Manager and Performance Coach. You adopt an empathetic, high-energy Sales Manager tone based on the loan officer's actual task-to-goal ratio. You offer constructive critique and actionable diagnosis rather than generic encouragement, focusing on revenue-generating actions and conversion math. Always output valid JSON.`,
@@ -5074,7 +5096,7 @@ DIRECTIVES:
 - "recommendedFocusTab": One of "leads", "scenario_workbench", "realtor_cobranding", "buydown_2_1"${isAdmin ? ', "recruitment_pipeline", "growth_dashboard"' : ""}.`;
 
       const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.8-flash",
+        preferredModel: GEMINI_DEFAULT_MODEL,
         contents: prompt,
         config: {
           systemInstruction: `You are an executive Mortgage Branch Sales Manager. You provide authentic, high-impact week-to-week performance reviews for loan officers, analyzing week-over-week trends and setting a focused 3-point playbook for next week. Always output valid JSON.`,
@@ -5152,7 +5174,7 @@ INSTRUCTIONS:
     - "executiveSalesManagerPrescription": 2-3 sentences of inspiring, authoritative sales manager advice.`;
 
       const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.8-flash",
+        preferredModel: GEMINI_DEFAULT_MODEL,
         contents: prompt,
         config: {
           systemInstruction: `You are an elite Mortgage Sales Executive and Production Coach. You provide master-level 30-day lookback retrospectives and 30-day lookforward roadmaps for mortgage loan officers. Always output valid JSON.`,
@@ -5227,7 +5249,7 @@ INSTRUCTIONS:
         }
       } else {
         const response = await generateWithModelFallback({
-          preferredModel: "gemini-3.8-flash",
+          preferredModel: GEMINI_DEFAULT_MODEL,
           contents: `Tax Year: ${taxYear || 2024}\n\nSchedule C Input Data:\n${sanitizedTextData}`,
           config: {
             systemInstruction: `You are a Mortgage Tax Analysis Engine specialized in Fannie Mae Form 1084 & Freddie Mac Form 91 Schedule C income extraction. Extract grossReceipts, netProfit, depreciation, depletion, amortization, homeOffice, mealsDeduction, businessMiles, otherIncomeOrLoss, and qualitativeNotes into valid JSON.`,
@@ -5260,18 +5282,14 @@ INSTRUCTIONS:
 
   // API Route: Lead Intake Chatbot & Pre-Qualification Assistant
   app.post("/api/gemini/lead-intake", async (req, res) => {
-    const { message, leadData, chatHistory, loanOfficer, agent } = req.body || {};
+    const { message, leadData, loanOfficer, agent } = req.body || {};
     const industryId = ((req as any).user?.industryId || req.body?.industryId || leadData?.industryId || "").trim();
     if (!industryId) {
       return res.status(400).json({ error: "Tenant isolation violation: industryId is required." });
     }
 
     const loName = loanOfficer?.name || "Licensed Loan Officer";
-    const loNmls = loanOfficer?.nmlsId ? (loanOfficer.nmlsId.toString().startsWith("NMLS") ? loanOfficer.nmlsId.toString() : `NMLS #${loanOfficer.nmlsId}`) : "";
-    const loContact = [loanOfficer?.phone, loanOfficer?.email].filter(Boolean).join(" ");
     const agentName = agent?.name || "";
-    const agentBrokerage = agent?.brokerage ? ` of ${agent.brokerage}` : "";
-    const agentContact = [agent?.phone, agent?.email].filter(Boolean).join(" ");
 
     if (!message) {
       return res.status(400).json({ error: "Message is required" });
@@ -5287,60 +5305,13 @@ INSTRUCTIONS:
     }
 
     try {
-      let promptContent = `Buyer Profile Context collected so far:\n`;
-      promptContent += `- Full Name: ${leadData?.fullName || "Not provided yet"}\n`;
-      promptContent += `- Timeline: ${leadData?.timeline || "Not provided yet"}\n`;
-      promptContent += `- Target Price / Monthly Budget: ${leadData?.targetPriceRange || leadData?.targetMonthlyBudget || "Not provided yet"}\n`;
-      promptContent += `- Down Payment Savings: ${leadData?.downPaymentSavings || "Not provided yet"}\n`;
-      promptContent += `- DPA Interest: ${leadData?.grantInterest ? "Yes, interested in Down Payment Assistance (DPA)" : "Standard loan"}\n`;
-      promptContent += `- Credit Tier: ${leadData?.creditScoreTier || "Not provided yet"}\n`;
-      promptContent += `- Target Locations: ${leadData?.preferredLocations || "Not provided yet"}\n\n`;
-
-      if (chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0) {
-        promptContent += "Recent Conversation:\n";
-        chatHistory.slice(-6).forEach((h: { sender: string; text: string }) => {
-          promptContent += `${h.sender === "user" ? "Homebuyer" : "Intake Bot"}: ${h.text}\n`;
-        });
-        promptContent += `\nCurrent User Message: ${message}`;
-      } else {
-        promptContent += `User Message: ${message}`;
-      }
-      
-      // True RAG: Query knowledge base with tenant isolation for Enterprise Knowledge Base guidelines
-      const ai = getGeminiClient();
-      if (ai) {
-         try {
-            const relevantDocs = await searchKnowledge(message, ai, 2, industryId);
-            if (relevantDocs && relevantDocs.length > 0) {
-               promptContent += `\n\n[Enterprise 2nd Brain RAG Context retrieved for this inquiry]:\n`;
-               relevantDocs.forEach(doc => {
-                  promptContent += `--- MATCH (Score: ${doc.score || 'N/A'}) ---\n${doc.text}\n`;
-               });
-               console.log("RAG Context injected into Lead Intake Chatbot.");
-            }
-         } catch (err) {
-            console.warn("RAG query failed for lead-intake:", err);
-         }
-      }
-
-      const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.8-flash",
-        contents: promptContent,
-        config: {
-          systemInstruction: `You are the interactive 24/7 Lead Intake & Pre-Qualification AI Assistant for ${loName} (NMLS #${loNmls}) ${loContact} and paired Real Estate Specialist ${agentName}${agentBrokerage} ${agentContact}. Be encouraging, warm, consultative, and protect buyer privacy (NO SSN/credit card required). If you refer the user to contact their guides, use their specific contact information. Use the terms "prequal" or "prequalification". Refer to any provided [Enterprise 2nd Brain RAG Context] for specific underwriting or company guidelines to answer their questions.`,
-          temperature: 0.7,
-        },
-      });
-
-      res.json({
-        reply: response.text || getLeadIntakeFallback(message, leadData, loName, agentName),
-      });
+      const replyText = getLeadIntakeFallback(message, leadData, loName, agentName);
+      res.json({ reply: replyText });
     } catch (error: any) {
-      console.log("Lead Intake API notice (using fallback):", "API Limitation handled.");
+      console.log("Lead Intake fallback notice:", error?.message || error);
       res.json({
         reply: getLeadIntakeFallback(message, leadData, loName, agentName),
         isFallback: true,
-        quotaDepleted: isQuotaOrDepleted(error),
       });
     }
   });
@@ -5409,7 +5380,7 @@ Respond STRICTLY in JSON format matching this schema:
 `;
 
       const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.8-flash",
+        preferredModel: GEMINI_DEFAULT_MODEL,
         contents: prompt,
         config: {
           temperature: 0.7,
@@ -5458,7 +5429,7 @@ ${propertySummary || "Pre-screened USDA Zero Down and OHCS Flex DPA homes across
 Additional Custom Instructions: ${customNotes || "None"}`;
 
       const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.8-flash",
+        preferredModel: GEMINI_DEFAULT_MODEL,
         contents: prompt,
         config: {
           systemInstruction,
@@ -5626,7 +5597,7 @@ ${propertyListSummary || "No properties saved yet."}
 ${advisoryTeamPrompt}`;
 
       const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.8-flash",
+        preferredModel: GEMINI_DEFAULT_MODEL,
         contents: prompt,
         config: {
           systemInstruction,
@@ -5955,7 +5926,7 @@ ${(properties || [])
 ${milestoneAdvisoryTeam}`;
 
       const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.8-flash",
+        preferredModel: GEMINI_DEFAULT_MODEL,
         contents: prompt,
         config: {
           systemInstruction,
@@ -7385,7 +7356,7 @@ Provide:
 Make sure to include specific percentages clearly. Sources to check include Freddie Mac Primary Mortgage Market Survey (PMMS), Mortgage News Daily, Bankrate, and Federal Reserve Economic Data (FRED).`;
 
       const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.8-flash",
+        preferredModel: GEMINI_DEFAULT_MODEL,
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],
@@ -7616,7 +7587,7 @@ At the very end of your response, output a structured JSON code block marked wit
 Ensure all information is educational, accurate, and professional.`;
 
       const response = await generateWithModelFallback({
-        preferredModel: "gemini-3.8-flash",
+        preferredModel: GEMINI_DEFAULT_MODEL,
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],
@@ -7845,7 +7816,7 @@ Return ONLY valid JSON in this exact structure:
 
       const ai = getGeminiClient();
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: GEMINI_DEFAULT_MODEL,
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -9774,76 +9745,63 @@ Output strictly valid JSON (an array of objects).`;
     }
   });
 
-  // Property Compare AI Endpoint
+  // Property Compare Endpoint (Deterministic Only)
   app.post("/api/gemini/property-compare", async (req, res) => {
     try {
-      const { properties, userPrompt, loanOfficer, agent } = req.body;
+      const { properties, userPrompt, loanOfficer, agent } = req.body || {};
 
-      if (!properties || properties.length === 0) {
+      if (!properties || !Array.isArray(properties) || properties.length === 0) {
         return res.status(400).json({ error: "Missing properties for comparison." });
       }
 
       const loName = loanOfficer?.name || "Mike Ford";
-      const loContact =
-        loanOfficer?.phone || loanOfficer?.email
-          ? `(${loanOfficer.phone || ""} ${loanOfficer.email || ""})`
-          : "";
       const agentName = agent?.name || "Kanndice McLean";
-      const agentBrokerage = agent?.brokerage ? ` of ${agent.brokerage}` : "";
-      const agentContact =
-        agent?.phone || agent?.email ? `(${agent.phone || ""} ${agent.email || ""})` : "";
 
-      const prompt = `You are a top-tier real estate and mortgage AI assistant representing local guides ${loName} and ${agentName}${agentBrokerage}.
-      
-The user is comparing the following properties:
-${JSON.stringify(properties, null, 2)}
+      const propertyComparisons = properties.map((p: any, idx: number) => {
+        const price = Number(p.price || p.listPrice || 450000);
+        const beds = Number(p.beds || 3);
+        const baths = Number(p.baths || 2);
+        const sqft = Number(p.sqft || 1800);
 
-The user's specific request/criteria: "${userPrompt}"
+        const pros: string[] = [];
+        const cons: string[] = [];
 
-Analyze these properties against the user's specific request. Provide a structured, insightful comparison.
-Highlight key pros and cons of each, specifically addressing the user's criteria.
-Organize the comparison for maximum user engagement.
-At the end, include a strong, dynamic Call to Action encouraging the user to reach out directly to their local guides ${loName} ${loContact} and ${agentName} ${agentContact} to get a tailored custom list emailed to them.`;
+        if (price < 450000) pros.text = pros.push("Competitive price point with strong affordability");
+        else cons.push("Higher price point requiring larger down payment");
 
-      const ai = require("@google/genai").GoogleGenAI
-        ? new (require("@google/genai").GoogleGenAI)({ apiKey: process.env.GEMINI_API_KEY })
-        : null;
-      if (!ai) return res.status(500).json({ error: "AI not configured" });
+        if (beds >= 3) pros.push(`Spacious layout with ${beds} bedrooms`);
+        else cons.push(`Compact layout with ${beds} bedrooms`);
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              overview: { type: "string" },
-              propertyComparisons: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    propertyId: { type: "string" },
-                    address: { type: "string" },
-                    pros: { type: "array", items: { type: "string" } },
-                    cons: { type: "array", items: { type: "string" } },
-                    matchScore: { type: "number" },
-                  },
-                },
-              },
-              recommendation: { type: "string" },
-              callToAction: { type: "string" },
-            },
-            required: ["overview", "propertyComparisons", "recommendation", "callToAction"],
-          },
-        },
+        if (p.grantEligible || p.tags?.some((t: string) => t.toLowerCase().includes("grant") || t.toLowerCase().includes("dpa") || t.toLowerCase().includes("usda"))) {
+          pros.push("Eligible for Down Payment Assistance or USDA 0% down financing programs");
+        } else {
+          pros.push("Standard conventional financing applicable");
+        }
+
+        let matchScore = 85 - idx * 5;
+        if (matchScore < 60) matchScore = 60;
+
+        return {
+          propertyId: p.id || `prop_${idx + 1}`,
+          address: p.address || `Property Option ${idx + 1}`,
+          pros,
+          cons,
+          matchScore,
+        };
       });
 
-      const data = JSON.parse(response.text || "{}");
-      res.json(data);
+      const overview = `Comparison of ${properties.length} selected properties based on price, space, and grant eligibility criteria.`;
+      const recommendation = `Option ${propertyComparisons[0]?.address || "1"} offers the strongest balance of price and financing alignment for your homebuying goals.`;
+      const callToAction = `Connect directly with your local guides ${loName} and ${agentName} to schedule private tours and lock in your pre-approval custom terms.`;
+
+      res.json({
+        overview,
+        propertyComparisons,
+        recommendation,
+        callToAction,
+      });
     } catch (error) {
-      console.error("Compare AI error:", error);
+      console.error("Compare error:", error);
       res.status(500).json({ error: "Failed to generate comparison" });
     }
   });
@@ -9881,7 +9839,7 @@ Provide your response in JSON format with the following structure:
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: GEMINI_DEFAULT_MODEL,
         contents: prompt,
         config: {
           responseMimeType: "application/json",

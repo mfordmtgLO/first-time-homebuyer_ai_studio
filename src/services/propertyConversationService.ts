@@ -1,5 +1,5 @@
 import { db } from "../firebase";
-import { doc, getDoc, setDoc, onSnapshot, collection, runTransaction } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
 import { PropertyConversation, PropertyConversationMessage, PropertyActionItem } from "../types";
 import { evaluateBadgesForConversation } from "./loanWisdomBadgeService";
 

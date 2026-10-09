@@ -716,7 +716,6 @@ async function startServer() {
     "GET /api/ai/diagnostics", // boolean capability flags only; called by the public chatbot
     // Public lead-gen funnel: chatbot intake, AI copilot, property browsing,
     // mortgage lab, market trends, share-via-email, client interaction memories
-    "POST /api/chat",
     "POST /api/gemini/lead-intake",
     "POST /api/gemini/advisor",
     "POST /api/gemini/offer-strategy",
@@ -3355,60 +3354,18 @@ Return JSON matching this shape:
   });
 
   app.post("/api/hybrid/deepseek", async (req, res) => {
-    try {
-      const { prompt, model = "deepseek-v4-pro" } = req.body || {};
-      if (!prompt) {
-        return res.status(400).json({ error: "prompt is required" });
-      }
-
-      const { execFile } = await import("child_process");
-      const { promisify } = await import("util");
-      const execFileAsync = promisify(execFile);
-
-      try {
-        // Hardened: execFile with explicit argument vector avoids invoking a shell entirely,
-        // eliminating shell-injection risks from backticks, $(), quotes, and newlines.
-        const { stdout } = await execFileAsync("dsh", [
-          "execute",
-          "--model",
-          String(model),
-          "--lightweight",
-          "deepseek-flash",
-          "--prompt",
-          String(prompt)
-        ], { timeout: 5000 });
-        return res.json(JSON.parse(stdout));
-      } catch (cliErr) {
-        console.warn("dsh CLI execution fallback:", cliErr);
-        return res.json({
-          success: true,
-          provider: "deepseek-v4-pro-hybrid-engine",
-          prompt,
-          model,
-          lightweightModel: "deepseek-flash",
-          response: `[Vantage AI Zero-Hallucination Protocol]: We recorded your inquiry: "${prompt}". Rather than computing unverified estimates during offline mode, loan officer Mike Ford will review your underwriting parameters directly.`,
-          executedAt: new Date().toISOString(),
-        });
-      }
-    } catch (err: any) {
-      console.error("DeepSeek hybrid route error:", err);
-      res.status(500).json({ error: err.message || "DeepSeek hybrid execution failed" });
-    }
+    return res.status(404).json({ error: "Route retired." });
   });
 
-  // Standard Chat Endpoint (Vantage AI)
-  app.post("/api/chat", async (req, res) => {
+  // Standard Chat Endpoint (Vantage AI) - Authenticated Staff Only
+  app.post("/api/chat", authenticateUser, async (req, res) => {
     try {
-      const industryId = ((req as any).user?.industryId || req.body?.industryId || "mortgage_real_estate").trim();
+      const industryId = ((req as any).user?.industryId || req.body?.industryId || "").trim();
       if (!industryId) {
         return res.status(400).json({ error: "Tenant isolation violation: industryId is required." });
       }
 
       const { prompt, chatHistory } = req.body;
-      const provider = getActiveAIProvider();
-
-      if (provider === "none") return res.status(500).json({ error: "No AI Provider configured" });
-
       let augmentedPrompt = prompt;
 
       // ============================================================================
@@ -3545,37 +3502,19 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
         console.error("RAG Search failed, proceeding without context", e);
       }
 
-      if (provider === "deepseek") {
-        const response = await fetch("https://api.deepseek.com/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "deepseek-chat",
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: augmentedPrompt },
-            ],
-            temperature: 0.3,
-          }),
-        });
-        const data = await response.json();
-        return res.json({ response: data.choices?.[0]?.message?.content || "" });
-      } else {
-        const ai = getGeminiClient();
-        const response = await ai!.models.generateContent({
-          model: "gemini-3.8-flash",
-          contents: augmentedPrompt,
-          config: {
-            systemInstruction: SYSTEM_PROMPT,
-            temperature: 0.3,
-            tools: [{ googleSearch: {} }],
-          },
-        });
-        return res.json({ response: response.text });
-      }
+      const ai = getGeminiClient();
+      if (!ai) return res.status(500).json({ error: "AI not configured" });
+
+      const response = await ai.models.generateContent({
+        model: GEMINI_DEFAULT_MODEL,
+        contents: augmentedPrompt,
+        config: {
+          systemInstruction: SYSTEM_PROMPT,
+          temperature: 0.3,
+          tools: [{ googleSearch: {} }],
+        },
+      });
+      return res.json({ response: response.text });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -3807,9 +3746,8 @@ INSTRUCTION: Please incorporate these mathematically verified facts into your re
   }) => {
     const ai = getGeminiClient();
     const modelsToTry = [
-      params.preferredModel || "gemini-3.8-flash",
+      params.preferredModel || GEMINI_DEFAULT_MODEL,
       "gemini-3.1-flash-lite",
-      "gemini-flash-latest",
     ];
 
     const timeout = params.timeoutMs || 8000;

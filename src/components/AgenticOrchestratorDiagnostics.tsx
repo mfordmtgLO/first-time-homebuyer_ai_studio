@@ -359,7 +359,7 @@ export function AgenticOrchestratorDiagnostics() {
             <div className="space-y-1 text-xs font-mono mb-4 text-[#2D362E]">
               <div className="flex items-center justify-between text-[11px] bg-[#F8F9F7] px-2.5 py-1 rounded-md border border-[#EAE7E0]">
                 <span className="text-[#606C5D]">Active Models:</span>
-                <span className="font-bold text-amber-900">gemini-3.8-flash / gemini-3.1-pro-preview</span>
+                <span className="font-bold text-amber-900">gemini-3.8-flash / gemini-2.5-pro</span>
               </div>
               <div className="flex items-center justify-between text-[11px] bg-[#F8F9F7] px-2.5 py-1 rounded-md border border-[#EAE7E0]">
                 <span className="text-[#606C5D]">Routing Load:</span>

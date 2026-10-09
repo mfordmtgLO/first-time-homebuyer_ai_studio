@@ -57,9 +57,17 @@ export const LeadPropertyConversationSync: React.FC<LeadPropertyConversationSync
     return () => unsub();
   }, [propertyId, leadId]);
 
+  const buyerInitiated = Boolean(conversation?.messages?.some(
+    message => message.sender === "buyer" && typeof message.text === "string" && message.text.trim()
+  ));
+
   const handleSendLoReply = async (customText?: string, programTag?: string, fact?: string) => {
     const textToSend = (customText || replyText).trim();
     if (!textToSend) return;
+    if (!buyerInitiated) {
+      onTriggerToast?.("Reply unavailable: buyer must post the first property card note.");
+      return;
+    }
 
     setIsSending(true);
     try {
@@ -229,7 +237,7 @@ export const LeadPropertyConversationSync: React.FC<LeadPropertyConversationSync
           <div className="max-h-56 overflow-y-auto space-y-2 pr-1 text-xs">
             {messages.length === 0 ? (
               <div className="p-3 rounded-xl bg-[#FAF9F5] border border-dashed border-[#EAE7E0] text-center text-xs text-[#606C5D]">
-                No notes in this thread yet. Send a message below to start communicating with {leadName} directly on this property card!
+                No buyer-initiated card note yet. Loan officers cannot start this conversation; the buyer must post the first note.
               </div>
             ) : (
               messages.map((m) => {
@@ -289,11 +297,17 @@ export const LeadPropertyConversationSync: React.FC<LeadPropertyConversationSync
           {/* VANTAGE AI ADS ENGINE: LINKED ADS */}
           <PropertyLinkedAds propertyId={propertyId} propertyAddress={propertyAddress} leadId={leadId} loanOfficerId={currentLo?.id} />
     
+          {!buyerInitiated && (
+            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2" role="status">
+              Buyer-first policy: wait for this buyer to post a property card note. Viewing or favoriting a home does not authorize an LO to initiate notes. This in-app reply permission is not SMS consent.
+            </p>
+          )}
           {/* Quick LO 1-Tap Responses */}
           <div className="flex items-center gap-1.5 flex-wrap pt-1">
             <span className="text-[10px] font-bold text-[#606C5D]">1-Tap Reply:</span>
             <button
               type="button"
+              disabled={!buyerInitiated || isSending}
               onClick={() => handleSendLoReply("I ran the math on this home! It is eligible for the OHCS 3% Cash Assistance bond program. Let's do a 5-minute pre-qual to verify your income limit.")}
               className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#4A5D4E] cursor-pointer"
             >
@@ -301,6 +315,7 @@ export const LeadPropertyConversationSync: React.FC<LeadPropertyConversationSync
             </button>
             <button
               type="button"
+              disabled={!buyerInitiated || isSending}
               onClick={() => handleSendLoReply("Kanndice McLean and I checked this property. We can structure a seller credit to buy down your interest rate 2% in Year 1.")}
               className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#FAF9F5] hover:bg-[#F1EFE9] border border-[#EAE7E0] text-[#4A5D4E] cursor-pointer"
             >
@@ -312,6 +327,7 @@ export const LeadPropertyConversationSync: React.FC<LeadPropertyConversationSync
           <div className="flex items-center gap-1.5">
             <input
               type="text"
+              disabled={!buyerInitiated}
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               onKeyDown={(e) => {
@@ -325,7 +341,7 @@ export const LeadPropertyConversationSync: React.FC<LeadPropertyConversationSync
             />
             <button
               type="button"
-              disabled={isSending || !replyText.trim()}
+              disabled={!buyerInitiated || isSending || !replyText.trim()}
               onClick={() => handleSendLoReply()}
               className="p-2 rounded-xl bg-[#4A5D4E] hover:bg-[#38463B] text-white disabled:opacity-50 transition-colors cursor-pointer shrink-0"
               title="Post note to visitor property card"

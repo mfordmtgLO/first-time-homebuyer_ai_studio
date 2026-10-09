@@ -100,8 +100,39 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
     websiteUrl: lo.websiteUrl && !lo.websiteUrl.includes("/lo/") ? lo.websiteUrl : (matchedDefault?.websiteUrl || `https://cfmtg.com/${canonicalSlug}/`),
     customSlug: canonicalSlug,
     isAdmin: matchedDefault?.isAdmin ?? lo.isAdmin ?? false,
-    marketNewsSpotlightAgentId: lo.marketNewsSpotlightAgentId || matchedDefault?.marketNewsSpotlightAgentId
   };
+
+  const spotlightId = lo.marketNewsSpotlightAgentId || matchedDefault?.marketNewsSpotlightAgentId;
+  if (spotlightId) {
+    cleaned.marketNewsSpotlightAgentId = spotlightId;
+  } else {
+    delete cleaned.marketNewsSpotlightAgentId;
+  }
+
+  return cleanFirestoreData(cleaned);
+}
+
+/**
+ * Recursively strips undefined keys and ensures compatibility with Firestore setDoc
+ */
+export function cleanFirestoreData<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => cleanFirestoreData(item)) as unknown as T;
+  }
+  if (typeof obj === "object" && obj !== null) {
+    if (obj instanceof Date) return obj;
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = cleanFirestoreData(value);
+      }
+    }
+    return cleaned as T;
+  }
+  return obj;
 }
 
 /**
@@ -123,10 +154,12 @@ export function sanitizeAgent(agent: RealEstateAgentProfile): RealEstateAgentPro
     finalHeadshot = ""; 
   }
 
-  return {
+  const cleaned = {
     ...agent,
     headshotUrl: finalHeadshot
   };
+
+  return cleanFirestoreData(cleaned);
 }
 
 /**

@@ -67,6 +67,7 @@ import {
   findMatchingAgent,
   findMatchingPairing,
   resolveFromUrlPath,
+  cleanFirestoreData,
 } from "./utils/guideMatching";
 import { db } from "./firebase";
 import { doc, getDoc, setDoc, onSnapshot, collection, query, where, writeBatch } from "firebase/firestore";
@@ -649,7 +650,7 @@ export default function App() {
           // First time initialization: Push local state up to Firebase if authenticated
           if (auth.currentUser) {
             const { leads, ...strippedState } = guidesState;
-            setDoc(doc(db, "guides_state", "singleton"), strippedState).catch((err) => {
+            setDoc(doc(db, "guides_state", "singleton"), cleanFirestoreData(strippedState)).catch((err) => {
               console.error("[Firestore Initial Singleton Save Error]:", err);
               triggerGlobalToast("Couldn't save — please retry. If this persists, contact support.");
             });
@@ -734,7 +735,7 @@ export default function App() {
         const chunk = entries.slice(i, i + 500);
         const batch = writeBatch(db);
         chunk.forEach(([id, lead]) => {
-          batch.set(doc(db, "leads", id), lead, { merge: true });
+          batch.set(doc(db, "leads", id), cleanFirestoreData(lead), { merge: true });
         });
         await batch.commit();
       }
@@ -767,13 +768,14 @@ export default function App() {
     const saveSingleton = (stateToSave: ProfessionalGuidesState) => {
       const { leads, ...strippedState } = stateToSave;
       try {
-        const payloadJson = JSON.stringify(strippedState);
+        const cleanedData = cleanFirestoreData(strippedState);
+        const payloadJson = JSON.stringify(cleanedData);
         const payloadSize = typeof Blob !== "undefined" ? new Blob([payloadJson]).size : Buffer.byteLength(payloadJson, "utf8");
         if (payloadSize > 900 * 1024) {
           console.warn(`[Firestore Payload Warning] guides_state/singleton size is ${(payloadSize / 1024).toFixed(1)}KB, approaching 1MB cap.`);
           triggerGlobalToast("⚠️ Warning: Dashboard state size is approaching the 1MB limit. Please shard or archive old data.");
         }
-        setDoc(doc(db, "guides_state", "singleton"), strippedState).catch((err) => {
+        setDoc(doc(db, "guides_state", "singleton"), cleanedData).catch((err) => {
           console.error("[Firestore Singleton Save Error]:", err);
           triggerGlobalToast("Couldn't save — please retry. If this persists, contact support.");
         });
@@ -838,11 +840,13 @@ export default function App() {
             setGuidesState((prev) => {
               const updatedLeads = [...data.leads, ...(prev.leads || [])];
               const newState = { ...prev, leads: updatedLeads };
-              // Auto-sync new webhooks to Firebase
-              setDoc(doc(db, "guides_state", "singleton"), newState).catch((err) => {
+              // Auto-sync new webhooks to Firebase with stripped leads
+              const { leads: _leads, ...stripped } = newState;
+              setDoc(doc(db, "guides_state", "singleton"), cleanFirestoreData(stripped)).catch((err) => {
                 console.error("[Firestore Webhook Sync Save Error]:", err);
                 triggerGlobalToast("Couldn't save — please retry. If this persists, contact support.");
               });
+              data.leads.forEach((l: CapturedLead) => queueLeadWrite(l));
               return newState;
             });
           }

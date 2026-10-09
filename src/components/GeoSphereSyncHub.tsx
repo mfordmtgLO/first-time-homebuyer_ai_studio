@@ -42,6 +42,7 @@ import {
   Zap
 } from "lucide-react";
 import { PropertyListing, ProfessionalGuidesState, AdCampaignDraft } from "../types";
+import { cleanFirestoreData } from "../utils/guideMatching";
 import { SyncPropertyToBpdCrmModal } from "./SyncPropertyToBpdCrmModal";
 import { 
   GEOSPHERE_DATASETS, 
@@ -375,7 +376,8 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
       onUpdateGuidesState(updatedGuidesState);
 
       if (auth.currentUser) {
-        await setDoc(doc(db, "guides_state", "singleton"), updatedGuidesState);
+        const { leads, ...stripped } = updatedGuidesState;
+        await setDoc(doc(db, "guides_state", "singleton"), cleanFirestoreData(stripped));
         await fetchFirestoreCount();
         onTriggerToast("Public homebuyer guide portal successfully updated!");
       } else {

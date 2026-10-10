@@ -2,7 +2,7 @@ import { RentCastUsageCounter } from "./RentCastUsageCounter";
 import { incrementRentCastUsage } from "../utils/rentcastUsageService";
 import { PropertyMapOverlay } from "./PropertyMapOverlay";
 import { Nationwide50StateGeoMap } from "./Nationwide50StateGeoMap";
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { 
   Layers, 
   Download, 

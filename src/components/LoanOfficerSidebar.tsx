@@ -448,16 +448,18 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
         </button>
       </div>
 
-      {/* 1. STICKY TOP: AI DAILY RHYTHM CARD ("Focus & Flow" Instructor) */}
-      <AIDailyRhythmCard
-        key={currentLo.id}
-        isSidebarCollapsed={isCollapsed}
-        currentLo={currentLo}
-        leads={guidesState.leads || []}
-        isAdminUser={Boolean(currentLo.isAdmin || currentLo.id === guidesState.adminLoanOfficerId)}
-        onOpenDailyReview={onOpenDailyReview}
-        onSelectTab={onSelectTab}
-      />
+      {/* SCROLLABLE SIDEBAR BODY (Single Self-Scrolling Column) */}
+      <div className="flex-1 overflow-y-auto min-h-0 dashboard-vertical-scrollbar">
+        {/* 1. AI DAILY RHYTHM CARD ("Focus & Flow" Instructor) */}
+        <AIDailyRhythmCard
+          key={currentLo.id}
+          isSidebarCollapsed={isCollapsed}
+          currentLo={currentLo}
+          leads={guidesState.leads || []}
+          isAdminUser={Boolean(currentLo.isAdmin || currentLo.id === guidesState.adminLoanOfficerId)}
+          onOpenDailyReview={onOpenDailyReview}
+          onSelectTab={onSelectTab}
+        />
 
       {/* 2. CORE COMMAND HUB QUICK SWITCHER (Lead Management & Recruitment Command Center) */}
       <div className="px-2.5 pt-2 pb-1 border-b border-[#EAE7E0]">
@@ -587,9 +589,9 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
         )}
       </div>
 
-      {/* 3. SCROLLABLE NAVIGATION DIRECTORY */}
-      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-4 dashboard-vertical-scrollbar">
-        {baseCategories.map((category) => {
+        {/* 3. NAVIGATION DIRECTORY */}
+        <div className="py-3 px-2 space-y-4">
+          {baseCategories.map((category) => {
           // Filter items based on user admin status and hidden flag
           const visibleItems = category.items.filter((item) => {
             if (item.hidden) return false;
@@ -701,6 +703,7 @@ export const LoanOfficerSidebar: React.FC<LoanOfficerSidebarProps> = ({
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* 4. BOTTOM FOOTER BAR: USER PROFILE */}

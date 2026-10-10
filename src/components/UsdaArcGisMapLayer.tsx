@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useMap } from "@vis.gl/react-google-maps";
 import { Layers, ShieldAlert, CheckCircle2, Sliders, Info, Eye, EyeOff } from "lucide-react";
 
+declare const google: any;
+
 interface UsdaArcGisMapLayerProps {
   visible: boolean;
   opacity?: number;
@@ -52,10 +54,11 @@ export const UsdaArcGisMapLayer: React.FC<UsdaArcGisMapLayerProps> = ({
   }, [opacity]);
 
   useEffect(() => {
-    if (!map || !window.google || !window.google.maps) return;
+    if (!map || !(window as any).google || !(window as any).google.maps) return;
 
     // Create the ArcGIS MapServer ImageMapType
-    const usdaMapType = new google.maps.ImageMapType({
+    const gMaps = (window as any).google.maps;
+    const usdaMapType = new gMaps.ImageMapType({
       name: "USDA Ineligible Areas",
       tileSize: new google.maps.Size(256, 256),
       opacity: activeOpacity,

@@ -25,7 +25,8 @@ import {
   Calculator,
   Megaphone,
   Smartphone,
-  Check
+  Check,
+  TrendingDown
 } from "lucide-react";
 import { PropertyListing, FinancialProfile, LoanOfficerProfile, RealEstateAgentProfile } from "../types";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";

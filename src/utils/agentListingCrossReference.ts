@@ -455,7 +455,7 @@ export async function syncCompletedAdKitToFthbPortal(
  */
 export function createDraftAdFromCoBrandedKit(
   kit: VantageCoBrandedAdKit,
-  status: 'draft' | 'ready_to_launch' = 'draft'
+  status: 'draft' | 'ready_to_launch' | 'published' = 'draft'
 ): AdCampaignDraft {
   return {
     id: `draft-${kit.propertyId}`,

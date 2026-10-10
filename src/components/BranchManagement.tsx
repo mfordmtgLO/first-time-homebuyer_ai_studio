@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../firebase";
-import { collection, getDocs, doc, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { 
   Building, 
   UserPlus, 

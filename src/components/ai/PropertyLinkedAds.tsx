@@ -64,11 +64,11 @@ export const PropertyLinkedAds: React.FC<PropertyLinkedAdsProps> = ({ propertyId
       await sendPropertyConversationMessage({
         propertyId,
         leadId,
-        senderType: "lo",
-        senderId: loanOfficerId,
+        propertyAddress: propertyAddress || "Saved Property",
+        sender: "loan_officer",
         senderName: "Mike Ford (Loan Officer)",
         text: `${ad.adCopy}\n\n[Attached Video: ${ad.title}]`,
-      });
+      } as any);
     } catch (error) {
       console.error(error);
     }

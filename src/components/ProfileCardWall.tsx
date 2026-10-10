@@ -259,13 +259,13 @@ export const ProfileCardWall: React.FC<ProfileCardWallProps> = ({
         return getLastName(a.name).localeCompare(getLastName(b.name));
       }
       if (agentSortBy === "units_desc") {
-        const uA = agent.buysideUnits12Mo || agent.production12MoUnits || 0;
-        const uB = agent.buysideUnits12Mo || agent.production12MoUnits || 0;
+        const uA = a.buysideUnits12Mo || a.production12MoUnits || 0;
+        const uB = b.buysideUnits12Mo || b.production12MoUnits || 0;
         return uB - uA;
       }
       if (agentSortBy === "volume_desc") {
-        const vA = agent.buysideVolume12Mo || agent.production12MoVolume || 0;
-        const vB = agent.buysideVolume12Mo || agent.production12MoVolume || 0;
+        const vA = a.buysideVolume12Mo || a.production12MoVolume || 0;
+        const vB = b.buysideVolume12Mo || b.production12MoVolume || 0;
         return vB - vA;
       }
       return 0;

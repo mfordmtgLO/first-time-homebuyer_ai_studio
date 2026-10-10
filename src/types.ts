@@ -32,6 +32,8 @@ export interface FinancialProfile {
   pmiRate: number; // e.g. 0.75%
   targetMaxMonthlyPayment?: number; // Self-restricted max monthly payment goal
   priceAlertEnabled?: boolean;
+  annualInsuranceRate?: number;
+  hoaMonthly?: number;
 }
 
 export interface MonthlyMortgageBreakdown {
@@ -106,6 +108,9 @@ export interface PropertyListing {
   county?: string;
   state?: string;
   zip?: string;
+  neighborhood?: string;
+  type?: string;
+  tourGrade?: string;
   price?: number | null;
   originalPrice?: number;
   priceDropAmount?: number;
@@ -123,7 +128,17 @@ export interface PropertyListing {
   tourDate?: string;
   daysOnMarket?: number | null;
   hoaMonthly?: number;
+  monthlyHOA?: number;
   propertyTaxAnnual?: number | null;
+  propertyTaxes?: number;
+  insurance?: number;
+  image?: string;
+  readiness?: {
+    score?: number;
+    tier?: string;
+    badgeColor?: string;
+    reasons?: string[];
+  };
   estimatedRent?: number | null;
   scorecard?: TourScorecard;
   isFavorite?: boolean;
@@ -231,16 +246,16 @@ export interface VantageCoBrandedAdKit {
   imageUrl?: string;
   loId: string;
   loName: string;
-  loNmls: string;
-  loPhone: string;
-  loHeadshotUrl: string;
+  loNmls?: string;
+  loPhone?: string;
+  loHeadshotUrl?: string;
   agentId: string;
   agentName: string;
   agentBrokerage: string;
-  agentLicense: string;
-  agentPhone: string;
-  agentHeadshotUrl: string;
-  pairingId: string;
+  agentLicense?: string;
+  agentPhone?: string;
+  agentHeadshotUrl?: string;
+  pairingId?: string;
   coBrandSlug: string;
   coBrandUrl: string;
   status?: string;
@@ -420,7 +435,7 @@ export interface LoanOfficerProfile {
   id: string;
   name: string;
   title: string;
-  nmlsId: string;
+  nmlsId?: string;
   company: string;
   branch?: string;
   branchId?: string;
@@ -439,10 +454,13 @@ export interface LoanOfficerProfile {
   headshotUrl: string;
   bio: string;
   specialties: string[];
-  bookingUrl: string;
+  bookingUrl?: string;
   licenseStates: string[];
   websiteUrl?: string;
   yearsExperience?: number;
+  realTrendsVerified?: boolean;
+  rating?: number;
+  reviewCount?: number;
   production12MoVolume?: number;
   production12MoUnits?: number;
   production6MoVolume?: number;
@@ -522,14 +540,19 @@ export interface RealEstateAgentProfile {
   id: string;
   name: string;
   title: string;
-  brokerage: string;
+  brokerage?: string;
   licenseNumber: string;
   email: string;
   phone: string;
   headshotUrl: string;
   bio: string;
   specialties: string[];
-  marketAreas: string[];
+  marketAreas?: string[];
+  areasServed?: string[];
+  company?: string;
+  enrichmentStatus?: string;
+  realTrendsVerified?: boolean;
+  yearsExperience?: number;
   activeAdCounties?: string[];
   agentType?: 'buyer_agent' | 'listing_agent' | 'dual_agent';
   experienceYears?: number;
@@ -603,6 +626,7 @@ export interface Top50Candidate {
   listingUnits12Mo?: number | null;
   accoladeRank?: string | null;
   rankVerified?: boolean;
+  realTrendsVerified?: boolean;
   sourceUrl?: string | null;
   verifyLicenseUrl?: string | null;
   source: 'active_pipeline' | 'organic_web_sweep' | 'organic_sweep';
@@ -848,6 +872,10 @@ export interface CapturedLead {
   interactedSourceType?: 'campaign' | 'property_listing' | 'chatbot' | 'flyer' | 'calculator';
   taggedCityArea?: string;
   leadPathTag?: string;
+  name?: string;
+  stage?: string;
+  preApprovalStatus?: string;
+  downPayment?: string;
   intentScore: 'hot' | 'warm' | 'exploring';
   status: 'new' | 'contacted' | 'pre_approved' | 'in_escrow' | 'closed' | 'archived';
   notes?: string;
@@ -1315,11 +1343,12 @@ export interface PropertyConversation {
 
 
 export interface CampaignAuditEntry {
-  id: string;
+  id?: string;
   timestamp: string;
   actor: string;
   action: string;
   details?: string;
+  notes?: string;
 }
 
 
@@ -1400,6 +1429,7 @@ export interface AgentScraperLogEntry {
   httpStatus?: number;
   scrapedData?: {
     name?: string;
+    title?: string;
     email?: string;
     phone?: string;
     licenseNumber?: string;
@@ -1469,3 +1499,6 @@ export interface MarketingFlyer {
   thumbnailUrl?: string;
   isCustom?: boolean;
 }
+
+export type GuidesState = ProfessionalGuidesState;
+export type { AdQueueItem } from "./components/AdQueueManager";

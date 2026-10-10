@@ -1,4 +1,5 @@
 import { auth, db } from "../firebase";
+import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
@@ -167,7 +168,6 @@ import { FTHBPipelineDashboard } from "./FTHBPipelineDashboard";
 import { BranchManagerDashboard } from "./BranchManagerDashboard";
 import { GrowthDashboard } from "./GrowthDashboard";
 import { AdsRoiPerformanceTab } from "./AdsRoiPerformanceTab";
-import { RespaCostSharingHub } from "./RespaCostSharingHub";
 import { BranchManagement } from "./BranchManagement";
 import { MetadataConfiguration } from "./MetadataConfiguration";
 import { RecruitmentPipeline } from "./RecruitmentPipeline";
@@ -336,18 +336,16 @@ export const LoanOfficerPortal: React.FC<LoanOfficerPortalProps> = ({
         publishedChannels: []
       }));
       
-      setGuidesState(prev => {
-        const currentDrafts = prev.adCampaignDrafts || [];
-        const existingIds = new Set(currentDrafts.map(d => d.id));
-        const newItems = mappedDrafts.filter(d => !existingIds.has(d.id));
-        const updatedItems = currentDrafts.map(curr => {
-          const match = mappedDrafts.find(m => m.id === curr.id);
-          return match ? { ...curr, ...match } : curr;
-        });
-        return {
-          ...prev,
-          adCampaignDrafts: [...newItems, ...updatedItems]
-        };
+      const currentDrafts = guidesState.adCampaignDrafts || [];
+      const existingIds = new Set(currentDrafts.map(d => d.id));
+      const newItems = mappedDrafts.filter(d => !existingIds.has(d.id));
+      const updatedItems = currentDrafts.map(curr => {
+        const match = mappedDrafts.find(m => m.id === curr.id);
+        return match ? { ...curr, ...match } : curr;
+      });
+      onUpdateGuidesState({
+        ...guidesState,
+        adCampaignDrafts: [...newItems, ...updatedItems]
       });
     });
     return () => unsub();
@@ -10880,10 +10878,10 @@ Don't forget to file your State Homestead Tax Exemption!`,
               agentType: a.agentType || "buyer_agent",
               bio: a.bio || undefined,
               specialties: ["First-Time Homebuyers", "Buyer Representation"],
-              areasServed: ["Portland Metro", "Willamette Valley", "Bend"],
+              marketAreas: ["Portland Metro", "Willamette Valley", "Bend"],
               customSlug: customSlug,
               assignedLoIds: [currentLo.id],
-            } as RealEstateAgentProfile;
+            } as unknown as RealEstateAgentProfile;
           });
 
           const newPairings = newAgents.map((ag, pIdx) => ({

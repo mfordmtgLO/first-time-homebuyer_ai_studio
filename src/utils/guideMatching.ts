@@ -85,7 +85,7 @@ export function sanitizeLoanOfficer(lo: LoanOfficerProfile): LoanOfficerProfile 
       : lo.branch;
   }
 
-  return {
+  const cleaned: any = {
     ...matchedDefault,
     ...lo,
     id: canonicalId,

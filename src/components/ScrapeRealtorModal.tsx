@@ -279,12 +279,11 @@ export const ScrapeRealtorModal: React.FC<ScrapeRealtorModalProps> = ({
             ...prev.filter(p => p.name?.toLowerCase() !== deepScrapedProfile.name?.toLowerCase())
           ]);
           setCardUrlInputs(prev => ({ 0: cleanUrl, ...prev }));
-          setSelectedIndices(prev => new Set([0, ...Array.from(prev).map(i => i + 1)]));
+          setSelectedIndices(prev => new Set([0, ...Array.from(prev).map((i: number) => i + 1)]));
           setSuccessBackfillIndex(0);
           setTimeout(() => setSuccessBackfillIndex(null), 6000);
         }
         setActiveBackfillIndex(null);
-        setCardBackfillUrl("");
         setTopBarUrl("");
       } else {
         setErrorMsg(data?.error || "Failed to scrape agent from URL. Please check the website address and retry.");

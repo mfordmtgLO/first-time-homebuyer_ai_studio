@@ -505,7 +505,7 @@ async function startServer() {
 
   const app = express();
   app.set("trust proxy", 1);
-  const PORT = process.env.PORT || 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Immediate TCP & HTTP Health Probe Endpoints (Crucial for Cloud Run startup probes)
   app.get(["/healthz", "/_health", "/health", "/api/health"], (_req, res) => {
@@ -9310,7 +9310,7 @@ Return ONLY valid JSON in this exact structure:
             listingUnits12Mo: lUnits,
             rank: typeof c.rank === "number" ? c.rank : null,
             accoladeRank: c.realTrendsRank || c.accoladeRank || (typeof c.rank === "number" ? `#${c.rank}` : null),
-            rankVerified: Boolean(confirmedRank !== null && c.sourceUrl),
+            rankVerified: Boolean(c.rank != null && c.sourceUrl),
             sourceUrl: c.sourceUrl || null,
             verifyLicenseUrl,
             source: "active_pipeline",
@@ -9766,7 +9766,7 @@ Output strictly valid JSON (an array of objects).`;
         const pros: string[] = [];
         const cons: string[] = [];
 
-        if (price < 450000) pros.text = pros.push("Competitive price point with strong affordability");
+        if (price < 450000) pros.push("Competitive price point with strong affordability");
         else cons.push("Higher price point requiring larger down payment");
 
         if (beds >= 3) pros.push(`Spacious layout with ${beds} bedrooms`);
@@ -9998,7 +9998,7 @@ Provide your response in JSON format with the following structure:
 
   app.get("/api/ads/synced", async (req, res) => {
     try {
-      const loId = req.query.loId || "lo_1";
+      const loId = String(req.query.loId || "lo_1");
       let firestoreAds: any[] = [];
       try {
         const firestore = getFirestore(adminApp);

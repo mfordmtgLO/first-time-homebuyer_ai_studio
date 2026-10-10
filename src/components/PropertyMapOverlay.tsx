@@ -62,6 +62,8 @@ interface PropertyMapOverlayProps {
   onCloseMap?: () => void;
 }
 
+declare const google: any;
+
 const MAP_LIBRARIES: any = ["visualization"];
 
 const GeosphereHeatmap: React.FC<{
@@ -70,10 +72,10 @@ const GeosphereHeatmap: React.FC<{
   visible: boolean;
 }> = ({ properties, amenities, visible }) => {
   const map = useMap();
-  const [heatmap, setHeatmap] = useState<google.maps.visualization.HeatmapLayer | null>(null);
+  const [heatmap, setHeatmap] = useState<any>(null);
 
   useEffect(() => {
-    if (!map || !window.google || !window.google.maps) return;
+    if (!map || !(window as any).google || !(window as any).google.maps) return;
 
     // Utilize Geosphere logic conceptually: cluster properties and amenities
     const heatmapData: any[] = [];
@@ -102,8 +104,9 @@ const GeosphereHeatmap: React.FC<{
 
     let layer: any = null;
     try {
-      if (window.google.maps.visualization && (window.google.maps.visualization as any).HeatmapLayer) {
-        layer = new (window.google.maps.visualization as any).HeatmapLayer({
+      const gMaps = (window as any).google?.maps;
+      if (gMaps?.visualization?.HeatmapLayer) {
+        layer = new gMaps.visualization.HeatmapLayer({
           data: heatmapData,
           map: visible ? map : null,
           radius: 40,
@@ -524,6 +527,11 @@ export const PropertyMapOverlay: React.FC<PropertyMapOverlayProps> = ({
     if (!selectedPropertyId) return null;
     return enrichedProperties.find((p) => p.id === selectedPropertyId) || null;
   }, [selectedPropertyId, enrichedProperties]);
+
+  const propertyConversation = useMemo(() => {
+    if (!activeSelectedProperty) return null;
+    return (activeSelectedProperty as any).propertyConversation || (activeSelectedProperty as any).conversation || null;
+  }, [activeSelectedProperty]);
 
   // Radius summary statistics
   const radiusStats = useMemo(() => {

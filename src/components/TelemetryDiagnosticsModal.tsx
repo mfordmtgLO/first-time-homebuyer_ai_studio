@@ -17,6 +17,7 @@ import {
   Zap,
   Lock,
   Server,
+  Sparkles,
 } from "lucide-react";
 
 interface TelemetryDiagnosticsModalProps {

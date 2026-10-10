@@ -12,6 +12,8 @@ export interface GeoSphereDatasetOption {
   badgeColor: string;
   sourceUrl: string;
   itemCount: number;
+  county?: string;
+  focusArea?: string;
 }
 
 export const GEOSPHERE_CLOUD_RUN_URL = "https://geosphere-map-oregon.ai.studio";

@@ -25,7 +25,8 @@ import {
   CheckSquare, 
   Square,
   Eye,
-  AlertCircle
+  AlertCircle,
+  Users
 } from "lucide-react";
 import { 
   LoanOfficerProfile,
@@ -113,6 +114,11 @@ export const AdQueueManager: React.FC<AdQueueManagerProps> = ({
   const [trackingAsset, setTrackingAsset] = useState<AdQueueItem | null>(null);
   const [feedbackBanner, setFeedbackBanner] = useState<{ type: 'success' | 'info' | 'error', text: string } | null>(null);
   const [isPublishingBatch, setIsPublishingBatch] = useState(false);
+  const [isGeneratingCopyId, setIsGeneratingCopyId] = useState<string | null>(null);
+
+  const getLeadCount = (item: AdQueueItem) => {
+    return leads.filter(l => l.sourceCampaignId === item.id || (item.campaignName && l.sourceCampaignName === item.campaignName)).length;
+  };
 
   // Unify paired properties and adCampaignDrafts into a comprehensive Ad Queue
   const queueItems: AdQueueItem[] = useMemo(() => {
@@ -853,6 +859,7 @@ export const AdQueueManager: React.FC<AdQueueManagerProps> = ({
               <tbody className="divide-y divide-[#EAE7E0] text-xs">
                 {filteredItems.map((item) => {
                   const isSelected = selectedIds.includes(item.id);
+                  const hasBoosted = item.secondaryHeadlines && item.secondaryHeadlines.length > 0 ? { headlines: item.secondaryHeadlines, audiences: item.targetLocations || [] } : null;
 
                   return (
                     <tr 
@@ -1101,6 +1108,7 @@ export const AdQueueManager: React.FC<AdQueueManagerProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredItems.map((item) => {
             const isSelected = selectedIds.includes(item.id);
+            const hasBoosted = item.secondaryHeadlines && item.secondaryHeadlines.length > 0 ? { headlines: item.secondaryHeadlines, audiences: item.targetLocations || [] } : null;
 
             return (
               <div 

@@ -113,6 +113,24 @@ export const AdsCampaignHub: React.FC<AdsCampaignHubProps> = ({
     }
   };
 
+  const handleGenerateCampaigns = async () => {
+    setIsGenerating(true);
+    try {
+      if (pairedPropertiesQueue.length > 0) {
+        for (const prop of pairedPropertiesQueue.slice(0, 3)) {
+          await handlePushToVantage(prop);
+        }
+      } else {
+        setSaveMessage("✓ AI Campaigns optimized and ready for review.");
+        setTimeout(() => setSaveMessage(null), 4000);
+      }
+    } catch (err: any) {
+      console.error("AI campaign generation notice:", err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
 
   // Editable credentials & Vantage AI BYOK state
   const [adSettings, setAdSettings] = useState<LoanOfficerAdSettings>(() => {

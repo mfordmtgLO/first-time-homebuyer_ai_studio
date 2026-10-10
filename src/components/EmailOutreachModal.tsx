@@ -1051,12 +1051,12 @@ export const EmailOutreachModal: React.FC<EmailOutreachModalProps> = ({
 
     const bodyText = generateBodyContent(false);
     downloadEmailDraftPDF({
-      subject,
+      subject: editSubject || "First-Time Homebuyer Proposal",
       bodyText,
-      leadName: lead?.name,
+      leadName: lead?.name || lead?.fullName,
       agent: targetAgent,
       loanOfficer: activeLo,
-      properties: selectedLeadPropertyMatches.length > 0 ? selectedLeadPropertyMatches : properties.slice(0, 4),
+      properties: properties.slice(0, 4),
       targetCity: properties?.[0]?.city || "Bend & Redmond, OR",
     });
 

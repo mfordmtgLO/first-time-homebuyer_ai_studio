@@ -312,6 +312,7 @@ interface IntakeStep {
   question: string;
   field: keyof CapturedLead;
   options: { label: string; value: string; sub?: string }[];
+  stepNumber?: number;
 }
 
 const INTAKE_STEPS: IntakeStep[] = [
@@ -880,7 +881,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: `Intake Step ${step.stepNumber}: ${step.question}`,
+          title: `Intake Step ${step.stepNumber || (currentStepIndex + 1)}: ${step.question}`,
           content: `Borrower answered: ${optionValue}`,
           kind: "intake_answer",
           industryId: "mortgage_real_estate",
@@ -888,7 +889,7 @@ export const LeadIntakeChatbot: React.FC<LeadIntakeChatbotProps> = ({
           source: "lead_intake_chatbot",
           metadata: {
             stepId: step.id,
-            stepNumber: step.stepNumber,
+            stepNumber: step.stepNumber || (currentStepIndex + 1),
             selectedValue: optionValue,
             currentBudget: leadState.targetPriceRange,
             timeline: leadState.timeline,

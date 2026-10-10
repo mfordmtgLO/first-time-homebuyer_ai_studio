@@ -336,6 +336,8 @@ async function searchLiveWebDirect(params: SearchRegistryParams, type: "lo" | "a
 
     const nmlsM = s.match(/NMLS\s*#?\s*‍?(\d{4,8})/i);
     const nmlsVal = nmlsM ? nmlsM[1] : null;
+    const phoneM = s.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
+    const emailM = s.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
     const phoneVal = (phoneM && !phoneM[0].includes("555")) ? phoneM[0] : null;
     const emailVal = (emailM && emailM[0].includes("@")) ? emailM[0] : null;
     const cityM = s.match(/\b(Lake Oswego|Portland|Beaverton|Bend|Eugene|Salem|Hillsboro|Tigard|West Linn|Gresham|Oregon City)\b/i);

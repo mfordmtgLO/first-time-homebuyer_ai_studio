@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { db } from "../firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { motion, useAnimation, PanInfo, useMotionValue, useTransform, AnimatePresence } from "motion/react";
 import { 
   Building, 
@@ -215,6 +217,7 @@ interface PropertyTrackerProps {
   onAskAiAboutProperty: (property: PropertyListing) => void;
   userRole?: string | null;
   isStaffOrLo?: boolean;
+  onTriggerToast?: (msg: string) => void;
 }
 
 function getExportFilename(prefix: string, ext: string): string {
@@ -234,6 +237,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   onAskAiAboutProperty,
   userRole,
   isStaffOrLo,
+  onTriggerToast,
 }) => {
   const [viewMode, setViewMode] = useState<"cards" | "map">("cards");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -354,7 +358,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
   // Real-time backend webhook status listener / polling
   useEffect(() => {
     const checkBackendPullStatus = async () => {
-      const hasPending = Object.values(cityPullRequests).some(r => r.status === "pending");
+      const hasPending = Object.values(cityPullRequests).some((r: any) => r?.status === "pending");
       if (!hasPending) return;
 
       try {
@@ -705,7 +709,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       setProperties(updatedProperties);
 
       // 4. By-City Active Listings Discovery Engine
-      const uniqueCities = Array.from(new Set(updatedProperties.map(p => p.city?.trim() || "Oregon")));
+      const uniqueCities: string[] = Array.from(new Set(updatedProperties.map(p => p.city?.trim() || "Oregon")));
       if (!uniqueCities.some(c => c.toLowerCase().includes("junction city"))) {
         uniqueCities.push("Junction City");
       }
@@ -2493,7 +2497,7 @@ export const PropertyTracker: React.FC<PropertyTrackerProps> = ({
       {/* Property Cards Rendering (Grouped by City Folders OR Flat Grid) */}
       {groupByCity ? (
         <div className="space-y-8 w-full">
-          {Object.entries(cityGroups).map(([cityName, cityPropertyListings]) => {
+          {(Object.entries(cityGroups) as [string, PropertyListing[]][]).map(([cityName, cityPropertyListings]) => {
             const pullState = cityPullRequests[cityName] || { status: "none", count: 0 };
             const discovered = cityDiscoveredListings[cityName] || [];
             const isCitySelected = selectedCityFoldersForPull.includes(cityName);

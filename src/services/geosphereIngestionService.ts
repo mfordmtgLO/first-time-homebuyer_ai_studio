@@ -304,7 +304,7 @@ export function diffAndMergeListings(params: {
       const newDocId = (
         incoming.id ||
         `geo_${addressToSlug(cleanCity)}_${Date.now()}_${idx}`
-      ).replace(/[\/\s#?]/g, "_");
+      ).replace(/[/\s#?]/g, "_");
 
       const existingTags = Array.isArray(incoming.tags) ? incoming.tags : [];
       const tags = Array.from(new Set([...existingTags, "new"]));

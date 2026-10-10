@@ -39,7 +39,8 @@ import {
   Copy,
   Megaphone,
   Users,
-  Zap
+  Zap,
+  FolderKanban
 } from "lucide-react";
 import { PropertyListing, ProfessionalGuidesState, AdCampaignDraft } from "../types";
 import { cleanFirestoreData } from "../utils/guideMatching";
@@ -175,6 +176,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   const [requestStateInput, setRequestStateInput] = useState<string>("OR");
   const [isRequestingPull, setIsRequestingPull] = useState<boolean>(false);
   const [isFetchingFolders, setIsFetchingFolders] = useState<boolean>(false);
+  const [nowTimestamp] = useState<number>(() => Date.now());
 
   const fetchFoldersAndRequests = async () => {
     setIsFetchingFolders(true);
@@ -207,7 +209,17 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
   };
 
   useEffect(() => {
-    fetchFoldersAndRequests();
+    let isCancelled = false;
+    const load = async () => {
+      await Promise.resolve();
+      if (!isCancelled) {
+        fetchFoldersAndRequests();
+      }
+    };
+    void load();
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   const handleSyncSelectedFolders = async () => {
@@ -243,7 +255,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
     const city = (cityOverride !== undefined ? cityOverride : requestCityInput).trim();
     const state = (stateOverride !== undefined ? stateOverride : requestStateInput).trim();
 
-    if (!city || !/^[a-zA-Z\s\-]{2,50}$/.test(city)) {
+    if (!city || !/^[a-zA-Z\s-]{2,50}$/.test(city)) {
       onTriggerToast("Invalid city name. Requires 2+ characters (letters, spaces, hyphens only).");
       return;
     }
@@ -289,7 +301,7 @@ export const GeoSphereSyncHub: React.FC<GeoSphereSyncHubProps> = ({
 
   const getFolderAgeString = (savedAt: string) => {
     try {
-      const diffMs = Date.now() - new Date(savedAt).getTime();
+      const diffMs = nowTimestamp - new Date(savedAt).getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
       if (diffDays <= 0) return "saved today";
       if (diffDays === 1) return "saved yesterday";
